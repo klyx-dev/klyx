@@ -12,12 +12,6 @@
         ]
     },
     "npm": false,
-    "hooks": {
-        "before:bump": "sed -i'' -E 's/(versionName = \")[^\"]+\"/\\1${version}\"/' app/build.gradle.kts",
-        "after:bump": "git add app/build.gradle.kts",
-        "before:release": "./gradlew assembleRelease",
-        "after:release": "echo '✅ Released v${version}'"
-    },
     "plugins": {
         "@release-it/conventional-changelog": {
             "preset": {
