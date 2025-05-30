@@ -52,7 +52,10 @@ fun EditorScreen(
     val state by viewModel.state.collectAsState()
     val openFiles by remember { derivedStateOf { state.openFiles } }
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         if (openFiles.isNotEmpty()) {
             // Tab bar
             EditorTabBar(
