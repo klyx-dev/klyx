@@ -13,6 +13,8 @@
             <option value="$PROJECT_DIR$/app" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/editor" />
+            <option value="$PROJECT_DIR$/extension-api" />
+            <option value="$PROJECT_DIR$/kwasm" />
           </set>
         </option>
       </GradleProjectSettings>

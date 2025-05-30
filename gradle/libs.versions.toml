@@ -2,6 +2,7 @@
 agp = "8.12.0-alpha02"
 desugar_jdk_libs = "2.1.5"
 json5k = "0.3.0"
+kotlinxCoroutinesCore = "1.10.2"
 kotlinxSerializationJson = "1.8.1"
 sora-editor = "0.23.5"
 kotlin = "2.1.21"
@@ -21,6 +22,7 @@ androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = 
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 sora-editor-language-textmate = { module = "io.github.Rosemoe.sora-editor:language-textmate" }
 sora-editor = { module = "io.github.Rosemoe.sora-editor:editor" }

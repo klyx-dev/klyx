@@ -27,3 +27,5 @@ rootProject.name = "Klyx"
 include(":app")
 include(":core")
 include(":editor")
+include(":kwasm")
+include(":extension-api")

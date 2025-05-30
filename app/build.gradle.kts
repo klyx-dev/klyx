@@ -70,6 +70,8 @@ dependencies {
 
     implementation(project(":core"))
     implementation(project(":editor"))
+    implementation(project(":kwasm"))
+    implementation(project(":extension-api"))
 
     testImplementation(libs.junit)
 
