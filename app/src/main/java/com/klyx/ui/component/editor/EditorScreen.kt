@@ -55,7 +55,7 @@ fun EditorScreen(
                 },
                 onClose = { index ->
                     viewModel.closeFile(openFiles[index].id)
-                    // TODO: remove editor from map
+                    editors.remove(openFiles[index].id)
                     if (index == currentFileIndex && openFiles.size > 1) {
                         currentFileIndex = maxOf(0, index - 1)
                         viewModel.setActiveFile(openFiles[currentFileIndex].id)
