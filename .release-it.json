@@ -10,7 +10,7 @@
         "release": true,
         "tokenRef": "GITHUB_TOKEN",
         "assets": [
-            "app/klyx-release-v*.apk"
+            "app/release/klyx-release-v*.apk"
         ]
     },
     "npm": false,
