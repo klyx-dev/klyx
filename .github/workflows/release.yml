@@ -24,20 +24,23 @@ jobs:
         run: |
           echo "## Changelog" > RELEASE_NOTES.md
 
-          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${{ github.ref_name }}$" | head -n 1)
           if [ -z "$PREV_TAG" ]; then
             echo "No previous tag found, using initial commit"
             RANGE=""
           else
+            echo "Previous tag found: $PREV_TAG"
             RANGE="$PREV_TAG..HEAD"
           fi
 
           git log $RANGE --pretty=format:"%s" |
           grep -E "^(feat|fix|perf|refactor|style|docs|test|chore)(\(.+\))?: " >> RELEASE_NOTES.md || echo "No valid commits."
 
-          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
-          cat RELEASE_NOTES.md >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          {
+            echo "RELEASE_NOTES<<EOF"
+            cat RELEASE_NOTES.md
+            echo "EOF"
+          } >> $GITHUB_ENV
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -48,7 +51,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.KLYX_RELEASE }}
 
       - name: Rename APKs
         run: |
