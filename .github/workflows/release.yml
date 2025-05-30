@@ -1,4 +1,4 @@
-name: Release
+name: Release Klyx
 
 on:
   push:
@@ -17,19 +17,34 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Build project
+        run: ./gradlew build
+
+      - name: Generate release notes
+        id: release_notes
         run: |
-          ./gradlew build
+          echo "## Changelog" > RELEASE_NOTES.md
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"%s" |
+          grep -E "^(feat|fix|perf|refactor|style|docs|test|chore)(\(.+\))?: " >> RELEASE_NOTES.md
+          echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
+          cat RELEASE_NOTES.md >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          generate_release_notes: true
+          body: ${{ env.RELEASE_NOTES }}
           draft: false
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Rename APKs
+        run: |
+          mkdir -p renamed-apks
+          cp build/outputs/apk/debug/app-debug.apk renamed-apks/klyx-debug-${{ github.ref_name }}.apk
+          cp build/outputs/apk/release/app-release.apk renamed-apks/klyx-release-${{ github.ref_name }}.apk
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v2
