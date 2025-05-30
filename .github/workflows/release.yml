@@ -28,7 +28,7 @@ jobs:
       - name: Run release-it
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx release-it --ci
+        run: npx release-it --ci --no-git.requireCleanWorkingDir
 
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
