@@ -19,17 +19,22 @@ jobs:
       - name: Build project
         run: ./gradlew build
 
-      - name: Generate Release Notes (changelog only)
+      - name: Generate changelog
+        id: changelog
         run: |
           echo "## Changelog" > RELEASE_NOTES.md
-          PREV_TAG=$(git tag --sort=-creatordate | sed -n 2p)
+
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
           if [ -z "$PREV_TAG" ]; then
-            git log --pretty=format:"%s" |
-            grep -E "^(feat|fix|perf|refactor|style|docs|test|chore)(\(.+\))?: " >> RELEASE_NOTES.md
+            echo "No previous tag found, using initial commit"
+            RANGE=""
           else
-            git log "$PREV_TAG"..HEAD --pretty=format:"%s" |
-            grep -E "^(feat|fix|perf|refactor|style|docs|test|chore)(\(.+\))?: " >> RELEASE_NOTES.md
+            RANGE="$PREV_TAG..HEAD"
           fi
+
+          git log $RANGE --pretty=format:"%s" |
+          grep -E "^(feat|fix|perf|refactor|style|docs|test|chore)(\(.+\))?: " >> RELEASE_NOTES.md || echo "No valid commits."
+
           echo "RELEASE_NOTES<<EOF" >> $GITHUB_ENV
           cat RELEASE_NOTES.md >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
