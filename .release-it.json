@@ -1,0 +1,39 @@
+{
+    "git": {
+        "commitMessage": "chore(release): v${version}",
+        "tagName": "v${version}",
+        "push": true
+    },
+    "github": {
+        "release": true,
+        "tokenRef": "GITHUB_TOKEN",
+        "assets": [
+            "app/build/outputs/apk/release/klyx-release-v${version}.apk"
+        ]
+    },
+    "npm": false,
+    "hooks": {
+        "before:bump": "sed -i'' -E 's/(versionName = \")[^\"]+\"/\\1${version}\"/' app/build.gradle.kts",
+        "after:bump": "git add app/build.gradle.kts",
+        "before:release": "./gradlew assembleRelease",
+        "after:release": "echo '✅ Released v${version}'"
+    },
+    "plugins": {
+        "@release-it/conventional-changelog": {
+            "preset": {
+                "name": "conventionalcommits",
+                "types": [
+                    {
+                        "type": "feat",
+                        "section": "Features"
+                    },
+                    {
+                        "type": "fix",
+                        "section": "Bug Fixes"
+                    },
+                    {}
+                ]
+            }
+        }
+    }
+}

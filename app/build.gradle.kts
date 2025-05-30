@@ -1,3 +1,5 @@
+import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+
 plugins {
     alias(libs.plugins.android.application)
     kotlin("android")
@@ -16,6 +18,15 @@ android {
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            if (this is ApkVariantOutputImpl) {
+                outputFileName = "klyx-${variant.name}-v${versionName}.apk"
+            }
+        }
     }
 
     buildTypes {
