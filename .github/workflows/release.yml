@@ -1,4 +1,4 @@
-name: Auto Release
+name: Release
 
 on:
   push:
@@ -13,15 +13,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build project
         run: |
           ./gradlew build
 
-      - name: Create Release
+      - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           generate_release_notes: true
           draft: false
           prerelease: false
