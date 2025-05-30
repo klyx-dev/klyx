@@ -38,6 +38,15 @@ fun EditorScreen(
     val typefaceText by rememberTypeface(settings.fontFamily)
     val typefaceLineNumber by rememberTypeface(settings.lineNumberFontFamily)
 
+    LaunchedEffect(settings) {
+        editors.values.forEach { editor ->
+            editor.setTheme(settings.theme)
+            editor.isCursorAnimationEnabled = settings.cursorAnimation
+            editor.typefaceText = typefaceText
+            editor.typefaceLineNumber = typefaceLineNumber
+        }
+    }
+
     var currentFileIndex by remember { mutableIntStateOf(0) }
 
     val state by viewModel.state.collectAsState()
