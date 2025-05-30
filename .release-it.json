@@ -2,7 +2,9 @@
     "git": {
         "commitMessage": "chore(release): v${version}",
         "tagName": "v${version}",
-        "push": true
+        "push": true,
+        "requireCleanWorkingDir": false,
+        "signTag": true
     },
     "github": {
         "release": true,
@@ -12,9 +14,6 @@
         ]
     },
     "npm": false,
-    "hooks": {
-        "before:init": ["bash gradlew assembleRelease"]
-    },
     "plugins": {
         "@release-it/conventional-changelog": {
             "preset": {
