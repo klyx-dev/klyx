@@ -13,7 +13,7 @@
     },
     "npm": false,
     "hooks": {
-        "before:init": ["./gradlew assembleRelease"]
+        "before:init": ["gradlew assembleRelease"]
     },
     "plugins": {
         "@release-it/conventional-changelog": {
