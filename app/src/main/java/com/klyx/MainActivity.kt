@@ -6,7 +6,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
@@ -72,7 +72,7 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    Column(modifier = Modifier.systemBarsPadding()) {
+                    Box(modifier = Modifier.systemBarsPadding()) {
                         EditorProvider {
                             val editorSettings by remember { derivedStateOf { settings.editor } }
                             val viewModel = LocalEditorViewModel.current
