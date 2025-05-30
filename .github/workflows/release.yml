@@ -20,7 +20,7 @@ jobs:
           node-version: '20'
 
       - name: Install release-it
-        run: npm install --save-dev release-it
+        run: npm install --save-dev release-it @release-it/conventional-changelog
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
