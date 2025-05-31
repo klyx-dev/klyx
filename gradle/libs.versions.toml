@@ -1,8 +1,9 @@
 [versions]
 agp = "8.12.0-alpha02"
+assertjCore = "3.27.3"
 desugar_jdk_libs = "2.1.5"
 json5k = "0.3.0"
-kotlinxCoroutinesCore = "1.10.2"
+kotlinxCoroutines = "1.10.2"
 kotlinxSerializationJson = "1.8.1"
 sora-editor = "0.23.5"
 kotlin = "2.1.21"
@@ -15,14 +16,17 @@ activityCompose = "1.10.1"
 composeBom = "2025.05.01"
 appcompat = "1.7.0"
 material = "1.12.0"
+truth = "1.4.4"
 utilcodex = "1.31.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 sora-editor-language-textmate = { module = "io.github.Rosemoe.sora-editor:language-textmate" }
 sora-editor = { module = "io.github.Rosemoe.sora-editor:editor" }
@@ -43,6 +47,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+google-truth = { module = "com.google.truth:truth", version.ref = "truth" }
 utilcodex = { module = "com.blankj:utilcodex", version.ref = "utilcodex" }
 
 [plugins]

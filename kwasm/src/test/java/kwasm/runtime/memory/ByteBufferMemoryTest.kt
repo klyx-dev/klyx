@@ -18,7 +18,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.Truth.assertWithMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runBlockingTest
+import kotlinx.coroutines.test.runTest
 import kwasm.runtime.Memory.Companion.GROW_FAILURE
 import kwasm.runtime.Memory.Companion.PAGE_SIZE
 import org.junit.Assert.assertThrows
@@ -554,7 +554,7 @@ class ByteBufferMemoryTest {
     }
 
     @Test
-    fun lock_enforcesFiFo() = runBlockingTest {
+    fun lock_enforcesFiFo() = runTest {
         val memory = ByteBufferMemory()
 
         val values = arrayOf(1, 2, 3)
