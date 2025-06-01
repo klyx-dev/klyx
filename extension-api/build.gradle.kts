@@ -37,6 +37,8 @@ dependencies {
     implementation(libs.ktoml.core)
     implementation(libs.ktoml.file)
 
+    implementation(kotlin("reflect"))
+
     implementation(project(":kwasm"))
     implementation(project(":core"))
 
