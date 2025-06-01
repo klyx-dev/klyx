@@ -2,6 +2,7 @@ package com.klyx.ui.component.editor
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.Text
@@ -52,10 +53,7 @@ fun EditorScreen(
     val state by viewModel.state.collectAsState()
     val openFiles by remember { derivedStateOf { state.openFiles } }
 
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(modifier = modifier) {
         if (openFiles.isNotEmpty()) {
             // Tab bar
             EditorTabBar(
@@ -108,13 +106,10 @@ fun EditorScreen(
             }
         } else {
             Box(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "No files open",
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                Text("No files open")
             }
         }
     }

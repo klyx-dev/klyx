@@ -7,16 +7,14 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.klyx.core.file.FileId
 import com.klyx.editor.KlyxCodeEditor
-import com.klyx.viewmodel.EditorViewModel
 
 @Composable
 fun EditorProvider(content: @Composable () -> Unit) {
     val editorMap = remember { mutableStateMapOf<FileId, KlyxCodeEditor>() }
-    val viewModel: EditorViewModel = viewModel()
 
     CompositionLocalProvider(
         LocalEditorStore provides editorMap,
-        LocalEditorViewModel provides viewModel
+        LocalEditorViewModel provides viewModel()
     ) {
         content()
     }
