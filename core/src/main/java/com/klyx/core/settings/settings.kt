@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AppSettings(
     @SerialComment("Whether to use dynamic colors or not")
+    @SerialName("dynamic_colors")
     val dynamicColors: Boolean = true,
 
     @SerialComment(
@@ -34,6 +35,7 @@ data class EditorSettings(
         Any font from [Google Fonts](https://fonts.google.com/) can be used.
     """
     )
+    @SerialName("font_family")
     val fontFamily: String = "JetBrains Mono",
 
     @SerialComment(
@@ -43,6 +45,7 @@ data class EditorSettings(
         Any font from [Google Fonts](https://fonts.google.com/) can be used.
     """
     )
+    @SerialName("line_number_font_family")
     val lineNumberFontFamily: String = fontFamily,
 
     @SerialComment(
@@ -60,6 +63,7 @@ data class EditorSettings(
     val theme: String = "Darcula",
 
     @SerialComment("Whether to enable cursor animation or not")
+    @SerialName("cursor_animation")
     val cursorAnimation: Boolean = false
 )
 
