@@ -12,9 +12,11 @@ data class Extension(
 
 @Throws(Exception::class)
 fun parseExtension(dir: File): Extension {
-    val toml = File(dir, "extension.toml").inputStream().use {
-        Toml.decodeFromStream<ExtensionToml>(it)
-    }
-    val wasm = File(dir, "extension.wasm").inputStream()
+    val toml: ExtensionToml = File(dir, "extension.toml").inputStream().use(Toml.Default::decodeFromStream)
+
+    val wasm = dir.listFiles { file ->
+        file.extension == "wasm"
+    }?.firstOrNull()?.inputStream() ?: throw ExtensionLoadException("No wasm file found in $dir")
+
     return Extension(wasm, toml)
 }
