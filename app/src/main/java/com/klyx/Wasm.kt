@@ -13,58 +13,25 @@ class Wasm(private val context: Context) {
         onColorChanged: (Int, Int, Int) -> Unit
     ) {
         val assets = context.assets
-        val wasm = assets.open("wasm/wasm_add.wasm")
+        val wasm = assets.open("wasm/my_extension.wasm")
 
-        val memoryProvider = ByteBufferMemoryProvider(4096 * 4096)
-
-        val program = KWasmProgram.builder(memoryProvider)
-            .withBinaryModule("test", wasm)
+        val tempMemory = ByteBufferMemoryProvider(2 * 1024 * 1024)
+        val preProgram = KWasmProgram.builder(tempMemory)
+            .withBinaryModule("ext", wasm)
             .withHostFunction(
                 namespace = "env",
-                name = "show_toast",
-                hostFunction = HostFunction { offset: IntValue, length: IntValue, context ->
+                name = "show_toast_impl",
+                hostFunction = HostFunction { ptr: IntValue, length: IntValue, context ->
                     val bytes = ByteArray(length.value)
-                    context.memory?.readBytes(bytes, offset.value)
-                    val txt = bytes.toString(Charsets.UTF_8)
-                    this.context.showShortToast(txt)
-                    EmptyValue
-                }
-            )
-            .withHostFunction(
-                namespace = "env",
-                name = "set_ui_color",
-                hostFunction = HostFunction { r: IntValue, g: IntValue, b: IntValue, context ->
-                    onColorChanged(r.value, g.value, b.value)
+                    context.memory?.readBytes(bytes, ptr.value)
+                    this.context.showShortToast(bytes.toString(Charsets.UTF_8))
                     EmptyValue
                 }
             )
             .build()
 
-        val main = program.getFunction("test", "main")
-        println("[main] signature: ${main.signature}")
-        println("[main] argCount: ${main.argCount}")
-        main()
-
         kotlin.runCatching {
-            val add = program.getFunction("test", "add")
-            println("[add] signature: ${add.signature}")
-            println("[add] argCount: ${add.argCount}")
-            println("1 + 2 using wasm = ${add(1, 2)}")
-
-            val sub = program.getFunction("test", "sub")
-            println("[sub] signature: ${sub.signature}")
-            println("[sub] argCount: ${sub.argCount}")
-            println("1 - 2 using wasm = ${sub(1, 2)}")
-
-            val mul = program.getFunction("test", "mul")
-            println("[mul] signature: ${mul.signature}")
-            println("[mul] argCount: ${mul.argCount}")
-            println("1 * 2 using wasm = ${mul(1, 2)}")
-
-//            val div = program.getFunction("test", "div")
-//            println("[div] signature: ${div.signature}")
-//            println("[div] argCount: ${div.argCount}")
-//            println("1 / 2 using wasm = ${div(1, 2)}")
+            preProgram.getFunction("ext", "start")()
         }.onFailure {
             it.printStackTrace()
         }

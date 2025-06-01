@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
+    kotlin("plugin.serialization") version libs.versions.kotlin
 }
 
 android {
@@ -33,6 +34,8 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.core.ktx)
+    implementation(libs.ktoml.core)
+    implementation(libs.ktoml.file)
 
     implementation(project(":kwasm"))
 

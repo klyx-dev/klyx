@@ -4,7 +4,8 @@ assertjCore = "3.27.3"
 desugar_jdk_libs = "2.1.5"
 json5k = "0.3.0"
 kotlinxCoroutines = "1.10.2"
-kotlinxSerializationJson = "1.8.1"
+kotlinxSerialization = "1.8.1"
+ktoml = "0.7.0"
 sora-editor = "0.23.5"
 kotlin = "2.1.21"
 coreKtx = "1.16.0"
@@ -27,7 +28,10 @@ desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref 
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
-kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
+ktoml-core = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
+ktoml-file = { module = "com.akuleshov7:ktoml-file", version.ref = "ktoml" }
 sora-editor-language-textmate = { module = "io.github.Rosemoe.sora-editor:language-textmate" }
 sora-editor = { module = "io.github.Rosemoe.sora-editor:editor" }
 sora-editor-bom = { module = "io.github.Rosemoe.sora-editor:bom", version.ref = "sora-editor" }
