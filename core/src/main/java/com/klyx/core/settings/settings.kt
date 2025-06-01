@@ -16,7 +16,7 @@ data class AppSettings(
         
         The available themes are:
         - "system": Use the theme that corresponds to the system's appearance
-        - "light": Use the light theme 
+        - "light": Use the light theme
         - "dark": Use the dark theme
     """
     )
