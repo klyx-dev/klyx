@@ -38,6 +38,7 @@ dependencies {
     implementation(libs.ktoml.file)
 
     implementation(project(":kwasm"))
+    implementation(project(":core"))
 
     testImplementation(libs.junit)
 

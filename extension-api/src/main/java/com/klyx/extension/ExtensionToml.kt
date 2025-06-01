@@ -1,7 +1,11 @@
 package com.klyx.extension
 
+import com.akuleshov7.ktoml.Toml
+import com.akuleshov7.ktoml.source.decodeFromStream
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+import java.io.InputStream
 
 /**
  * This is inspired by [zed](zed.dev) extension toml.
@@ -29,8 +33,21 @@ data class ExtensionToml(
     @SerialName("schema_version")
     val schemaVersion: Int = 1,
     val authors: Array<String> = arrayOf(),
-    val description: String = ""
+    val description: String = "",
+    val repository: String = ""
 ) {
+    companion object {
+        @JvmStatic
+        fun from(toml: String): ExtensionToml {
+            return Toml.decodeFromString(toml)
+        }
+
+        @JvmStatic
+        fun from(inputStream: InputStream): ExtensionToml {
+            return Toml.decodeFromStream(inputStream)
+        }
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -44,6 +61,7 @@ data class ExtensionToml(
         if (version != other.version) return false
         if (!authors.contentEquals(other.authors)) return false
         if (description != other.description) return false
+        if (repository != other.repository) return false
 
         return true
     }
@@ -56,6 +74,7 @@ data class ExtensionToml(
         result = 31 * result + version.hashCode()
         result = 31 * result + authors.contentHashCode()
         result = 31 * result + description.hashCode()
+        result = 31 * result + repository.hashCode()
         return result
     }
 }

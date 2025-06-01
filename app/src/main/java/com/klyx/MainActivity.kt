@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,21 +15,19 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import com.klyx.core.compose.LocalBuildVariant
 import com.klyx.core.compose.ProvideCompositionLocals
-import com.klyx.core.isDebug
 import com.klyx.core.settings.AppTheme
 import com.klyx.core.settings.SettingsManager
-import com.klyx.core.showShortToast
 import com.klyx.editor.compose.EditorProvider
 import com.klyx.editor.compose.LocalEditorViewModel
+import com.klyx.extension.Extension
+import com.klyx.extension.ExtensionFactory
+import com.klyx.extension.ExtensionToml
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.theme.KlyxTheme
 import kotlinx.coroutines.delay
@@ -41,7 +38,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val context = LocalContext.current
-            val wasm = remember { Wasm(context) }
+            val extensionFactory = remember { ExtensionFactory.create(context) }
 
             LaunchedEffect(Unit) {
                 SettingsManager.load(context)
@@ -80,15 +77,10 @@ class MainActivity : ComponentActivity() {
                     dynamicColor = settings.dynamicColors,
                     darkTheme = darkMode
                 ) {
-                    val bgColor = MaterialTheme.colorScheme.background
-                    var color by remember { mutableStateOf(bgColor) }
-                    val colorState by animateColorAsState(color)
-
                     val buildVariant = LocalBuildVariant.current
 
                     Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = colorState
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         Box(
                             modifier = Modifier
@@ -106,15 +98,8 @@ class MainActivity : ComponentActivity() {
                                 EditorScreen(editorSettings)
 
                                 LaunchedEffect(Unit) {
-                                    if (buildVariant.isDebug) {
-                                        delay(3000)
-                                        wasm.test(onColorChanged = { r, g, b ->
-                                            color = Color(red = r, green = g, blue = b)
-                                            context.showShortToast("Surface color changed for testing, will be reset after 5 seconds")
-                                        })
-                                        delay(5000)
-                                        color = bgColor
-                                    }
+                                    delay(500)
+                                    loadTestExtension(extensionFactory)
                                 }
                             }
                         }
@@ -122,5 +107,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun loadTestExtension(factory: ExtensionFactory) {
+        val wasm = assets.open("wasm/my_extension/my_extension.wasm")
+        val tomlIS = assets.open("wasm/my_extension/extension.toml")
+        val toml = ExtensionToml.from(tomlIS)
+
+        val extension = Extension(wasm, toml)
+        factory.loadExtension(extension, true)
     }
 }
