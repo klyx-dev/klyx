@@ -20,5 +20,4 @@ package kwasm.util
  * Useful mainly in `when` blocks on `reified` type-parameters when the `else` should never be hit.
  */
 @Suppress("FunctionName")
-fun Impossible(message: String = "Reached an impossible branch somehow"): Nothing =
-    throw IllegalStateException(message)
+fun Impossible(message: String = "Reached an impossible branch somehow"): Nothing = throw IllegalStateException(message)

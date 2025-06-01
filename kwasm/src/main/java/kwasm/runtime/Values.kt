@@ -55,7 +55,8 @@ object EmptyValue : Value<Byte> {
 }
 
 /** Holds a 32-bit integer [Value]. */
-inline class IntValue(override val value: Int) : Value<Int> {
+@JvmInline
+value class IntValue(override val value: Int) : Value<Int> {
     val unsignedValue: UInt
         get() = value.toUInt()
 
@@ -65,7 +66,8 @@ inline class IntValue(override val value: Int) : Value<Int> {
 }
 
 /** Holds a 64-bit integer [Value]. */
-inline class LongValue(override val value: Long) : Value<Long> {
+@JvmInline
+value class LongValue(override val value: Long) : Value<Long> {
     val unsignedValue: ULong
         get() = value.toULong()
 
@@ -75,14 +77,16 @@ inline class LongValue(override val value: Long) : Value<Long> {
 }
 
 /** Holds a 32-bit floating-point [Value]. */
-inline class FloatValue(override val value: Float) : Value<Float> {
+@JvmInline
+value class FloatValue(override val value: Float) : Value<Float> {
     companion object {
         val ZERO = FloatValue(0f)
     }
 }
 
 /** Holds a 64-bit floating-point [Value]. */
-inline class DoubleValue(override val value: Double) : Value<Double> {
+@JvmInline
+value class DoubleValue(override val value: Double) : Value<Double> {
     companion object {
         val ZERO = DoubleValue(0.0)
     }
@@ -107,7 +111,6 @@ fun Float.toValue(): FloatValue = FloatValue(this)
 fun Double.toValue(): DoubleValue = DoubleValue(this)
 
 /** Wraps the receiving value as a [Value] instance. */
-@Suppress("UNCHECKED_CAST")
 inline fun <reified T : Number> T.toValue(): Value<*> = when (this) {
     is Int -> IntValue(this)
     is Long -> LongValue(this)

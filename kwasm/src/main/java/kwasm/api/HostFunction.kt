@@ -19,7 +19,6 @@ package kwasm.api
 import kwasm.ast.Identifier
 import kwasm.ast.type.FunctionType
 import kwasm.ast.type.Param
-import kwasm.ast.type.ValueType
 import kwasm.runtime.EmptyValue
 import kwasm.runtime.Memory
 import kwasm.runtime.Value
@@ -148,11 +147,12 @@ inline fun <reified P1, reified ReturnType> HostFunction(
  */
 inline fun <reified P1, reified P2, reified ReturnType> HostFunction(
     crossinline block: (P1, P2, HostFunctionContext) -> ReturnType
-): HostFunction<ReturnType> where P1 : Value<*>,
-                                  P2 : Value<*>,
-                                  ReturnType : Value<*> = object : HostFunction<ReturnType> {
+): HostFunction<ReturnType> where P1 : Value<*>, P2 : Value<*>, ReturnType : Value<*> = object : HostFunction<ReturnType> {
+
     override val parameterTypes: List<KClass<out Value<*>>> = listOf(P1::class, P2::class)
-    override val returnType: KClass<ReturnType>? = ReturnType::class
+
+    override val returnType: KClass<ReturnType> = ReturnType::class
+
     override fun invoke(params: List<Value<*>>, context: HostFunctionContext): ReturnType {
         val p1 = requireParam<P1>(params, 0)
         val p2 = requireParam<P2>(params, 1)
