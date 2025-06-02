@@ -3,7 +3,6 @@ package com.klyx
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
@@ -19,11 +18,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.compose.LocalBuildVariant
-import com.klyx.core.compose.ProvideCompositionLocals
+import com.klyx.core.setAppContent
 import com.klyx.core.settings.AppTheme
 import com.klyx.core.settings.SettingsManager
-import com.klyx.editor.compose.EditorProvider
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.extension.Extension
 import com.klyx.extension.ExtensionFactory
@@ -36,15 +35,11 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
+        setAppContent {
             val context = LocalContext.current
+            val settings = LocalAppSettings.current
+
             val extensionFactory = remember { ExtensionFactory.create(context) }
-
-            LaunchedEffect(Unit) {
-                SettingsManager.load(context)
-            }
-
-            val settings by SettingsManager.settings
             val isSystemInDarkTheme = isSystemInDarkTheme()
 
             val darkMode by remember(settings) {
@@ -72,36 +67,32 @@ class MainActivity : ComponentActivity() {
                 )
             )
 
-            ProvideCompositionLocals {
-                KlyxTheme(
-                    dynamicColor = settings.dynamicColors,
-                    darkTheme = darkMode
+            KlyxTheme(
+                dynamicColor = settings.dynamicColors,
+                darkTheme = darkMode
+            ) {
+                val buildVariant = LocalBuildVariant.current
+
+                Surface(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    val buildVariant = LocalBuildVariant.current
-
-                    Surface(
-                        modifier = Modifier.fillMaxSize()
+                    Box(
+                        modifier = Modifier
+                            .systemBarsPadding()
+                            .fillMaxSize()
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .systemBarsPadding()
-                                .fillMaxSize()
-                        ) {
-                            EditorProvider {
-                                val editorSettings by remember { derivedStateOf { settings.editor } }
-                                val viewModel = LocalEditorViewModel.current
+                        val editorSettings by remember { derivedStateOf { settings.editor } }
+                        val viewModel = LocalEditorViewModel.current
 
-                                LaunchedEffect(Unit) {
-                                    viewModel.openFile(SettingsManager.settingsFile(context))
-                                }
+                        LaunchedEffect(Unit) {
+                            viewModel.openFile(SettingsManager.settingsFile(context))
+                        }
 
-                                EditorScreen(editorSettings)
+                        EditorScreen(editorSettings)
 
-                                LaunchedEffect(Unit) {
-                                    delay(500)
-                                    loadTestExtension(extensionFactory)
-                                }
-                            }
+                        LaunchedEffect(Unit) {
+                            delay(500)
+                            loadTestExtension(extensionFactory)
                         }
                     }
                 }
@@ -111,8 +102,7 @@ class MainActivity : ComponentActivity() {
 
     private fun loadTestExtension(factory: ExtensionFactory) {
         val wasm = assets.open("wasm/my_extension/my_extension.wasm")
-        val tomlIS = assets.open("wasm/my_extension/extension.toml")
-        val toml = ExtensionToml.from(tomlIS)
+        val toml = ExtensionToml.from(assets.open("wasm/my_extension/extension.toml"))
 
         val extension = Extension(wasm, toml)
         factory.loadExtension(extension, true)

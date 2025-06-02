@@ -3,13 +3,19 @@ package com.klyx.editor.compose
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.klyx.core.file.FileId
+import com.klyx.core.noLocalProvidedFor
 import com.klyx.editor.KlyxCodeEditor
 import com.klyx.viewmodel.EditorViewModel
 
 val LocalEditorStore = compositionLocalOf<SnapshotStateMap<FileId, KlyxCodeEditor>> {
-    error("EditorStore not provided")
+    noLocalProvidedFor("EditorStore")
 }
 
 val LocalEditorViewModel = compositionLocalOf<EditorViewModel> {
-    error("EditorViewModel not provided")
+    noLocalProvidedFor<EditorViewModel>()
 }
+
+/**
+ * Returns current editor, or null if not any
+ */
+val LocalKlyxEditor = compositionLocalOf<KlyxCodeEditor?> { null }
