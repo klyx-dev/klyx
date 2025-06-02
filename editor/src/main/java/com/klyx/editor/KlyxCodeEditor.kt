@@ -26,10 +26,6 @@ class KlyxCodeEditor @JvmOverloads constructor(
     private val scope = CoroutineScope(Dispatchers.Default)
 
     init {
-        FileProviderRegistry.getInstance().addFileProvider(
-            AssetsFileResolver(context.applicationContext.assets)
-        )
-
         registerDefaultGrammers()
         registerDefaultThemes()
         applyTextMateTheme()
@@ -109,5 +105,12 @@ class KlyxCodeEditor @JvmOverloads constructor(
         }
 
         setEditorLanguage(language)
+    }
+
+    companion object {
+        @JvmStatic
+        fun setupFileProviders(context: Context) {
+            FileProviderRegistry.getInstance().addFileProvider(AssetsFileResolver(context.applicationContext.assets))
+        }
     }
 }
