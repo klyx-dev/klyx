@@ -36,7 +36,7 @@ data class EditorSettings(
     """
     )
     @SerialName("font_family")
-    val fontFamily: String = "JetBrains Mono",
+    val fontFamily: String = "Roboto Mono",
 
     @SerialComment(
         """
@@ -64,7 +64,11 @@ data class EditorSettings(
 
     @SerialComment("Whether to enable cursor animation or not")
     @SerialName("cursor_animation")
-    val cursorAnimation: Boolean = false
+    val cursorAnimation: Boolean = true,
+
+    @SerialComment("The font size to use for rendering text in the editor")
+    @SerialName("font_size")
+    val fontSize: Float = 14f
 )
 
 @Serializable

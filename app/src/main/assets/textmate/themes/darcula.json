@@ -7,7 +7,7 @@
                 "foreground": "#cccccc",
                 "lineHighlight": "#2B2B2B",
                 "selection": "#214283",
-                "highlightedDelimitersForeground": "#57f6c0"
+                "highlightedDelimetersForeground": "#D4D4D4"
             }
         },
         {
@@ -470,12 +470,6 @@
             "settings": {
                 "foreground": "#FFC66D"
             }
-        },
-        {
-            "scope": [
-                "meta.line-number.active"
-            ],
-            "settings": { "foreground": "#61afef" }
         }
     ]
 }

@@ -6,6 +6,12 @@ import com.klyx.editor.KlyxCodeEditor
 class Klyx : Application() {
     override fun onCreate() {
         super.onCreate()
-        KlyxCodeEditor.setupFileProviders(this)
+        KlyxCodeEditor.apply {
+            loadTSLibrary()
+            setupFileProviders(this@Klyx)
+            registerDefaultGrammers()
+            loadTextMateLanguages("textmate/grammers/grammers.json")
+            registerDefaultThemes()
+        }
     }
 }

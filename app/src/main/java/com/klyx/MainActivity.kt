@@ -81,14 +81,13 @@ class MainActivity : ComponentActivity() {
                             .systemBarsPadding()
                             .fillMaxSize()
                     ) {
-                        val editorSettings by remember { derivedStateOf { settings.editor } }
                         val viewModel = LocalEditorViewModel.current
 
                         LaunchedEffect(Unit) {
                             viewModel.openFile(SettingsManager.settingsFile(context))
                         }
 
-                        EditorScreen(editorSettings)
+                        EditorScreen()
 
                         LaunchedEffect(Unit) {
                             delay(500)

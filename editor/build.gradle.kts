@@ -42,7 +42,11 @@ dependencies {
 
     api(platform(libs.sora.editor.bom))
     api(libs.sora.editor)
+    api(libs.sora.editor.language.treesitter)
     implementation(libs.sora.editor.language.textmate)
+    implementation(libs.ktreesitter)
+    implementation(libs.android.tree.sitter)
+    implementation(libs.android.tree.sitter.java)
 
     testImplementation(libs.junit)
 

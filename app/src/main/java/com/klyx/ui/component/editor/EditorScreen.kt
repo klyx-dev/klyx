@@ -19,19 +19,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.file.id
 import com.klyx.core.rememberTypeface
-import com.klyx.core.settings.EditorSettings
 import com.klyx.editor.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorStore
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.editor.scopeName
 
 @Composable
-fun EditorScreen(
-    settings: EditorSettings,
-    modifier: Modifier = Modifier
-) {
+fun EditorScreen(modifier: Modifier = Modifier) {
+    val appSettings = LocalAppSettings.current
+    val settings by remember { derivedStateOf { appSettings.editor } }
+
     val editors = LocalEditorStore.current
     val context = LocalContext.current
     val viewModel = LocalEditorViewModel.current
@@ -45,6 +45,7 @@ fun EditorScreen(
             editor.isCursorAnimationEnabled = settings.cursorAnimation
             editor.typefaceText = typefaceText
             editor.typefaceLineNumber = typefaceLineNumber
+            editor.setTextSize(settings.fontSize)
         }
     }
 
@@ -81,9 +82,9 @@ fun EditorScreen(
             if (file != null && fileId != null) {
                 val editor = editors.getOrPut(fileId) {
                     KlyxCodeEditor(context).apply {
-                        setText(file.readText())
                         setLanguage(file.scopeName())
                         setTheme(settings.theme)
+                        setText(file.readText())
                         isCursorAnimationEnabled = settings.cursorAnimation
                     }
                 }

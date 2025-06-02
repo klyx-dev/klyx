@@ -1,11 +1,13 @@
 [versions]
 agp = "8.12.0-alpha02"
+androidTreeSitter = "4.3.1"
 assertjCore = "3.27.3"
 desugar_jdk_libs = "2.1.5"
 json5k = "0.3.0"
 kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.8.1"
 ktoml = "0.7.0"
+ktreesitter = "0.24.1"
 sora-editor = "0.23.5"
 kotlin = "2.1.21"
 coreKtx = "1.16.0"
@@ -21,6 +23,9 @@ truth = "1.4.4"
 utilcodex = "1.31.1"
 
 [libraries]
+#noinspection Aligned16KB
+android-tree-sitter = { module = "com.itsaky.androidide.treesitter:android-tree-sitter", version.ref = "androidTreeSitter" }
+android-tree-sitter-java = { module = "com.itsaky.androidide.treesitter:tree-sitter-java", version.ref = "androidTreeSitter" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
@@ -32,7 +37,9 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 ktoml-core = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
 ktoml-file = { module = "com.akuleshov7:ktoml-file", version.ref = "ktoml" }
+ktreesitter = { module = "io.github.tree-sitter:ktreesitter", version.ref = "ktreesitter" }
 sora-editor-language-textmate = { module = "io.github.Rosemoe.sora-editor:language-textmate" }
+sora-editor-language-treesitter = { module = "io.github.Rosemoe.sora-editor:language-treesitter" }
 sora-editor = { module = "io.github.Rosemoe.sora-editor:editor" }
 sora-editor-bom = { module = "io.github.Rosemoe.sora-editor:bom", version.ref = "sora-editor" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
