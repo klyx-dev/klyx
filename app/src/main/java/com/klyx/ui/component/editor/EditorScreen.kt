@@ -21,7 +21,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.file.id
 import com.klyx.core.rememberTypeface
-import com.klyx.editor.Editor
 import com.klyx.editor.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorStore
 import com.klyx.editor.compose.LocalEditorViewModel
@@ -109,14 +108,13 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                     }
 
                     LaunchedEffect(editor) {
-                        Editor.setCurrentEditor(editor)
                         editor.requestFocus()
                     }
 
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { editor },
-                        onRelease = { it.release() }
+                        onRelease = KlyxCodeEditor::release
                     )
                 }
             }
