@@ -39,6 +39,11 @@ dependencies {
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.ui)
+    implementation(libs.androidx.ui.graphics)
 
     api(platform(libs.sora.editor.bom))
     api(libs.sora.editor)
@@ -47,6 +52,8 @@ dependencies {
     implementation(libs.ktreesitter)
     implementation(libs.android.tree.sitter)
     implementation(libs.android.tree.sitter.java)
+
+    implementation(project(":core"))
 
     testImplementation(libs.junit)
 

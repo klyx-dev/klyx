@@ -12,17 +12,26 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.compose.LocalBuildVariant
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.setAppContent
 import com.klyx.core.settings.AppTheme
 import com.klyx.core.settings.SettingsManager
+import com.klyx.editor.Editor
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.extension.Extension
 import com.klyx.extension.ExtensionFactory
@@ -67,6 +76,17 @@ class MainActivity : ComponentActivity() {
                 )
             )
 
+            val editorState by LocalEditorViewModel.current.state.collectAsState()
+            val editor = Editor.current
+
+            LaunchedEffect(Unit) {
+                subscribeToEvent<KeyEvent> { event ->
+                    if (event.isCtrlPressed && event.key == Key.S) {
+
+                    }
+                }
+            }
+
             KlyxTheme(
                 dynamicColor = settings.dynamicColors,
                 darkTheme = darkMode
@@ -87,7 +107,12 @@ class MainActivity : ComponentActivity() {
                             viewModel.openFile(SettingsManager.settingsFile(context))
                         }
 
-                        EditorScreen()
+                        Box(modifier = Modifier.onPreviewKeyEvent { event ->
+                            EventBus.getInstance().postSync(event)
+                            false
+                        }) {
+                            EditorScreen()
+                        }
 
                         LaunchedEffect(Unit) {
                             delay(500)

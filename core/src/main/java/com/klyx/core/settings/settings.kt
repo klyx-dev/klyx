@@ -36,7 +36,7 @@ data class EditorSettings(
     """
     )
     @SerialName("font_family")
-    val fontFamily: String = "Roboto Mono",
+    val fontFamily: String = "IBM Plex Mono",
 
     @SerialComment(
         """
