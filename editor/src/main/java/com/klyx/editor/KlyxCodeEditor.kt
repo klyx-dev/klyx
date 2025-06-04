@@ -2,7 +2,10 @@ package com.klyx.editor
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.KeyEvent
 import com.itsaky.androidide.treesitter.TreeSitter
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.toComposeKeyEvent
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
@@ -30,6 +33,11 @@ class KlyxCodeEditor @JvmOverloads constructor(
         applyTextMateTheme()
 
         isCursorAnimationEnabled = false
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        EventBus.getInstance().postSync(event.toComposeKeyEvent())
+        return super.onKeyDown(keyCode, event)
     }
 
     fun setTheme(name: String) {

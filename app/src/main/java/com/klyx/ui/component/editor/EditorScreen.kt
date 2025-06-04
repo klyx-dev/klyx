@@ -3,18 +3,17 @@ package com.klyx.ui.component.editor
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -27,6 +26,7 @@ import com.klyx.editor.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorStore
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.editor.scopeName
+import kotlinx.coroutines.launch
 
 @Composable
 fun EditorScreen(modifier: Modifier = Modifier) {
@@ -40,7 +40,21 @@ fun EditorScreen(modifier: Modifier = Modifier) {
     val typefaceText by rememberTypeface(settings.fontFamily)
     val typefaceLineNumber by rememberTypeface(settings.lineNumberFontFamily)
 
-    LaunchedEffect(settings) {
+    val state by viewModel.state.collectAsState()
+    val openFiles by remember { derivedStateOf { state.openFiles } }
+
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { openFiles.size })
+    val scope = rememberCoroutineScope()
+
+    // set active file when page changes
+    LaunchedEffect(pagerState.currentPage, openFiles.size) {
+        openFiles.getOrNull(pagerState.currentPage)?.let { file ->
+            viewModel.setActiveFile(file.id)
+        }
+    }
+
+    // update all editors on settings change
+    LaunchedEffect(settings, typefaceText, typefaceLineNumber) {
         editors.values.forEach { editor ->
             editor.setTheme(settings.theme)
             editor.isCursorAnimationEnabled = settings.cursorAnimation
@@ -50,71 +64,64 @@ fun EditorScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    var currentFileIndex by remember { mutableIntStateOf(0) }
-
-    val state by viewModel.state.collectAsState()
-    val openFiles by remember { derivedStateOf { state.openFiles } }
-
     Column(modifier = modifier) {
         if (openFiles.isNotEmpty()) {
-            // Tab bar
             EditorTabBar(
                 tabs = openFiles.map { it.name },
-                selectedTab = currentFileIndex,
-                onTabSelected = { index ->
-                    currentFileIndex = index
-                    viewModel.setActiveFile(openFiles[index].id)
+                selectedTab = pagerState.currentPage,
+                onTabSelected = { page ->
+                    viewModel.setActiveFile(openFiles[page].id)
+                    scope.launch { pagerState.animateScrollToPage(page) }
                 },
                 onClose = { index ->
                     viewModel.closeFile(openFiles[index].id)
                     editors.remove(openFiles[index].id)
-                    if (index == currentFileIndex && openFiles.size > 1) {
-                        currentFileIndex = maxOf(0, index - 1)
-                        viewModel.setActiveFile(openFiles[currentFileIndex].id)
-                    }
                 },
                 isDirty = { false }
             )
 
-            // Code Editor Area
-            val file = openFiles.getOrNull(currentFileIndex)
-            val fileId = file?.id
+            HorizontalPager(
+                state = pagerState,
+                userScrollEnabled = false,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .imePadding(),
+            ) { page ->
+                val file = openFiles.getOrNull(page)
+                val fileId = file?.id
 
-            if (file != null && fileId != null) {
-                val editor = editors.getOrPut(fileId) {
-                    KlyxCodeEditor(context).apply {
-                        setLanguage(file.scopeName())
-                        setTheme(settings.theme)
-                        setText(file.readText())
-                        isCursorAnimationEnabled = settings.cursorAnimation
+                if (file != null && fileId != null) {
+                    val editor = remember(fileId) {
+                        editors.getOrPut(fileId) {
+                            KlyxCodeEditor(context).apply {
+                                setLanguage(file.scopeName())
+                                setTheme(settings.theme)
+                                setText(file.readText())
+                                isCursorAnimationEnabled = settings.cursorAnimation
+                            }
+                        }
                     }
-                }
 
-                LaunchedEffect(typefaceText, typefaceLineNumber) {
-                    editor.typefaceText = typefaceText
-                    editor.typefaceLineNumber = typefaceLineNumber
-                }
+                    // update fonts only once for this editor
+                    LaunchedEffect(typefaceText, typefaceLineNumber) {
+                        editor.typefaceText = typefaceText
+                        editor.typefaceLineNumber = typefaceLineNumber
+                    }
 
-                key(fileId) {
                     LaunchedEffect(editor) {
                         Editor.setCurrentEditor(editor)
+                        editor.requestFocus()
                     }
 
                     AndroidView(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .imePadding(),
+                        modifier = Modifier.fillMaxSize(),
                         factory = { editor },
-                        update = KlyxCodeEditor::requestFocus
+                        onRelease = { it.release() }
                     )
                 }
             }
         } else {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text("No files open")
             }
         }

@@ -14,8 +14,3 @@ val LocalEditorStore = compositionLocalOf<SnapshotStateMap<FileId, KlyxCodeEdito
 val LocalEditorViewModel = compositionLocalOf<EditorViewModel> {
     noLocalProvidedFor<EditorViewModel>()
 }
-
-/**
- * Returns current editor, or null if not any
- */
-val LocalKlyxEditor = compositionLocalOf<KlyxCodeEditor?> { null }
