@@ -5,12 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,13 +25,11 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.klyx.core.compose.LocalAppSettings
-import com.klyx.core.compose.LocalBuildVariant
-import com.klyx.core.event.EventBus
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.KWatchEvent
 import com.klyx.core.file.asWatchChannel
@@ -45,6 +44,7 @@ import com.klyx.extension.Extension
 import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionToml
 import com.klyx.ui.component.editor.EditorScreen
+import com.klyx.ui.component.editor.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.consumeEach
@@ -133,31 +133,35 @@ class MainActivity : ComponentActivity() {
                 dynamicColor = settings.dynamicColors,
                 darkTheme = darkMode
             ) {
-                val buildVariant = LocalBuildVariant.current
+                val background = MaterialTheme.colorScheme.background
 
                 Surface(
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.surfaceColorAtElevation(5.dp)
                 ) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .systemBarsPadding()
                             .fillMaxSize()
                     ) {
-                        val viewModel = LocalEditorViewModel.current
+                        MainMenuBar()
 
-                        LaunchedEffect(Unit) {
-                            viewModel.openFile(settingsFile)
+                        Surface(color = background) {
+                            val viewModel = LocalEditorViewModel.current
+                            LaunchedEffect(Unit) {
+                                viewModel.openFile(settingsFile)
 
-                            val tempFile = File.createTempFile("temp", ".txt").apply { deleteOnExit() }
-                            tempFile.writeText("Hello, World!")
-                            viewModel.openFile(tempFile)
-                        }
+                                val tempFile = File.createTempFile("temp", ".txt").apply { deleteOnExit() }
+                                tempFile.writeText("Hello, World!")
+                                viewModel.openFile(tempFile)
+                            }
 
-                        EditorScreen()
+                            EditorScreen()
 
-                        LaunchedEffect(Unit) {
-                            delay(500)
-                            loadTestExtension(extensionFactory)
+                            LaunchedEffect(Unit) {
+                                delay(500)
+                                loadTestExtension(extensionFactory)
+                            }
                         }
                     }
                 }

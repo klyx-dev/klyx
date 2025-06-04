@@ -14,52 +14,33 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
-import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.file.id
 import com.klyx.core.rememberTypeface
-import com.klyx.editor.KlyxCodeEditor
+import com.klyx.editor.compose.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorStore
 import com.klyx.editor.compose.LocalEditorViewModel
-import com.klyx.editor.scopeName
 import kotlinx.coroutines.launch
 
 @Composable
 fun EditorScreen(modifier: Modifier = Modifier) {
-    val appSettings = LocalAppSettings.current
-    val settings by remember { derivedStateOf { appSettings.editor } }
-
     val editors = LocalEditorStore.current
-    val context = LocalContext.current
     val viewModel = LocalEditorViewModel.current
-
-    val typefaceText by rememberTypeface(settings.fontFamily)
-    val typefaceLineNumber by rememberTypeface(settings.lineNumberFontFamily)
 
     val state by viewModel.state.collectAsState()
     val openFiles by remember { derivedStateOf { state.openFiles } }
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openFiles.size })
     val scope = rememberCoroutineScope()
+    val typeface by rememberTypeface("IBM Plex Mono")
 
-    // set active file when page changes
-    LaunchedEffect(pagerState.currentPage, openFiles.size) {
-        openFiles.getOrNull(pagerState.currentPage)?.let { file ->
-            viewModel.setActiveFile(file.id)
-        }
-    }
-
-    // update all editors on settings change
-    LaunchedEffect(settings, typefaceText, typefaceLineNumber) {
-        editors.values.forEach { editor ->
-            editor.setTheme(settings.theme)
-            editor.isCursorAnimationEnabled = settings.cursorAnimation
-            editor.typefaceText = typefaceText
-            editor.typefaceLineNumber = typefaceLineNumber
-            editor.setTextSize(settings.fontSize)
+    LaunchedEffect(pagerState, openFiles.size) {
+        snapshotFlow { pagerState.currentPage }.collect { page ->
+            openFiles.getOrNull(page)?.let { file ->
+                viewModel.setActiveFile(file.id)
+            }
         }
     }
 
@@ -90,31 +71,9 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                 val fileId = file?.id
 
                 if (file != null && fileId != null) {
-                    val editor = remember(fileId) {
-                        editors.getOrPut(fileId) {
-                            KlyxCodeEditor(context).apply {
-                                setLanguage(file.scopeName())
-                                setTheme(settings.theme)
-                                setText(file.readText())
-                                isCursorAnimationEnabled = settings.cursorAnimation
-                            }
-                        }
-                    }
-
-                    // update fonts only once for this editor
-                    LaunchedEffect(typefaceText, typefaceLineNumber) {
-                        editor.typefaceText = typefaceText
-                        editor.typefaceLineNumber = typefaceLineNumber
-                    }
-
-                    LaunchedEffect(editor) {
-                        editor.requestFocus()
-                    }
-
-                    AndroidView(
-                        modifier = Modifier.fillMaxSize(),
-                        factory = { editor },
-                        onRelease = KlyxCodeEditor::release
+                    KlyxCodeEditor(
+                        file.readText(),
+                        typeface = typeface
                     )
                 }
             }

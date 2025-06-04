@@ -22,8 +22,8 @@ data class AppSettings(
     )
     val theme: AppTheme = AppTheme.Dark,
 
-    @SerialComment("The editor settings")
-    val editor: EditorSettings = EditorSettings()
+//    @SerialComment("The editor settings")
+//    val editor: EditorSettings = EditorSettings()
 )
 
 @Serializable
