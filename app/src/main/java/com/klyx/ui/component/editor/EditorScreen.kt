@@ -1,8 +1,5 @@
 package com.klyx.ui.component.editor
 
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,13 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import com.klyx.core.event.EventBus
 import com.klyx.core.file.id
-import com.klyx.core.key.textInput
 import com.klyx.core.rememberTypeface
 import com.klyx.editor.compose.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorStore
@@ -44,8 +35,6 @@ fun EditorScreen(modifier: Modifier = Modifier) {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openFiles.size })
     val scope = rememberCoroutineScope()
     val typeface by rememberTypeface("IBM Plex Mono")
-    val keyboardController = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
 
     LaunchedEffect(pagerState, openFiles.size) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
@@ -85,18 +74,6 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                     KlyxCodeEditor(
                         file.readText(),
                         typeface = typeface,
-                        modifier = Modifier
-                            .focusRequester(focusRequester)
-                            .textInput(keyboardController) { event ->
-                                EventBus.getInstance().postSync(event)
-                                true
-                            }
-                            .focusable(interactionSource = remember { MutableInteractionSource() })
-                            .pointerInput(Unit) {
-                                detectTapGestures {
-                                    focusRequester.requestFocus()
-                                }
-                            }
                     )
                 }
             }

@@ -1,4 +1,4 @@
-package com.klyx.core.key
+package com.klyx.editor.compose.input
 
 import android.text.InputType
 import android.view.inputmethod.BaseInputConnection
