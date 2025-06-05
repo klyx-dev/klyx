@@ -16,6 +16,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.editor.compose.input.textInput
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun KlyxCodeEditor(
@@ -68,6 +70,7 @@ fun KlyxCodeEditor(
     var showCursor by remember { mutableStateOf(true) }
     var isCursorActive by remember { mutableStateOf(false) }
     var lastCursorActivityTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var isCursorMoving by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val lineHeightPx = with(density) { lineHeight.toPx() }
     val lineSpacingPx = with(density) { 4.dp.toPx() }
@@ -78,11 +81,9 @@ fun KlyxCodeEditor(
     val endHorizontalPaddingPx = if (wrapText) 0f else with(density) { 50.dp.toPx() }
     val cursorFocusPaddingPx = with(density) { cursorFocusPadding.toPx() }
 
-    // Track canvas size
     var canvasWidth by remember { mutableFloatStateOf(0f) }
     var canvasHeight by remember { mutableFloatStateOf(0f) }
 
-    // Scrollbar dragging state
     var draggingVerticalScrollbar by remember { mutableStateOf(false) }
     var draggingHorizontalScrollbar by remember { mutableStateOf(false) }
     var verticalDragOffset by remember { mutableFloatStateOf(0f) }
@@ -97,6 +98,7 @@ fun KlyxCodeEditor(
 
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+    val coroutineScope = rememberCoroutineScope()
 
     fun ensureCursorInView() {
         val cursorPosition = editorState.cursorPosition
@@ -121,14 +123,12 @@ fun KlyxCodeEditor(
         val cursorY = cursorLine * fullLineHeightPx
         val cursorBottom = cursorY + fullLineHeightPx
 
-        // Adjust vertical scroll if needed
         if (cursorY < scrollY.floatValue + cursorFocusPaddingPx) {
             scrollY.floatValue = (cursorY - cursorFocusPaddingPx).coerceAtLeast(0f)
         } else if (cursorBottom > scrollY.floatValue + canvasHeight - cursorFocusPaddingPx) {
             scrollY.floatValue = (cursorBottom - canvasHeight + cursorFocusPaddingPx).coerceAtLeast(0f)
         }
 
-        // Adjust horizontal scroll if needed
         if (!wrapText) {
             val cursorRight = gutterWidthPx + horizontalPaddingPx + cursorX
             if (cursorX < scrollX.floatValue + cursorFocusPaddingPx) {
@@ -145,7 +145,9 @@ fun KlyxCodeEditor(
             delay(cursorBlinkRate)
             val currentTime = System.currentTimeMillis()
             if (!isCursorActive || currentTime - lastCursorActivityTime > cursorBlinkRate) {
-                showCursor = !showCursor
+                if (!isCursorMoving) {
+                    showCursor = !showCursor
+                }
             }
         }
     }
@@ -155,6 +157,11 @@ fun KlyxCodeEditor(
         isCursorActive = true
         lastCursorActivityTime = System.currentTimeMillis()
         showCursor = true
+        isCursorMoving = true
+        coroutineScope.launch {
+            delay(100)
+            isCursorMoving = false
+        }
     }
 
     Canvas(
@@ -167,6 +174,7 @@ fun KlyxCodeEditor(
                 editorState = editorState,
                 onKeyEvent = { event: KeyEvent ->
                     if (event.type == KeyEventType.KeyDown) {
+                        updateCursorActivity()
                         when (event.key) {
                             Key.Backspace -> {
                                 if (editorState.text.isNotEmpty() && editorState.cursorPosition > 0) {
@@ -313,7 +321,10 @@ fun KlyxCodeEditor(
                         } else canvasHeight.toFloat()
 
                         val verticalThumbTop = if (verticalLimit > 0f) {
-                            (scrollY.floatValue / verticalLimit * (canvasHeight - verticalThumbHeight)).coerceIn(0f, canvasHeight - verticalThumbHeight)
+                            (scrollY.floatValue / verticalLimit * (canvasHeight - verticalThumbHeight)).coerceIn(
+                                0f,
+                                canvasHeight - verticalThumbHeight
+                            )
                         } else 0f
 
                         val horizontalThumbWidth = if (!wrapText && horizontalLimit > 0f) {
