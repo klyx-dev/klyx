@@ -1,7 +1,6 @@
 package com.klyx.editor.compose.input
 
 import android.text.InputType
-import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
 import androidx.compose.ui.Modifier
@@ -15,28 +14,24 @@ import androidx.compose.ui.platform.PlatformTextInputModifierNode
 import androidx.compose.ui.platform.PlatformTextInputSession
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.establishTextInputSession
+import com.klyx.editor.compose.EditorState
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 private class TextInputModifierNode(
     var softwareKeyboardController: SoftwareKeyboardController?,
-    var sendKeyEventHandler: (KeyEvent) -> Boolean
+    var editorState: EditorState,
+    var sendKeyEventHandler: (KeyEvent) -> Boolean,
+    var onCursorMoved: () -> Unit
 ) : Modifier.Node(), FocusEventModifierNode, PlatformTextInputModifierNode {
     private var focusedJob: Job? = null
 
     override fun onFocusEvent(focusState: FocusState) {
-        println("Focus: $focusState")
-
         focusedJob?.cancel()
         focusedJob = if (focusState.isFocused) {
             softwareKeyboardController?.show()
             coroutineScope.launch {
                 establishTextInputSession {
-                    launch {
-                        // TODO: Observe text field state, call into system to update it as
-                        //  required by the platform.
-                    }
-
                     val request = createInputRequest()
                     startInputMethod(request)
                 }
@@ -50,13 +45,12 @@ private class TextInputModifierNode(
     private fun PlatformTextInputSession.createInputRequest(): PlatformTextInputMethodRequest {
         return object : PlatformTextInputMethodRequest {
             override fun createInputConnection(outAttributes: EditorInfo): InputConnection {
-                outAttributes.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                outAttributes.imeOptions = EditorInfo.IME_FLAG_NO_ENTER_ACTION or EditorInfo.IME_FLAG_NO_EXTRACT_UI
-                return object : BaseInputConnection(view, false) {
-                    override fun sendKeyEvent(event: android.view.KeyEvent): Boolean {
-                        return sendKeyEventHandler(KeyEvent(event))
-                    }
-                }
+                outAttributes.inputType = InputType.TYPE_CLASS_TEXT or 
+                    InputType.TYPE_TEXT_FLAG_MULTI_LINE or 
+                    InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                outAttributes.imeOptions = EditorInfo.IME_FLAG_NO_ENTER_ACTION or 
+                    EditorInfo.IME_FLAG_NO_EXTRACT_UI
+                return KlyxInputConnection.create(view, editorState, sendKeyEventHandler, onCursorMoved)
             }
         }
     }
@@ -64,26 +58,34 @@ private class TextInputModifierNode(
 
 private data class TextInputElement(
     private val keyboardController: SoftwareKeyboardController?,
-    private val sendKeyEventHandler: (KeyEvent) -> Boolean
+    private val editorState: EditorState,
+    private val sendKeyEventHandler: (KeyEvent) -> Boolean,
+    private val onCursorMoved: () -> Unit
 ) : ModifierNodeElement<TextInputModifierNode>() {
 
     override fun InspectorInfo.inspectableProperties() {
         name = "textInput"
         properties["keyboardController"] = keyboardController
+        properties["editorState"] = editorState
         properties["sendKeyEventHandler"] = sendKeyEventHandler
+        properties["onCursorMoved"] = onCursorMoved
     }
 
     override fun create(): TextInputModifierNode {
-        return TextInputModifierNode(keyboardController, sendKeyEventHandler)
+        return TextInputModifierNode(keyboardController, editorState, sendKeyEventHandler, onCursorMoved)
     }
 
     override fun update(node: TextInputModifierNode) {
         node.softwareKeyboardController = keyboardController
+        node.editorState = editorState
         node.sendKeyEventHandler = sendKeyEventHandler
+        node.onCursorMoved = onCursorMoved
     }
 }
 
 fun Modifier.textInput(
     keyboardController: SoftwareKeyboardController? = null,
-    onKeyEvent: (KeyEvent) -> Boolean = { false }
-): Modifier = this then TextInputElement(keyboardController, onKeyEvent)
+    editorState: EditorState,
+    onKeyEvent: (KeyEvent) -> Boolean = { false },
+    onCursorMoved: () -> Unit = {}
+): Modifier = this then TextInputElement(keyboardController, editorState, onKeyEvent, onCursorMoved)

@@ -10,8 +10,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,6 +25,12 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -30,12 +38,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.klyx.core.event.EventBus
 import com.klyx.editor.compose.input.textInput
+import kotlinx.coroutines.delay
 
 @Composable
 fun KlyxCodeEditor(
-    text: String,
+    editorState: EditorState,
     modifier: Modifier = Modifier,
     wrapText: Boolean = false,
     scrollbarThickness: Dp = 10.dp,
@@ -49,11 +57,17 @@ fun KlyxCodeEditor(
     pinnedLineNumbers: Boolean = false,
     gutterBackgroundColor: Color = Color(0xFF2B2B2B),
     gutterTextColor: Color = Color(0xFF888888),
-    gutterDividerColor: Color = Color(0xFF444444)
+    gutterDividerColor: Color = Color(0xFF444444),
+    cursorColor: Color = Color.White,
+    cursorWidth: Dp = 2.dp,
+    cursorBlinkRate: Long = 500,
+    cursorFocusPadding: Dp = 100.dp
 ) {
     val scrollY = remember { mutableFloatStateOf(0f) }
     val scrollX = remember { mutableFloatStateOf(0f) }
-
+    var showCursor by remember { mutableStateOf(true) }
+    var isCursorActive by remember { mutableStateOf(false) }
+    var lastCursorActivityTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val density = LocalDensity.current
     val lineHeightPx = with(density) { lineHeight.toPx() }
     val lineSpacingPx = with(density) { 4.dp.toPx() }
@@ -62,31 +76,195 @@ fun KlyxCodeEditor(
     val gutterWidthPx = if (showGutter) with(density) { gutterWidth.toPx() } else 0f
     val scrollbarThicknessPx = with(density) { scrollbarThickness.toPx() }
     val endHorizontalPaddingPx = if (wrapText) 0f else with(density) { 50.dp.toPx() }
+    val cursorFocusPaddingPx = with(density) { cursorFocusPadding.toPx() }
 
+    // Track canvas size
+    var canvasWidth by remember { mutableFloatStateOf(0f) }
+    var canvasHeight by remember { mutableFloatStateOf(0f) }
+
+    // Scrollbar dragging state
     var draggingVerticalScrollbar by remember { mutableStateOf(false) }
     var draggingHorizontalScrollbar by remember { mutableStateOf(false) }
     var verticalDragOffset by remember { mutableFloatStateOf(0f) }
     var horizontalDragOffset by remember { mutableFloatStateOf(0f) }
 
+    val textPaint = Paint().apply {
+        textSize = lineHeightPx
+        color = Color.White.toArgb()
+        isAntiAlias = true
+        this.typeface = typeface
+    }
+
     val keyboardController = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
+
+    fun ensureCursorInView() {
+        val cursorPosition = editorState.cursorPosition
+        val lines = editorState.text.lines()
+        var currentPosition = 0
+        var cursorLine = 0
+        var cursorX = 0f
+
+        // Find cursor line and X position
+        for (i in lines.indices) {
+            val lineLength = lines[i].length + 1
+            if (currentPosition + lineLength > cursorPosition) {
+                cursorLine = i
+                val line = lines[i]
+                val charPosition = cursorPosition - currentPosition
+                cursorX = textPaint.measureText(line.substring(0, charPosition))
+                break
+            }
+            currentPosition += lineLength
+        }
+
+        val cursorY = cursorLine * fullLineHeightPx
+        val cursorBottom = cursorY + fullLineHeightPx
+
+        // Adjust vertical scroll if needed
+        if (cursorY < scrollY.floatValue + cursorFocusPaddingPx) {
+            scrollY.floatValue = (cursorY - cursorFocusPaddingPx).coerceAtLeast(0f)
+        } else if (cursorBottom > scrollY.floatValue + canvasHeight - cursorFocusPaddingPx) {
+            scrollY.floatValue = (cursorBottom - canvasHeight + cursorFocusPaddingPx).coerceAtLeast(0f)
+        }
+
+        // Adjust horizontal scroll if needed
+        if (!wrapText) {
+            val cursorRight = gutterWidthPx + horizontalPaddingPx + cursorX
+            if (cursorX < scrollX.floatValue + cursorFocusPaddingPx) {
+                scrollX.floatValue = (cursorX - cursorFocusPaddingPx).coerceAtLeast(0f)
+            } else if (cursorRight > scrollX.floatValue + canvasWidth - cursorFocusPaddingPx) {
+                scrollX.floatValue = (cursorRight - canvasWidth + cursorFocusPaddingPx).coerceAtLeast(0f)
+            }
+        }
+    }
+
+    // Cursor blink effect
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(cursorBlinkRate)
+            val currentTime = System.currentTimeMillis()
+            if (!isCursorActive || currentTime - lastCursorActivityTime > cursorBlinkRate) {
+                showCursor = !showCursor
+            }
+        }
+    }
+
+    // Function to update cursor activity
+    fun updateCursorActivity() {
+        isCursorActive = true
+        lastCursorActivityTime = System.currentTimeMillis()
+        showCursor = true
+    }
 
     Canvas(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(focusRequester)
-            .textInput(keyboardController) { event ->
-                EventBus.getInstance().postSync(event)
-                true
-            }
+            .textInput(
+                keyboardController = keyboardController,
+                editorState = editorState,
+                onKeyEvent = { event: KeyEvent ->
+                    if (event.type == KeyEventType.KeyDown) {
+                        when (event.key) {
+                            Key.Backspace -> {
+                                if (editorState.text.isNotEmpty() && editorState.cursorPosition > 0) {
+                                    val currentText = editorState.text
+                                    val cursorPos = editorState.cursorPosition
+                                    val beforeCursor = currentText.substring(0, cursorPos - 1)
+                                    val afterCursor = currentText.substring(cursorPos)
+                                    editorState.text = beforeCursor + afterCursor
+                                    editorState.moveCursor(cursorPos - 1)
+                                    ensureCursorInView()
+                                }
+                                true
+                            }
+
+                            Key.Enter -> {
+                                val currentText = editorState.text
+                                val cursorPos = editorState.cursorPosition
+                                val beforeCursor = currentText.substring(0, cursorPos)
+                                val afterCursor = currentText.substring(cursorPos)
+                                editorState.text = beforeCursor + "\n" + afterCursor
+                                editorState.moveCursor(cursorPos + 1)
+                                ensureCursorInView()
+                                true
+                            }
+
+                            else -> {
+                                if (event.utf16CodePoint != 0) {
+                                    val char = event.utf16CodePoint.toChar()
+                                    if (char.isDefined() && !char.isISOControl()) {
+                                        val currentText = editorState.text
+                                        val cursorPos = editorState.cursorPosition
+                                        val beforeCursor = currentText.substring(0, cursorPos)
+                                        val afterCursor = currentText.substring(cursorPos)
+                                        editorState.text = beforeCursor + char + afterCursor
+                                        editorState.moveCursor(cursorPos + 1)
+                                        ensureCursorInView()
+                                        true
+                                    } else {
+                                        false
+                                    }
+                                } else {
+                                    false
+                                }
+                            }
+                        }
+                    } else {
+                        false
+                    }
+                },
+                onCursorMoved = {
+                    updateCursorActivity()
+                    ensureCursorInView()
+                }
+            )
             .focusable(interactionSource = remember { MutableInteractionSource() })
             .pointerInput(Unit) {
-                detectTapGestures {
+                detectTapGestures { offset ->
                     focusRequester.requestFocus()
+                    updateCursorActivity()
+                    // Calculate cursor position from tap
+                    val paint = Paint().apply {
+                        textSize = lineHeightPx
+                        isAntiAlias = true
+                        this.typeface = typeface
+                    }
+
+                    val tapX = offset.x - gutterWidthPx - horizontalPaddingPx + scrollX.floatValue
+                    val tapY = offset.y + scrollY.floatValue
+
+                    // Find the line number
+                    val lineNumber = (tapY / fullLineHeightPx).toInt().coerceAtLeast(0)
+                    val lines = editorState.text.lines()
+                    if (lineNumber < lines.size) {
+                        val line = lines[lineNumber]
+                        // Find the character position in the line
+                        var charPosition = 0
+                        var currentX = 0f
+                        for (i in line.indices) {
+                            val charWidth = paint.measureText(line[i].toString())
+                            if (currentX + charWidth / 2 > tapX) {
+                                break
+                            }
+                            currentX += charWidth
+                            charPosition++
+                        }
+
+                        // Calculate absolute position in text
+                        var absolutePosition = 0
+                        for (i in 0 until lineNumber) {
+                            absolutePosition += lines[i].length + 1 // +1 for newline
+                        }
+                        absolutePosition += charPosition
+
+                        editorState.moveCursor(absolutePosition)
+                    }
                 }
             }
-            .pointerInput(text, wrapText, showGutter, pinnedLineNumbers) { // Consider unifying allLines calculation
+            .pointerInput(editorState.text, wrapText, showGutter, pinnedLineNumbers) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         val canvasWidth = size.width
@@ -98,10 +276,8 @@ fun KlyxCodeEditor(
                             this.typeface = typeface
                         }
 
-                        // this allLines calculation is specific to drag gestures.
-                        // for perfect consistency, it should use the same logic/source as the drawing part.
                         val allLines = buildList {
-                            text.lines().forEachIndexed { originalLineIdx, originalLine ->
+                            editorState.text.lines().forEachIndexed { originalLineIdx, originalLine ->
                                 if (!wrapText) {
                                     add(originalLine)
                                 } else {
@@ -137,12 +313,13 @@ fun KlyxCodeEditor(
                         } else canvasHeight.toFloat()
 
                         val verticalThumbTop = if (verticalLimit > 0f) {
-                            (scrollY.floatValue / verticalLimit * (canvasHeight - verticalThumbHeight))
-                                .coerceIn(0f, canvasHeight - verticalThumbHeight)
+                            (scrollY.floatValue / verticalLimit * (canvasHeight - verticalThumbHeight)).coerceIn(0f, canvasHeight - verticalThumbHeight)
                         } else 0f
 
                         val horizontalThumbWidth = if (!wrapText && horizontalLimit > 0f) {
-                            (canvasWidth / (maxLineWidth + horizontalPaddingPx + endHorizontalPaddingPx + gutterWidthPx) * canvasWidth).coerceAtLeast(20f)
+                            (canvasWidth / (maxLineWidth + horizontalPaddingPx + endHorizontalPaddingPx + gutterWidthPx) * canvasWidth).coerceAtLeast(
+                                20f
+                            )
                         } else 0f
 
                         val horizontalThumbLeft = if (!wrapText && horizontalLimit > 0f) {
@@ -159,7 +336,8 @@ fun KlyxCodeEditor(
                         val inGutterArea = showGutter && offset.x <= gutterWidthPx
 
                         draggingVerticalScrollbar = !inGutterArea && verticalLimit > 0f && inVerticalScrollbarX && inVerticalScrollbarY
-                        draggingHorizontalScrollbar = !inGutterArea && !wrapText && horizontalLimit > 0f && inHorizontalScrollbarY && inHorizontalScrollbarX
+                        draggingHorizontalScrollbar =
+                            !inGutterArea && !wrapText && horizontalLimit > 0f && inHorizontalScrollbarY && inHorizontalScrollbarX
 
                         if (draggingVerticalScrollbar) {
                             verticalDragOffset = offset.y - verticalThumbTop
@@ -187,9 +365,8 @@ fun KlyxCodeEditor(
                             isAntiAlias = true
                             this.typeface = typeface
                         }
-                         // this allLines calculation is specific to drag gestures.
                         val allLines = buildList {
-                            text.lines().forEachIndexed { originalLineIdx, originalLine ->
+                            editorState.text.lines().forEachIndexed { originalLineIdx, originalLine ->
                                 if (!wrapText) {
                                     add(originalLine)
                                 } else {
@@ -225,8 +402,9 @@ fun KlyxCodeEditor(
                             val newThumbTop = (change.position.y - verticalDragOffset).coerceIn(0f, canvasHeight - verticalThumbHeight)
                             scrollY.floatValue = (newThumbTop / (canvasHeight - verticalThumbHeight)) * verticalLimit
                         } else if (draggingHorizontalScrollbar && !wrapText && horizontalLimit > 0f) {
-                            val horizontalThumbWidth = (canvasWidth / (maxLineWidth + horizontalPaddingPx + endHorizontalPaddingPx + gutterWidthPx) * canvasWidth)
-                                .coerceAtLeast(20f)
+                            val horizontalThumbWidth =
+                                (canvasWidth / (maxLineWidth + horizontalPaddingPx + endHorizontalPaddingPx + gutterWidthPx) * canvasWidth)
+                                    .coerceAtLeast(20f)
                             val newThumbLeft = (change.position.x - horizontalDragOffset).coerceIn(0f, canvasWidth - horizontalThumbWidth)
                             scrollX.floatValue = (newThumbLeft / (canvasWidth - horizontalThumbWidth)) * horizontalLimit
                         } else {
@@ -241,8 +419,9 @@ fun KlyxCodeEditor(
                 )
             }
     ) {
-        val canvasWidth = size.width
-        val canvasHeight = size.height
+        // update canvas size
+        canvasWidth = size.width
+        canvasHeight = size.height
 
         val textPaint = Paint().apply {
             textSize = lineHeightPx
@@ -262,7 +441,7 @@ fun KlyxCodeEditor(
         val allVisualLines = mutableListOf<String>()
         val visualToOriginalLineIndexMap = mutableListOf<Int>()
 
-        text.lines().forEachIndexed { originalLineIdx, originalLine ->
+        editorState.text.lines().forEachIndexed { originalLineIdx, originalLine ->
             if (!wrapText) {
                 allVisualLines.add(originalLine)
                 visualToOriginalLineIndexMap.add(originalLineIdx)
@@ -343,7 +522,7 @@ fun KlyxCodeEditor(
 
                 val y = i * fullLineHeightPx - scrollY.floatValue + lineHeightPx
                 val currentOriginalLineIndex = visualToOriginalLineIndexMap[i]
-                
+
                 val shouldShowLineNumber = if (!wrapText) {
                     true
                 } else {
@@ -352,10 +531,10 @@ fun KlyxCodeEditor(
                     } else {
                         // show number if the original line index changed from the previous visual line
                         // and ensure previous index is valid
-                        if (i -1 < visualToOriginalLineIndexMap.size) {
-                           visualToOriginalLineIndexMap[i] != visualToOriginalLineIndexMap[i - 1]
+                        if (i - 1 < visualToOriginalLineIndexMap.size) {
+                            visualToOriginalLineIndexMap[i] != visualToOriginalLineIndexMap[i - 1]
                         } else {
-                           true // should not happen if i > 0
+                            true // should not happen if i > 0
                         }
                     }
                 }
@@ -405,6 +584,81 @@ fun KlyxCodeEditor(
                 topLeft = Offset(horizontalThumbLeft, canvasHeight - scrollbarThicknessPx),
                 size = Size(horizontalThumbWidth, scrollbarThicknessPx)
             )
+        }
+
+        // Draw cursor
+        if (showCursor) {
+            val cursorPosition = editorState.cursorPosition
+            val lines = editorState.text.lines()
+            var currentPosition = 0
+            var cursorLine = 0
+            var cursorX = 0f
+
+            // Find the line and X position of the cursor
+            for (i in lines.indices) {
+                val lineLength = lines[i].length + 1 // +1 for newline
+                if (currentPosition + lineLength > cursorPosition) {
+                    cursorLine = i
+                    val line = lines[i]
+                    val charPosition = cursorPosition - currentPosition
+                    cursorX = textPaint.measureText(line.substring(0, charPosition))
+                    break
+                }
+                currentPosition += lineLength
+            }
+
+            val cursorY = cursorLine * fullLineHeightPx - scrollY.floatValue
+
+            // Draw cursor
+            drawRect(
+                color = cursorColor,
+                topLeft = Offset(
+                    gutterWidthPx + horizontalPaddingPx + cursorX - scrollX.floatValue,
+                    cursorY
+                ),
+                size = Size(
+                    with(density) { cursorWidth.toPx() },
+                    fullLineHeightPx
+                )
+            )
+        }
+
+        // Draw selection
+        if (editorState.hasSelection) {
+            val selectionStart = editorState.selectionStart
+            val selectionEnd = editorState.selectionEnd
+            val lines = editorState.text.lines()
+            var currentPosition = 0
+
+            // Draw selection rectangles for each line
+            for (i in lines.indices) {
+                val line = lines[i]
+                val lineLength = line.length + 1 // +1 for newline
+                val lineStart = currentPosition
+                val lineEnd = currentPosition + lineLength
+
+                if (lineEnd > selectionStart && lineStart < selectionEnd) {
+                    val startInLine = (selectionStart - lineStart).coerceAtLeast(0)
+                    val endInLine = (selectionEnd - lineStart).coerceAtMost(line.length)
+
+                    val startX = textPaint.measureText(line.substring(0, startInLine))
+                    val endX = textPaint.measureText(line.substring(0, endInLine))
+
+                    drawRect(
+                        color = Color(0x33FFFFFF), // Semi-transparent white
+                        topLeft = Offset(
+                            gutterWidthPx + horizontalPaddingPx + startX - scrollX.floatValue,
+                            i * fullLineHeightPx - scrollY.floatValue
+                        ),
+                        size = Size(
+                            endX - startX,
+                            lineHeightPx
+                        )
+                    )
+                }
+
+                currentPosition += lineLength
+            }
         }
     }
 }

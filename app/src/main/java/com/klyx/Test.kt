@@ -15,12 +15,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.klyx.core.rememberTypeface
+import com.klyx.editor.compose.EditorState
 import com.klyx.editor.compose.KlyxCodeEditor
 
 class Test : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val code = """
+        val initialCode = """
             fun main() {
                 println("Hellow")
             }
@@ -28,6 +29,7 @@ class Test : ComponentActivity() {
         setContent {
             var wrap by remember { mutableStateOf(false) }
             val typeface by rememberTypeface("IBM Plex Mono")
+            val editorState = remember { EditorState(initialCode) }
 
             Box(
                 modifier = Modifier
@@ -41,7 +43,7 @@ class Test : ComponentActivity() {
                     }
             ) {
                 KlyxCodeEditor(
-                    code,
+                    editorState = editorState,
                     wrapText = wrap,
                     scrollbarThickness = 12.dp,
                     typeface = typeface
