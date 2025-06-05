@@ -69,10 +69,16 @@ fun KlyxCodeEditor(
     editable: Boolean = true,
     cursorBlinkRate: Long = 500,
     cursorFocusPadding: Dp = 100.dp,
-    onTextChanged: (String) -> Unit = {}
+    onTextChanged: (String) -> Unit = {},
+    language: String = "json"
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val highlighter = remember { TreeSitterHighlighter() }
+    val syntaxHighlights = remember(editorState.text, language) {
+        highlighter.setLanguage(language)
+        highlighter.getSyntaxHighlights(editorState.text)
+    }
 
     val scrollY = remember { mutableFloatStateOf(0f) }
     val scrollX = remember { mutableFloatStateOf(0f) }
@@ -592,18 +598,74 @@ fun KlyxCodeEditor(
         val visibleCount = (canvasHeight / fullLineHeightPx).toInt() + 2
         val lastVisibleIndex = (firstVisibleIndex + visibleCount).coerceAtMost(allVisualLines.size)
 
-        // Draw code text
         for (i in firstVisibleIndex until lastVisibleIndex) {
             val line = allVisualLines[i]
             val y = i * fullLineHeightPx - scrollY.floatValue + lineHeightPx
-
             val codeStartX = gutterWidthPx + horizontalPaddingPx - scrollX.floatValue
-            drawContext.canvas.nativeCanvas.drawText(
-                line,
-                codeStartX,
-                y,
-                textPaint
-            )
+
+            var lineStartOffset = 0
+            for (j in 0 until i) {
+                lineStartOffset += allVisualLines[j].length + 1 // +1 for newline
+            }
+
+            // get highlights for this line
+            val lineHighlights = syntaxHighlights
+                .map { highlight ->
+                    val startChar = highlight.startOffset - lineStartOffset
+                    val endChar = highlight.endOffset - lineStartOffset
+                    Triple(
+                        startChar.coerceIn(0, line.length),
+                        endChar.coerceIn(0, line.length),
+                        highlight.color
+                    )
+                }
+                .filter { (start, end) -> start < end }
+                .sortedBy { it.first }
+
+            // draw the line character by character
+            var currentX = codeStartX
+            var currentPos = 0
+            while (currentPos < line.length) {
+                // find the next highlight that starts at or after current position
+                val nextHighlight = lineHighlights.find { it.first >= currentPos }
+                
+                if (nextHighlight != null) {
+                    // draw text before the highlight
+                    if (nextHighlight.first > currentPos) {
+                        val beforeText = line.substring(currentPos, nextHighlight.first)
+                        drawContext.canvas.nativeCanvas.drawText(
+                            beforeText,
+                            currentX,
+                            y,
+                            textPaint
+                        )
+                        currentX += textPaint.measureText(beforeText)
+                    }
+                    
+                    // draw the highlighted text
+                    val highlightText = line.substring(nextHighlight.first, nextHighlight.second)
+                    textPaint.color = nextHighlight.third
+                    drawContext.canvas.nativeCanvas.drawText(
+                        highlightText,
+                        currentX,
+                        y,
+                        textPaint
+                    )
+                    currentX += textPaint.measureText(highlightText)
+                    textPaint.color = Color.White.toArgb() // reset color
+                    currentPos = nextHighlight.second
+                } else {
+                    // no more highlights, draw the rest of the text
+                    val remainingText = line.substring(currentPos)
+                    drawContext.canvas.nativeCanvas.drawText(
+                        remainingText,
+                        currentX,
+                        y,
+                        textPaint
+                    )
+                    break
+                }
+            }
         }
 
         if (showGutter) {

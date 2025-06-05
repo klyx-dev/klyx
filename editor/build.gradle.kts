@@ -56,9 +56,13 @@ dependencies {
     api(libs.sora.editor)
     api(libs.sora.editor.language.treesitter)
     implementation(libs.sora.editor.language.textmate)
+
     implementation(libs.ktreesitter)
     implementation(libs.android.tree.sitter)
     implementation(libs.android.tree.sitter.java)
+    implementation(libs.android.tree.sitter.kotlin)
+    implementation(libs.android.tree.sitter.python)
+    implementation(libs.android.tree.sitter.json)
 
     implementation(project(":core"))
 
