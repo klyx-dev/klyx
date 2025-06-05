@@ -71,7 +71,7 @@ class KWatchChannel(
     init {
         // commence emitting events from channel
         scope.launch(Dispatchers.IO) {
-            // sending channel initalization event
+            // sending channel initialization event
             channel.send(
                 KWatchEvent(
                     file = path.toFile(),
