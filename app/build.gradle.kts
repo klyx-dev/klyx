@@ -14,8 +14,8 @@ android {
         applicationId = "com.klyx"
         minSdk = 26
         targetSdk = 36
-        versionCode = 120
-        versionName = "1.2.0"
+        versionName = "1.3.0-alpha.0"
+        versionCode = calculateVersionCode(versionName!!)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -86,3 +86,29 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
+fun calculateVersionCode(versionName: String): Int {
+    val semverRegex = Regex("""(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?""")
+    val match = semverRegex.matchEntire(versionName) ?: error("Invalid semver format: $versionName")
+
+    val (majorStr, minorStr, patchStr, preReleaseType, preReleaseNumStr) = match.destructured
+
+    val major = majorStr.toInt()
+    val minor = minorStr.toInt()
+    val patch = patchStr.toInt()
+    val preReleaseNum = preReleaseNumStr.toIntOrNull() ?: 0
+
+    val preReleaseOffset = when (preReleaseType) {
+        null, "" -> 3_000 // stable
+        "rc" -> 2_000
+        "beta" -> 1_000
+        "alpha" -> 0
+        else -> error("Unknown pre-release type: $preReleaseType")
+    }
+
+    return major * 10_000_000 +
+            minor * 100_000 +
+            patch * 1_000 +
+            preReleaseOffset + preReleaseNum
+}
+
