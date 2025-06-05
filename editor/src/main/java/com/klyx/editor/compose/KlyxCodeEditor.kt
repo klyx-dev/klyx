@@ -317,6 +317,84 @@ fun KlyxCodeEditor(
                                         true
                                     }
 
+                                    Key.DirectionLeft -> {
+                                        if (editorState.cursorPosition > 0) {
+                                            editorState.moveCursor(editorState.cursorPosition - 1)
+                                            ensureCursorInView()
+                                        }
+                                        true
+                                    }
+
+                                    Key.DirectionRight -> {
+                                        if (editorState.cursorPosition < editorState.text.length) {
+                                            editorState.moveCursor(editorState.cursorPosition + 1)
+                                            ensureCursorInView()
+                                        }
+                                        true
+                                    }
+
+                                    Key.DirectionUp -> {
+                                        val lines = editorState.text.lines()
+                                        var currentPosition = 0
+                                        var currentLine = 0
+                                        var currentColumn = 0
+
+                                        // Find current line and column
+                                        for (i in lines.indices) {
+                                            val lineLength = lines[i].length + 1
+                                            if (currentPosition + lineLength > editorState.cursorPosition) {
+                                                currentLine = i
+                                                currentColumn = editorState.cursorPosition - currentPosition
+                                                break
+                                            }
+                                            currentPosition += lineLength
+                                        }
+
+                                        if (currentLine > 0) {
+                                            val targetLine = currentLine - 1
+                                            val targetColumn = currentColumn.coerceAtMost(lines[targetLine].length)
+                                            var newPosition = 0
+                                            for (i in 0 until targetLine) {
+                                                newPosition += lines[i].length + 1
+                                            }
+                                            newPosition += targetColumn
+                                            editorState.moveCursor(newPosition)
+                                            ensureCursorInView()
+                                        }
+                                        true
+                                    }
+
+                                    Key.DirectionDown -> {
+                                        val lines = editorState.text.lines()
+                                        var currentPosition = 0
+                                        var currentLine = 0
+                                        var currentColumn = 0
+
+                                        // Find current line and column
+                                        for (i in lines.indices) {
+                                            val lineLength = lines[i].length + 1
+                                            if (currentPosition + lineLength > editorState.cursorPosition) {
+                                                currentLine = i
+                                                currentColumn = editorState.cursorPosition - currentPosition
+                                                break
+                                            }
+                                            currentPosition += lineLength
+                                        }
+
+                                        if (currentLine < lines.size - 1) {
+                                            val targetLine = currentLine + 1
+                                            val targetColumn = currentColumn.coerceAtMost(lines[targetLine].length)
+                                            var newPosition = 0
+                                            for (i in 0 until targetLine) {
+                                                newPosition += lines[i].length + 1
+                                            }
+                                            newPosition += targetColumn
+                                            editorState.moveCursor(newPosition)
+                                            ensureCursorInView()
+                                        }
+                                        true
+                                    }
+
                                     Key.Enter -> {
                                         val currentText = editorState.text
                                         val cursorPos = editorState.cursorPosition
