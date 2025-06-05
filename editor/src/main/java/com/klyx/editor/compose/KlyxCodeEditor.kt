@@ -34,6 +34,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.Dp
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.core.event.EventBus
+import com.klyx.core.showShortToast
 import com.klyx.editor.compose.input.textInput
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -69,13 +71,15 @@ fun KlyxCodeEditor(
     cursorFocusPadding: Dp = 100.dp,
     onTextChanged: (String) -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val density = LocalDensity.current
+
     val scrollY = remember { mutableFloatStateOf(0f) }
     val scrollX = remember { mutableFloatStateOf(0f) }
     var showCursor by remember { mutableStateOf(true) }
     var isCursorActive by remember { mutableStateOf(false) }
     var lastCursorActivityTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var isCursorMoving by remember { mutableStateOf(false) }
-    val density = LocalDensity.current
     val lineHeightPx = with(density) { lineHeight.toPx() }
     val lineSpacingPx = with(density) { 4.dp.toPx() }
     val fullLineHeightPx = lineHeightPx + lineSpacingPx
@@ -364,7 +368,10 @@ fun KlyxCodeEditor(
             .focusable(interactionSource = remember { MutableInteractionSource() })
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
-                    //if (!editable) return@detectTapGestures
+                    if (!editable) {
+                        context.showShortToast("read only")
+                    }
+
                     focusRequester.requestFocus()
                     updateCursorActivity()
 
