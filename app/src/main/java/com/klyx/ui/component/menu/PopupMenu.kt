@@ -1,6 +1,5 @@
 package com.klyx.ui.component.menu
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -28,6 +26,7 @@ data class MenuItem(
     val title: String = "",
     val shortcutKey: String? = null,
     val isDivider: Boolean = title.isEmpty(),
+    val dismissRequestOnClicked: Boolean = true,
     val onClick: () -> Unit = {}
 )
 
@@ -77,7 +76,7 @@ fun PopupMenu(
                                 .clickable {
                                     onItemClick(index, item)
                                     item.onClick()
-                                    onDismissRequest()
+                                    if (item.dismissRequestOnClicked) onDismissRequest()
                                 },
                             verticalAlignment = Alignment.CenterVertically
                         ) {
