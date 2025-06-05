@@ -11,9 +11,9 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 10300000,
-      "versionName": "1.3.0-alpha.0",
-      "outputFile": "klyx-release-v1.3.0-alpha.0.apk"
+      "versionCode": 10300001,
+      "versionName": "1.3.0-alpha.1",
+      "outputFile": "klyx-release-v1.3.0-alpha.1.apk"
     }
   ],
   "elementType": "File",
@@ -22,14 +22,14 @@
       "minApi": 28,
       "maxApi": 30,
       "baselineProfiles": [
-        "baselineProfiles/1/klyx-release-v1.3.0-alpha.0.dm"
+        "baselineProfiles/1/klyx-release-v1.3.0-alpha.1.dm"
       ]
     },
     {
       "minApi": 31,
       "maxApi": 2147483647,
       "baselineProfiles": [
-        "baselineProfiles/0/klyx-release-v1.3.0-alpha.0.dm"
+        "baselineProfiles/0/klyx-release-v1.3.0-alpha.1.dm"
       ]
     }
   ],
