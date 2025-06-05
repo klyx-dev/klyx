@@ -9,7 +9,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -38,6 +37,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
 
     val state by viewModel.state.collectAsState()
     val openTabs by remember { derivedStateOf { state.openTabs } }
+    val activeTabId by remember { derivedStateOf { state.activeTabId } }
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openTabs.size })
     val scope = rememberCoroutineScope()
@@ -49,6 +49,15 @@ fun EditorScreen(modifier: Modifier = Modifier) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             openTabs.getOrNull(page)?.let { tab ->
                 viewModel.setActiveTab(tab.id)
+            }
+        }
+    }
+
+    LaunchedEffect(activeTabId, pagerState) {
+        val index = openTabs.indexOfFirst { it.id == activeTabId }
+        if (index != -1 && index != pagerState.currentPage) {
+            scope.launch {
+                pagerState.animateScrollToPage(index)
             }
         }
     }

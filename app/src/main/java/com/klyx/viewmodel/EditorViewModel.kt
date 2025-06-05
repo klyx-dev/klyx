@@ -49,7 +49,7 @@ class EditorViewModel : ViewModel() {
         }
 
         _state.update { current ->
-            if (current.openTabs.any { it.type == (if (isInternal) "fileInternal" else "file") && it.id == file.id }) {
+            if (current.openTabs.any { it.isFileTab && it.id == file.id }) {
                 current.copy(activeTabId = file.id)
             } else {
                 current.copy(
@@ -120,9 +120,9 @@ class EditorViewModel : ViewModel() {
 
             _state.update { current ->
                 current.copy(openTabs = current.openTabs.map {
-                    if (it.type == "file" && it.id == fileId.toString()) {
+                    if (it.type == "file" && it.id == fileId) {
                         object : TabItem {
-                            override val id: String = file.id.toString()
+                            override val id: String = file.id
                             override val name: String = file.name
                             override val type: String = "file"
                             override val data: Any = file
