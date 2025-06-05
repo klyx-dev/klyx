@@ -1,5 +1,9 @@
 package com.klyx.viewmodel
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.core.file.FileId
@@ -10,47 +14,98 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 
+interface TabItem {
+    val id: String
+    val name: String
+    val type: String
+    val data: Any?
+    val content: @Composable () -> Unit
+}
+
+val TabItem.isFileTab get() = type == "file" || type == "fileInternal"
+
 data class EditorState(
-    val openFiles: List<File> = emptyList(),
-    val activeFileId: FileId? = null
+    val openTabs: List<TabItem> = emptyList(),
+    val activeTabId: String? = null
 )
 
 class EditorViewModel : ViewModel() {
     private val _state = MutableStateFlow(EditorState())
     val state = _state.asStateFlow()
 
-    fun openFile(file: File) {
+    fun openFile(
+        file: File,
+        tabTitle: String = file.name,
+        isInternal: Boolean = false
+    ) {
+        val fileTab = object : TabItem {
+            override val id: String = file.id
+            override val name: String = tabTitle
+            override val type: String = if (isInternal) "fileInternal" else "file"
+            override val data: Any = file
+            override val content: @Composable () -> Unit = {
+                Box(modifier = Modifier.fillMaxSize())
+            }
+        }
+
         _state.update { current ->
-            if (current.openFiles.any { it.id == file.id }) {
-                current.copy(activeFileId = file.id)
+            if (current.openTabs.any { it.type == (if (isInternal) "fileInternal" else "file") && it.id == file.id }) {
+                current.copy(activeTabId = file.id)
             } else {
                 current.copy(
-                    openFiles = current.openFiles + file,
-                    activeFileId = file.id
+                    openTabs = current.openTabs + fileTab,
+                    activeTabId = file.id
                 )
             }
         }
     }
 
-    fun closeFile(fileId: FileId) {
+    fun openTab(
+        type: String,
+        id: String,
+        name: String,
+        content: @Composable () -> Unit,
+        data: Any? = null
+    ) {
+        val tab = object : TabItem {
+            override val id: String = id
+            override val name: String = name
+            override val type: String = type
+            override val data: Any? = data
+            override val content: @Composable () -> Unit = content
+        }
+
         _state.update { current ->
-            val updatedFiles = current.openFiles.filterNot { it.id == fileId }
-            val newActiveFileId = when {
-                fileId == current.activeFileId -> updatedFiles.lastOrNull()?.id
-                else -> current.activeFileId
+            if (current.openTabs.any { it.type == type && it.id == id }) {
+                current.copy(activeTabId = id)
+            } else {
+                current.copy(
+                    openTabs = current.openTabs + tab,
+                    activeTabId = id
+                )
+            }
+        }
+    }
+
+    fun closeTab(tabId: String) {
+        _state.update { current ->
+            val updatedTabs = current.openTabs.filterNot { it.id == tabId }
+            val newActiveTabId = when {
+                tabId == current.activeTabId -> updatedTabs.lastOrNull()?.id
+                else -> current.activeTabId
             }
 
             current.copy(
-                openFiles = updatedFiles,
-                activeFileId = newActiveFileId
+                openTabs = updatedTabs,
+                activeTabId = newActiveTabId
             )
         }
     }
 
-    fun setActiveFile(fileId: FileId) {
+    fun setActiveTab(tabId: String) {
         _state.update { current ->
-            if (current.openFiles.any { it.id == fileId }) {
-                current.copy(activeFileId = fileId)
+            if (current.openTabs.any { it.id == tabId }) {
+                current.copy(activeTabId = tabId)
             } else {
                 current
             }
@@ -59,13 +114,23 @@ class EditorViewModel : ViewModel() {
 
     fun updateFileContent(fileId: FileId, content: String) {
         viewModelScope.launch {
-            val file = _state.value.openFiles.find { it.id == fileId } ?: return@launch
+            val fileTab = _state.value.openTabs.find { it.type == "file" && it.id == fileId.toString() } ?: return@launch
+            val file = fileTab.data as? File ?: return@launch
             file.writeText(content)
 
             _state.update { current ->
-                current.copy(openFiles = current.openFiles.map {
-                    if (it.id == fileId) {
-                        file
+                current.copy(openTabs = current.openTabs.map {
+                    if (it.type == "file" && it.id == fileId.toString()) {
+                        object : TabItem {
+                            override val id: String = file.id.toString()
+                            override val name: String = file.name
+                            override val type: String = "file"
+                            override val data: Any = file
+                            override val content: @Composable () -> Unit = {
+                                // File content will be handled by EditorScreen
+                                Box(modifier = Modifier.fillMaxSize())
+                            }
+                        }
                     } else {
                         it
                     }
@@ -76,6 +141,6 @@ class EditorViewModel : ViewModel() {
 
     fun getActiveFile(): File? {
         val current = _state.value
-        return current.openFiles.find { it.id == current.activeFileId }
+        return (current.openTabs.find { it.id == current.activeTabId }?.data as? File)
     }
 }

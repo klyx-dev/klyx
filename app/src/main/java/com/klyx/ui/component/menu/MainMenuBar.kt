@@ -27,6 +27,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.key.matches
 import com.klyx.core.key.parseShortcut
+import com.klyx.core.settings.SettingsManager
+import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.ui.component.AboutDialog
 
 @Composable
@@ -35,6 +37,7 @@ fun MainMenuBar(
 ) {
     val activity = LocalActivity.current
     val lifecycleOwner = LocalLifecycleOwner.current
+    val viewModel = LocalEditorViewModel.current
 
     var showPopup by remember { mutableStateOf(false) }
     var iconPosition by remember { mutableStateOf(IntOffset.Zero) }
@@ -45,8 +48,16 @@ fun MainMenuBar(
         listOf(
             MenuItem("About Klyx...") { showAbout = true },
             MenuItem(),
-            MenuItem("Open Settings", "Ctrl-,"),
-            MenuItem("Open Default Settings"),
+            MenuItem("Open Settings", "Ctrl-,") {
+                viewModel.openFile(SettingsManager.settingsFile)
+            },
+            MenuItem("Open Default Settings") {
+                viewModel.openFile(
+                    SettingsManager.internalSettingsFile,
+                    tabTitle = "Default Settings",
+                    isInternal = true
+                )
+            },
             MenuItem(),
             MenuItem("Quit", "Ctrl-Q") { activity?.finishAffinity() }
         )

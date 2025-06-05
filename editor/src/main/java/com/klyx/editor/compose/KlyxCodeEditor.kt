@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.klyx.core.event.EventBus
 import com.klyx.editor.compose.input.textInput
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -63,8 +64,10 @@ fun KlyxCodeEditor(
     gutterDividerColor: Color = Color(0xFF444444),
     cursorColor: Color = Color.White,
     cursorWidth: Dp = 2.dp,
+    editable: Boolean = true,
     cursorBlinkRate: Long = 500,
-    cursorFocusPadding: Dp = 100.dp
+    cursorFocusPadding: Dp = 100.dp,
+    onTextChanged: (String) -> Unit = {}
 ) {
     val scrollY = remember { mutableFloatStateOf(0f) }
     val scrollX = remember { mutableFloatStateOf(0f) }
@@ -284,69 +287,84 @@ fun KlyxCodeEditor(
             .fillMaxSize()
             .background(Color.Black)
             .focusRequester(focusRequester)
-            .textInput(
-                keyboardController = keyboardController,
-                editorState = editorState,
-                onKeyEvent = { event: KeyEvent ->
-                    if (event.type == KeyEventType.KeyDown) {
-                        updateCursorActivity()
-                        when (event.key) {
-                            Key.Backspace -> {
-                                if (editorState.text.isNotEmpty() && editorState.cursorPosition > 0) {
-                                    val currentText = editorState.text
-                                    val cursorPos = editorState.cursorPosition
-                                    val beforeCursor = currentText.substring(0, cursorPos - 1)
-                                    val afterCursor = currentText.substring(cursorPos)
-                                    editorState.text = beforeCursor + afterCursor
-                                    editorState.moveCursor(cursorPos - 1)
-                                    ensureCursorInView()
-                                }
-                                true
-                            }
+            .then(
+                if (editable) {
+                    Modifier.textInput(
+                        keyboardController = keyboardController,
+                        editorState = editorState,
+                        onKeyEvent = { event: KeyEvent ->
+                            EventBus.getInstance().postSync(event)
 
-                            Key.Enter -> {
-                                val currentText = editorState.text
-                                val cursorPos = editorState.cursorPosition
-                                val beforeCursor = currentText.substring(0, cursorPos)
-                                val afterCursor = currentText.substring(cursorPos)
-                                editorState.text = beforeCursor + "\n" + afterCursor
-                                editorState.moveCursor(cursorPos + 1)
-                                ensureCursorInView()
-                                true
-                            }
+                            if (event.type == KeyEventType.KeyDown) {
+                                updateCursorActivity()
+                                when (event.key) {
+                                    Key.Backspace -> {
+                                        if (editorState.text.isNotEmpty() && editorState.cursorPosition > 0) {
+                                            val currentText = editorState.text
+                                            val cursorPos = editorState.cursorPosition
+                                            val beforeCursor = currentText.substring(0, cursorPos - 1)
+                                            val afterCursor = currentText.substring(cursorPos)
+                                            val newText = beforeCursor + afterCursor
+                                            editorState.updateText(newText)
+                                            onTextChanged(newText)
+                                            editorState.moveCursor(cursorPos - 1)
+                                            ensureCursorInView()
+                                        }
+                                        true
+                                    }
 
-                            else -> {
-                                if (event.utf16CodePoint != 0) {
-                                    val char = event.utf16CodePoint.toChar()
-                                    if (char.isDefined() && !char.isISOControl()) {
+                                    Key.Enter -> {
                                         val currentText = editorState.text
                                         val cursorPos = editorState.cursorPosition
                                         val beforeCursor = currentText.substring(0, cursorPos)
                                         val afterCursor = currentText.substring(cursorPos)
-                                        editorState.text = beforeCursor + char + afterCursor
+                                        val newText = beforeCursor + "\n" + afterCursor
+                                        editorState.updateText(newText)
+                                        onTextChanged(newText)
                                         editorState.moveCursor(cursorPos + 1)
                                         ensureCursorInView()
                                         true
-                                    } else {
-                                        false
                                     }
-                                } else {
-                                    false
+
+                                    else -> {
+                                        if (event.utf16CodePoint != 0) {
+                                            val char = event.utf16CodePoint.toChar()
+                                            if (char.isDefined() && !char.isISOControl()) {
+                                                val currentText = editorState.text
+                                                val cursorPos = editorState.cursorPosition
+                                                val beforeCursor = currentText.substring(0, cursorPos)
+                                                val afterCursor = currentText.substring(cursorPos)
+                                                val newText = beforeCursor + char + afterCursor
+                                                editorState.updateText(newText)
+                                                onTextChanged(newText)
+                                                editorState.moveCursor(cursorPos + 1)
+                                                ensureCursorInView()
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    }
                                 }
+                            } else {
+                                false
                             }
+                        },
+                        onCursorMoved = {
+                            updateCursorActivity()
+                            ensureCursorInView()
                         }
-                    } else {
-                        false
-                    }
-                },
-                onCursorMoved = {
-                    updateCursorActivity()
-                    ensureCursorInView()
+                    )
+                } else {
+                    Modifier
                 }
             )
             .focusable(interactionSource = remember { MutableInteractionSource() })
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
+                    //if (!editable) return@detectTapGestures
                     focusRequester.requestFocus()
                     updateCursorActivity()
 

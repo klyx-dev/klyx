@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
  */
 class EditorState(initialText: String = "") {
     var text by mutableStateOf(initialText)
+    var isModified by mutableStateOf(false)
+        private set
     
     // Cursor position (caret position)
     var cursorPosition by mutableIntStateOf(initialText.length)
@@ -75,5 +77,16 @@ class EditorState(initialText: String = "") {
         } else {
             ""
         }
+    }
+
+    fun updateText(newText: String) {
+        if (text != newText) {
+            text = newText
+            isModified = true
+        }
+    }
+
+    fun markAsSaved() {
+        isModified = false
     }
 }

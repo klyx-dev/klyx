@@ -1,5 +1,6 @@
 package com.klyx.ui.component.menu
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
@@ -55,7 +57,7 @@ fun PopupMenu(
                 containerColor = colorScheme.surfaceContainer,
                 contentColor = colorScheme.onSurface
             ),
-            modifier = modifier,
+            modifier = modifier,//.border(0.4.dp, colorScheme.outline, shape = RoundedCornerShape(4.dp)),
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
             Column(

@@ -9,6 +9,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -18,63 +19,76 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.klyx.core.file.id
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.klyx.core.rememberTypeface
 import com.klyx.editor.compose.EditorState
 import com.klyx.editor.compose.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorStore
 import com.klyx.editor.compose.LocalEditorViewModel
+import com.klyx.viewmodel.isFileTab
 import kotlinx.coroutines.launch
+import java.io.File
+import java.util.Locale
 
 @Composable
 fun EditorScreen(modifier: Modifier = Modifier) {
     val editors = LocalEditorStore.current
     val viewModel = LocalEditorViewModel.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val state by viewModel.state.collectAsState()
-    val openFiles by remember { derivedStateOf { state.openFiles } }
+    val openTabs by remember { derivedStateOf { state.openTabs } }
 
-    val pagerState = rememberPagerState(initialPage = 0, pageCount = { openFiles.size })
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { openTabs.size })
     val scope = rememberCoroutineScope()
     val typeface by rememberTypeface("IBM Plex Mono")
 
-    // Store EditorState instances for each open file
     val editorStates = remember { mutableStateMapOf<String, EditorState>() }
 
-    LaunchedEffect(pagerState, openFiles.size) {
+    LaunchedEffect(pagerState, openTabs.size) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
-            openFiles.getOrNull(page)?.let { file ->
-                viewModel.setActiveFile(file.id)
+            openTabs.getOrNull(page)?.let { tab ->
+                viewModel.setActiveTab(tab.id)
             }
         }
     }
 
-    // Clean up editorStates when files are closed
-    LaunchedEffect(openFiles) {
-        val currentFileIds = openFiles.map { it.id }.toSet()
+    LaunchedEffect(openTabs) {
+        val currentFileIds = openTabs
+            .filter { it.type == "file" }
+            .map { it.id }
+            .toSet()
         editorStates.keys.retainAll { it in currentFileIds }
     }
 
     Column(modifier = modifier) {
-        if (openFiles.isNotEmpty()) {
+        if (openTabs.isNotEmpty()) {
             EditorTabBar(
-                tabs = openFiles.map { it.name },
+                tabs = openTabs,
                 selectedTab = pagerState.currentPage,
                 onTabSelected = { page ->
-                    viewModel.setActiveFile(openFiles[page].id)
-                    scope.launch { pagerState.animateScrollToPage(page) }
+                    keyboardController?.hide()
+
+                    openTabs.getOrNull(page)?.let { tab ->
+                        viewModel.setActiveTab(tab.id)
+                        scope.launch { pagerState.animateScrollToPage(page) }
+                    }
                 },
                 onClose = { index ->
-                    val fileToCloseId = openFiles[index].id
-                    viewModel.closeFile(fileToCloseId)
-                    editors.remove(fileToCloseId)
-                    // editorStates will be cleaned up by the LaunchedEffect(openFiles)
+                    openTabs.getOrNull(index)?.let { tab ->
+                        viewModel.closeTab(tab.id)
+                        if (tab.isFileTab) {
+                            editors.remove(tab.id)
+                        }
+                    }
                 },
-                isDirty = {
-                    // Placeholder: Implement actual dirty checking based on EditorState if needed
-                    // val fileId = openFiles.getOrNull(it)?.id
-                    // fileId?.let { editorStates[it]?.isModified } ?: false
-                    false
+                isDirty = { index ->
+                    val tab = openTabs.getOrNull(index)
+                    if (tab?.isFileTab == true) {
+                        editorStates[tab.id]?.isModified ?: false
+                    } else {
+                        false
+                    }
                 }
             )
 
@@ -85,23 +99,43 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                     .fillMaxSize()
                     .imePadding(),
             ) { page ->
-                val file = openFiles.getOrNull(page)
+                val tab = openTabs.getOrNull(page)
 
-                if (file != null) {
-                    // Get or create EditorState for the current file
-                    val editorState = editorStates.getOrPut(file.id) {
-                        EditorState(initialText = file.readText())
+                when {
+                    tab?.isFileTab == true -> {
+                        val file = tab.data as? File
+                        if (file != null) {
+                            val editorState = editorStates.getOrPut(tab.id) {
+                                EditorState(initialText = file.readText())
+                            }
+
+                            KlyxCodeEditor(
+                                editorState = editorState,
+                                typeface = typeface,
+                                editable = tab.type != "fileInternal",
+                                onTextChanged = { newText ->
+                                    //editorState.updateText(newText)
+                                }
+                            )
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("Invalid file")
+                            }
+                        }
                     }
 
-                    KlyxCodeEditor(
-                        editorState = editorState, // Pass the EditorState instance
-                        typeface = typeface,
-                    )
+                    else -> {
+                        tab?.content?.invoke() ?: run {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("${tab?.type?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.ROOT) else it.toString() } ?: "Unknown"} Tab: ${tab?.name ?: ""}")
+                            }
+                        }
+                    }
                 }
             }
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No files open")
+                Text("No tabs open")
             }
         }
     }

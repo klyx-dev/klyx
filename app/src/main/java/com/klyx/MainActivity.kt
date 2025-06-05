@@ -23,8 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.setAppContent
 import com.klyx.core.settings.AppTheme
-import com.klyx.core.settings.SettingsManager
-import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.extension.Extension
 import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionToml
@@ -32,7 +30,6 @@ import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.menu.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
 import kotlinx.coroutines.delay
-import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,8 +67,6 @@ class MainActivity : ComponentActivity() {
                 )
             )
 
-            val settingsFile = remember { SettingsManager.settingsFile(context) }
-
             KlyxTheme(
                 dynamicColor = settings.dynamicColors,
                 darkTheme = darkMode
@@ -91,15 +86,6 @@ class MainActivity : ComponentActivity() {
                         MainMenuBar()
 
                         Surface(color = background) {
-                            val viewModel = LocalEditorViewModel.current
-                            LaunchedEffect(Unit) {
-                                viewModel.openFile(settingsFile)
-
-                                val tempFile = File.createTempFile("temp", ".txt").apply { deleteOnExit() }
-                                tempFile.writeText("Hello, World!")
-                                viewModel.openFile(tempFile)
-                            }
-
                             EditorScreen()
 
                             LaunchedEffect(Unit) {

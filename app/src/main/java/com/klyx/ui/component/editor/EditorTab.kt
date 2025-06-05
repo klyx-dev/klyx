@@ -22,48 +22,64 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.klyx.core.Env
+import com.klyx.viewmodel.TabItem
+import java.io.File
 
 @Composable
 fun EditorTabBar(
-    tabs: List<String>,
+    tabs: List<TabItem>,
     modifier: Modifier = Modifier,
     selectedTab: Int = 0,
     onTabSelected: (Int) -> Unit = {},
     onClose: (Int) -> Unit = {},
     isDirty: (Int) -> Boolean = { false },
 ) {
-    LazyRow(modifier = modifier.zIndex(5f)
-        .fillMaxWidth()) {
-        itemsIndexed(tabs) { index, tab ->
-            EditorTab(
-                text = tab,
-                isSelected = index == selectedTab,
-                isDirty = isDirty(index),
-                onClick = { onTabSelected(index) },
-                onClose = { onClose(index) }
-            )
+    val dirty by rememberUpdatedState(isDirty)
+
+    Box(
+        modifier = modifier
+            .zIndex(5f)
+            .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
+            .fillMaxWidth()
+    ) {
+        LazyRow {
+            itemsIndexed(tabs) { index, tab ->
+                EditorTab(
+                    tabItem = tab,
+                    isSelected = index == selectedTab,
+                    isDirty = dirty(index),
+                    onClick = { onTabSelected(index) },
+                    onClose = { onClose(index) }
+                )
+            }
         }
     }
 }
 
 @Composable
 fun EditorTab(
-    text: String,
+    tabItem: TabItem,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
     isDirty: Boolean = false,
     onClick: () -> Unit = {},
     onClose: () -> Unit = {},
 ) {
-    val surface4 = MaterialTheme.colorScheme.surfaceColorAtElevation(4.dp)
+    val colorScheme = MaterialTheme.colorScheme
+
+    val surface4 = colorScheme.surfaceColorAtElevation(4.dp)
     val onSurface4 = contentColorFor(surface4)
-    val surface1 = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp)
+    val surface1 = colorScheme.surfaceColorAtElevation(1.dp)
     val onSurface1 = contentColorFor(surface1)
 
     val backgroundColor by animateColorAsState(
@@ -77,6 +93,19 @@ fun EditorTab(
         modifier = modifier
             .background(backgroundColor)
             .clickable(onClick = onClick)
+            .then(if (isSelected) Modifier.drawWithCache {
+                onDrawBehind {
+                    val strokeWidth = 1.dp.toPx()
+                    val y = size.height - strokeWidth / 2
+
+                    drawLine(
+                        color = colorScheme.onSurface,
+                        start = Offset(0f, y),
+                        end = Offset(size.width, y),
+                        strokeWidth = strokeWidth
+                    )
+                }
+            } else Modifier)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -84,19 +113,47 @@ fun EditorTab(
             Box(
                 modifier = Modifier
                     .size(6.dp)
-                    .background(Color.Red, CircleShape)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
             )
             Spacer(modifier = Modifier.width(6.dp))
         }
 
         Text(
-            text = text,
+            text = tabItem.name,
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodySmall
             //modifier = Modifier.weight(1f, fill = false)
         )
+
+        if (tabItem.type == "file") {
+            val file = tabItem.data as? File
+
+            if (file != null) {
+                Spacer(modifier = Modifier.width(4.dp))
+
+                Text(
+                    text = file.path.let {
+                        var result = if (it.startsWith(Env.APP_HOME_DIR)) {
+                            it.replaceFirst(Env.APP_HOME_DIR, "~")
+                        } else if (it.startsWith(Env.DEVICE_HOME_DIR)) {
+                            it.replaceFirst(Env.DEVICE_HOME_DIR, "~")
+                        } else it
+
+                        if (result.length > 20) {
+                            result = "${result.take(20)}..."
+                        }
+                        result
+                    },
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.alpha(0.7f)
+                )
+            }
+        }
 
         Icon(
             imageVector = Icons.Default.Close,

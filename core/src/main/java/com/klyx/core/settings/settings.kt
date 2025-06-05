@@ -20,7 +20,7 @@ data class AppSettings(
         - "dark": Use the dark theme
     """
     )
-    val theme: AppTheme = AppTheme.Dark,
+    val theme: AppTheme = AppTheme.System,
 
 //    @SerialComment("The editor settings")
 //    val editor: EditorSettings = EditorSettings()
