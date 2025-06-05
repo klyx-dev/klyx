@@ -86,13 +86,11 @@ class EventBus private constructor() {
      * Returns a [Job] that can be used to cancel the subscription
      */
     inline fun <reified T : Any> subscribe(
-        dispatcher: CoroutineDispatcher,
+        dispatcher: CoroutineDispatcher = Dispatchers.Default,
         crossinline onEvent: suspend (T) -> Unit
     ): Job {
         return scope.launch(dispatcher) {
-            subscribe<T>().collect {
-                onEvent(it)
-            }
+            subscribe<T>().collect { onEvent(it) }
         }
     }
 

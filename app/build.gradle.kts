@@ -69,6 +69,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.google.fonts)
 
+    implementation(kotlin("reflect"))
+
     implementation(project(":core"))
     implementation(project(":editor"))
     implementation(project(":kwasm"))
