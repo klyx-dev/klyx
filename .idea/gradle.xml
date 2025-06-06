@@ -4,9 +4,21 @@
   <component name="GradleSettings">
     <option name="linkedExternalProjectsSettings">
       <GradleProjectSettings>
+        <compositeConfiguration>
+          <compositeBuild compositeDefinitionSource="SCRIPT">
+            <builds>
+              <build path="$PROJECT_DIR$/ktreesitter-plugin" name="ktreesitter-plugin">
+                <projects>
+                  <project path="$PROJECT_DIR$/ktreesitter-plugin" />
+                </projects>
+              </build>
+            </builds>
+          </compositeBuild>
+        </compositeConfiguration>
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
-        <option name="gradleJvm" value="#GRADLE_LOCAL_JAVA_HOME" />
+        <option name="gradleHome" value="C:\Gradle\gradle-8.10.1" />
+        <option name="gradleJvm" value="21" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
@@ -14,10 +26,16 @@
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/editor" />
             <option value="$PROJECT_DIR$/extension-api" />
+            <option value="$PROJECT_DIR$/ktreesitter-plugin" />
             <option value="$PROJECT_DIR$/kwasm" />
+            <option value="$PROJECT_DIR$/tree-sitter" />
+            <option value="$PROJECT_DIR$/tree-sitter/java" />
+            <option value="$PROJECT_DIR$/tree-sitter/json" />
+            <option value="$PROJECT_DIR$/tree-sitter/kotlin" />
           </set>
         </option>
       </GradleProjectSettings>
     </option>
+    <option name="parallelModelFetch" value="true" />
   </component>
 </project>

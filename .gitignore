@@ -15,3 +15,20 @@
 local.properties
 /.kotlin/
 **/*.apk
+
+### C ###
+.cache/
+.cmake/
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+### JetBrains ###
+.idea/*
+out/
+*.iws
+*.ipr
+*.trace
+*.log

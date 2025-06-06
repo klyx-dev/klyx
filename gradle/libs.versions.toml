@@ -1,6 +1,5 @@
 [versions]
 agp = "8.12.0-alpha03"
-androidTreeSitter = "4.3.1"
 assertjCore = "3.27.3"
 desugar_jdk_libs = "2.1.5"
 json5k = "0.3.0"
@@ -16,20 +15,13 @@ junitVersion = "1.2.1"
 espressoCore = "3.6.1"
 lifecycle = "2.9.0"
 activityCompose = "1.10.1"
-composeBom = "2025.05.01"
+composeBom = "2025.06.00"
 appcompat = "1.7.0"
 material = "1.12.0"
 truth = "1.4.4"
 utilcodex = "1.31.1"
 
 [libraries]
-#noinspection Aligned16KB
-android-tree-sitter = { module = "com.itsaky.androidide.treesitter:android-tree-sitter", version.ref = "androidTreeSitter" }
-android-tree-sitter-java = { module = "com.itsaky.androidide.treesitter:tree-sitter-java", version.ref = "androidTreeSitter" }
-android-tree-sitter-json = { module = "com.itsaky.androidide.treesitter:tree-sitter-json", version.ref = "androidTreeSitter" }
-android-tree-sitter-kotlin = { module = "com.itsaky.androidide.treesitter:tree-sitter-kotlin", version.ref = "androidTreeSitter" }
-android-tree-sitter-python = { module = "com.itsaky.androidide.treesitter:tree-sitter-python", version.ref = "androidTreeSitter" }
-android-tree-sitter-xml = { module = "com.itsaky.androidide.treesitter:tree-sitter-xml", version.ref = "androidTreeSitter" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }

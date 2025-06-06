@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.klyx.core.rememberTypeface
 import com.klyx.editor.compose.EditorState
@@ -31,6 +32,7 @@ import java.util.Locale
 
 @Composable
 fun EditorScreen(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val editors = LocalEditorStore.current
     val viewModel = LocalEditorViewModel.current
     val keyboardController = LocalSoftwareKeyboardController.current

@@ -1,0 +1,9 @@
+[submodule "tree-sitter/java/tree-sitter-java"]
+	path = tree-sitter/java/tree-sitter-java
+	url = https://github.com/tree-sitter/tree-sitter-java
+[submodule "tree-sitter/kotlin/tree-sitter-kotlin"]
+	path = tree-sitter/kotlin/tree-sitter-kotlin
+	url = https://github.com/fwcd/tree-sitter-kotlin
+[submodule "tree-sitter/json/tree-sitter-json"]
+	path = tree-sitter/json/tree-sitter-json
+	url = https://github.com/tree-sitter/tree-sitter-json

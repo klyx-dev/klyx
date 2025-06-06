@@ -2,10 +2,9 @@ package com.klyx.editor.compose
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import com.itsaky.androidide.treesitter.java.TSLanguageJava
-import com.itsaky.androidide.treesitter.json.TSLanguageJson
-import com.itsaky.androidide.treesitter.kotlin.TSLanguageKotlin
-import com.itsaky.androidide.treesitter.python.TSLanguagePython
+import com.klyx.treesitter.java.TreeSitterJava
+import com.klyx.treesitter.json.TreeSitterJson
+import com.klyx.treesitter.kotlin.TreeSitterKotlin
 import io.github.treesitter.ktreesitter.Language
 import io.github.treesitter.ktreesitter.Node
 import io.github.treesitter.ktreesitter.Parser
@@ -18,10 +17,9 @@ class TreeSitterHighlighter {
 
     fun setLanguage(languageName: String) {
         language = when (languageName.lowercase()) {
-            "kotlin" -> Language(TSLanguageKotlin.getInstance().nativeObject)
-            "java" -> Language(TSLanguageJava.getInstance().nativeObject)
-            "python" -> Language(TSLanguagePython.getInstance().nativeObject)
-            "json" -> Language(TSLanguageJson.getInstance().nativeObject)
+            "kotlin" -> Language(TreeSitterKotlin.language())
+            "java" -> Language(TreeSitterJava.language())
+            "json" -> Language(TreeSitterJson.language())
             else -> null
         }
 
