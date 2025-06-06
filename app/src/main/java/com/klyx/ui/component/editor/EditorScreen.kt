@@ -23,8 +23,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import com.klyx.core.rememberTypeface
 import com.klyx.editor.compose.EditorState
 import com.klyx.editor.compose.KlyxCodeEditor
-import com.klyx.editor.compose.LocalEditorStore
 import com.klyx.editor.compose.LocalEditorViewModel
+import com.klyx.editor.language.language
 import com.klyx.viewmodel.isFileTab
 import kotlinx.coroutines.launch
 import java.io.File
@@ -33,7 +33,6 @@ import java.util.Locale
 @Composable
 fun EditorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val editors = LocalEditorStore.current
     val viewModel = LocalEditorViewModel.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -89,7 +88,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                     openTabs.getOrNull(index)?.let { tab ->
                         viewModel.closeTab(tab.id)
                         if (tab.isFileTab) {
-                            editors.remove(tab.id)
+                            editorStates.remove(tab.id)
                         }
                     }
                 },
@@ -124,6 +123,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                                 editorState = editorState,
                                 typeface = typeface,
                                 editable = tab.type != "fileInternal",
+                                language = file.language(),
                                 onTextChanged = { newText ->
                                     //editorState.updateText(newText)
                                 }

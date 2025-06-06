@@ -30,27 +30,28 @@ class KlyxInputConnection(
             return false
         }
         
-        // ensure we're using the current cursor position
+        // Normalize line endings in the input text
+        val normalizedInput = text.toString().replace("\r\n", "\n").replace("\r", "\n")
+        
+        // Get text before and after cursor
         val beforeCursor = currentText.substring(0, cursorPosition)
         val afterCursor = currentText.substring(cursorPosition)
         
-        // validate text parts
-        if (beforeCursor.length + afterCursor.length != currentText.length) {
-            Log.e("KlyxInputConnection", "Text parts validation failed: before=${beforeCursor.length}, after=${afterCursor.length}, total=${currentText.length}")
-            return false
+        // Create new text with normalized line endings
+        val newText = beforeCursor + normalizedInput + afterCursor
+        
+        // Update editor state
+        editorState.updateText(newText)
+        
+        // Handle cursor position based on whether this is a newline insertion
+        if (normalizedInput == "\n") {
+            // For newline, move cursor exactly one position forward
+            editorState.moveCursor(cursorPosition + 1)
+        } else {
+            // For other text, move cursor after the inserted text
+            editorState.moveCursor(cursorPosition + normalizedInput.length)
         }
         
-        val newText = beforeCursor + text + afterCursor
-        editorState.text = newText
-        
-        // validate new cursor position
-        val newCursorPos = cursorPosition + text.length
-        if (newCursorPos > newText.length) {
-            Log.e("KlyxInputConnection", "Invalid new cursor position: $newCursorPos, new text length: ${newText.length}")
-            return false
-        }
-        
-        editorState.moveCursor(newCursorPos)
         onCursorMoved()
         return true
     }
@@ -60,17 +61,21 @@ class KlyxInputConnection(
         val cursorPosition = editorState.cursorPosition
         
         if (beforeLength > 0 && cursorPosition > 0) {
+            // Normalize line endings to \n for consistent handling
+            val normalizedText = currentText.replace("\r\n", "\n").replace("\r", "\n")
+            
+            // Calculate the actual start position
             val start = (cursorPosition - beforeLength).coerceAtLeast(0)
-            val beforeCursor = currentText.substring(0, start)
-            val afterCursor = currentText.substring(cursorPosition)
             
-            // Validate text parts
-            if (beforeCursor.length + afterCursor.length + beforeLength != currentText.length) {
-                Log.e("KlyxInputConnection", "Delete validation failed: before=${beforeCursor.length}, after=${afterCursor.length}, delete=$beforeLength, total=${currentText.length}")
-                return false
-            }
+            // Get the text before and after cursor
+            val beforeCursor = normalizedText.substring(0, start)
+            val afterCursor = normalizedText.substring(cursorPosition)
             
-            editorState.text = beforeCursor + afterCursor
+            // Create new text
+            val newText = beforeCursor + afterCursor
+            
+            // Update editor state
+            editorState.updateText(newText)
             editorState.moveCursor(start)
             onCursorMoved()
             return true

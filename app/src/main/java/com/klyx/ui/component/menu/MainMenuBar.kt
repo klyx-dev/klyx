@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.klyx.core.Env
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.key.matches
 import com.klyx.core.key.parseShortcut
@@ -46,6 +47,7 @@ import com.klyx.core.showShortToast
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.ui.component.AboutDialog
 import kotlinx.coroutines.delay
+import java.io.File
 
 @Composable
 fun MainMenuBar(
@@ -82,6 +84,20 @@ fun MainMenuBar(
             "File" to listOf(
                 MenuItem("New File", "Ctrl-N", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
                 MenuItem("Open File...", "Ctrl-O", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
+                MenuItem("Open Test Kt File") {
+                    viewModel.openFile(
+                        File(Env.APP_HOME_DIR, "test.kt").apply {
+                            writeText(context.assets.open("test.kt").bufferedReader().use { it.readText() })
+                        }
+                    )
+                },
+                MenuItem("Open Test Java File") {
+                    viewModel.openFile(
+                        File(Env.APP_HOME_DIR, "test.java").apply {
+                            writeText(context.assets.open("test.java").bufferedReader().use { it.readText() })
+                        }
+                    )
+                },
                 MenuItem(),
                 MenuItem("Save", "Ctrl-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
                 MenuItem("Save As...", "Ctrl-Shift-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },

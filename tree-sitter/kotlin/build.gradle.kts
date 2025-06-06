@@ -59,7 +59,7 @@ android {
         named("main") {
             val generatedSrc = generateTask.generatedSrc.get()
 
-            kotlin.srcDir(generatedSrc.dir("androidMain").dir("kotlin"))
+            kotlin.srcDirs(generatedSrc.dir("androidMain").dir("kotlin"), "src/main/kotlin")
         }
     }
 

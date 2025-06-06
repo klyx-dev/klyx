@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
  */
 class EditorState(initialText: String = "") {
     var text by mutableStateOf(initialText)
+        private set
     var isModified by mutableStateOf(false)
         private set
     
@@ -80,10 +81,9 @@ class EditorState(initialText: String = "") {
     }
 
     fun updateText(newText: String) {
-        if (text != newText) {
-            text = newText
-            isModified = true
-        }
+        // normalize line endings to \n
+        text = newText.replace("\r\n", "\n").replace("\r", "\n")
+        isModified = true
     }
 
     fun markAsSaved() {

@@ -72,7 +72,7 @@ fun KlyxCodeEditor(
     cursorBlinkRate: Long = 500,
     cursorFocusPadding: Dp = 100.dp,
     onTextChanged: (String) -> Unit = {},
-    language: String = "json"
+    language: String = "text"
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
@@ -100,34 +100,27 @@ fun KlyxCodeEditor(
     var canvasWidth by remember { mutableFloatStateOf(0f) }
     var canvasHeight by remember { mutableFloatStateOf(0f) }
 
-    // Virtual scrolling state
     val visibleLines = remember { mutableStateListOf<String>() }
     val lineOffsets = remember { mutableStateListOf<Int>() }
     val totalLines = remember { mutableStateOf(0) }
-    val chunkSize = 100 // Number of lines to process at once
 
-    // Add debouncing for scroll updates
     var lastScrollUpdateTime by remember { mutableLongStateOf(0L) }
     val scrollDebounceTime = 16L // ~60fps
 
-    // Add text update debouncing
     var lastTextUpdateTime by remember { mutableLongStateOf(0L) }
     val textUpdateDebounceTime = 16L // ~60fps
 
-    // Store all highlights separately from visible highlights
     val allHighlights = remember { mutableStateListOf<SyntaxHighlight>() }
 
-    // Update visible lines based on scroll position
     fun updateVisibleLines(allLines: List<String>) {
         val startIndex = (scrollY.floatValue / fullLineHeightPx).toInt().coerceAtLeast(0)
         val visibleCount = (canvasHeight / fullLineHeightPx).toInt() + 2
         val endIndex = (startIndex + visibleCount).coerceAtMost(allLines.size)
-        
+
         visibleLines.clear()
         visibleLines.addAll(allLines.subList(startIndex, endIndex))
     }
 
-    // Update visible highlights based on scroll position
     fun updateVisibleHighlights() {
         val lines = editorState.text.lines()
         val startIndex = (scrollY.floatValue / fullLineHeightPx).toInt().coerceAtLeast(0)
@@ -135,102 +128,90 @@ fun KlyxCodeEditor(
         val bufferSize = 20 // Number of lines to process above and below visible area
         val processStart = (startIndex - bufferSize).coerceAtLeast(0)
         val processEnd = (startIndex + visibleCount + bufferSize).coerceAtMost(lines.size)
-        
-        // Calculate character offsets for the visible region
+
         var startCharOffset = 0
         for (i in 0 until processStart) {
             startCharOffset += lines[i].length + 1 // +1 for newline
         }
-        
+
         var endCharOffset = startCharOffset
         for (i in processStart until processEnd) {
             endCharOffset += lines[i].length + 1 // +1 for newline
         }
-        
-        // Filter highlights to only include those in the visible region
+
         val filteredHighlights = allHighlights.filter { highlight ->
             highlight.startOffset < endCharOffset && highlight.endOffset > startCharOffset
         }
-        
+
         syntaxHighlights.clear()
         syntaxHighlights.addAll(filteredHighlights)
     }
 
-    // Optimize syntax highlighting for large files with debouncing
+    val highlighter = remember { TreeSitterHighlighter(context) }
+
     LaunchedEffect(editorState.text, language) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastTextUpdateTime >= textUpdateDebounceTime) {
             if (editorState.text != lastHighlightedText.value || language != lastHighlightedLanguage.value) {
                 lastTextUpdateTime = currentTime
-                
-                val highlighter = TreeSitterHighlighter().apply {
-                    setLanguage(language)
-                }
+                highlighter.setLanguage(language)
 
-                // Process the entire text for TreeSitter
                 val newHighlights = highlighter.getSyntaxHighlights(editorState.text)
-                
+
                 lastHighlightedText.value = editorState.text
                 lastHighlightedLanguage.value = language
-                
+
                 allHighlights.clear()
                 allHighlights.addAll(newHighlights)
-                
-                // Update visible highlights
+
                 updateVisibleHighlights()
             }
         }
     }
 
-    // Update visible highlights when scrolling
     LaunchedEffect(scrollY.floatValue) {
         updateVisibleHighlights()
     }
 
-    // Optimize scroll handling
     fun handleScroll(newScrollY: Float) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastScrollUpdateTime >= scrollDebounceTime) {
             scrollY.floatValue = newScrollY
             lastScrollUpdateTime = currentTime
-            
+
             // Only update visible lines if we've scrolled enough
             val lineDelta = (newScrollY - scrollY.floatValue) / fullLineHeightPx
             if (abs(lineDelta) >= 1) {
                 updateVisibleLines(editorState.text.lines())
-                updateVisibleHighlights() // Update highlights when scrolling
+                updateVisibleHighlights()
             }
         }
     }
 
-    // Process text in chunks
     LaunchedEffect(editorState.text) {
         val lines = editorState.text.lines()
         totalLines.value = lines.size
-        
-        // Calculate line offsets
+
         lineOffsets.clear()
         var offset = 0
         lines.forEach { line ->
             lineOffsets.add(offset)
             offset += line.length + 1 // +1 for newline
         }
-        
-        // Update visible lines
+
         updateVisibleLines(lines)
     }
 
-    // Update visible lines when scrolling with debouncing
     LaunchedEffect(scrollY.floatValue) {
         handleScroll(scrollY.floatValue)
     }
 
-    // Track dirty regions for partial redraws
+    // track dirty regions for partial redraws
     val dirtyRegion = remember { mutableStateOf<Pair<Float, Float>?>(null) }
     var lastScrollY by remember { mutableFloatStateOf(0f) }
     var lastScrollX by remember { mutableFloatStateOf(0f) }
 
-    // Update dirty region when scrolling
+    // update dirty region when scrolling
     LaunchedEffect(scrollY.floatValue, scrollX.floatValue) {
         if (scrollY.floatValue != lastScrollY || scrollX.floatValue != lastScrollX) {
             dirtyRegion.value = Pair(scrollY.floatValue - lastScrollY, scrollX.floatValue - lastScrollX)
@@ -263,9 +244,9 @@ fun KlyxCodeEditor(
         }
     }
 
-    // Cache for wrapped lines with size limit
+    // cache for wrapped lines with size limit
     val wrappedLinesCache = remember { mutableStateOf<Pair<String, List<String>>?>(null) }
-    val maxCacheSize = 1000 // Maximum number of cached lines
+    val maxCacheSize = 1000 // maximum number of cached lines
 
     fun getWrappedLines(text: String, paint: Paint, wrapWidth: Float): List<String> {
         // Check cache first
@@ -279,7 +260,7 @@ fun KlyxCodeEditor(
             val startIndex = (scrollY.floatValue / fullLineHeightPx).toInt().coerceAtLeast(0)
             val visibleCount = (canvasHeight / fullLineHeightPx).toInt() + 2
             val endIndex = (startIndex + visibleCount).coerceAtMost(text.lines().size)
-            
+
             val visibleLines = text.lines().subList(startIndex, endIndex)
             buildList {
                 visibleLines.forEachIndexed { _, originalLine ->
@@ -327,7 +308,7 @@ fun KlyxCodeEditor(
                 }
             }
         }
-        
+
         // Update cache only for smaller files
         if (text.lines().size <= maxCacheSize) {
             wrappedLinesCache.value = text to lines
@@ -370,18 +351,24 @@ fun KlyxCodeEditor(
         return Pair(verticalLimit, horizontalLimit)
     }
 
+    // calculate cursor position
     fun calculateCursorPosition(cursorPosition: Int, lines: List<String>, paint: Paint): Pair<Int, Float> {
         var currentPosition = 0
         var cursorLine = 0
         var cursorX = 0f
 
         for (i in lines.indices) {
-            val lineLength = lines[i].length + 1
+            val line = lines[i]
+            val lineLength = line.length + 1 // +1 for newline
+
             if (currentPosition + lineLength > cursorPosition) {
                 cursorLine = i
-                val line = lines[i]
                 val charPosition = cursorPosition - currentPosition
-                cursorX = measureText(line.substring(0, charPosition))
+
+                // measure text up to cursor position
+                if (charPosition > 0) {
+                    cursorX = measureText(line.substring(0, charPosition))
+                }
                 break
             }
             currentPosition += lineLength
@@ -488,7 +475,6 @@ fun KlyxCodeEditor(
         }
     }
 
-    // Function to update cursor activity
     fun updateCursorActivity() {
         isCursorActive = true
         lastCursorActivityTime = System.currentTimeMillis()
@@ -511,11 +497,7 @@ fun KlyxCodeEditor(
                         keyboardController = keyboardController,
                         editorState = editorState,
                         onKeyEvent = { event: KeyEvent ->
-                            // Only mark dirty region for visible area
-                            val visibleStart = (scrollY.floatValue / fullLineHeightPx).toInt()
-                            val visibleEnd = visibleStart + (canvasHeight / fullLineHeightPx).toInt()
-                            dirtyRegion.value = Pair(visibleStart.toFloat(), visibleEnd.toFloat())
-                            
+                            dirtyRegion.value = Pair(Float.MAX_VALUE, Float.MAX_VALUE)
                             EventBus.getInstance().postSync(event)
 
                             if (event.type == KeyEventType.KeyDown) {
@@ -617,12 +599,21 @@ fun KlyxCodeEditor(
                                     Key.Enter -> {
                                         val currentText = editorState.text
                                         val cursorPos = editorState.cursorPosition
-                                        val beforeCursor = currentText.substring(0, cursorPos)
-                                        val afterCursor = currentText.substring(cursorPos)
+
+                                        // normalize line endings to \n for consistent handling
+                                        val normalizedText = currentText.replace("\r\n", "\n").replace("\r", "\n")
+
+                                        // get text before and after cursor
+                                        val beforeCursor = normalizedText.substring(0, cursorPos)
+                                        val afterCursor = normalizedText.substring(cursorPos)
+
+                                        // create new text with normalized line ending
                                         val newText = beforeCursor + "\n" + afterCursor
+
                                         editorState.updateText(newText)
-                                        onTextChanged(newText)
+                                        // move cursor exactly one position forward for newline
                                         editorState.moveCursor(cursorPos + 1)
+                                        onTextChanged(newText)
                                         ensureCursorInView()
                                         true
                                     }
@@ -929,7 +920,6 @@ fun KlyxCodeEditor(
             allVisualLines.size
         )
 
-        // Draw cursor
         if (showCursor) {
             val (cursorLine, cursorX) = calculateCursorPosition(editorState.cursorPosition, editorState.text.lines(), textPaint)
             val cursorY = cursorLine * fullLineHeightPx - scrollY.floatValue
@@ -984,7 +974,7 @@ fun KlyxCodeEditor(
             }
         }
 
-        // Clear dirty region after drawing
+        // clear dirty region after drawing
         dirtyRegion.value = null
     }
 }
