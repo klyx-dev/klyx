@@ -13,8 +13,7 @@ class EditorState(initialText: String = "") {
     var text by mutableStateOf(initialText)
         private set
     var isModified by mutableStateOf(false)
-        private set
-    
+
     // Cursor position (caret position)
     var cursorPosition by mutableIntStateOf(initialText.length)
         private set

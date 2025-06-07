@@ -1,7 +1,11 @@
 package com.klyx.ui.component
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -41,6 +45,8 @@ fun KlyxDialog(
                             text = title,
                             style = MaterialTheme.typography.titleLarge
                         )
+
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
                     if (message != null) {
@@ -52,7 +58,12 @@ fun KlyxDialog(
                 }
 
                 if (isAnyButtonAvailable) {
-                    Row {
+                    Row(
+                        horizontalArrangement = Arrangement.Absolute.Right,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
+                    ) {
                         if (neutralButton != null) {
                             neutralButton()
                         }

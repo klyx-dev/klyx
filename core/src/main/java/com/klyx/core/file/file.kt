@@ -1,5 +1,8 @@
 package com.klyx.core.file
 
+import android.Manifest
+import android.content.Context
+import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -107,3 +110,50 @@ fun File.asWatchChannel(
     scope = scope,
     tag = tag
 )
+
+fun FileWrapper.requiresPermission(context: Context, isWrite: Boolean): Boolean {
+    // External storage root check
+    val externalDirs = context.getExternalFilesDirs(null).mapNotNull { it?.parentFile?.parentFile?.parentFile }
+    val isExternalStorage = externalDirs.any { this.absolutePath.startsWith(it.absolutePath) }
+
+    return when {
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
+            // For Android 11 and above (Scoped Storage)
+            // Apps can access their own app-specific dirs freely
+            !this.isInAppSpecificDir(context) && !this.canAccess(context)
+        }
+
+        isExternalStorage -> {
+            val permission = if (isWrite) Manifest.permission.WRITE_EXTERNAL_STORAGE else Manifest.permission.READ_EXTERNAL_STORAGE
+            context.checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+
+        else -> false // Internal storage or app-private paths generally don't require extra permission
+    }
+}
+
+private fun FileWrapper.isInAppSpecificDir(context: Context): Boolean {
+    val appSpecificDirs = listOfNotNull(
+        context.filesDir,
+        context.cacheDir,
+        context.externalCacheDir,
+        context.getExternalFilesDir(null)
+    ).map { it.absolutePath }
+
+    return appSpecificDirs.any { this.absolutePath.startsWith(it) }
+}
+
+private fun FileWrapper.canAccess(context: Context): Boolean {
+    return if (exists()) {
+        if (canRead() && canWrite()) true
+        else try {
+            if (isDirectory) list()?.isNotEmpty() != null
+            else inputStream(context)?.close() != null
+        } catch (e: Exception) {
+            false
+        }
+    } else {
+        val parent = this.parentFile ?: return false
+        parent.canWrite()
+    }
+}

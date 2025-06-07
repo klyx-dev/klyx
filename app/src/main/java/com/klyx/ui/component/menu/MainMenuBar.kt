@@ -1,6 +1,8 @@
 package com.klyx.ui.component.menu
 
 import androidx.activity.compose.LocalActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -38,8 +40,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.Env
 import com.klyx.core.event.subscribeToEvent
+import com.klyx.core.file.FileWrapper
+import com.klyx.core.file.wrapFile
 import com.klyx.core.key.matches
 import com.klyx.core.key.parseShortcut
 import com.klyx.core.settings.SettingsManager
@@ -59,6 +64,18 @@ fun MainMenuBar(
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
 
+    val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            viewModel.openFile(UriUtils.uri2File(uri).wrapFile())
+        }
+    }
+
+    val createFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        if (uri != null) {
+            viewModel.openFile(UriUtils.uri2File(uri).wrapFile())
+        }
+    }
+
     var showAbout by remember { mutableStateOf(false) }
     var showMenuBar by remember { mutableStateOf(false) }
 
@@ -68,11 +85,11 @@ fun MainMenuBar(
                 MenuItem("About Klyx...") { showAbout = true },
                 MenuItem(),
                 MenuItem("Open Settings", "Ctrl-,") {
-                    viewModel.openFile(SettingsManager.settingsFile)
+                    viewModel.openFile(SettingsManager.settingsFile.wrapFile())
                 },
                 MenuItem("Open Default Settings") {
                     viewModel.openFile(
-                        SettingsManager.internalSettingsFile,
+                        SettingsManager.internalSettingsFile.wrapFile(),
                         tabTitle = "Default Settings",
                         isInternal = true
                     )
@@ -82,24 +99,32 @@ fun MainMenuBar(
             ),
 
             "File" to listOf(
-                MenuItem("New File", "Ctrl-N", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
-                MenuItem("Open File...", "Ctrl-O", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
+                MenuItem("New File", "Ctrl-N") {
+                    //createFile.launch("untitled")
+                    viewModel.openFile(File("untitled").wrapFile())
+                },
+                MenuItem("Open File...", "Ctrl-O") {
+                    openFile.launch(arrayOf("*/*"))
+                },
                 MenuItem("Open Test Kt File") {
                     viewModel.openFile(
                         File(Env.APP_HOME_DIR, "test.kt").apply {
                             writeText(context.assets.open("test.kt").bufferedReader().use { it.readText() })
-                        }
+                        }.wrapFile()
                     )
                 },
                 MenuItem("Open Test Java File") {
                     viewModel.openFile(
                         File(Env.APP_HOME_DIR, "test.java").apply {
                             writeText(context.assets.open("test.java").bufferedReader().use { it.readText() })
-                        }
+                        }.wrapFile()
                     )
                 },
                 MenuItem(),
-                MenuItem("Save", "Ctrl-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
+                MenuItem("Save", "Ctrl-S") {
+                    viewModel.saveCurrent()
+                    context.showShortToast("Saved")
+                },
                 MenuItem("Save As...", "Ctrl-Shift-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
                 MenuItem("Save All", "Ctrl-Alt-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
             ),

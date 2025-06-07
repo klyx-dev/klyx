@@ -1,8 +1,9 @@
 package com.klyx.editor.language
 
-import java.io.File
+import com.klyx.core.file.FileWrapper
+import com.klyx.core.file.extension
 
-fun File.language() = when (val ext = extension.lowercase()) {
+fun FileWrapper.language() = when (val ext = extension.lowercase()) {
     "kt", "kts" -> "kotlin"
     "js" -> "javascript"
     "ts" -> "typescript"

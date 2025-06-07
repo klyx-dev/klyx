@@ -2,6 +2,7 @@
 agp = "8.12.0-alpha03"
 assertjCore = "3.27.3"
 desugar_jdk_libs = "2.1.5"
+documentfile = "1.1.0"
 json5k = "0.3.0"
 kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.8.1"
@@ -9,7 +10,7 @@ ktoml = "0.7.0"
 ktreesitter = "0.24.1"
 sora-editor = "0.23.5"
 kotlin = "2.1.21"
-coreKtx = "1.16.0"
+core = "1.16.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
@@ -22,7 +23,9 @@ truth = "1.4.4"
 utilcodex = "1.31.1"
 
 [libraries]
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-core = { module = "androidx.core:core", version.ref = "core" }
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
+androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }

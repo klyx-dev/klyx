@@ -32,8 +32,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.klyx.core.Env
+import com.klyx.core.file.FileWrapper
 import com.klyx.viewmodel.TabItem
-import java.io.File
 
 @Composable
 fun EditorTabBar(
@@ -128,9 +128,9 @@ fun EditorTab(
         )
 
         if (tabItem.type == "file") {
-            val file = tabItem.data as? File
+            val file = tabItem.data as? FileWrapper
 
-            if (file != null) {
+            if (file != null && file.path != "untitled") {
                 Spacer(modifier = Modifier.width(4.dp))
 
                 Text(
@@ -140,6 +140,8 @@ fun EditorTab(
                         } else if (it.startsWith(Env.DEVICE_HOME_DIR)) {
                             it.replaceFirst(Env.DEVICE_HOME_DIR, "~")
                         } else it
+
+                        result = result.substringBeforeLast("/")
 
                         if (result.length > 20) {
                             result = "${result.take(20)}..."
