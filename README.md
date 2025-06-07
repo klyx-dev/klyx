@@ -10,6 +10,8 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 - Local file management
 - Dark/Light theme support
 - Syntax highlighting for multiple languages
+- Extensible theme system with custom theme support
+- Plugin system for extending functionality
 
 ## Screenshot
 
@@ -46,6 +48,22 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 1. Launch Klyx on your Android device
 2. Create a new file or open an existing one
 3. Start coding with the built-in editor
+
+## Extensions
+
+Klyx supports extensions to enhance its functionality. Currently, the following types of extensions are available:
+
+### Theme Extensions
+
+Theme extensions allow you to customize the appearance of Klyx. You can create your own themes by following our [Theme Extensions Guide](docs/theme-extensions.md). Theme extensions support:
+
+- Custom color schemes
+- Syntax highlighting customization
+- Dark and light mode variants
+- Terminal color customization
+- UI element styling
+
+More extension types will be added in future releases.
 
 ## Contributing
 
