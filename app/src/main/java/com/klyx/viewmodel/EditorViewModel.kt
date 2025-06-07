@@ -15,16 +15,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-interface TabItem {
-    val id: String
-    val name: String
-    val type: String
-    val data: Any?
-    val content: @Composable () -> Unit
-    val editorState: EditorState? get() = null
+data class TabItem(
+    val id: String,
+    val name: String,
+    val type: String,
+    val data: Any?,
+    val content: @Composable () -> Unit,
+    val editorState: EditorState? = null
+) {
+    val isFileTab: Boolean get() = type == "file" || type == "fileInternal"
 }
-
-val TabItem.isFileTab get() = type == "file" || type == "fileInternal"
 
 data class TabState(
     val openTabs: List<TabItem> = emptyList(),
@@ -40,17 +40,16 @@ class EditorViewModel : ViewModel() {
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
-        val fileTab = object : TabItem {
-            override val id: String = file.id
-            override val name: String = tabTitle
-            override val type: String = if (isInternal) "fileInternal" else "file"
-            override val data: Any = file
-            override val content: @Composable () -> Unit = {
+        val fileTab = TabItem(
+            id = file.id,
+            name = tabTitle,
+            type = if (isInternal) "fileInternal" else "file",
+            data = file,
+            content = {
                 Box(modifier = Modifier.fillMaxSize())
-            }
-            override val editorState: EditorState
-                get() = EditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
-        }
+            },
+            editorState = EditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
+        )
 
         _state.update { current ->
             if (current.openTabs.any { it.isFileTab && it.id == file.id }) {
@@ -71,13 +70,13 @@ class EditorViewModel : ViewModel() {
         content: @Composable () -> Unit,
         data: Any? = null
     ) {
-        val tab = object : TabItem {
-            override val id: String = id
-            override val name: String = name
-            override val type: String = type
-            override val data: Any? = data
-            override val content: @Composable () -> Unit = content
-        }
+        val tab = TabItem(
+            id = id,
+            name = name,
+            type = type,
+            data = data,
+            content = content
+        )
 
         _state.update { current ->
             if (current.openTabs.any { it.type == type && it.id == id }) {
@@ -125,35 +124,83 @@ class EditorViewModel : ViewModel() {
             _state.update { current ->
                 current.copy(openTabs = current.openTabs.map {
                     if (it.type == "file" && it.id == fileId) {
-                        object : TabItem {
-                            override val id: String = file.id
-                            override val name: String = file.name
-                            override val type: String = "file"
-                            override val data: Any = file
-                            override val content: @Composable () -> Unit = {
-                                // File content will be handled by EditorScreen
+                        TabItem(
+                            id = file.id,
+                            name = file.name,
+                            type = "file",
+                            data = file,
+                            content = {
                                 Box(modifier = Modifier.fillMaxSize())
-                            }
-                            override val editorState: EditorState
-                                get() = EditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
-                        }
-                    } else {
-                        it
-                    }
+                            },
+                            editorState = EditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
+                        )
+                    } else it
                 })
             }
         }
     }
 
-    fun saveCurrent() {
+    fun saveCurrent(): Boolean {
         val current = _state.value
-        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return
-        val editorState = tab.editorState ?: return
-        val file = tab.data as? FileWrapper ?: return
+        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
+        val editorState = tab.editorState ?: return false
+        val file = tab.data as? FileWrapper ?: return false
         val context = Klyx.application.applicationContext
 
-        file.write(context, editorState.text)
+        if (file.path == "untitled") {
+            return false
+        }
+
+        return file.write(context, editorState.text).also { isSaved ->
+            if (isSaved) editorState.markAsSaved()
+        }
+    }
+
+    fun saveAs(newFile: FileWrapper): Boolean {
+        val current = _state.value
+        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
+        val editorState = tab.editorState ?: return false
+        val context = Klyx.application.applicationContext
+
+        val saved = newFile.write(context, editorState.text)
+        if (!saved) return false
+
+        val newTab = TabItem(
+            id = newFile.id,
+            name = newFile.name,
+            type = "file",
+            data = newFile,
+            content = {
+                Box(modifier = Modifier.fillMaxSize())
+            },
+            editorState = EditorState(initialText = editorState.text)
+        )
+
+        replaceTab(tab.id, newTab)
         editorState.markAsSaved()
+        return true
+    }
+
+    fun saveAll(): Map<String, Boolean> {
+        val context = Klyx.application.applicationContext
+        val results = mutableMapOf<String, Boolean>()
+
+        _state.value.openTabs.forEach { tab ->
+            if (tab.type == "file" || tab.type == "fileInternal") {
+                val file = tab.data as? FileWrapper
+                val editorState = tab.editorState
+                
+                if (file != null && editorState != null && file.path != "untitled") {
+                    val saved = file.write(context, editorState.text)
+                    if (saved) {
+                        editorState.markAsSaved()
+                    }
+                    results[tab.name] = saved
+                }
+            }
+        }
+
+        return results
     }
 
     fun getTab(tabId: String): TabItem? {
@@ -168,5 +215,17 @@ class EditorViewModel : ViewModel() {
     fun getActiveTab(): TabItem? {
         val current = _state.value
         return current.openTabs.find { it.id == current.activeTabId }
+    }
+
+    fun replaceTab(tabId: String, newTab: TabItem) {
+        _state.update { current ->
+            val updatedTabs = current.openTabs.map { tab ->
+                if (tab.id == tabId) newTab else tab
+            }
+            current.copy(
+                openTabs = updatedTabs,
+                activeTabId = if (current.activeTabId == tabId) newTab.id else current.activeTabId
+            )
+        }
     }
 }

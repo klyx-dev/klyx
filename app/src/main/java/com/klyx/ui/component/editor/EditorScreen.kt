@@ -39,7 +39,6 @@ import com.klyx.editor.compose.KlyxCodeEditor
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.editor.language.language
 import com.klyx.ui.component.KlyxDialog
-import com.klyx.viewmodel.isFileTab
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 import java.util.Locale

@@ -45,6 +45,7 @@ import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.Env
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.DocumentFileWrapper
+import com.klyx.core.file.FileWrapper
 import com.klyx.core.file.wrapFile
 import com.klyx.core.key.matches
 import com.klyx.core.key.parseShortcut
@@ -75,7 +76,12 @@ fun MainMenuBar(
 
     val createFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
         if (uri != null) {
-            viewModel.openFile(UriUtils.uri2File(uri).wrapFile())
+            val file = if (DocumentFileWrapper.shouldWrap(uri)) {
+                DocumentFileWrapper(DocumentFile.fromSingleUri(context, uri)!!)
+            } else UriUtils.uri2File(uri).wrapFile()
+
+            val saved = viewModel.saveAs(file)
+            if (saved) context.showShortToast("Saved")
         }
     }
 
@@ -109,27 +115,42 @@ fun MainMenuBar(
                 MenuItem("Open File...", "Ctrl-O") {
                     openFile.launch(arrayOf("*/*"))
                 },
-                MenuItem("Open Test Kt File") {
-                    viewModel.openFile(
-                        File(Env.APP_HOME_DIR, "test.kt").apply {
-                            writeText(context.assets.open("test.kt").bufferedReader().use { it.readText() })
-                        }.wrapFile()
-                    )
-                },
-                MenuItem("Open Test Java File") {
-                    viewModel.openFile(
-                        File(Env.APP_HOME_DIR, "test.java").apply {
-                            writeText(context.assets.open("test.java").bufferedReader().use { it.readText() })
-                        }.wrapFile()
-                    )
-                },
                 MenuItem(),
                 MenuItem("Save", "Ctrl-S") {
-                    viewModel.saveCurrent()
-                    context.showShortToast("Saved")
+                    val file = viewModel.getActiveFile()
+                    if (file == null) {
+                        context.showShortToast("No active file")
+                        return@MenuItem
+                    }
+
+                    if (file.path == "untitled") {
+                        createFile.launch(file.name)
+                    } else {
+                        val saved = viewModel.saveCurrent()
+                        if (saved) context.showShortToast("Saved")
+                    }
                 },
-                MenuItem("Save As...", "Ctrl-Shift-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
-                MenuItem("Save All", "Ctrl-Alt-S", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
+                MenuItem("Save As...", "Ctrl-Shift-S") {
+                    val file = viewModel.getActiveFile()
+                    if (file == null) {
+                        context.showShortToast("No active file")
+                        return@MenuItem
+                    }
+                    createFile.launch(file.name)
+                },
+                MenuItem("Save All", "Ctrl-Alt-S") {
+                    val results = viewModel.saveAll()
+                    if (results.isEmpty()) {
+                        context.showShortToast("No files to save")
+                    } else {
+                        val failedFiles = results.filter { !it.value }.keys
+                        if (failedFiles.isEmpty()) {
+                            context.showShortToast("All files saved")
+                        } else {
+                            context.showShortToast("Failed to save: ${failedFiles.joinToString(", ")}")
+                        }
+                    }
+                },
             ),
 
             "Help" to listOf(
