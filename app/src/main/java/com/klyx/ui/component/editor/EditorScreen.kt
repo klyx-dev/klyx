@@ -24,10 +24,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.file.FileWrapper
 import com.klyx.core.file.KWatchEvent
 import com.klyx.core.file.asWatchChannel
@@ -46,6 +48,7 @@ import java.util.Locale
 @Composable
 fun EditorScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val editorSettings = LocalAppSettings.current.editor
     val lifecycleOwner = LocalLifecycleOwner.current
     val viewModel = LocalEditorViewModel.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -56,7 +59,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openTabs.size })
     val scope = rememberCoroutineScope()
-    val typeface by rememberTypeface("IBM Plex Mono")
+    val typeface by rememberTypeface(editorSettings.fontFamily)
 
     var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
     var pendingFile: FileWrapper? by remember { mutableStateOf(null) }
@@ -179,7 +182,9 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                                 editorState = editorState,
                                 typeface = typeface,
                                 editable = tab.type != "fileInternal",
-                                language = file.language()
+                                language = file.language(),
+                                pinnedLineNumbers = editorSettings.pinLineNumbers,
+                                fontSize = editorSettings.fontSize.sp
                             )
                         } else {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

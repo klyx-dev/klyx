@@ -98,6 +98,8 @@ class TreeSitterHighlighter(context: Context) {
                 val node = capture.node
                 val captureName = capture.name
 
+                println(captureName)
+
                 val color = when (captureName) {
                     "keyword" -> Color(0xFF569CD6).toArgb()
                     "keyword.function" -> Color(0xFF569CD6).toArgb()
@@ -117,7 +119,7 @@ class TreeSitterHighlighter(context: Context) {
                     "operator" -> Color(0xFFD4D4D4).toArgb()
                     "property" -> Color(0xFF9CDCFE).toArgb()
                     "property_key" -> Color(0xFF9CDCFE).toArgb()
-                    "boolean" -> Color(0xFF569CD6).toArgb()
+                    "boolean", "true", "false" -> Color(0xFF569CD6).toArgb()
                     "null" -> Color(0xFF569CD6).toArgb()
                     "character" -> Color(0xFFCE9178).toArgb()
                     "parameter" -> Color(0xFF9CDCFE).toArgb()

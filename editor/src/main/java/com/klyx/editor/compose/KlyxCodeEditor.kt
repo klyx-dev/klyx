@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
@@ -18,6 +19,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -43,7 +45,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.core.event.EventBus
+import com.klyx.core.settings.SettingsManager
 import com.klyx.core.showShortToast
+import com.klyx.core.theme.ThemeManager
 import com.klyx.editor.compose.input.textInput
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -55,7 +59,7 @@ fun KlyxCodeEditor(
     modifier: Modifier = Modifier,
     wrapText: Boolean = false,
     scrollbarThickness: Dp = 10.dp,
-    lineHeight: TextUnit = 18.sp,
+    fontSize: TextUnit = 18.sp,
     horizontalPadding: Dp = 10.dp,
     bottomPaddingLines: Int = 5,
     scrollbarColor: Color = Color(0x88FFFFFF),
@@ -76,6 +80,13 @@ fun KlyxCodeEditor(
 ) {
     val context = LocalContext.current
     val density = LocalDensity.current
+    val settings by SettingsManager.settings
+
+    val themeStyle by remember(settings) { derivedStateOf { ThemeManager.getThemeByName(settings.theme)?.style } }
+
+    val effectiveGutterBackground = themeStyle?.gutterBackground ?: gutterBackgroundColor
+    val effectiveGutterText = themeStyle?.gutterText ?: gutterTextColor
+    val effectiveGutterDivider = themeStyle?.gutterDivider ?: gutterDividerColor
 
     val coroutineScope = rememberCoroutineScope()
     val syntaxHighlights = remember { mutableStateListOf<SyntaxHighlight>() }
@@ -88,7 +99,7 @@ fun KlyxCodeEditor(
     var isCursorActive by remember { mutableStateOf(false) }
     var lastCursorActivityTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var isCursorMoving by remember { mutableStateOf(false) }
-    val lineHeightPx = with(density) { lineHeight.toPx() }
+    val lineHeightPx = with(density) { fontSize.toPx() }
     val lineSpacingPx = with(density) { 4.dp.toPx() }
     val fullLineHeightPx = lineHeightPx + lineSpacingPx
     val horizontalPaddingPx = with(density) { horizontalPadding.toPx() }
@@ -234,10 +245,10 @@ fun KlyxCodeEditor(
         }
     }
 
-    val gutterPaint = remember(typeface, lineHeightPx, gutterTextColor) {
+    val gutterPaint = remember(typeface, lineHeightPx, effectiveGutterText) {
         Paint().apply {
             textSize = lineHeightPx * 0.85f
-            color = gutterTextColor.toArgb()
+            color = effectiveGutterText.toArgb()
             isAntiAlias = true
             this.typeface = typeface
             textAlign = Paint.Align.RIGHT
@@ -324,7 +335,7 @@ fun KlyxCodeEditor(
         return textMeasurementCache.value[text] ?: run {
             val measurement = textPaint.measureText(text)
             if (textMeasurementCache.value.size < maxMeasurementCacheSize) {
-                textMeasurementCache.value = textMeasurementCache.value + (text to measurement)
+                textMeasurementCache.value += (text to measurement)
             }
             measurement
         }
@@ -489,7 +500,7 @@ fun KlyxCodeEditor(
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(themeStyle?.editorBackground ?: Color.Transparent)
             .focusRequester(focusRequester)
             .then(
                 if (editable) {
@@ -855,7 +866,7 @@ fun KlyxCodeEditor(
                         textPaint
                     )
                     currentX += measureText(highlightText)
-                    textPaint.color = Color.White.toArgb() // reset color
+                    textPaint.color = (themeStyle?.editorForeground ?: Color.White).toArgb()
                     currentPos = nextHighlight.second
                 } else {
                     // no more highlights, draw the rest of the text
@@ -875,13 +886,13 @@ fun KlyxCodeEditor(
             val gutterScrollX = if (pinnedLineNumbers) 0f else -scrollX.floatValue
 
             drawRect(
-                color = gutterBackgroundColor,
+                color = effectiveGutterBackground,
                 topLeft = Offset(gutterScrollX, 0f),
                 size = Size(gutterWidthPx, canvasHeight)
             )
 
             drawRect(
-                color = gutterDividerColor,
+                color = effectiveGutterDivider,
                 topLeft = Offset(gutterWidthPx - 1f + gutterScrollX, 0f),
                 size = Size(1f, canvasHeight)
             )
@@ -925,7 +936,7 @@ fun KlyxCodeEditor(
             val cursorY = cursorLine * fullLineHeightPx - scrollY.floatValue
 
             drawRect(
-                color = cursorColor,
+                color = themeStyle?.editorForeground ?: cursorColor,
                 topLeft = Offset(
                     gutterWidthPx + horizontalPaddingPx + cursorX - scrollX.floatValue,
                     cursorY

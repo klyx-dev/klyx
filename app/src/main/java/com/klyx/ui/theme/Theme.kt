@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.klyx.core.theme.ThemeManager
 
 internal val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -257,10 +258,11 @@ fun KlyxTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     useThemeExtension: Boolean = true,
+    themeName: String? = null,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        useThemeExtension -> ThemeManager.getColorScheme(darkTheme)
+        useThemeExtension -> ThemeManager.getColorScheme(darkTheme, themeName)
 
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

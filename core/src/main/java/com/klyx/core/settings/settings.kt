@@ -1,5 +1,6 @@
 package com.klyx.core.settings
 
+import com.klyx.core.theme.ThemeManager
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -13,17 +14,12 @@ data class AppSettings(
     @SerialComment(
         """
         The name of the Klyx theme to use for the UI.
-        
-        The available themes are:
-        - "system": Use the theme that corresponds to the system's appearance
-        - "light": Use the light theme
-        - "dark": Use the dark theme
     """
     )
-    val theme: AppTheme = AppTheme.System,
+    val theme: String = ThemeManager.getAllAvailableThemes().firstOrNull()?.name ?: "Midnight Blue",
 
-//    @SerialComment("The editor settings")
-//    val editor: EditorSettings = EditorSettings()
+    @SerialComment("The editor settings")
+    val editor: EditorSettings = EditorSettings()
 )
 
 @Serializable
@@ -38,37 +34,13 @@ data class EditorSettings(
     @SerialName("font_family")
     val fontFamily: String = "IBM Plex Mono",
 
-    @SerialComment(
-        """
-        The name of a font to use for rendering line numbers in the editor
-        
-        Any font from [Google Fonts](https://fonts.google.com/) can be used.
-    """
-    )
-    @SerialName("line_number_font_family")
-    val lineNumberFontFamily: String = fontFamily,
-
-    @SerialComment(
-        """
-        The name of a theme to use for rendering text in the editor
-        
-        Available themes are:
-        - "Catppuccin Frappé" (unstable)
-        - "Catppuccin Macchiato" (unstable)
-        - "One Dark Pro" (unstable)
-        - "Darcula"
-        - "One Light"
-    """
-    )
-    val theme: String = "Darcula",
-
-    @SerialComment("Whether to enable cursor animation or not")
-    @SerialName("cursor_animation")
-    val cursorAnimation: Boolean = true,
-
     @SerialComment("The font size to use for rendering text in the editor")
     @SerialName("font_size")
-    val fontSize: Float = 14f
+    val fontSize: Float = 14f,
+
+    @SerialComment("Whether to pin line numbers in the editor")
+    @SerialName("pin_line_numbers")
+    val pinLineNumbers: Boolean = false
 )
 
 @Serializable

@@ -1,4 +1,4 @@
-package com.klyx.ui.theme
+package com.klyx.core.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
@@ -8,13 +8,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.toColorInt
-import com.klyx.extension.Extension
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.InputStream
 
 /**
  * Data class representing a parsed Klyx theme
@@ -24,6 +24,8 @@ data class KlyxTheme(
     val appearance: String,
     val style: KlyxThemeStyle
 )
+
+fun KlyxTheme.isDark() = appearance == "dark"
 
 /**
  * Data class representing the style section of a Klyx theme
@@ -82,6 +84,21 @@ data class KlyxThemeStyle(
     val editorForeground: Color?,
     val editorActiveLineBackground: Color?,
 
+    // Gutter colors
+    val gutterBackground: Color?,
+    val gutterText: Color?,
+    val gutterDivider: Color?,
+
+    // Syntax highlighting colors
+    val syntaxKeyword: Color?,
+    val syntaxFunction: Color?,
+    val syntaxString: Color?,
+    val syntaxComment: Color?,
+    val syntaxVariable: Color?,
+    val syntaxNumber: Color?,
+    val syntaxBoolean: Color?,
+    val syntaxType: Color?,
+
     // Additional utility colors
     val dropTargetBackground: Color?,
     val searchMatchBackground: Color?,
@@ -131,9 +148,20 @@ object ThemeManager {
         editorBackground = Color(0xFFFFFFFF),
         editorForeground = Color(0xFF24292E),
         editorActiveLineBackground = Color(0xFFF6F8FA),
+        gutterBackground = Color(0xFFF6F8FA),
+        gutterText = Color(0xFF6A737D),
+        gutterDivider = Color(0xFFE1E4E8),
         dropTargetBackground = Color(0x1A007ACC),
         searchMatchBackground = Color(0xFFFFDF5D),
-        linkTextHover = Color(0xFF0366D6)
+        linkTextHover = Color(0xFF0366D6),
+        syntaxKeyword = null,
+        syntaxFunction = null,
+        syntaxString = null,
+        syntaxComment = null,
+        syntaxVariable = null,
+        syntaxNumber = null,
+        syntaxBoolean = null,
+        syntaxType = null
     )
 
     private val defaultDarkColors = KlyxThemeStyle(
@@ -174,17 +202,28 @@ object ThemeManager {
         editorBackground = Color(0xFF0D1117),
         editorForeground = Color(0xFFC9D1D9),
         editorActiveLineBackground = Color(0xFF161B22),
+        gutterBackground = Color(0xFF161B22),
+        gutterText = Color(0xFF8B949E),
+        gutterDivider = Color(0xFF30363D),
         dropTargetBackground = Color(0x1A58A6FF),
         searchMatchBackground = Color(0xFF3C2F00),
-        linkTextHover = Color(0xFF79C0FF)
+        linkTextHover = Color(0xFF79C0FF),
+        syntaxKeyword = null,
+        syntaxFunction = null,
+        syntaxString = null,
+        syntaxComment = null,
+        syntaxVariable = null,
+        syntaxNumber = null,
+        syntaxBoolean = null,
+        syntaxType = null
     )
 
     /**
      * Load and parse a theme family from extension
      */
-    fun loadThemeFamily(extension: Extension): Result<Unit> {
+    fun loadThemeFamily(themeInput: InputStream?): Result<Unit> {
         return try {
-            val themeJson = extension.themeInput?.use { it.readBytes() } ?: return Result.failure(Exception("Theme file not found"))
+            val themeJson = themeInput?.use { it.readBytes() } ?: return Result.failure(Exception("Theme file not found"))
 
             val json = Json.parseToJsonElement(String(themeJson)).jsonObject
             currentThemeFamily = json
@@ -229,6 +268,8 @@ object ThemeManager {
     }
 
     private fun parseThemeStyle(styleObj: JsonObject): KlyxThemeStyle {
+        val syntaxObj = styleObj["syntax"]?.jsonObject
+
         return KlyxThemeStyle(
             // Core colors
             background = parseColor(styleObj["background"]),
@@ -282,6 +323,21 @@ object ThemeManager {
             editorBackground = parseColor(styleObj["editor.background"]),
             editorForeground = parseColor(styleObj["editor.foreground"]),
             editorActiveLineBackground = parseColor(styleObj["editor.active_line.background"]),
+
+            // Gutter colors
+            gutterBackground = parseColor(styleObj["editor.gutter.background"]),
+            gutterText = parseColor(styleObj["editor.gutter.text"]),
+            gutterDivider = parseColor(styleObj["editor.gutter.divider"]),
+
+            // Syntax highlighting colors
+            syntaxKeyword = parseColor(syntaxObj?.get("keyword")?.jsonObject?.get("color")),
+            syntaxFunction = parseColor(syntaxObj?.get("function")?.jsonObject?.get("color")),
+            syntaxString = parseColor(syntaxObj?.get("string")?.jsonObject?.get("color")),
+            syntaxComment = parseColor(syntaxObj?.get("comment")?.jsonObject?.get("color")),
+            syntaxVariable = parseColor(syntaxObj?.get("variable")?.jsonObject?.get("color")),
+            syntaxNumber = parseColor(syntaxObj?.get("number")?.jsonObject?.get("color")),
+            syntaxBoolean = parseColor(syntaxObj?.get("boolean")?.jsonObject?.get("color")),
+            syntaxType = parseColor(syntaxObj?.get("type")?.jsonObject?.get("color")),
 
             // Utility colors
             dropTargetBackground = parseColor(styleObj["drop_target.background"]),
@@ -356,8 +412,15 @@ object ThemeManager {
     /**
      * Get available theme names for the given appearance
      */
-    fun getAvailableThemes(appearance: String): List<String> {
-        return availableThemes.filter { it.appearance == appearance }.map { it.name }
+    fun getAvailableThemes(appearance: String): List<KlyxTheme> {
+        return availableThemes.filter { it.appearance == appearance }
+    }
+
+    /**
+     * Get all available themes
+     */
+    fun getAllAvailableThemes(): List<KlyxTheme> {
+        return availableThemes
     }
 
     /**
@@ -368,12 +431,20 @@ object ThemeManager {
     }
 
     /**
+     * Get theme by name
+     */
+    fun getThemeByName(name: String): KlyxTheme? {
+        return availableThemes.find { it.name == name }
+    }
+
+    /**
      * Convert KlyxTheme to Material3 ColorScheme
      */
     fun getColorScheme(darkTheme: Boolean, themeName: String? = null): ColorScheme {
         val appearance = if (darkTheme) "dark" else "light"
+
         val theme = if (themeName != null) {
-            getTheme(themeName, appearance)
+            getThemeByName(themeName)
         } else {
             availableThemes.find { it.appearance == appearance }
         }
