@@ -1,8 +1,0 @@
-id = "my-extension"
-name = "My extension"
-version = "0.0.1"
-requested_memory_size = 2
-schema_version = 1
-authors = ["Vivek"]
-description = "My cool extension"
-repository = ""

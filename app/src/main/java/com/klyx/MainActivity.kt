@@ -18,28 +18,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.setAppContent
 import com.klyx.core.settings.AppTheme
 import com.klyx.extension.Extension
-import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionToml
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.menu.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
-import kotlinx.coroutines.delay
+import com.klyx.ui.theme.ThemeManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setAppContent {
-            val context = LocalContext.current
             val settings = LocalAppSettings.current
-
-            val extensionFactory = remember { ExtensionFactory.create(context) }
             val isSystemInDarkTheme = isSystemInDarkTheme()
 
             val darkMode by remember(settings) {
@@ -67,9 +62,14 @@ class MainActivity : ComponentActivity() {
                 )
             )
 
+            LaunchedEffect(Unit) {
+                loadTestExtension()
+            }
+
             KlyxTheme(
                 dynamicColor = settings.dynamicColors,
-                darkTheme = darkMode
+                darkTheme = darkMode,
+                useThemeExtension = true
             ) {
                 val background = MaterialTheme.colorScheme.background
 
@@ -87,11 +87,6 @@ class MainActivity : ComponentActivity() {
 
                         Surface(color = background) {
                             EditorScreen()
-
-                            LaunchedEffect(Unit) {
-                                delay(500)
-                                loadTestExtension(extensionFactory)
-                            }
                         }
                     }
                 }
@@ -99,11 +94,25 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun loadTestExtension(factory: ExtensionFactory) {
-        val wasm = assets.open("wasm/my_extension/my_extension.wasm")
-        val toml = ExtensionToml.from(assets.open("wasm/my_extension/extension.toml"))
+    private fun loadTestExtension() {
+        try {
+            val extensionPath = "extensions/theme_extension"
+            val toml = ExtensionToml.from(assets.open("$extensionPath/extension.toml"))
 
-        val extension = Extension(wasm, toml)
-        factory.loadExtension(extension, true)
+            val themeInput = assets.open("$extensionPath/themes/themes.json")
+            
+            val extension = Extension(
+                wasmInput = null,
+                themeInput = themeInput,
+                toml = toml,
+                path = extensionPath
+            )
+            
+            ThemeManager.loadThemeFamily(extension).onSuccess {
+                println(ThemeManager.getAvailableThemes("light"))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }

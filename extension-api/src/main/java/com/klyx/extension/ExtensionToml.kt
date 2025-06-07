@@ -15,27 +15,37 @@ import java.io.InputStream
  * ```toml
  * id = "my-extension"
  * name = "My extension"
- * requested_memory_size = 1 # in mega-bytes (MB)
  * version = "0.0.1"
  * schema_version = 1
  * authors = ["Your Name <you@example.com>"]
  * description = "My cool extension"
  * repository = "https://github.com/your-name/my-klyx-extension"
+ * 
+ * [extension]
+ * type = "theme"  # or "wasm"
  * ```
  */
 @Serializable
 data class ExtensionToml(
     val id: String,
     val name: String,
-    @SerialName("requested_memory_size")
-    val requestedMemorySize: Int = 1,
     val version: String = "0.0.1",
     @SerialName("schema_version")
     val schemaVersion: Int = 1,
     val authors: Array<String> = arrayOf(),
     val description: String = "",
-    val repository: String = ""
+    val repository: String = "",
+    val extension: ExtensionInfo? = null
 ) {
+    @Serializable
+    data class ExtensionInfo(
+        val type: String = "wasm", // "wasm" or "theme"
+        @SerialName("entry_point")
+        val entryPoint: String? = null,
+        @SerialName("requested_memory_size")
+        val requestedMemorySize: Int? = null
+    )
+
     companion object {
         @JvmStatic
         fun from(toml: String): ExtensionToml {
@@ -54,7 +64,6 @@ data class ExtensionToml(
 
         other as ExtensionToml
 
-        if (requestedMemorySize != other.requestedMemorySize) return false
         if (schemaVersion != other.schemaVersion) return false
         if (id != other.id) return false
         if (name != other.name) return false
@@ -62,19 +71,20 @@ data class ExtensionToml(
         if (!authors.contentEquals(other.authors)) return false
         if (description != other.description) return false
         if (repository != other.repository) return false
+        if (extension != other.extension) return false
 
         return true
     }
 
     override fun hashCode(): Int {
-        var result = requestedMemorySize
-        result = 31 * result + schemaVersion
+        var result = schemaVersion
         result = 31 * result + id.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + version.hashCode()
         result = 31 * result + authors.contentHashCode()
         result = 31 * result + description.hashCode()
         result = 31 * result + repository.hashCode()
+        result = 31 * result + (extension?.hashCode() ?: 0)
         return result
     }
 }

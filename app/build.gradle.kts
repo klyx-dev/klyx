@@ -70,6 +70,10 @@ dependencies {
     implementation(libs.androidx.google.fonts)
     implementation(libs.androidx.documentfile)
 
+    // Kotlin Serialization
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.core)
+
     implementation(kotlin("reflect"))
 
     implementation(project(":core"))
