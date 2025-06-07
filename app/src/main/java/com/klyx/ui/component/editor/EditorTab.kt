@@ -32,6 +32,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.klyx.core.Env
+import com.klyx.core.file.DocumentFileWrapper
 import com.klyx.core.file.FileWrapper
 import com.klyx.viewmodel.TabItem
 
@@ -142,6 +143,10 @@ fun EditorTab(
                         } else it
 
                         result = result.substringBeforeLast("/")
+
+                        if (file is DocumentFileWrapper && file.isFromTermux()) {
+                            result = "~/termux${result.substringAfterLast("com.termux/files/home")}"
+                        }
 
                         if (result.length > 20) {
                             result = "${result.take(20)}..."

@@ -66,6 +66,8 @@ data class DocumentFileWrapper(
         it?.readText()
     }
 
+    fun isFromTermux() = raw.uri.host == "com.termux.documents"
+
     companion object {
         fun shouldWrap(uri: Uri) = ContentResolver.SCHEME_CONTENT == uri.scheme && "com.termux.documents" == uri.host
     }
