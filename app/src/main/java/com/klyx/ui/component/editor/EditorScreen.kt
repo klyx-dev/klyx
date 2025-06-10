@@ -31,17 +31,14 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.file.FileWrapper
-import com.klyx.core.file.KWatchEvent
-import com.klyx.core.file.asWatchChannel
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
 import com.klyx.core.rememberTypeface
 import com.klyx.core.requestStoragePermission
-import com.klyx.editor.compose.KlyxCodeEditor
+import com.klyx.editor.compose.CodeEditor
 import com.klyx.editor.compose.LocalEditorViewModel
-import com.klyx.editor.language.language
 import com.klyx.ui.component.KlyxDialog
-import kotlinx.coroutines.channels.consumeEach
+import com.klyx.ui.theme.rememberFontFamily
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -148,7 +145,8 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                 },
                 isDirty = { index ->
                     val tab = openTabs.getOrNull(index)
-                    tab?.editorState?.isModified == true
+                    //tab?.editorState?.isModified == true
+                    false
                 }
             )
 
@@ -165,7 +163,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                     tab?.isFileTab == true -> {
                         val file = tab.data as? FileWrapper
                         if (file != null && tab.editorState != null) {
-                            val editorState = tab.editorState!!
+                            val editorState = tab.editorState
 
                             if (file.path != "untitled") {
                                 LaunchedEffect(Unit) {
@@ -178,13 +176,13 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                                 }
                             }
 
-                            KlyxCodeEditor(
-                                editorState = editorState,
-                                typeface = typeface,
+                            CodeEditor(
+                                fontFamily = rememberFontFamily("IBM Plex Mono"),
                                 editable = tab.type != "fileInternal",
-                                language = file.language(),
-                                pinnedLineNumbers = editorSettings.pinLineNumbers,
-                                fontSize = editorSettings.fontSize.sp
+                                pinLineNumber = editorSettings.pinLineNumbers,
+                                fontSize = editorSettings.fontSize.sp,
+                                editorState = editorState,
+                                modifier = Modifier.fillMaxSize()
                             )
                         } else {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

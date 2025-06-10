@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.klyx.Klyx
 import com.klyx.core.file.FileId
 import com.klyx.core.file.FileWrapper
-import com.klyx.editor.compose.EditorState
+import com.klyx.editor.CodeEditorState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -21,7 +21,7 @@ data class TabItem(
     val type: String,
     val data: Any?,
     val content: @Composable () -> Unit,
-    val editorState: EditorState? = null
+    val editorState: CodeEditorState? = null
 ) {
     val isFileTab: Boolean get() = type == "file" || type == "fileInternal"
 }
@@ -48,7 +48,7 @@ class EditorViewModel : ViewModel() {
             content = {
                 Box(modifier = Modifier.fillMaxSize())
             },
-            editorState = EditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
+            editorState = CodeEditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
         )
 
         _state.update { current ->
@@ -132,7 +132,7 @@ class EditorViewModel : ViewModel() {
                             content = {
                                 Box(modifier = Modifier.fillMaxSize())
                             },
-                            editorState = EditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
+                            editorState = CodeEditorState(initialText = file.readText(Klyx.application.applicationContext) ?: "")
                         )
                     } else it
                 })
@@ -152,7 +152,7 @@ class EditorViewModel : ViewModel() {
         }
 
         return file.write(context, editorState.text).also { isSaved ->
-            if (isSaved) editorState.markAsSaved()
+            //if (isSaved) editorState.markAsSaved()
         }
     }
 
@@ -173,11 +173,11 @@ class EditorViewModel : ViewModel() {
             content = {
                 Box(modifier = Modifier.fillMaxSize())
             },
-            editorState = EditorState(initialText = editorState.text)
+            editorState = CodeEditorState(initialText = editorState.text)
         )
 
         replaceTab(tab.id, newTab)
-        editorState.markAsSaved()
+        //editorState.markAsSaved()
         return true
     }
 
@@ -193,7 +193,7 @@ class EditorViewModel : ViewModel() {
                 if (file != null && editorState != null && file.path != "untitled") {
                     val saved = file.write(context, editorState.text)
                     if (saved) {
-                        editorState.markAsSaved()
+                        //editorState.markAsSaved()
                     }
                     results[tab.name] = saved
                 }

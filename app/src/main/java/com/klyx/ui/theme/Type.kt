@@ -1,10 +1,11 @@
 package com.klyx.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontFamily
-
-import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 import com.klyx.R
 
 val provider = GoogleFont.Provider(
@@ -26,6 +27,11 @@ val displayFontFamily = FontFamily(
         fontProvider = provider,
     )
 )
+
+@Composable
+fun rememberFontFamily(name: String): FontFamily {
+    return remember(name) { FontFamily(Font(googleFont = GoogleFont(name), fontProvider = provider)) }
+}
 
 // Default Material 3 typography values
 val baseline = Typography()

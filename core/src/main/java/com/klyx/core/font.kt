@@ -11,9 +11,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.resolveAsTypeface
 
 @Composable
-fun rememberTypefaceFromFontFamily(fontFamily: FontFamily, resolver: FontFamily.Resolver? = null): State<Typeface> {
-    val r = resolver ?: LocalFontFamilyResolver.current
-    return remember(r, fontFamily) { r.resolveAsTypeface(fontFamily) }
+fun rememberTypefaceFromFontFamily(fontFamily: FontFamily, resolver: FontFamily.Resolver = LocalFontFamilyResolver.current): State<Typeface> {
+    return remember(resolver, fontFamily) { resolver.resolveAsTypeface(fontFamily) }
 }
 
 fun createFontRequestQuery(
