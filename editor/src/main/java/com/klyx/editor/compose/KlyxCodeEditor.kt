@@ -502,7 +502,7 @@ fun KlyxCodeEditor(
     Canvas(
         modifier = modifier
             .fillMaxSize()
-            .background(themeStyle?.editorBackground ?: Color.Transparent)
+            .background(Color(0xFF0D1117))
             .focusRequester(focusRequester)
             .then(
                 if (editable) {

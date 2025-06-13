@@ -54,6 +54,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.documentfile.provider.DocumentFile
+import com.klyx.core.compose.LocalExtensionFactory
 import com.klyx.core.file.DocumentFileWrapper
 import com.klyx.core.icons.GithubAlt
 import com.klyx.core.icons.KlyxIcons
@@ -77,6 +78,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val factory = LocalExtensionFactory.current
     val scope = rememberCoroutineScope()
 
     val selectDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -88,6 +90,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                     ExtensionManager.installExtension(
                         context = context,
                         dir = dir,
+                        factory = factory,
                         isDevExtension = true,
                         onError = { _, exception ->
                             context.showShortToast("Error installing extension: ${exception.message}")

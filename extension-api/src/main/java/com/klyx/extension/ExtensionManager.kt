@@ -16,6 +16,7 @@ object ExtensionManager {
     suspend fun installExtension(
         context: Context,
         dir: DocumentFileWrapper,
+        factory: ExtensionFactory,
         isDevExtension: Boolean = false,
         onError: (String, IOException) -> Unit = { _, _ -> }
     ) = withContext(Dispatchers.IO) {
@@ -60,6 +61,7 @@ object ExtensionManager {
 
         val extension = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
         installedExtensions.add(extension)
+        factory.loadExtension(extension)
     }
 
     fun uninstallExtension(extension: Extension) {
@@ -70,13 +72,15 @@ object ExtensionManager {
         installedExtensions.remove(extension)
     }
 
-    suspend fun loadExtensions() = withContext(Dispatchers.IO) {
+    suspend fun loadExtensions(factory: ExtensionFactory) = withContext(Dispatchers.IO) {
         val extensionsDir = File(Env.EXTENSIONS_DIR)
         if (!extensionsDir.exists()) extensionsDir.mkdirs()
 
         extensionsDir.listFiles { file -> file.isDirectory }?.forEach { file ->
             val toml = parseToml(file.resolve("extension.toml").inputStream())
-            installedExtensions.add(parseExtension(file, toml))
+            val extension = parseExtension(file, toml)
+            installedExtensions.add(extension)
+            factory.loadExtension(extension)
         }
 
         val devExtensionsDir = File(Env.DEV_EXTENSIONS_DIR)
@@ -84,7 +88,9 @@ object ExtensionManager {
 
         devExtensionsDir.listFiles { file -> file.isDirectory }?.forEach { file ->
             val toml = parseToml(file.resolve("extension.toml").inputStream())
-            installedExtensions.add(parseExtension(file, toml).copy(isDevExtension = true))
+            val extension = parseExtension(file, toml).copy(isDevExtension = true)
+            installedExtensions.add(extension)
+            factory.loadExtension(extension)
         }
     }
 }

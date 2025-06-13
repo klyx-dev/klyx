@@ -8,6 +8,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.toColorInt
+import com.klyx.core.cmd.Command
+import com.klyx.core.cmd.CommandManager
+import com.klyx.core.settings.SettingsManager
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -154,14 +157,14 @@ object ThemeManager {
         dropTargetBackground = Color(0x1A007ACC),
         searchMatchBackground = Color(0xFFFFDF5D),
         linkTextHover = Color(0xFF0366D6),
-        syntaxKeyword = null,
-        syntaxFunction = null,
-        syntaxString = null,
-        syntaxComment = null,
-        syntaxVariable = null,
-        syntaxNumber = null,
-        syntaxBoolean = null,
-        syntaxType = null
+        syntaxKeyword = Color(0xFF0000FF),
+        syntaxFunction = Color(0xFF795E26),
+        syntaxString = Color(0xFFA31515),
+        syntaxComment = Color(0xFF008000),
+        syntaxVariable = Color(0xFF001080),
+        syntaxNumber = Color(0xFF098658),
+        syntaxBoolean = Color(0xFF0000FF),
+        syntaxType = Color(0xFF267F99)
     )
 
     private val defaultDarkColors = KlyxThemeStyle(
@@ -208,14 +211,14 @@ object ThemeManager {
         dropTargetBackground = Color(0x1A58A6FF),
         searchMatchBackground = Color(0xFF3C2F00),
         linkTextHover = Color(0xFF79C0FF),
-        syntaxKeyword = null,
-        syntaxFunction = null,
-        syntaxString = null,
-        syntaxComment = null,
-        syntaxVariable = null,
-        syntaxNumber = null,
-        syntaxBoolean = null,
-        syntaxType = null
+        syntaxKeyword = Color(0xFF569CD6),
+        syntaxFunction = Color(0xFFDCDCAA),
+        syntaxString = Color(0xFFCE9178),
+        syntaxComment = Color(0xFF6A9955),
+        syntaxVariable = Color(0xFF9CDCFE),
+        syntaxNumber = Color(0xFFB5CEA8),
+        syntaxBoolean = Color(0xFF569CD6),
+        syntaxType = Color(0xFF4EC9B0)
     )
 
     /**
@@ -228,7 +231,13 @@ object ThemeManager {
             val json = Json.parseToJsonElement(String(themeJson)).jsonObject
             currentThemeFamily = json
 
-            availableThemes = parseThemes(json)
+            val parsedThemes = parseThemes(json)
+            CommandManager.addCommand(*parsedThemes.map {
+                Command("Change Theme: ${it.name} (${it.appearance})") {
+                    SettingsManager.updateSettings(SettingsManager.settings.value.copy(theme = it.name))
+                }
+            }.toTypedArray())
+            availableThemes += parsedThemes
 
             println("Theme family loaded successfully: ${json["name"]?.jsonPrimitive?.content}")
             println("Available themes: ${availableThemes.map { "${it.name} (${it.appearance})" }}")

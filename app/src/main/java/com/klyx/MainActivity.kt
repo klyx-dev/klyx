@@ -23,12 +23,10 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.unit.dp
-import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.setAppContent
-import com.klyx.core.settings.SettingsManager
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
 import com.klyx.ui.component.cmd.CommandPalette
@@ -76,16 +74,6 @@ class MainActivity : ComponentActivity() {
                             CommandManager.showPalette()
                         }
                     }
-                }
-
-                LaunchedEffect(Unit) {
-                    CommandManager.addCommand(
-                        *ThemeManager.getAllAvailableThemes().map {
-                            Command("Change Theme: ${it.name} (${it.appearance})") {
-                                SettingsManager.updateSettings(settings.copy(theme = it.name))
-                            }
-                        }.toTypedArray()
-                    )
                 }
 
                 Surface(

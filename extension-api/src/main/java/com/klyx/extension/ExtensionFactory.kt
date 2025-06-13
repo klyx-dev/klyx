@@ -1,6 +1,7 @@
 package com.klyx.extension
 
 import android.content.Context
+import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.impl.Android
 import com.klyx.extension.impl.FileSystem
 import com.klyx.extension.impl.Logger
@@ -12,6 +13,7 @@ class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
         val id = extension.toml.id
 
         if (extension.toml.extension?.type == "theme") {
+            ThemeManager.loadThemeFamily(extension.themeInput)
             return null
         }
 
