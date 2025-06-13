@@ -17,18 +17,7 @@
     "plugins": {
         "@release-it/conventional-changelog": {
             "preset": {
-                "name": "conventionalcommits",
-                "types": [
-                    {
-                        "type": "feat",
-                        "section": "New Features"
-                    },
-                    {
-                        "type": "fix",
-                        "section": "Bug Fixes"
-                    },
-                    {}
-                ]
+                "name": "conventionalcommits"
             }
         }
     }
