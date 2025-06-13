@@ -37,7 +37,7 @@ import androidx.compose.ui.zIndex
 import com.klyx.core.Env
 import com.klyx.core.file.DocumentFileWrapper
 import com.klyx.core.file.FileWrapper
-import com.klyx.core.file.KWatchEvent
+import com.klyx.core.file.KWatchEvent.Kind
 import com.klyx.core.file.asWatchChannel
 import com.klyx.viewmodel.TabItem
 import kotlinx.coroutines.channels.consumeEach
@@ -86,9 +86,11 @@ fun EditorTab(
 
     LaunchedEffect(tabItem) {
         if (tabItem.data is FileWrapper) {
+            if (tabItem.data.exists().not()) return@LaunchedEffect
+
             tabItem.data.asRawFile()?.let { file ->
                 file.asWatchChannel().consumeEach { event ->
-                    if (event.kind == KWatchEvent.Kind.Deleted) {
+                    if (event.kind == Kind.Deleted || event.kind == Kind.Created) {
                         recomposeScope.invalidate()
                     }
                 }
@@ -139,13 +141,15 @@ fun EditorTab(
             Spacer(modifier = Modifier.width(6.dp))
         }
 
+        val isTabFileMissing = { (tabItem.data as? FileWrapper)?.exists() == false && tabItem.data.name != "untitled" }
+
         Text(
             text = tabItem.name,
-            color = textColor,
+            color = if (isTabFileMissing()) colorScheme.error else textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             style = MaterialTheme.typography.bodySmall,
-            textDecoration = if ((tabItem.data as? FileWrapper)?.exists() == false && tabItem.data.name != "untitled") {
+            textDecoration = if (isTabFileMissing()) {
                 TextDecoration.LineThrough
             } else TextDecoration.None
         )
