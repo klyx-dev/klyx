@@ -29,9 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -41,13 +38,9 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.key.matches
-import com.klyx.core.cmd.key.parseShortcut
-import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.DocumentFileWrapper
 import com.klyx.core.file.wrapFile
 import com.klyx.core.settings.SettingsManager
@@ -56,13 +49,13 @@ import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.ui.component.AboutDialog
 import kotlinx.coroutines.delay
 import java.io.File
+import kotlin.system.exitProcess
 
 @Composable
 fun MainMenuBar(
     modifier: Modifier = Modifier
 ) {
     val activity = LocalActivity.current
-    val lifecycleOwner = LocalLifecycleOwner.current
     val viewModel = LocalEditorViewModel.current
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
@@ -107,7 +100,10 @@ fun MainMenuBar(
                     )
                 },
                 MenuItem(),
-                MenuItem("Quit", "Ctrl-Q") { activity?.finishAffinity() }
+                MenuItem("Quit", "Ctrl-Q") {
+                    activity?.finishAffinity()
+                    exitProcess(0)
+                }
             ),
 
             "File" to listOf(
@@ -177,16 +173,6 @@ fun MainMenuBar(
                     }
                 }.toTypedArray()
             )
-
-            items.fastFilter { it.shortcutKey != null }.fastForEach { item ->
-                lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
-                    if (event.type == KeyEventType.KeyDown) {
-                        if (event.matches(parseShortcut(item.shortcutKey!!).first())) {
-                            item.onClick()
-                        }
-                    }
-                }
-            }
         }
     }
 
