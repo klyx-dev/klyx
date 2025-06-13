@@ -104,7 +104,7 @@ fun calculateVersionCode(versionName: String): Int {
     val preReleaseNum = preReleaseNumStr.toIntOrNull() ?: 0
 
     val preReleaseOffset = when (preReleaseType) {
-        null, "" -> 3_000 // stable
+        "" -> 3_000 // stable
         "rc" -> 2_000
         "beta" -> 1_000
         "alpha" -> 0
