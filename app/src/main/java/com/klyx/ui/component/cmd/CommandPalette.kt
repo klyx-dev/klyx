@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +75,8 @@ fun CommandPalette(
             colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface
-            )
+            ),
+            shape = RoundedCornerShape(8.dp)
         ) {
             var searchQuery by remember { mutableStateOf("") }
 
@@ -100,7 +102,7 @@ fun CommandPalette(
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
-                            .clip(CardDefaults.elevatedShape)
+                            .clip(RoundedCornerShape(6.dp))
                             .clickable {
                                 CommandManager.addRecentlyUsedCommand(command)
                                 command.execute(command)

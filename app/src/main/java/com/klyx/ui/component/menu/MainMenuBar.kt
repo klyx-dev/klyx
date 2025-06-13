@@ -1,5 +1,7 @@
 package com.klyx.ui.component.menu
 
+import android.os.Process
+import android.os.Process.SIGNAL_KILL
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -52,7 +54,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
-import kotlin.system.exitProcess
 
 @Composable
 fun MainMenuBar(
@@ -106,7 +107,7 @@ fun MainMenuBar(
                 MenuItem(),
                 MenuItem("Quit", "Ctrl-Q") {
                     activity?.finishAffinity()
-                    exitProcess(0)
+                    Process.sendSignal(Process.myPid(), SIGNAL_KILL)
                 }
             ),
 
