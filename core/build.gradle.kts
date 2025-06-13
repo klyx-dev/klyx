@@ -49,6 +49,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.documentfile)
 
+    implementation(kotlin("reflect"))
+
     api(libs.utilcodex)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.json5k)

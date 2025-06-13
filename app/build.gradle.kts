@@ -74,8 +74,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.serialization.core)
 
-    implementation(kotlin("reflect"))
-
     implementation(project(":core"))
     implementation(project(":editor"))
     implementation(project(":kwasm"))
