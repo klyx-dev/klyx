@@ -33,6 +33,6 @@ include(":kwasm")
 include(":extension-api")
 include(":rope")
 
-file("tree-sitter").listFiles { file -> file.isDirectory }?.forEach {
+file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
     include(":tree-sitter:${it.name}")
 }

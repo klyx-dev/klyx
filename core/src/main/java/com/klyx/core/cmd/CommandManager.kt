@@ -4,12 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.isAltPressed
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
+import com.klyx.core.cmd.key.matches
+import com.klyx.core.cmd.key.parseShortcut
 import com.klyx.core.event.EventBus
 
 object CommandManager {
@@ -21,35 +20,12 @@ object CommandManager {
 
     init {
         EventBus.getInstance().subscribe<KeyEvent> { event ->
-            val isCtrlPressed = event.isCtrlPressed
-            val isShiftPressed = event.isShiftPressed
-            val isAltPressed = event.isAltPressed
-
-            cmd@ for (command in commands) {
-                val keys = command.keybinding?.split("-")
-
-                if (keys != null) {
-                    var isCtrlRequired = false
-                    var isShiftRequired = false
-                    var isAltRequired = false
-                    var cmdKey: Key? = null
-
-                    for (key in keys) {
-                        when (key.lowercase()) {
-                            "ctrl" -> isCtrlRequired = true
-                            "shift" -> isShiftRequired = true
-                            "alt" -> isAltRequired = true
-                            else -> cmdKey = key.toKey()
+            for (command in commands) {
+                command.shortcutKey?.let { key ->
+                    if (event.type == KeyEventType.KeyDown) {
+                        if (event.matches(parseShortcut(key).first())) {
+                            command.execute(command)
                         }
-                    }
-
-                    if (isCtrlPressed == isCtrlRequired &&
-                        isShiftPressed == isShiftRequired &&
-                        isAltPressed == isAltRequired &&
-                        cmdKey == event.key
-                    ) {
-                        command.action(command)
-                        break@cmd
                     }
                 }
             }
@@ -64,8 +40,8 @@ object CommandManager {
         showCommandPalette = false
     }
 
-    fun addCommand(vararg commands: Command) {
-        this.commands.addAll(commands)
+    fun addCommand(vararg command: Command) {
+        commands.addAll(command)
     }
 
     fun addRecentlyUsedCommand(command: Command) {

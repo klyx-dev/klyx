@@ -39,16 +39,17 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
+import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.blankj.utilcode.util.UriUtils
-import com.klyx.core.Env
+import com.klyx.core.cmd.Command
+import com.klyx.core.cmd.CommandManager
+import com.klyx.core.cmd.key.matches
+import com.klyx.core.cmd.key.parseShortcut
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.DocumentFileWrapper
-import com.klyx.core.file.FileWrapper
 import com.klyx.core.file.wrapFile
-import com.klyx.core.key.matches
-import com.klyx.core.key.parseShortcut
 import com.klyx.core.settings.SettingsManager
 import com.klyx.core.showShortToast
 import com.klyx.editor.compose.LocalEditorViewModel
@@ -68,9 +69,11 @@ fun MainMenuBar(
 
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            viewModel.openFile(if (DocumentFileWrapper.shouldWrap(uri)) {
-                DocumentFileWrapper(DocumentFile.fromSingleUri(context, uri)!!)
-            } else UriUtils.uri2File(uri).wrapFile())
+            viewModel.openFile(
+                if (DocumentFileWrapper.shouldWrap(uri)) {
+                    DocumentFileWrapper(DocumentFile.fromSingleUri(context, uri)!!)
+                } else UriUtils.uri2File(uri).wrapFile()
+            )
         }
     }
 
@@ -164,6 +167,17 @@ fun MainMenuBar(
 
     LaunchedEffect(Unit) {
         menuItems.values.map { it }.fastForEach { items ->
+            CommandManager.addCommand(
+                *items.fastFilter { !it.isDivider }.fastMap {
+                    Command(
+                        name = it.title,
+                        shortcutKey = it.shortcutKey,
+                    ) {
+                        it.onClick()
+                    }
+                }.toTypedArray()
+            )
+
             items.fastFilter { it.shortcutKey != null }.fastForEach { item ->
                 lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
                     if (event.type == KeyEventType.KeyDown) {

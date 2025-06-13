@@ -1,4 +1,4 @@
-package com.klyx.core.key
+package com.klyx.core.cmd.key
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent

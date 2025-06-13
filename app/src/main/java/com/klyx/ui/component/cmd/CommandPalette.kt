@@ -1,6 +1,5 @@
 package com.klyx.ui.component.cmd
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
@@ -86,7 +85,7 @@ fun CommandPalette(
                     .fillMaxWidth()
                     .focusable()
                     .focusRequester(focusRequester),
-                placeholder = { Text("Type command...") }
+                placeholder = { Text("Execute a command...") }
             )
 
             val filteredCommands = remember(searchQuery) {
@@ -104,7 +103,7 @@ fun CommandPalette(
                             .clip(CardDefaults.elevatedShape)
                             .clickable {
                                 CommandManager.addRecentlyUsedCommand(command)
-                                command.action(command)
+                                command.execute(command)
                                 onDismissRequest()
                             }
                     ) {
@@ -132,7 +131,7 @@ fun CommandPalette(
                                 )
                             }
 
-                            command.keybinding?.let {
+                            command.shortcutKey?.let {
                                 Text(
                                     text = it,
                                     color = Color(0xFF1369FF).harmonizeWithPrimary(0.5f),
