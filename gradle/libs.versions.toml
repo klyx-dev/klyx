@@ -8,6 +8,7 @@ kotlinxCoroutines = "1.10.2"
 kotlinxSerialization = "1.8.1"
 ktoml = "0.7.0"
 ktreesitter = "0.24.1"
+materialIcons = "1.7.8"
 sora-editor = "0.23.5"
 kotlin = "2.1.21"
 core = "1.16.0"
@@ -21,12 +22,15 @@ appcompat = "1.7.0"
 material = "1.12.0"
 truth = "1.4.4"
 utilcodex = "1.31.1"
+compose-material3 = "1.4.0-alpha15"
 
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "core" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-material-icons-core = { module = "androidx.compose.material:material-icons-core", version.ref = "materialIcons" }
+androidx-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "materialIcons" }
 assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertjCore" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
@@ -53,7 +57,7 @@ androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
 androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "compose-material3" }
 androidx-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }

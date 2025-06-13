@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -50,6 +51,7 @@ import com.klyx.core.settings.SettingsManager
 import com.klyx.core.showShortToast
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.ui.component.AboutDialog
+import com.klyx.ui.component.extension.ExtensionScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -103,6 +105,22 @@ fun MainMenuBar(
                         tabTitle = "Default Settings",
                         isInternal = true
                     )
+                },
+                MenuItem(),
+                MenuItem("Command Palette", "Ctrl-Shift-P") {
+                    CommandManager.showPalette()
+                },
+                MenuItem("Extensions", "Ctrl-Shift-X") {
+                    val id = "extension"
+
+                    if (viewModel.isTabOpen(id)) {
+                        viewModel.setActiveTab(id)
+                    } else {
+                        viewModel.openTab("Extensions", id = id) {
+                            ExtensionScreen(modifier = Modifier.fillMaxSize())
+                        }
+                        viewModel.setActiveTab(id)
+                    }
                 },
                 MenuItem(),
                 MenuItem("Quit", "Ctrl-Q") {

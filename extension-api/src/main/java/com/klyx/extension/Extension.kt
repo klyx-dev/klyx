@@ -1,21 +1,18 @@
 package com.klyx.extension
 
-import com.akuleshov7.ktoml.Toml
-import com.akuleshov7.ktoml.source.decodeFromStream
 import java.io.File
 import java.io.InputStream
 
 data class Extension(
+    val toml: ExtensionToml,
+    val path: String,
     val wasmInput: InputStream? = null,
     val themeInput: InputStream? = null,
-    val toml: ExtensionToml,
-    val path: String
+    val isDevExtension: Boolean = false
 )
 
 @Throws(Exception::class)
-fun parseExtension(dir: File): Extension {
-    val toml: ExtensionToml = File(dir, "extension.toml").inputStream().use(Toml.Default::decodeFromStream)
-
+fun parseExtension(dir: File, toml: ExtensionToml): Extension {
     val themeInput = if (toml.extension?.type == "theme") {
         File(dir, "themes/themes.json").inputStream()
     } else null
@@ -27,5 +24,10 @@ fun parseExtension(dir: File): Extension {
         }?.firstOrNull()?.inputStream()
     } else null
 
-    return Extension(wasmInput, themeInput, toml, dir.absolutePath)
+    return Extension(
+        wasmInput = wasmInput,
+        themeInput = themeInput,
+        toml = toml,
+        path = dir.absolutePath
+    )
 }

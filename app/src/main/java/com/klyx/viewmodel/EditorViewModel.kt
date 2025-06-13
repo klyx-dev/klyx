@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.klyx.Klyx
 import com.klyx.core.file.FileId
 import com.klyx.core.file.FileWrapper
+import com.klyx.core.ifNull
 import com.klyx.editor.compose.EditorState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,16 +65,16 @@ class EditorViewModel : ViewModel() {
     }
 
     fun openTab(
-        type: String,
-        id: String,
         name: String,
+        type: String? = null,
+        id: String? = null,
+        data: Any? = null,
         content: @Composable () -> Unit,
-        data: Any? = null
     ) {
         val tab = TabItem(
-            id = id,
+            id = id.ifNull { "${type ?: "unknown"}_${System.currentTimeMillis()}" },
             name = name,
-            type = type,
+            type = type.ifNull { "unknown" },
             data = data,
             content = content
         )
@@ -189,7 +190,7 @@ class EditorViewModel : ViewModel() {
             if (tab.type == "file" || tab.type == "fileInternal") {
                 val file = tab.data as? FileWrapper
                 val editorState = tab.editorState
-                
+
                 if (file != null && editorState != null && file.path != "untitled") {
                     val saved = file.write(context, editorState.text)
                     if (saved) {
@@ -227,5 +228,38 @@ class EditorViewModel : ViewModel() {
                 activeTabId = if (current.activeTabId == tabId) newTab.id else current.activeTabId
             )
         }
+    }
+
+    fun closeAllTabs() {
+        _state.update { current ->
+            current.copy(
+                openTabs = emptyList(),
+                activeTabId = null
+            )
+        }
+    }
+
+    fun isTabOpen(tabId: String): Boolean {
+        return _state.value.openTabs.any { it.id == tabId }
+    }
+
+    fun isTabActive(tabId: String): Boolean {
+        return _state.value.activeTabId == tabId
+    }
+
+    fun isFileTabOpen(fileId: FileId): Boolean {
+        return _state.value.openTabs.any { it.type == "file" && it.id == fileId }
+    }
+
+    fun isFileTabActive(fileId: FileId): Boolean {
+        return _state.value.activeTabId == fileId
+    }
+
+    fun isFileTab(tabId: String): Boolean {
+        return _state.value.openTabs.any { it.type == "file" && it.id == tabId }
+    }
+
+    fun isFileTabInternal(tabId: String): Boolean {
+        return _state.value.openTabs.any { it.type == "fileInternal" && it.id == tabId }
     }
 }

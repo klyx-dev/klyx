@@ -7,7 +7,7 @@ import androidx.documentfile.provider.DocumentFile
 import java.io.File
 
 data class DocumentFileWrapper(
-    private val raw: DocumentFile,
+    val raw: DocumentFile,
     private val isDocumentTree: Boolean = false
 ) : FileWrapper {
     private val _name by lazy { raw.name ?: "(unknown)" }
@@ -38,7 +38,7 @@ data class DocumentFileWrapper(
         return raw.listFiles().map { it.name!! }.toTypedArray()
     }
 
-    override fun listFiles(): List<FileWrapper> {
+    override fun listFiles(): List<DocumentFileWrapper> {
         return raw.listFiles().map(::DocumentFileWrapper)
     }
 

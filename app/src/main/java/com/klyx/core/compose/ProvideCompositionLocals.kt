@@ -12,6 +12,7 @@ import com.klyx.core.rememberBuildVariant
 import com.klyx.core.settings.SettingsManager
 import com.klyx.core.theme.ThemeManager
 import com.klyx.editor.compose.EditorProvider
+import com.klyx.extension.ExtensionManager
 import kotlinx.coroutines.channels.consumeEach
 
 @Composable
@@ -33,6 +34,7 @@ fun ProvideCompositionLocals(content: @Composable () -> Unit) {
     LaunchedEffect(Unit) {
         loadDefaultTheme()
         SettingsManager.load()
+        ExtensionManager.loadExtensions()
 
         var oldContent = SettingsManager.settingsFile.readText()
 

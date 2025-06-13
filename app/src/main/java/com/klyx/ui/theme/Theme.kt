@@ -262,12 +262,12 @@ fun KlyxTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
-        useThemeExtension -> ThemeManager.getColorScheme(darkTheme, themeName)
-
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
+
+        useThemeExtension -> ThemeManager.getColorScheme(darkTheme, themeName)
 
         darkTheme -> darkScheme
         else -> lightScheme
