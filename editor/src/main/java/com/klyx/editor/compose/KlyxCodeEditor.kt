@@ -161,6 +161,8 @@ fun KlyxCodeEditor(
     val highlighter = remember { TreeSitterHighlighter(context) }
 
     LaunchedEffect(editorState.text, language) {
+        highlighter.reparse(editorState.text)
+
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastTextUpdateTime >= textUpdateDebounceTime) {
             if (editorState.text != lastHighlightedText.value || language != lastHighlightedLanguage.value) {

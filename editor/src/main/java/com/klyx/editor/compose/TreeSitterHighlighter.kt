@@ -14,7 +14,7 @@ import io.github.treesitter.ktreesitter.Tree
 
 class TreeSitterHighlighter(context: Context) {
     private var parser: Parser? = null
-    private var tree: Tree? = null
+    private var oldTree: Tree? = null
     private var language: Language? = null
     private var query: Query? = null
 
@@ -40,8 +40,13 @@ class TreeSitterHighlighter(context: Context) {
         }
     }
 
-    fun parse(text: String): Tree? {
-        return parser?.parse(text)
+    fun reparse(text: String) {
+        if (parser == null) return
+        oldTree = parser!!.parse(text, oldTree)
+    }
+
+    fun parse(text: String, oldTree: Tree? = null): Tree? {
+        return parser?.parse(text, oldTree)
     }
 
     private fun byteOffsetToCharOffset(text: String, byteOffset: Int): Int {
@@ -90,10 +95,11 @@ class TreeSitterHighlighter(context: Context) {
 
     fun getSyntaxHighlights(text: String): List<SyntaxHighlight> {
         val highlights = mutableListOf<SyntaxHighlight>()
-        val tree = parse(text) ?: return highlights
+        val tree = parse(text, oldTree) ?: return highlights
+        oldTree = tree
         val query = this.query ?: return highlights
 
-        query.matches(tree.rootNode).forEach { match ->
+        query.matches(oldTree!!.rootNode).forEach { match ->
             match.captures.forEach { capture ->
                 val node = capture.node
                 val captureName = capture.name
@@ -163,7 +169,7 @@ class TreeSitterHighlighter(context: Context) {
     }
 
     fun close() {
-        tree?.close()
+        oldTree?.close()
         parser?.close()
         query?.close()
     }
