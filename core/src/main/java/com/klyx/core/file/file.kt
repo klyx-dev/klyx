@@ -2,6 +2,7 @@ package com.klyx.core.file
 
 import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -93,7 +94,7 @@ fun File.isMetaEqualTo(other: File): Boolean {
  * Watches directory. If file is supplied it will use parent directory. If it's an intent to watch just file,
  * developers must filter for the file related events themselves.
  *
- * From: https://github.com/vishna/watchservice-ktx
+ * From: [watchservice-ktx](https://github.com/vishna/watchservice-ktx)
  *
  * @param [mode] - mode in which we should observe changes, can be SingleFile, SingleDirectory, Recursive
  * @param [tag] - any kind of data that should be associated with this channel
@@ -125,7 +126,7 @@ fun FileWrapper.requiresPermission(context: Context, isWrite: Boolean): Boolean 
 
         isExternalStorage -> {
             val permission = if (isWrite) Manifest.permission.WRITE_EXTERNAL_STORAGE else Manifest.permission.READ_EXTERNAL_STORAGE
-            context.checkSelfPermission(permission) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED
         }
 
         else -> false // Internal storage or app-private paths generally don't require extra permission

@@ -1,6 +1,11 @@
 package com.klyx.ui.theme
 
+import androidx.annotation.FloatRange
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 
 val primaryLight = Color(0xFF0C6780)
 val onPrimaryLight = Color(0xFFFFFFFF)
@@ -219,6 +224,18 @@ val surfaceContainerHighDarkHighContrast = Color(0xFF373C3F)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF42484A)
 
 
+fun Color.blend(
+    color: Color,
+    @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
+): Color = Color(ColorUtils.blendARGB(this.toArgb(), color.toArgb(), fraction))
+
+@Composable
+fun Color.harmonizeWithPrimary(
+    @FloatRange(
+        from = 0.0,
+        to = 1.0
+    ) fraction: Float = 0.2f
+): Color = blend(MaterialTheme.colorScheme.primary, fraction)
 
 
 
