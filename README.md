@@ -48,6 +48,7 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 1. Launch Klyx on your Android device
 2. Create a new file or open an existing one
 3. Start coding with the built-in editor
+4. Check out the [Keyboard Shortcuts](docs/keyboard-shortcuts.md) for efficient navigation and editing
 
 ## Extensions
 
