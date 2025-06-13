@@ -13,6 +13,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -21,13 +22,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 data class MenuItem(
     val title: String = "",
     val shortcutKey: String? = null,
     val isDivider: Boolean = title.isEmpty(),
     val dismissRequestOnClicked: Boolean = true,
-    val onClick: () -> Unit = {}
+    val onClick: suspend () -> Unit = {}
 )
 
 @Composable
@@ -50,6 +53,8 @@ fun PopupMenu(
             dismissOnBackPress = true
         )
     ) {
+        val scope = rememberCoroutineScope()
+
         Card(
             shape = RoundedCornerShape(4.dp),
             colors = CardDefaults.cardColors(
@@ -75,7 +80,7 @@ fun PopupMenu(
                                 .clip(RoundedCornerShape(4.dp))
                                 .clickable {
                                     onItemClick(index, item)
-                                    item.onClick()
+                                    scope.launch(Dispatchers.Main.immediate) { item.onClick() }
                                     if (item.dismissRequestOnClicked) onDismissRequest()
                                 },
                             verticalAlignment = Alignment.CenterVertically

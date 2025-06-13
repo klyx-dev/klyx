@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +48,9 @@ import com.klyx.core.settings.SettingsManager
 import com.klyx.core.showShortToast
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.ui.component.AboutDialog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -59,6 +62,7 @@ fun MainMenuBar(
     val viewModel = LocalEditorViewModel.current
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val scope = rememberCoroutineScope()
 
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
@@ -169,7 +173,7 @@ fun MainMenuBar(
                         name = it.title,
                         shortcutKey = it.shortcutKey,
                     ) {
-                        it.onClick()
+                        scope.launch(Dispatchers.Main.immediate) { it.onClick() }
                     }
                 }.toTypedArray()
             )

@@ -21,6 +21,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.currentRecomposeScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
@@ -28,13 +30,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.klyx.core.Env
 import com.klyx.core.file.DocumentFileWrapper
 import com.klyx.core.file.FileWrapper
+import com.klyx.core.file.KWatchEvent
+import com.klyx.core.file.asWatchChannel
 import com.klyx.viewmodel.TabItem
+import kotlinx.coroutines.channels.consumeEach
 
 @Composable
 fun EditorTabBar(
@@ -76,6 +82,20 @@ fun EditorTab(
     onClick: () -> Unit = {},
     onClose: () -> Unit = {},
 ) {
+    val recomposeScope = currentRecomposeScope
+
+    LaunchedEffect(tabItem) {
+        if (tabItem.data is FileWrapper) {
+            tabItem.data.asRawFile()?.let { file ->
+                file.asWatchChannel().consumeEach { event ->
+                    if (event.kind == KWatchEvent.Kind.Deleted) {
+                        recomposeScope.invalidate()
+                    }
+                }
+            }
+        }
+    }
+
     val colorScheme = MaterialTheme.colorScheme
 
     val surface4 = colorScheme.surfaceColorAtElevation(4.dp)
@@ -124,8 +144,10 @@ fun EditorTab(
             color = textColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodySmall
-            //modifier = Modifier.weight(1f, fill = false)
+            style = MaterialTheme.typography.bodySmall,
+            textDecoration = if ((tabItem.data as? FileWrapper)?.exists() == false && tabItem.data.name != "untitled") {
+                TextDecoration.LineThrough
+            } else TextDecoration.None
         )
 
         if (tabItem.type == "file") {
