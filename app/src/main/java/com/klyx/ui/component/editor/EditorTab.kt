@@ -28,6 +28,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.style.TextDecoration
@@ -39,6 +40,7 @@ import com.klyx.core.file.DocumentFileWrapper
 import com.klyx.core.file.FileWrapper
 import com.klyx.core.file.KWatchEvent.Kind
 import com.klyx.core.file.asWatchChannel
+import com.klyx.ui.theme.DefaultKlyxShape
 import com.klyx.viewmodel.TabItem
 import kotlinx.coroutines.channels.consumeEach
 
@@ -129,7 +131,7 @@ fun EditorTab(
                     )
                 }
             } else Modifier)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isDirty) {
@@ -188,14 +190,17 @@ fun EditorTab(
             }
         }
 
+        Spacer(modifier = Modifier.width(6.dp))
+
         Icon(
             imageVector = Icons.Default.Close,
             contentDescription = "Close tab",
             tint = textColor,
             modifier = Modifier
-                .size(18.dp)
+                .size(15.dp)
+                .clip(DefaultKlyxShape)
                 .clickable(onClick = onClose)
-                .padding(start = 8.dp)
+                .padding(2.dp)
         )
     }
 }
