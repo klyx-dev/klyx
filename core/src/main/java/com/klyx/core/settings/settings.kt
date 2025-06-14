@@ -14,9 +14,23 @@ data class AppSettings(
     @SerialComment(
         """
         The name of the Klyx theme to use for the UI.
+        
+        Note: It will not work if `dynamic_colors` is set to `true`.
     """
     )
-    val theme: String = ThemeManager.getAllAvailableThemes().firstOrNull()?.name ?: "Midnight Blue",
+    val theme: String = ThemeManager.getAllAvailableThemes().firstOrNull()?.name ?: "Default",
+
+    @SerialComment("""
+        The appearance of the UI.
+        
+        Available options:
+        - light
+        - dark
+        - system
+        
+        Note: This will be overridden by the `theme` appearance if set.
+    """)
+    val appearance: Appearance = Appearance.System,
 
     @SerialComment("The editor settings")
     val editor: EditorSettings = EditorSettings()
@@ -44,7 +58,7 @@ data class EditorSettings(
 )
 
 @Serializable
-enum class AppTheme {
+enum class Appearance {
     @SerialName("light")
     Light,
 

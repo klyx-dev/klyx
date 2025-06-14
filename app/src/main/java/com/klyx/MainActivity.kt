@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -27,6 +28,7 @@ import com.klyx.core.cmd.CommandManager
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.setAppContent
+import com.klyx.core.settings.Appearance
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
 import com.klyx.ui.component.cmd.CommandPalette
@@ -40,9 +42,20 @@ class MainActivity : ComponentActivity() {
 
         setAppContent {
             val settings = LocalAppSettings.current
+            val isSystemInDarkTheme = isSystemInDarkTheme()
 
             val darkMode by remember(settings) {
-                derivedStateOf { ThemeManager.getThemeByName(settings.theme)?.isDark() == true }
+                derivedStateOf {
+                    if (settings.dynamicColors) {
+                        when (settings.appearance) {
+                            Appearance.Dark -> true
+                            Appearance.Light -> false
+                            Appearance.System -> isSystemInDarkTheme
+                        }
+                    } else {
+                        ThemeManager.getThemeByName(settings.theme)?.isDark() ?: isSystemInDarkTheme
+                    }
+                }
             }
 
             val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
