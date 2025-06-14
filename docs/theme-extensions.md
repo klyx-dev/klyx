@@ -26,17 +26,14 @@ version = "0.0.1"
 schema_version = 1
 authors = ["Your Name"]
 description = "Description of your theme"
-repository = ""
-
-[extension]
-type = "theme"
+repository = "https://github.com/your-name/my-klyx-extension"
 ```
 
 ### 2. themes.json
 
 This file contains the actual theme definitions. You can define multiple themes in a single extension:
 
-```json
+```json5
 {
     "author": "Your Name",
     "name": "Theme Collection Name",
