@@ -12,16 +12,15 @@ class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
     fun loadExtension(extension: Extension, callStartFunction: Boolean = false): KWasmProgram? {
         val id = extension.toml.id
 
-        if (extension.toml.extension?.type == "theme") {
-            ThemeManager.loadThemeFamily(extension.themeInput)
-            return null
+        extension.themeFiles.forEach { file ->
+            ThemeManager.loadThemeFamily(file.inputStream())
         }
 
-        // For WASM extensions
-        extension.wasmInput?.let { wasmInput ->
-            val memorySize = extension.toml.extension?.requestedMemorySize ?: 1 // Default to 1MB if not specified
-            val builder = KWasmProgram.builder(ByteBufferMemoryProvider(memorySize * 1024L * 1024L))
-                .withBinaryModule(id, wasmInput)
+        return extension.wasmFiles.firstOrNull()?.let { wasm ->
+            val memorySize = extension.toml.requestedMemorySize ?: 1 // Default to 1MB if not specified
+            val builder = KWasmProgram
+                .builder(ByteBufferMemoryProvider(memorySize * 1024L * 1024L))
+                .withBinaryModule(id, wasm)
 
             for (module in modules) {
                 for (func in module.getHostFunctions()) {
@@ -43,10 +42,8 @@ class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
                 }
             }
 
-            return program
+            program
         }
-
-        return null
     }
 
     companion object {

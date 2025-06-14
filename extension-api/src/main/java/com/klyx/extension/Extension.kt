@@ -1,33 +1,24 @@
 package com.klyx.extension
 
 import java.io.File
-import java.io.InputStream
 
 data class Extension(
     val toml: ExtensionToml,
     val path: String,
-    val wasmInput: InputStream? = null,
-    val themeInput: InputStream? = null,
+    val wasmFiles: List<File> = emptyList(),
+    val themeFiles: List<File> = emptyList(),
     val isDevExtension: Boolean = false
 )
 
 @Throws(Exception::class)
 fun parseExtension(dir: File, toml: ExtensionToml): Extension {
-    val themeInput = if (toml.extension?.type == "theme") {
-        File(dir, "themes/themes.json").inputStream()
-    } else null
+    val themes = dir.resolve("themes").listFiles { file ->
+        file.extension == "json"
+    }?.toList() ?: emptyList()
 
-    // Only look for WASM file if the extension type requires it
-    val wasmInput = if (toml.extension?.type == "wasm") {
-        dir.listFiles { file ->
-            file.extension == "wasm"
-        }?.firstOrNull()?.inputStream()
-    } else null
+    val wasmFiles = dir.resolve("lib").listFiles { file ->
+        file.extension == "wasm"
+    }?.toList() ?: emptyList()
 
-    return Extension(
-        wasmInput = wasmInput,
-        themeInput = themeInput,
-        toml = toml,
-        path = dir.absolutePath
-    )
+    return Extension(toml, dir.absolutePath, wasmFiles, themes)
 }

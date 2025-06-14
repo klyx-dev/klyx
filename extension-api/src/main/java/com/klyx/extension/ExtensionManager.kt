@@ -17,14 +17,17 @@ object ExtensionManager {
         context: Context,
         dir: DocumentFileWrapper,
         factory: ExtensionFactory,
-        isDevExtension: Boolean = false,
-        onError: (String, IOException) -> Unit = { _, _ -> }
-    ) = withContext(Dispatchers.IO) {
+        isDevExtension: Boolean = false
+    ): Result<Any> = withContext(Dispatchers.IO) {
         val tomlFile = dir.raw.findFile("extension.toml")
             ?: throw IOException("extension.toml not found in selected folder")
 
         val toml = context.contentResolver.openInputStream(tomlFile.uri)?.use { input ->
-            parseToml(input)
+            try {
+                parseToml(input)
+            } catch (e: Exception) {
+                return@withContext Result.failure(e)
+            }
         } ?: throw IOException("Failed to read extension.toml")
 
         val internalDir = File(
@@ -51,17 +54,24 @@ object ExtensionManager {
                         }
                     }
                 } catch (e: IOException) {
-                    onError(file.name, e)
                     throw e
                 }
             }
         }
 
-        copyRecursive(dir, internalDir)
+        runCatching { copyRecursive(dir, internalDir) }.onFailure {
+            return@withContext Result.failure(it)
+        }
 
-        val extension = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
-        installedExtensions.add(extension)
-        factory.loadExtension(extension)
+        runCatching {
+            val extension = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
+            installedExtensions.add(extension)
+            factory.loadExtension(extension)
+        }.onFailure {
+            return@withContext Result.failure(it)
+        }
+
+        Result.success(Unit)
     }
 
     fun uninstallExtension(extension: Extension) {

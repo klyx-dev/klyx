@@ -91,11 +91,10 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                         context = context,
                         dir = dir,
                         factory = factory,
-                        isDevExtension = true,
-                        onError = { _, exception ->
-                            context.showShortToast("Error installing extension: ${exception.message}")
-                        }
-                    )
+                        isDevExtension = true
+                    ).onFailure {
+                        context.showShortToast("Failed to install extension: ${it.message}")
+                    }
                 }
             } else {
                 context.showShortToast("Select a directory from your device's storage. External storage providers are not supported.")
@@ -202,6 +201,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                                             .clip(DefaultKlyxShape)
                                             .clickable(role = Role.Button) {
                                                 ExtensionManager.uninstallExtension(extension)
+                                                context.showShortToast("Restart the app to complete the uninstall process.")
                                             }
                                             .padding(horizontal = 4.dp),
                                         color = if (extension.isDevExtension) {
