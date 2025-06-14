@@ -179,7 +179,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
             val filteredExtensions = when (filter) {
                 ExtensionFilter.All -> installedExtensions + extensions.fastFilter { it !in installedExtensions }
                 ExtensionFilter.Installed -> installedExtensions
-                ExtensionFilter.NotInstalled -> extensions
+                ExtensionFilter.NotInstalled -> extensions.fastFilter { it !in installedExtensions }
             }.fastFilter { it.name.contains(searchQuery, ignoreCase = true) }
 
             if (filteredExtensions.isNotEmpty()) {
