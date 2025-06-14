@@ -176,12 +176,12 @@ fun MainMenuBar(
             ),
 
             "Help" to listOf(
-                MenuItem("Documentation", dismissRequestOnClicked = false) { context.showShortToast("Soon...") },
-                MenuItem("Keyboard Shortcuts", dismissRequestOnClicked = false) {
+                MenuItem("Documentation") { uriHandler.openUri("https://github.com/klyx-dev/klyx/tree/main/docs") },
+                MenuItem("Keyboard Shortcuts") {
                     uriHandler.openUri("https://github.com/klyx-dev/klyx/blob/main/docs/keyboard-shortcuts.md")
                 },
                 MenuItem(),
-                MenuItem("Report Issue", dismissRequestOnClicked = false) { uriHandler.openUri("https://github.com/klyx-dev/klyx/issues/new") }
+                MenuItem("Report Issue") { uriHandler.openUri("https://github.com/klyx-dev/klyx/issues/new") }
             )
         )
     }

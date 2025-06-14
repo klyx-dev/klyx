@@ -2,6 +2,9 @@
 
 This guide will help you create custom theme extensions for Klyx. Theme extensions allow you to customize the appearance of the editor and create your own unique visual styles.
 
+> [!NOTE]
+> Before creating a theme extension, make sure you're familiar with the [Developing Extensions](developing-extensions.md) guide, which covers the basic extension structure and development workflow.
+
 ## Extension Structure
 
 A theme extension consists of the following structure:
@@ -207,10 +210,6 @@ Here's a minimal example of a dark theme:
     ]
 }
 ```
-
-## Installation
-
-Not available currently
 
 ## Contributing
 
