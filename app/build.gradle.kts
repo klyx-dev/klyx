@@ -14,7 +14,7 @@ android {
         applicationId = "com.klyx"
         minSdk = 26
         targetSdk = 36
-        versionName = "1.3.0"
+        versionName = "1.4.0-rc.0"
         versionCode = calculateVersionCode(versionName!!)
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
