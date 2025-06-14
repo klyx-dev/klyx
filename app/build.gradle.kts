@@ -37,9 +37,6 @@ android {
     }
 
     compileOptions {
-        // required by sora-editor language-textmate
-        isCoreLibraryDesugaringEnabled = true
-
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -55,9 +52,6 @@ kotlin {
 }
 
 dependencies {
-    // required by sora-editor language-textmate
-    coreLibraryDesugaring(libs.desugar.jdk.libs)
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
