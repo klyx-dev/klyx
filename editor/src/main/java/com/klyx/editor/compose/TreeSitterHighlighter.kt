@@ -95,11 +95,10 @@ class TreeSitterHighlighter(context: Context) {
 
     fun getSyntaxHighlights(text: String): List<SyntaxHighlight> {
         val highlights = mutableListOf<SyntaxHighlight>()
-        val tree = parse(text, oldTree) ?: return highlights
-        oldTree = tree
+        val tree = parse(text) ?: return highlights
         val query = this.query ?: return highlights
 
-        query.matches(oldTree!!.rootNode).forEach { match ->
+        query.matches(tree.rootNode).forEach { match ->
             match.captures.forEach { capture ->
                 val node = capture.node
                 val captureName = capture.name

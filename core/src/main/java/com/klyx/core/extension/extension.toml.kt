@@ -1,4 +1,4 @@
-package com.klyx.extension
+package com.klyx.core.extension
 
 import com.akuleshov7.ktoml.Toml
 import com.akuleshov7.ktoml.source.decodeFromStream

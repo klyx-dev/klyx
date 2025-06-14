@@ -6,9 +6,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.AssetManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
@@ -24,6 +27,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.klyx.core.net.NetworkState
 
 fun AssetManager.readText(path: String) = open(path).bufferedReader().use { it.readText() }
 
@@ -79,4 +83,22 @@ fun Context.requestStoragePermission() {
             1001
         )
     }
+}
+
+@RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+fun Context.isInternetAvailable(): Boolean {
+    val connectivityManager = getSystemService(ConnectivityManager::class.java)
+    val network = connectivityManager.activeNetwork ?: return false
+    val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+
+    return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+}
+
+@RequiresPermission(Manifest.permission.ACCESS_NETWORK_STATE)
+@Composable
+fun rememberNetworkState(): State<NetworkState> {
+    val context = LocalContext.current
+    val isConnected = context.isInternetAvailable()
+    return rememberUpdatedState(if (isConnected) NetworkState.Connected else NetworkState.NotConnected)
 }

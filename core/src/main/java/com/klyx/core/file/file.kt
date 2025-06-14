@@ -6,7 +6,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.withContext
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.File
 import java.security.MessageDigest
 
@@ -158,3 +161,34 @@ private fun FileWrapper.canAccess(context: Context): Boolean {
         parent.canWrite()
     }
 }
+
+fun FileWrapper.find(name: String): FileWrapper? {
+    return listFiles()?.find { it.name == name }
+}
+
+suspend fun ZipArchiveInputStream.extractTo(targetDir: File): Boolean = withContext(Dispatchers.IO) {
+    var entry = nextEntry
+
+    while (entry != null) {
+        val name = entry.name
+
+        if (name.isEmpty()) {
+            entry = nextEntry
+            continue
+        }
+
+        val outputFile = File(targetDir, name)
+
+        if (entry.isDirectory) {
+            outputFile.mkdirs()
+        } else {
+            outputFile.parentFile?.mkdirs()
+            outputFile.outputStream().use(::copyTo)
+        }
+
+        entry = nextEntry
+    }
+
+    true
+}
+

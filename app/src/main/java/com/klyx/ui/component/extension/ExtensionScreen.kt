@@ -25,7 +25,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -38,12 +37,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -52,34 +53,54 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEachIndexed
+import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
 import com.klyx.core.compose.LocalExtensionFactory
+import com.klyx.core.extension.ExtensionToml
+import com.klyx.core.extension.fetchExtensions
+import com.klyx.core.extension.installExtension
 import com.klyx.core.file.DocumentFileWrapper
+import com.klyx.core.file.wrapFile
 import com.klyx.core.icons.GithubAlt
 import com.klyx.core.icons.KlyxIcons
+import com.klyx.core.net.isConnected
+import com.klyx.core.rememberNetworkState
 import com.klyx.core.showShortToast
 import com.klyx.core.spacedName
 import com.klyx.extension.ExtensionFilter
 import com.klyx.extension.ExtensionManager
 import com.klyx.ui.theme.DefaultKlyxShape
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ExtensionScreen(modifier: Modifier = Modifier) {
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        delay(1000)
-        isLoading = false
-    }
-
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val factory = LocalExtensionFactory.current
+
     val scope = rememberCoroutineScope()
+    val networkState by rememberNetworkState()
+
+    val extensions = remember { mutableStateListOf<ExtensionToml>() }
+
+    var isLoading by remember { mutableStateOf(true) }
+    var filter by remember { mutableStateOf(ExtensionFilter.All) }
+
+    LaunchedEffect(networkState) {
+        if (networkState.isConnected) {
+            isLoading = true
+            fetchExtensions().onSuccess { extensions += it }.onFailure {
+                context.showShortToast("${it.message}")
+            }
+            isLoading = false
+        } else {
+            context.showShortToast("No internet connection")
+            isLoading = false
+        }
+    }
 
     val selectDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -140,7 +161,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
         )
 
-        ExtensionFilterBar()
+        ExtensionFilterBar(onFilterChange = { filter = it })
         //HorizontalDivider()
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -153,58 +174,87 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                 LinearWavyProgressIndicator()
             }
         } else {
-            val extensions = ExtensionManager.installedExtensions.filter {
-                it.toml.name.contains(searchQuery, ignoreCase = true)
-            }
+            val installedExtensions = ExtensionManager.installedExtensions.fastMap { it.toml }
 
-            if (extensions.isNotEmpty()) {
+            val filteredExtensions = when (filter) {
+                ExtensionFilter.All -> installedExtensions + extensions.fastFilter { it !in installedExtensions }
+                ExtensionFilter.Installed -> installedExtensions
+                ExtensionFilter.NotInstalled -> extensions
+            }.fastFilter { it.name.contains(searchQuery, ignoreCase = true) }
+
+            if (filteredExtensions.isNotEmpty()) {
                 LazyColumn(
                     modifier = Modifier.padding(horizontal = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(extensions) { extension ->
+                    items(filteredExtensions, key = { it.id }) { extension ->
                         Card(
                             shape = DefaultKlyxShape,
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceContainer
-                            )
+                            ),
+                            modifier = Modifier.animateItem()
                         ) {
+                            var isInstalling by remember { mutableStateOf(false) }
+
                             Column(
                                 modifier = Modifier
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
                                     .fillMaxWidth()
                             ) {
-                                val toml = extension.toml
-
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = toml.name,
+                                        text = extension.name,
                                         style = MaterialTheme.typography.titleMedium
                                     )
 
                                     Spacer(modifier = Modifier.width(8.dp))
 
                                     Text(
-                                        text = "v${toml.version}",
+                                        text = "v${extension.version}",
                                         style = MaterialTheme.typography.titleMedium
                                     )
 
                                     Spacer(modifier = Modifier.weight(1f))
 
                                     Text(
-                                        text = "Uninstall",
+                                        text = if (extension in installedExtensions) {
+                                            "Uninstall"
+                                        } else "Install",
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier
                                             .clip(DefaultKlyxShape)
-                                            .clickable(role = Role.Button) {
-                                                ExtensionManager.uninstallExtension(extension)
-                                                context.showShortToast("Restart the app to complete the uninstall process.")
+                                            .alpha(if (isInstalling) 0.5f else 1f)
+                                            .clickable(role = Role.Button, enabled = !isInstalling) {
+                                                if (extension in installedExtensions) {
+                                                    ExtensionManager.uninstallExtension(extension)
+                                                    context.showShortToast("Restart the app to complete the uninstall process.")
+                                                } else {
+                                                    scope.launch {
+                                                        isInstalling = true
+                                                        installExtension(extension).onSuccess { file ->
+                                                            ExtensionManager.installExtension(
+                                                                context = context,
+                                                                dir = file.wrapFile(),
+                                                                factory = factory,
+                                                                isDevExtension = false
+                                                            ).onSuccess {
+                                                                context.showShortToast("Extension installed successfully")
+                                                            }.onFailure {
+                                                                context.showShortToast("Failed to install extension: ${it.message}")
+                                                            }
+                                                        }.onFailure {
+                                                            context.showShortToast("Failed to install extension: ${it.message}")
+                                                        }
+                                                        isInstalling = false
+                                                    }
+                                                }
                                             }
                                             .padding(horizontal = 4.dp),
-                                        color = if (extension.isDevExtension) {
+                                        color = if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
                                             MaterialTheme.colorScheme.onSurface
@@ -214,14 +264,14 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "Author${if (toml.authors.size > 1) "s" else ""}: ${toml.authors.joinToString(", ")}",
+                                        text = "Author${if (extension.authors.size > 1) "s" else ""}: ${extension.authors.joinToString(",")}",
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
 
                                     Spacer(modifier = Modifier.weight(1f))
 
-                                    if (extension.isDevExtension) {
+                                    if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
                                         Icon(
                                             Icons.Outlined.Code,
                                             contentDescription = null,
@@ -231,7 +281,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                                         )
                                     } else {
                                         Text(
-                                            text = "Downloads: 0",
+                                            text = "Downloads: N/A",
                                             style = MaterialTheme.typography.labelMedium
                                         )
                                     }
@@ -241,21 +291,25 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = toml.description,
+                                        text = extension.description,
                                         style = MaterialTheme.typography.labelLarge
                                     )
 
                                     Spacer(modifier = Modifier.weight(1f))
 
-                                    if (extension.isDevExtension) {
-                                        if (toml.repository.isNotBlank()) {
+                                    val isDevExtension = remember(extension) {
+                                        ExtensionManager.findExtension(extension.id)?.isDevExtension == true
+                                    }
+
+                                    if (!isDevExtension) {
+                                        if (extension.repository.isNotBlank()) {
                                             Icon(
                                                 KlyxIcons.GithubAlt,
                                                 contentDescription = null,
                                                 modifier = Modifier
                                                     .size(20.dp)
                                                     .clip(DefaultKlyxShape)
-                                                    .clickable(role = Role.Button) { uriHandler.openUri(toml.repository) }
+                                                    .clickable(role = Role.Button) { uriHandler.openUri(extension.repository) }
                                                     .padding(4.dp)
                                             )
 
@@ -268,12 +322,18 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                                             modifier = Modifier
                                                 .size(20.dp)
                                                 .clip(DefaultKlyxShape)
-                                                .clickable(role = Role.Button) {
-                                                    context.showShortToast("Nothing...")
-                                                }
+                                                .clickable(role = Role.Button) { context.showShortToast("Nothing...") }
                                                 .padding(2.dp)
                                         )
                                     }
+                                }
+
+                                if (isInstalling) {
+                                    LinearWavyProgressIndicator(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(2.dp)
+                                    )
                                 }
                             }
                         }

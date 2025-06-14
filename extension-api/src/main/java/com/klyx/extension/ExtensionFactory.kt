@@ -1,6 +1,7 @@
 package com.klyx.extension
 
 import android.content.Context
+import com.klyx.core.extension.Extension
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.impl.Android
 import com.klyx.extension.impl.FileSystem

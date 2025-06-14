@@ -1,4 +1,4 @@
-package com.klyx.extension
+package com.klyx.core.extension
 
 import java.io.File
 

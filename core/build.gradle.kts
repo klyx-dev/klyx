@@ -54,6 +54,12 @@ dependencies {
     api(libs.utilcodex)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.json5k)
+    implementation(libs.ktoml.core)
+    implementation(libs.ktoml.file)
+
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.commons.compress)
 
     testImplementation(libs.junit)
 
