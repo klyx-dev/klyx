@@ -8,12 +8,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.toColorInt
-import com.klyx.core.cmd.Command
-import com.klyx.core.cmd.CommandManager
-import com.klyx.core.settings.SettingsManager
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -613,8 +611,8 @@ object ThemeManager {
      */
     fun getThemeInfo(): Pair<String?, String?> {
         val family = currentThemeFamily ?: return null to null
-        val author = family["author"]?.jsonPrimitive?.content
-        val name = family["name"]?.jsonPrimitive?.content
+        val author = family["author"]?.jsonPrimitive?.contentOrNull
+        val name = family["name"]?.jsonPrimitive?.contentOrNull
         return author to name
     }
 }

@@ -52,6 +52,7 @@ import com.klyx.core.showShortToast
 import com.klyx.editor.compose.LocalEditorViewModel
 import com.klyx.ui.component.AboutDialog
 import com.klyx.ui.component.extension.ExtensionScreen
+import com.klyx.ui.component.terminal.TerminalScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -122,6 +123,18 @@ fun MainMenuBar(
                         viewModel.setActiveTab(id)
                     }
                 },
+//                MenuItem("Terminal") {
+//                    val id = "terminal"
+//
+//                    if (viewModel.isTabOpen(id)) {
+//                        viewModel.setActiveTab(id)
+//                    } else {
+//                        viewModel.openTab("Terminal", id = id) {
+//                            TerminalScreen(modifier = Modifier.fillMaxSize())
+//                        }
+//                        viewModel.setActiveTab(id)
+//                    }
+//                },
                 MenuItem(),
                 MenuItem("Quit", "Ctrl-Q") {
                     activity?.finishAffinity()

@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalContracts::class)
-
 package com.klyx.core
 
 import io.ktor.client.HttpClient
@@ -13,6 +11,7 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
+@OptIn(ExperimentalContracts::class)
 inline fun <T, R> T?.ifNull(defaultValue: () -> R): R where T : R {
     contract { callsInPlace(defaultValue, InvocationKind.AT_MOST_ONCE) }
     return this ?: defaultValue()

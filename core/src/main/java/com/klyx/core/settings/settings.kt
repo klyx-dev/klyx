@@ -1,5 +1,6 @@
 package com.klyx.core.settings
 
+import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.ThemeManager
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.SerialName
@@ -58,15 +59,3 @@ data class EditorSettings(
     @SerialName("pin_line_numbers")
     val pinLineNumbers: Boolean = false
 )
-
-@Serializable
-enum class Appearance {
-    @SerialName("light")
-    Light,
-
-    @SerialName("dark")
-    Dark,
-
-    @SerialName("system")
-    System
-}

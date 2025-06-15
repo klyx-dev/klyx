@@ -28,7 +28,7 @@ import com.klyx.core.cmd.CommandManager
 import com.klyx.core.compose.LocalAppSettings
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.setAppContent
-import com.klyx.core.settings.Appearance
+import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
 import com.klyx.ui.component.ThemeSelector
