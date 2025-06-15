@@ -20,7 +20,8 @@ data class AppSettings(
     )
     val theme: String = ThemeManager.getAllAvailableThemes().firstOrNull()?.name ?: "Default",
 
-    @SerialComment("""
+    @SerialComment(
+        """
         The appearance of the UI.
         
         Available options:
@@ -29,7 +30,8 @@ data class AppSettings(
         - system
         
         Note: This will be overridden by the `theme` appearance if set.
-    """)
+    """
+    )
     val appearance: Appearance = Appearance.System,
 
     @SerialComment("The editor settings")

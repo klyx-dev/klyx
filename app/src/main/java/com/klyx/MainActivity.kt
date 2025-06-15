@@ -31,6 +31,7 @@ import com.klyx.core.setAppContent
 import com.klyx.core.settings.Appearance
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
+import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.menu.MainMenuBar
@@ -106,6 +107,12 @@ class MainActivity : ComponentActivity() {
                                 commands = CommandManager.commands,
                                 recentlyUsedCommands = CommandManager.recentlyUsedCommands,
                                 onDismissRequest = CommandManager::hidePalette
+                            )
+                        }
+
+                        if (ThemeManager.showThemeSelector) {
+                            ThemeSelector(
+                                onDismissRequest = ThemeManager::hideThemeSelector
                             )
                         }
 

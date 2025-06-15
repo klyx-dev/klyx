@@ -112,6 +112,9 @@ object ThemeManager {
     private var currentThemeFamily: JsonObject? by mutableStateOf(null)
     private var availableThemes: List<KlyxTheme> by mutableStateOf(emptyList())
 
+    var showThemeSelector by mutableStateOf(false)
+        private set
+
     // Default fallback colors
     private val defaultLightColors = KlyxThemeStyle(
         background = Color(0xFFFFFFFF),
@@ -221,6 +224,18 @@ object ThemeManager {
         syntaxType = Color(0xFF4EC9B0)
     )
 
+    fun showThemeSelector() {
+        showThemeSelector = true
+    }
+
+    fun hideThemeSelector() {
+        showThemeSelector = false
+    }
+
+    fun toggleThemeSelector() {
+        showThemeSelector = !showThemeSelector
+    }
+
     /**
      * Load and parse a theme family from extension
      */
@@ -232,11 +247,6 @@ object ThemeManager {
             currentThemeFamily = json
 
             val parsedThemes = parseThemes(json)
-            CommandManager.addCommand(*parsedThemes.map {
-                Command("Change Theme: ${it.name} (${it.appearance})") {
-                    SettingsManager.updateSettings(SettingsManager.settings.value.copy(theme = it.name))
-                }
-            }.toTypedArray())
             availableThemes += parsedThemes
 
             println("Theme family loaded successfully: ${json["name"]?.jsonPrimitive?.content}")
