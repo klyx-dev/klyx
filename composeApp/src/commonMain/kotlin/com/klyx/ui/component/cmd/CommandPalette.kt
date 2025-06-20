@@ -62,7 +62,7 @@ fun CommandPalette(
             focusable = true,
             dismissOnBackPress = true,
             dismissOnClickOutside = true,
-            excludeFromSystemGesture = true
+            //excludeFromSystemGesture = true
         ),
         alignment = Alignment.TopCenter
     ) {

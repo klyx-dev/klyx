@@ -14,12 +14,6 @@ kotlin {
         namespace = "com.klyx.shared"
         compileSdk = Configs.Android.COMPILE_SDK_VERSION
         minSdk = Configs.Android.MIN_SDK_VERSION
-
-        compilations.configureEach {
-            compilerOptions.configure {
-                jvmTarget = JvmTarget.JVM_21
-            }
-        }
     }
 
     jvm()

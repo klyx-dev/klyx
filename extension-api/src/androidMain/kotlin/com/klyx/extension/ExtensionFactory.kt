@@ -6,15 +6,16 @@ import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.impl.Android
 import com.klyx.extension.impl.FileSystem
 import com.klyx.extension.impl.Logger
+import kotlinx.io.asSource
 import kwasm.KWasmProgram
 import kwasm.api.ByteBufferMemoryProvider
 
 class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
-    fun loadExtension(extension: Extension, callStartFunction: Boolean = false): KWasmProgram? {
+    suspend fun loadExtension(extension: Extension, callStartFunction: Boolean = false): KWasmProgram? {
         val id = extension.toml.id
 
         extension.themeFiles.forEach { file ->
-            ThemeManager.loadThemeFamily(file.inputStream())
+            ThemeManager.loadThemeFamily(file.inputStream().asSource()).getOrThrow()
         }
 
         return extension.wasmFiles.firstOrNull()?.let { wasm ->

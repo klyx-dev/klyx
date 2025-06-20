@@ -23,11 +23,11 @@ kotlin {
         }
     }
 
-    //jvm()
+    jvm()
 
     sourceSets {
         val commonMain by getting
-        //val jvmMain by getting
+        val jvmMain by getting
         val androidMain by getting
 
         commonMain.dependencies {
@@ -53,6 +53,7 @@ kotlin {
 
             implementation(kotlin("reflect"))
             api(libs.kotlinx.datetime)
+            api(libs.kotlinx.io.core)
             implementation(libs.okio)
 
             implementation(projects.shared)

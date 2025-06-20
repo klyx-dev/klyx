@@ -13,6 +13,7 @@ import android.provider.Settings
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 
 fun Context.hasStoragePermission(): Boolean {
@@ -29,6 +30,8 @@ fun Context.hasStoragePermission(): Boolean {
 fun Context.requestStoragePermission() {
     val activity = this as? Activity ?: return
     if (hasStoragePermission()) return
+
+    "#FFFFFFFF".toColorInt()
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {

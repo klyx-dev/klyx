@@ -25,6 +25,7 @@ data class TabState(
     val activeTabId: String? = null
 )
 
+@Suppress("MemberVisibilityCanBePrivate")
 class EditorViewModel(
     private val notifier: Notifier
 ) : ViewModel() {
@@ -211,7 +212,7 @@ class EditorViewModel(
                 editorState = EditorState(initialText = editorState.text)
             )
 
-            tab.id?.let { replaceTab(it, newTab) }
+            replaceTab(tab.id, newTab)
             editorState.markAsSaved()
             true
         } else false

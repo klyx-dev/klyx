@@ -19,16 +19,14 @@ kotlin {
         }
     }
 
-    //jvm("desktop")
+    jvm("desktop")
 
     sourceSets {
-        //val desktopMain by getting
+        val desktopMain by getting
 
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation(libs.androidx.material3)
-            implementation(libs.androidx.google.fonts)
             implementation(libs.androidx.documentfile)
             implementation(libs.koin.android)
         }
@@ -41,6 +39,8 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(libs.androidx.material3)
+            implementation(libs.androidx.google.fonts)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
@@ -56,10 +56,10 @@ kotlin {
             implementation(libs.kotlin.test)
         }
 
-//        desktopMain.dependencies {
-//            implementation(compose.desktop.currentOs)
-//            implementation(libs.kotlinx.coroutinesSwing)
-//        }
+        desktopMain.dependencies {
+            implementation(compose.desktop.currentOs)
+            implementation(libs.kotlinx.coroutinesSwing)
+        }
     }
 }
 
@@ -114,14 +114,14 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
-//compose.desktop {
-//    application {
-//        mainClass = "com.klyx.MainKt"
-//
-//        nativeDistributions {
-//            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-//            packageName = Configs.KLYX_PACKAGE_NAME
-//            packageVersion = Version.STABLE_VERSION_NAME
-//        }
-//    }
-//}
+compose.desktop {
+    application {
+        mainClass = "com.klyx.MainKt"
+
+        nativeDistributions {
+            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            packageName = Configs.KLYX_PACKAGE_NAME
+            packageVersion = Version.STABLE_VERSION_NAME
+        }
+    }
+}

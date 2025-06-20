@@ -21,7 +21,7 @@ kotlin {
         }
     }
 
-    //jvm()
+    jvm()
 
     sourceSets {
         commonMain {

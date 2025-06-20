@@ -2,13 +2,6 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel target="17">
-      <module name="Klyx.composeApp.desktopDev" target="21" />
-      <module name="Klyx.composeApp.desktopMain" target="21" />
-      <module name="Klyx.composeApp.desktopTest" target="21" />
-      <module name="Klyx.core.jvmMain" target="21" />
-      <module name="Klyx.core.jvmTest" target="21" />
-      <module name="Klyx.editor.jvmMain" target="21" />
-      <module name="Klyx.editor.jvmTest" target="21" />
       <module name="Klyx.nativelib" target="21" />
     </bytecodeTargetLevel>
   </component>

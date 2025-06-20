@@ -7,7 +7,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
-import androidx.core.graphics.toColorInt
+import kotlinx.io.RawSource
+import kotlinx.io.buffered
+import kotlinx.io.readString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -15,7 +17,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.io.InputStream
 
 /**
  * Data class representing a parsed Klyx theme
@@ -106,121 +107,121 @@ data class KlyxThemeStyle(
     val linkTextHover: Color?
 )
 
+// Default fallback colors
+private val defaultLightColors = KlyxThemeStyle(
+    background = Color(0xFFFFFFFF),
+    foreground = Color(0xFF000000),
+    accent = Color(0xFF007ACC),
+    border = Color(0xFFE1E4E8),
+    error = Color(0xFFD73A49),
+    warning = Color(0xFFE36209),
+    success = Color(0xFF28A745),
+    info = Color(0xFF0366D6),
+    elementBackground = Color(0xFFF6F8FA),
+    elementHover = Color(0xFFF3F4F6),
+    elementActive = Color(0xFFE1E4E8),
+    elementSelected = Color(0xFFDDF4FF),
+    elementDisabled = Color(0xFFF6F8FA),
+    ghostElementBackground = Color.Transparent,
+    ghostElementHover = Color(0x0F000000),
+    ghostElementActive = Color(0x1A000000),
+    ghostElementSelected = Color(0x1A007ACC),
+    ghostElementDisabled = Color.Transparent,
+    surfaceBackground = Color(0xFFFFFFFF),
+    elevatedSurfaceBackground = Color(0xFFFFFFFF),
+    text = Color(0xFF24292E),
+    textAccent = Color(0xFF007ACC),
+    textMuted = Color(0xFF6A737D),
+    textDisabled = Color(0xFFBDC3C7),
+    textPlaceholder = Color(0xFF959DA5),
+    borderVariant = Color(0xFFF1F3F4),
+    borderFocused = Color(0xFF007ACC),
+    borderSelected = Color(0xFF007ACC),
+    borderDisabled = Color(0xFFE1E4E8),
+    borderTransparent = Color.Transparent,
+    errorBackground = Color(0xFFFDF2F2),
+    warningBackground = Color(0xFFFFFBF0),
+    successBackground = Color(0xFFF0F9FF),
+    infoBackground = Color(0xFFF6F8FA),
+    editorBackground = Color(0xFFFFFFFF),
+    editorForeground = Color(0xFF24292E),
+    editorActiveLineBackground = Color(0xFFF6F8FA),
+    gutterBackground = Color(0xFFF6F8FA),
+    gutterText = Color(0xFF6A737D),
+    gutterDivider = Color(0xFFE1E4E8),
+    dropTargetBackground = Color(0x1A007ACC),
+    searchMatchBackground = Color(0xFFFFDF5D),
+    linkTextHover = Color(0xFF0366D6),
+    syntaxKeyword = Color(0xFF0000FF),
+    syntaxFunction = Color(0xFF795E26),
+    syntaxString = Color(0xFFA31515),
+    syntaxComment = Color(0xFF008000),
+    syntaxVariable = Color(0xFF001080),
+    syntaxNumber = Color(0xFF098658),
+    syntaxBoolean = Color(0xFF0000FF),
+    syntaxType = Color(0xFF267F99)
+)
+
+private val defaultDarkColors = KlyxThemeStyle(
+    background = Color(0xFF0D1117),
+    foreground = Color(0xFFC9D1D9),
+    accent = Color(0xFF58A6FF),
+    border = Color(0xFF30363D),
+    error = Color(0xFFF85149),
+    warning = Color(0xFFD29922),
+    success = Color(0xFF3FB950),
+    info = Color(0xFF58A6FF),
+    elementBackground = Color(0xFF161B22),
+    elementHover = Color(0xFF21262D),
+    elementActive = Color(0xFF30363D),
+    elementSelected = Color(0xFF0D419D),
+    elementDisabled = Color(0xFF161B22),
+    ghostElementBackground = Color.Transparent,
+    ghostElementHover = Color(0x1AFFFFFF),
+    ghostElementActive = Color(0x33FFFFFF),
+    ghostElementSelected = Color(0x1A58A6FF),
+    ghostElementDisabled = Color.Transparent,
+    surfaceBackground = Color(0xFF0D1117),
+    elevatedSurfaceBackground = Color(0xFF161B22),
+    text = Color(0xFFC9D1D9),
+    textAccent = Color(0xFF58A6FF),
+    textMuted = Color(0xFF8B949E),
+    textDisabled = Color(0xFF484F58),
+    textPlaceholder = Color(0xFF6E7681),
+    borderVariant = Color(0xFF21262D),
+    borderFocused = Color(0xFF58A6FF),
+    borderSelected = Color(0xFF58A6FF),
+    borderDisabled = Color(0xFF30363D),
+    borderTransparent = Color.Transparent,
+    errorBackground = Color(0xFF2C1A1A),
+    warningBackground = Color(0xFF2C2419),
+    successBackground = Color(0xFF1A2C1A),
+    infoBackground = Color(0xFF1A1F2C),
+    editorBackground = Color(0xFF0D1117),
+    editorForeground = Color(0xFFC9D1D9),
+    editorActiveLineBackground = Color(0xFF161B22),
+    gutterBackground = Color(0xFF161B22),
+    gutterText = Color(0xFF8B949E),
+    gutterDivider = Color(0xFF30363D),
+    dropTargetBackground = Color(0x1A58A6FF),
+    searchMatchBackground = Color(0xFF3C2F00),
+    linkTextHover = Color(0xFF79C0FF),
+    syntaxKeyword = Color(0xFF569CD6),
+    syntaxFunction = Color(0xFFDCDCAA),
+    syntaxString = Color(0xFFCE9178),
+    syntaxComment = Color(0xFF6A9955),
+    syntaxVariable = Color(0xFF9CDCFE),
+    syntaxNumber = Color(0xFFB5CEA8),
+    syntaxBoolean = Color(0xFF569CD6),
+    syntaxType = Color(0xFF4EC9B0)
+)
+
 object ThemeManager {
     private var currentThemeFamily: JsonObject? by mutableStateOf(null)
     private var availableThemes: List<KlyxTheme> by mutableStateOf(emptyList())
 
     var showThemeSelector by mutableStateOf(false)
         private set
-
-    // Default fallback colors
-    private val defaultLightColors = KlyxThemeStyle(
-        background = Color(0xFFFFFFFF),
-        foreground = Color(0xFF000000),
-        accent = Color(0xFF007ACC),
-        border = Color(0xFFE1E4E8),
-        error = Color(0xFFD73A49),
-        warning = Color(0xFFE36209),
-        success = Color(0xFF28A745),
-        info = Color(0xFF0366D6),
-        elementBackground = Color(0xFFF6F8FA),
-        elementHover = Color(0xFFF3F4F6),
-        elementActive = Color(0xFFE1E4E8),
-        elementSelected = Color(0xFFDDF4FF),
-        elementDisabled = Color(0xFFF6F8FA),
-        ghostElementBackground = Color.Transparent,
-        ghostElementHover = Color(0x0F000000),
-        ghostElementActive = Color(0x1A000000),
-        ghostElementSelected = Color(0x1A007ACC),
-        ghostElementDisabled = Color.Transparent,
-        surfaceBackground = Color(0xFFFFFFFF),
-        elevatedSurfaceBackground = Color(0xFFFFFFFF),
-        text = Color(0xFF24292E),
-        textAccent = Color(0xFF007ACC),
-        textMuted = Color(0xFF6A737D),
-        textDisabled = Color(0xFFBDC3C7),
-        textPlaceholder = Color(0xFF959DA5),
-        borderVariant = Color(0xFFF1F3F4),
-        borderFocused = Color(0xFF007ACC),
-        borderSelected = Color(0xFF007ACC),
-        borderDisabled = Color(0xFFE1E4E8),
-        borderTransparent = Color.Transparent,
-        errorBackground = Color(0xFFFDF2F2),
-        warningBackground = Color(0xFFFFFBF0),
-        successBackground = Color(0xFFF0F9FF),
-        infoBackground = Color(0xFFF6F8FA),
-        editorBackground = Color(0xFFFFFFFF),
-        editorForeground = Color(0xFF24292E),
-        editorActiveLineBackground = Color(0xFFF6F8FA),
-        gutterBackground = Color(0xFFF6F8FA),
-        gutterText = Color(0xFF6A737D),
-        gutterDivider = Color(0xFFE1E4E8),
-        dropTargetBackground = Color(0x1A007ACC),
-        searchMatchBackground = Color(0xFFFFDF5D),
-        linkTextHover = Color(0xFF0366D6),
-        syntaxKeyword = Color(0xFF0000FF),
-        syntaxFunction = Color(0xFF795E26),
-        syntaxString = Color(0xFFA31515),
-        syntaxComment = Color(0xFF008000),
-        syntaxVariable = Color(0xFF001080),
-        syntaxNumber = Color(0xFF098658),
-        syntaxBoolean = Color(0xFF0000FF),
-        syntaxType = Color(0xFF267F99)
-    )
-
-    private val defaultDarkColors = KlyxThemeStyle(
-        background = Color(0xFF0D1117),
-        foreground = Color(0xFFC9D1D9),
-        accent = Color(0xFF58A6FF),
-        border = Color(0xFF30363D),
-        error = Color(0xFFF85149),
-        warning = Color(0xFFD29922),
-        success = Color(0xFF3FB950),
-        info = Color(0xFF58A6FF),
-        elementBackground = Color(0xFF161B22),
-        elementHover = Color(0xFF21262D),
-        elementActive = Color(0xFF30363D),
-        elementSelected = Color(0xFF0D419D),
-        elementDisabled = Color(0xFF161B22),
-        ghostElementBackground = Color.Transparent,
-        ghostElementHover = Color(0x1AFFFFFF),
-        ghostElementActive = Color(0x33FFFFFF),
-        ghostElementSelected = Color(0x1A58A6FF),
-        ghostElementDisabled = Color.Transparent,
-        surfaceBackground = Color(0xFF0D1117),
-        elevatedSurfaceBackground = Color(0xFF161B22),
-        text = Color(0xFFC9D1D9),
-        textAccent = Color(0xFF58A6FF),
-        textMuted = Color(0xFF8B949E),
-        textDisabled = Color(0xFF484F58),
-        textPlaceholder = Color(0xFF6E7681),
-        borderVariant = Color(0xFF21262D),
-        borderFocused = Color(0xFF58A6FF),
-        borderSelected = Color(0xFF58A6FF),
-        borderDisabled = Color(0xFF30363D),
-        borderTransparent = Color.Transparent,
-        errorBackground = Color(0xFF2C1A1A),
-        warningBackground = Color(0xFF2C2419),
-        successBackground = Color(0xFF1A2C1A),
-        infoBackground = Color(0xFF1A1F2C),
-        editorBackground = Color(0xFF0D1117),
-        editorForeground = Color(0xFFC9D1D9),
-        editorActiveLineBackground = Color(0xFF161B22),
-        gutterBackground = Color(0xFF161B22),
-        gutterText = Color(0xFF8B949E),
-        gutterDivider = Color(0xFF30363D),
-        dropTargetBackground = Color(0x1A58A6FF),
-        searchMatchBackground = Color(0xFF3C2F00),
-        linkTextHover = Color(0xFF79C0FF),
-        syntaxKeyword = Color(0xFF569CD6),
-        syntaxFunction = Color(0xFFDCDCAA),
-        syntaxString = Color(0xFFCE9178),
-        syntaxComment = Color(0xFF6A9955),
-        syntaxVariable = Color(0xFF9CDCFE),
-        syntaxNumber = Color(0xFFB5CEA8),
-        syntaxBoolean = Color(0xFF569CD6),
-        syntaxType = Color(0xFF4EC9B0)
-    )
 
     fun showThemeSelector() {
         showThemeSelector = true
@@ -237,11 +238,12 @@ object ThemeManager {
     /**
      * Load and parse a theme family from extension
      */
-    fun loadThemeFamily(themeInput: InputStream?): Result<Unit> {
+    suspend fun loadThemeFamily(themeSource: RawSource?): Result<Unit> {
         return try {
-            val themeJson = themeInput?.use { it.readBytes() } ?: return Result.failure(Exception("Theme file not found"))
+            if (themeSource == null) return Result.failure(Exception("No theme source not found"))
+            val source = themeSource.buffered().peek()
 
-            val json = Json.parseToJsonElement(String(themeJson)).jsonObject
+            val json = Json.parseToJsonElement(source.readString()).jsonObject
             currentThemeFamily = json
 
             val parsedThemes = parseThemes(json)
@@ -370,11 +372,11 @@ object ThemeManager {
 
             // different color formats
             when {
-                colorStr.startsWith("#") -> Color(colorStr.toColorInt())
+                colorStr.startsWith("#") -> colorStr.toColor()
                 colorStr.startsWith("rgb(") -> parseRgbColor(colorStr)
                 colorStr.startsWith("rgba(") -> parseRgbaColor(colorStr)
                 colorStr.startsWith("hsl(") -> parseHslColor(colorStr)
-                else -> Color(if (colorStr == "transparent") 0x00000000 else colorStr.toColorInt())
+                else -> colorStr.toColor()
             }
         } catch (e: Exception) {
             println("Failed to parse color: ${colorElement?.jsonPrimitive?.content}, error: ${e.message}")
