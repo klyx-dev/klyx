@@ -154,9 +154,9 @@ sealed class ControlInstruction : Instruction {
         override val startPosition: Int
     ) : ControlInstruction(), BlockEnd
 
-    object Unreachable : ControlInstruction()
+    data object Unreachable : ControlInstruction()
 
-    object NoOp : ControlInstruction()
+    data object NoOp : ControlInstruction()
 
     data class Break(
         val labelIndex: Index<Identifier.Label>
@@ -171,7 +171,7 @@ sealed class ControlInstruction : Instruction {
         val defaultTarget: Index<Identifier.Label>
     ) : ControlInstruction()
 
-    object Return : ControlInstruction()
+    data object Return : ControlInstruction()
 
     data class Call(val functionIndex: Index<Identifier.Function>) : ControlInstruction()
 

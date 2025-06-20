@@ -28,8 +28,6 @@ import kotlin.math.log
  * defaults to `0` and the [alignment] to the storage size of the respective memory access, which is
  * its natural alignment.
  */
-@Suppress("DataClassPrivateConstructor")
-@OptIn(ExperimentalUnsignedTypes::class)
 class MemArg(
     offset: Int? = null,
     private val alignment: Int

@@ -33,7 +33,6 @@ internal val VARIABLE_OPCODE_RANGE = 0x20..0x24
  *                  0x24 x:globalidx    => global.set x
  * ```
  */
-@Suppress("UNCHECKED_CAST")
 fun BinaryParser.readVariableInstruction(opcode: Int): VariableInstruction = when (opcode) {
     0x20 -> VariableInstruction.LocalGet(readIndex())
     0x21 -> VariableInstruction.LocalSet(readIndex())

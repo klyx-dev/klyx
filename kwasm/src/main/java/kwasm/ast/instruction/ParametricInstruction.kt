@@ -21,8 +21,8 @@ package kwasm.ast.instruction
  */
 sealed class ParametricInstruction : Instruction {
     /** drop */
-    object Drop : ParametricInstruction()
+    data object Drop : ParametricInstruction()
 
     /** select */
-    object Select : ParametricInstruction()
+    data object Select : ParametricInstruction()
 }

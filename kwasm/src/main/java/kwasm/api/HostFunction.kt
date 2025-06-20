@@ -120,7 +120,7 @@ inline fun <reified ReturnType> HostFunction(
     crossinline block: (HostFunctionContext) -> ReturnType
 ): HostFunction<ReturnType> where ReturnType : Value<*> = object : HostFunction<ReturnType> {
     override val parameterTypes: List<KClass<out Value<*>>> = emptyList()
-    override val returnType: KClass<ReturnType>? = ReturnType::class
+    override val returnType: KClass<ReturnType> = ReturnType::class
     override fun invoke(params: List<Value<*>>, context: HostFunctionContext): ReturnType =
         block(context)
 }
@@ -134,7 +134,7 @@ inline fun <reified P1, reified ReturnType> HostFunction(
 ): HostFunction<ReturnType> where P1 : Value<*>,
                                   ReturnType : Value<*> = object : HostFunction<ReturnType> {
     override val parameterTypes: List<KClass<out Value<*>>> = listOf(P1::class)
-    override val returnType: KClass<ReturnType>? = ReturnType::class
+    override val returnType: KClass<ReturnType> = ReturnType::class
     override fun invoke(params: List<Value<*>>, context: HostFunctionContext): ReturnType {
         val p1 = requireParam<P1>(params, 0)
         return block(p1, context)
@@ -172,7 +172,7 @@ inline fun <reified P1, reified P2, reified P3, reified ReturnType> HostFunction
                                   ReturnType : Value<*> = object : HostFunction<ReturnType> {
     override val parameterTypes: List<KClass<out Value<*>>> =
         listOf(P1::class, P2::class, P3::class)
-    override val returnType: KClass<ReturnType>? = ReturnType::class
+    override val returnType: KClass<ReturnType> = ReturnType::class
     override fun invoke(params: List<Value<*>>, context: HostFunctionContext): ReturnType {
         val p1 = requireParam<P1>(params, 0)
         val p2 = requireParam<P2>(params, 1)

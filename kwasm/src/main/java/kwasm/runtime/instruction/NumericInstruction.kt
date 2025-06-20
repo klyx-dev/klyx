@@ -12,7 +12,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("EXPERIMENTAL_UNSIGNED_LITERALS", "EXPERIMENTAL_API_USAGE")
+@file:Suppress("EXPERIMENTAL_API_USAGE")
 
 package kwasm.runtime.instruction
 
@@ -46,7 +46,6 @@ private const val EXCEPTION_TRUNCATE_INF =
  * See
  * [the docs](https://webassembly.github.io/spec/core/exec/instructions.html#numeric-instructions):
  */
-@OptIn(ExperimentalStdlibApi::class)
 internal fun NumericInstruction.execute(context: ExecutionContext): ExecutionContext {
     when (this) {
         NumericInstruction.I32Add -> binaryOp<IntValue>(context) { x, y ->

@@ -30,7 +30,7 @@ fun List<Token>.parseInstructions(
     min: Int = 0,
     max: Int = Int.MAX_VALUE
 ): ParseResult<AstNodeList<out Instruction>> {
-    if (fromIndex !in 0 until size) {
+    if (fromIndex !in indices) {
         if (min == 0) return ParseResult(
             AstNodeList(emptyList()),
             0

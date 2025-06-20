@@ -43,7 +43,6 @@ import kwasm.ast.type.MemoryType
  * a single module, and all constructs implicitly reference this memory `0`. This restriction may
  * be lifted in future versions.
  */
-@Suppress("UNCHECKED_CAST", "EXPERIMENTAL_UNSIGNED_LITERALS")
 data class Memory(
     val id: Identifier.Memory = Identifier.Memory(
         null,

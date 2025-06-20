@@ -71,21 +71,21 @@ fun List<Token>.parseFoldedInstruction(fromIndex: Int): ParseResult<AstNodeList<
     val keyword: Keyword =
         getOrThrow(currentIndex, "Expected `if`, `block`, `loop`, or a \"plain\" instruction")
 
-    val instructions: List<Instruction> = when {
-        keyword.value == "block" || keyword.value == "loop" -> {
+    val instructions: List<Instruction> = when (keyword.value) {
+        "block", "loop" -> {
             currentIndex++
             val foldedBlock = parseFoldedBlockOrLoop(currentIndex, keyword.value == "loop")
             currentIndex += foldedBlock.parseLength
             listOf(foldedBlock.astNode)
         }
-        keyword.value == "if" -> {
+        "if" -> {
             currentIndex++
             val foldedIf = parseFoldedIf(currentIndex)
             currentIndex += foldedIf.parseLength
             foldedIf.astNode
         }
         // Don't try to parse folded-if's then/else here.
-        keyword.value == "then" || keyword.value == "else" -> return null
+        "then", "else" -> return null
         else -> {
             val plainInstruction = parseInstruction(currentIndex)?.takeIf { it.astNode.isPlain }
                 ?: throw ParseException(

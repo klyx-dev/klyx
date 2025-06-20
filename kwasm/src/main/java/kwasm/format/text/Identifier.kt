@@ -27,7 +27,6 @@ import kwasm.format.text.token.Token
  *
  * **Note:** Does not support [Identifier.TypeDef].
  */
-@Suppress("RemoveExplicitTypeArguments")
 inline fun <reified T : Identifier> List<Token>.parseIdentifier(
     fromIndex: Int,
     intAllowed: Boolean = false

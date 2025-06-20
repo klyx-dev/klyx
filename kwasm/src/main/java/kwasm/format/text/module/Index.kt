@@ -82,7 +82,7 @@ inline fun <reified T : kwasm.ast.Identifier> List<Token>.parseIndices(
     min: Int = 0,
     max: Int = Int.MAX_VALUE
 ): ParseResult<AstNodeList<out Index<T>>> {
-    if (fromIndex !in 0 until size) {
+    if (fromIndex !in indices) {
         if (min == 0) return ParseResult(
             AstNodeList(emptyList()),
             0

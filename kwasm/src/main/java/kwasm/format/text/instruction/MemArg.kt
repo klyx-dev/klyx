@@ -35,7 +35,6 @@ import kwasm.format.text.token.Token
  *                  ϵ => N
  * ```
  */
-@OptIn(ExperimentalUnsignedTypes::class)
 fun List<Token>.parseMemarg(fromIndex: Int, expectedMaxBytes: Int): ParseResult<MemArg> {
     var currentIndex = fromIndex
     val firstKeyword = getOrNull(currentIndex) as? Keyword

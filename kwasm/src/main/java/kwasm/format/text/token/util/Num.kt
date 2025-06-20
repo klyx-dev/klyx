@@ -34,7 +34,6 @@ import kwasm.format.ParseException
  *                  n:hexnum '_'? h:hexdigit => n * 16 + h
  * ```
  */
-@OptIn(ExperimentalUnsignedTypes::class)
 class Num(val sequence: CharSequence, context: ParseContext? = null) {
     var forceHex: Boolean = false
 

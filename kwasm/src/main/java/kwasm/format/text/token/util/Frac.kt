@@ -30,7 +30,6 @@ import kwasm.format.shiftColumnBy
  *                  h:hexdigit '_' p:hexdigit q:hexfrac => (h + (p + q) / 16) / 16
  * ```
  */
-@OptIn(ExperimentalUnsignedTypes::class)
 class Frac(private val sequence: CharSequence, private val context: ParseContext? = null) {
     var forceHex: Boolean = false
 

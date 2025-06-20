@@ -84,7 +84,6 @@ fun List<Token>.parseImport(
  *                     ‘(’ ‘global’ id? gt:globaltype ‘)’ => global gt
  * ```
  */
-@Suppress("UNCHECKED_CAST")
 fun List<Token>.parseImportDescriptor(
     fromIndex: Int,
     counts: TextModuleCounts

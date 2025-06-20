@@ -36,7 +36,7 @@ import kwasm.format.text.token.Token
  *   \          => {table x, offset e, init y*}
  * ```
  */
-@Suppress("UNCHECKED_CAST", "EXPERIMENTAL_UNSIGNED_LITERALS")
+@Suppress("UNCHECKED_CAST")
 fun List<Token>.parseElementSegment(
     fromIndex: Int,
     counts: TextModuleCounts,

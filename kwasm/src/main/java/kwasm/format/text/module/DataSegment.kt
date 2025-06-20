@@ -43,7 +43,7 @@ import java.util.stream.Collectors
  * **Note:*** In the current version of WebAssembly, the only valid memory index is `0` or a
  * symbolic memory identifier resolving to the same value.
  */
-@Suppress("UNCHECKED_CAST", "EXPERIMENTAL_UNSIGNED_LITERALS")
+@Suppress("UNCHECKED_CAST")
 fun List<Token>.parseDataSegment(
     fromIndex: Int,
     counts: TextModuleCounts,

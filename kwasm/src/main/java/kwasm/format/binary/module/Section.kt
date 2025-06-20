@@ -76,7 +76,7 @@ fun BinaryParser.readSection(): Section? {
         }
         return section
     } catch (e: ParseException) {
-        if ("Expected byte" in e.message ?: "") {
+        if ("Expected byte" in (e.message ?: "")) {
             throwException(
                 e.message + " (unexpected end of section or function|length out of bounds)"
             )

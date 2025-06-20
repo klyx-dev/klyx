@@ -74,9 +74,9 @@ fun CharSequence.parseDigit(index: Int, context: ParseContext? = null): Byte =
 fun IntArray.parseDigit(index: Int, context: ParseContext? = null): Byte =
     this[index].toChar().parseDigit(context)
 fun Char.parseDigit(context: ParseContext? = null): Byte = when (this) {
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> (toInt() - 48).toByte()
-    'a', 'b', 'c', 'd', 'e', 'f' -> (toInt() - 97 + 10).toByte()
-    'A', 'B', 'C', 'D', 'E', 'F' -> (toInt() - 65 + 10).toByte()
+    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' -> (code - 48).toByte()
+    'a', 'b', 'c', 'd', 'e', 'f' -> (code - 97 + 10).toByte()
+    'A', 'B', 'C', 'D', 'E', 'F' -> (code - 65 + 10).toByte()
     '_' -> NumberConstants.UNDERSCORE
     else -> throw ParseException("Illegal char '$this' in expected number.", context)
 }
@@ -265,17 +265,17 @@ internal object NumberConstants {
 }
 
 internal object StringConstants {
-    const val T = 't'.toInt()
-    const val N = 'n'.toInt()
-    const val R = 'r'.toInt()
-    const val SPACE = '\u0020'.toInt()
-    const val DELETE = '\u007F'.toInt()
-    const val QUOTE = '\u0027'.toInt()
-    const val DQUOTE = '\u0022'.toInt()
-    const val BACKSLASH = '\u005C'.toInt()
-    const val TAB = '\u0009'.toInt()
-    const val NEWLINE = '\u000A'.toInt()
-    const val RETURN = '\u000D'.toInt()
+    const val T = 't'.code
+    const val N = 'n'.code
+    const val R = 'r'.code
+    const val SPACE = '\u0020'.code
+    const val DELETE = '\u007F'.code
+    const val QUOTE = '\u0027'.code
+    const val DQUOTE = '\u0022'.code
+    const val BACKSLASH = '\u005C'.code
+    const val TAB = '\u0009'.code
+    const val NEWLINE = '\u000A'.code
+    const val RETURN = '\u000D'.code
 
     val UNICODE_PATTERN = object : ThreadLocal<Regex>() {
         override fun initialValue(): Regex = "\\\\u\\{([0-9a-fA-F]+)\\}".toRegex()

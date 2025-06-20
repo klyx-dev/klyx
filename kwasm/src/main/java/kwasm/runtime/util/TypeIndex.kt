@@ -27,6 +27,5 @@ class TypeIndex(
 ) : ObjectIndex<Identifier.Type, FunctionType>(types)
 
 /** Creates a [TypeIndex] from a list of [Type]s. */
-@Suppress("FunctionName")
 fun TypeIndex(types: List<Type>): TypeIndex =
     TypeIndex().apply { types.forEach { add(it.functionType, it.id) } }

@@ -35,10 +35,8 @@ import kwasm.format.binary.BinaryParser
  * block types. Thus, the binary format for types corresponds to the signed LEB128 encoding of
  * small negative `sN` values, so that they can coexist with (positive) type indices in the future.
  */
-@OptIn(ExperimentalUnsignedTypes::class)
 fun BinaryParser.readValueType(): ValueType {
-    val type = readByte().toUByte().toInt().asValueType()
-    if (type == null) throwException("Value type not found", -1)
+    val type = readByte().toUByte().toInt().asValueType() ?: throwException("Value type not found", -1)
     return type
 }
 
