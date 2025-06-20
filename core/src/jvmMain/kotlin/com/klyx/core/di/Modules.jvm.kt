@@ -1,8 +1,9 @@
 package com.klyx.core.di
 
-import org.koin.core.module.Module
+import com.klyx.core.Notifier
+import org.koin.core.module.dsl.singleOf
 import org.koin.dsl.module
 
 actual val platformModule = module {
-
+    singleOf(::Notifier)
 }

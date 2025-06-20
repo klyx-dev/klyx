@@ -3,7 +3,6 @@ package com.klyx
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.surfaceColorAtElevation
@@ -27,7 +26,6 @@ import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.menu.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun App(
     dynamicColor: Boolean = true,

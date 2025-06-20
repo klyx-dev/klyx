@@ -9,8 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.klyx.core.theme.ThemeManager
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-@ExperimentalMaterial3ExpressiveApi
 actual fun KlyxTheme(
     darkTheme: Boolean,
     dynamicColor: Boolean,

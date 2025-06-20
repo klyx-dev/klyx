@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
@@ -31,9 +32,11 @@ import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,11 +50,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
+import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
 import com.klyx.core.Notifier
@@ -67,6 +73,7 @@ import com.klyx.core.net.isConnected
 import com.klyx.core.net.rememberNetworkState
 import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionManager
+import com.klyx.spacedName
 import com.klyx.ui.theme.DefaultKlyxShape
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -359,6 +366,41 @@ actual fun ExtensionScreen(modifier: Modifier) {
                 ) {
                     Text("No extensions")
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+internal actual fun ExtensionFilterBar(onFilterChange: (ExtensionFilter) -> Unit) {
+    var selectedIndex by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(selectedIndex) {
+        onFilterChange(ExtensionFilter.entries[selectedIndex])
+    }
+
+    Row(
+        modifier = Modifier.padding(horizontal = 8.dp),
+        horizontalArrangement = ButtonGroupDefaults.HorizontalArrangement
+    ) {
+        ExtensionFilter.entries.fastForEachIndexed { index, filter ->
+            ToggleButton(
+                checked = selectedIndex == index,
+                onCheckedChange = {
+                    selectedIndex = index
+                    //onFilterChange(filter)
+                },
+                modifier = Modifier
+                    .semantics { role = Role.RadioButton }
+                    .weight(1f),
+                shapes = when (index) {
+                    0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                    ExtensionFilter.entries.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                    else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                }
+            ) {
+                Text(filter.spacedName)
             }
         }
     }
