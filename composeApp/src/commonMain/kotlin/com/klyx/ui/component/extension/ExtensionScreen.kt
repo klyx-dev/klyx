@@ -52,6 +52,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEachIndexed
@@ -80,6 +83,7 @@ import org.koin.compose.koinInject
 fun ExtensionScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val colorScheme = MaterialTheme.colorScheme
 
     val factory: ExtensionFactory = koinInject()
     val notifier: Notifier = koinInject()
@@ -210,7 +214,20 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = extension.name,
+                                        text = buildAnnotatedString {
+                                            val name = extension.name
+                                            val query = searchQuery
+                                            val startIndex = if (query.isNotBlank()) name.indexOf(query, ignoreCase = true) else -1
+                                            if (startIndex >= 0 && query.isNotBlank()) {
+                                                append(name.substring(0, startIndex))
+                                                withStyle(SpanStyle(color = colorScheme.primary)) {
+                                                    append(name.substring(startIndex, startIndex + query.length))
+                                                }
+                                                append(name.substring(startIndex + query.length))
+                                            } else {
+                                                append(name)
+                                            }
+                                        },
                                         style = MaterialTheme.typography.titleMedium
                                     )
 
