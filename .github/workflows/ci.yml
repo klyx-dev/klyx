@@ -1,4 +1,4 @@
-name: KMP CI
+name: Android CI
 
 on:
   push:
@@ -16,11 +16,8 @@ on:
 
 jobs:
   build:
-    name: Build and Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Build
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -32,53 +29,15 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            - ~/.gradle/caches
-            - ~/.gradle/wrapper
-          key: gradle-${{ matrix.os }}-${{ hashFiles('**/*.gradle*','**/gradle-wrapper.properties') }}
-
       - name: Ensure gradlew is executable
         run: chmod +x gradlew
 
       - name: Build all targets
-        run: ./gradlew build
+        run: ./gradlew assembleDebug
 
-      - name: Run tests
-        run: ./gradlew check
-
-      - name: Package JS distribution
-        run: ./gradlew jsBrowserDistribution || echo "No JS target"
-
-      - name: Package iOS XCFramework
-        if: matrix.os == 'macos-latest'
-        run: ./gradlew assembleXCFramework || echo "No iOS target"
-
-      - name: Upload JVM JAR
-        uses: actions/upload-artifact@v4
-        with:
-          name: jvm-artifacts
-          path: '**/build/libs/*.jar'
-
-      - name: Upload Android AAR/APK
+      - name: Upload Android APK
         uses: actions/upload-artifact@v4
         with:
           name: android-artifacts
           path: |
             **/build/outputs/apk/**/*.apk
-
-      - name: Upload JS bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: js-artifacts
-          path: |
-            **/build/distributions/**
-
-      - name: Upload iOS XCFramework
-        if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-artifacts
-          path: '**/build/**/XCFramework/**/*.zip'

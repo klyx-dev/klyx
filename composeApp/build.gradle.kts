@@ -28,6 +28,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.documentfile)
+            implementation(libs.androidx.google.fonts)
             implementation(libs.koin.android)
         }
 
@@ -40,7 +41,6 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.material3)
-            implementation(libs.androidx.google.fonts)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
