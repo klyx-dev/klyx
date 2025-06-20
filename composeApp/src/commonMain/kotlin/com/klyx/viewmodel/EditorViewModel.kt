@@ -1,0 +1,232 @@
+package com.klyx.viewmodel
+
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.klyx.core.file.FileId
+import com.klyx.core.file.FileWrapper
+import com.klyx.editor.EditorState
+import com.klyx.ifNull
+import com.klyx.tab.Tab
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
+
+data class TabState(
+    val openTabs: List<Tab> = emptyList(),
+    val activeTabId: String? = null
+)
+
+class EditorViewModel : ViewModel() {
+    private val _state = MutableStateFlow(TabState())
+    val state = _state.asStateFlow()
+
+    fun openTab(tab: Tab) {
+        _state.update { current ->
+            if (current.openTabs.any { it.id == tab.id }) {
+                current.copy(activeTabId = tab.id)
+            } else {
+                current.copy(
+                    openTabs = current.openTabs + tab,
+                    activeTabId = tab.id
+                )
+            }
+        }
+    }
+
+    fun openTab(
+        name: String,
+        type: String? = null,
+        id: String? = null,
+        data: Any? = null,
+        content: @Composable () -> Unit,
+    ) {
+        val tab = Tab.AnyTab(
+            id = id.ifNull { "${type ?: "unknown"}_${Clock.System.now().toEpochMilliseconds()}" },
+            name = name,
+            data = data,
+            content = content
+        )
+
+        openTab(tab)
+    }
+
+    fun openFile(
+        file: FileWrapper,
+        tabTitle: String = file.name,
+        isInternal: Boolean = false
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val fileTab = Tab.FileTab(
+                id = file.id,
+                name = tabTitle,
+                isInternal = isInternal,
+                fileWrapper = file,
+                content = { Box(modifier = Modifier.fillMaxSize()) },
+                editorState = EditorState(initialText = file.readText())
+            )
+
+            openTab(fileTab)
+        }
+    }
+
+    fun closeTab(tabId: String) {
+        _state.update { current ->
+            val updatedTabs = current.openTabs.filterNot { it.id == tabId }
+            val newActiveTabId = when {
+                tabId == current.activeTabId -> updatedTabs.lastOrNull()?.id
+                else -> current.activeTabId
+            }
+
+            current.copy(
+                openTabs = updatedTabs,
+                activeTabId = newActiveTabId
+            )
+        }
+    }
+
+    fun setActiveTab(tabId: String) {
+        _state.update { current ->
+            if (current.openTabs.any { it.id == tabId }) {
+                current.copy(activeTabId = tabId)
+            } else {
+                current
+            }
+        }
+    }
+
+    fun getTab(tabId: String): Tab? {
+        return _state.value.openTabs.find { it.id == tabId }
+    }
+
+    fun getActiveTab(): Tab? {
+        val current = _state.value
+        return current.openTabs.find { it.id == current.activeTabId }
+    }
+
+    fun getActiveFile(): FileWrapper? {
+        val current = _state.value
+        return (current.openTabs.find { it is Tab.FileTab && it.id == current.activeTabId } as? Tab.FileTab)?.fileWrapper
+    }
+
+    fun replaceTab(tabId: String, newTab: Tab) {
+        _state.update { current ->
+            val updatedTabs = current.openTabs.map { tab ->
+                if (tab.id == tabId) newTab else tab
+            }
+            current.copy(
+                openTabs = updatedTabs,
+                activeTabId = if (current.activeTabId == tabId) newTab.id else current.activeTabId
+            )
+        }
+    }
+
+    fun closeAllTabs() {
+        _state.update { current ->
+            current.copy(
+                openTabs = emptyList(),
+                activeTabId = null
+            )
+        }
+    }
+
+    fun isTabOpen(tabId: String): Boolean {
+        return _state.value.openTabs.any { it.id == tabId }
+    }
+
+    fun isTabActive(tabId: String): Boolean {
+        return _state.value.activeTabId == tabId
+    }
+
+    fun isFileTabOpen(fileId: FileId): Boolean {
+        return _state.value.openTabs.any { it is Tab.FileTab && it.id == fileId }
+    }
+
+    fun isFileTabActive(fileId: FileId): Boolean {
+        return _state.value.activeTabId == fileId
+    }
+
+    fun isFileTab(tabId: String): Boolean {
+        return _state.value.openTabs.any { it is Tab.FileTab && it.id == tabId }
+    }
+
+    fun isFileTabInternal(tabId: String): Boolean {
+        return _state.value.openTabs.any { it is Tab.FileTab && it.isInternal && it.id == tabId }
+    }
+
+    fun saveCurrent(): Boolean {
+        val current = _state.value
+        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
+
+        return if (tab is Tab.FileTab) {
+            val editorState = tab.editorState
+            val file = tab.fileWrapper
+
+            if (file.path == "untitled") return false
+
+            if (file.canWrite()) {
+                file.writeText(editorState.text)
+                editorState.markAsSaved()
+                true
+            } else false
+        } else false
+    }
+
+    fun saveAs(newFile: FileWrapper): Boolean {
+        val current = _state.value
+        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
+
+        return if (tab is Tab.FileTab) {
+            val editorState = tab.editorState
+
+            try {
+                newFile.writeText(editorState.text)
+            } catch (e: Exception) {
+                return false
+            }
+
+            val newTab = Tab.FileTab(
+                id = newFile.id,
+                name = newFile.name,
+                fileWrapper = newFile,
+                content = { Box(modifier = Modifier.fillMaxSize()) },
+                editorState = EditorState(initialText = editorState.text)
+            )
+
+            tab.id?.let { replaceTab(it, newTab) }
+            editorState.markAsSaved()
+            true
+        } else false
+    }
+
+    fun saveAll(): Map<String, Boolean> {
+        val results = mutableMapOf<String, Boolean>()
+
+        _state.value.openTabs.forEach { tab ->
+            if (tab is Tab.FileTab) {
+                val file = tab.fileWrapper
+                val editorState = tab.editorState
+
+                if (file.path != "untitled") {
+                    val saved = try {
+                        file.writeText(editorState.text)
+                        true
+                    } catch (e: Exception) {
+                        false
+                    }
+
+                    if (saved) editorState.markAsSaved()
+                    results[tab.name] = saved
+                }
+            }
+        }
+
+        return results
+    }
+}

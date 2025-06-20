@@ -7,6 +7,11 @@
         <compositeConfiguration>
           <compositeBuild compositeDefinitionSource="SCRIPT">
             <builds>
+              <build path="$PROJECT_DIR$/buildSrc" name="buildSrc">
+                <projects>
+                  <project path="$PROJECT_DIR$/buildSrc" />
+                </projects>
+              </build>
               <build path="$PROJECT_DIR$/ktreesitter-plugin" name="ktreesitter-plugin">
                 <projects>
                   <project path="$PROJECT_DIR$/ktreesitter-plugin" />
@@ -22,13 +27,14 @@
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
-            <option value="$PROJECT_DIR$/app" />
+            <option value="$PROJECT_DIR$/buildSrc" />
+            <option value="$PROJECT_DIR$/composeApp" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/editor" />
             <option value="$PROJECT_DIR$/extension-api" />
             <option value="$PROJECT_DIR$/ktreesitter-plugin" />
             <option value="$PROJECT_DIR$/kwasm" />
-            <option value="$PROJECT_DIR$/rope" />
+            <option value="$PROJECT_DIR$/shared" />
             <option value="$PROJECT_DIR$/tree-sitter" />
             <option value="$PROJECT_DIR$/tree-sitter/java" />
             <option value="$PROJECT_DIR$/tree-sitter/json" />

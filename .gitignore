@@ -16,7 +16,6 @@ local.properties
 /.kotlin/
 **/*.apk
 
-### C ###
 .cache/
 .cmake/
 *.a
@@ -25,10 +24,22 @@ local.properties
 *.dylib
 *.dll
 
-### JetBrains ###
 .idea/*
 out/
 *.iws
 *.ipr
 *.trace
 *.log
+
+.kotlin
+**/build/
+xcuserdata
+!src/**/build/
+.idea
+captures
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings

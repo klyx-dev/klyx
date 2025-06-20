@@ -6,8 +6,8 @@ import dalvik.annotation.optimization.CriticalNative
 import javax.annotation.processing.Generated
 
 @Suppress("FunctionName")
-@Generated("com.klyx.ktreesitter")
-object @CLASS@ {
+@Generated("io.github.treesitter.ktreesitter-plugin")
+actual object @CLASS@ {
     init {
         System.loadLibrary("@LIBRARY@")
     }

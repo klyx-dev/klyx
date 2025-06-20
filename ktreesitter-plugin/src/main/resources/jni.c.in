@@ -1,7 +1,7 @@
 // Automatically generated file. DO NOT MODIFY
 
 #include <jni.h>
-@INCLUDES@
+#include <tree-sitter-@GRAMMAR@.h>
 
 #ifndef __ANDROID__
 #define NATIVE_FUNCTION(name) JNIEXPORT jlong JNICALL name(JNIEnv * _env, jclass _class)

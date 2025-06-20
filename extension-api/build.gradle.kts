@@ -1,53 +1,50 @@
+import com.android.build.api.dsl.androidLibrary
+import com.klyx.Configs
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-    kotlin("plugin.serialization") version libs.versions.kotlin
-}
-
-android {
-    namespace = "com.klyx.extension"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
 }
 
 kotlin {
-    jvmToolchain(21)
-}
+    androidLibrary {
+        namespace = "com.klyx.extension"
+        compileSdk = Configs.Android.COMPILE_SDK_VERSION
+        minSdk = Configs.Android.MIN_SDK_VERSION
 
-dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.documentfile)
-    implementation(libs.ktoml.core)
-    implementation(libs.ktoml.file)
+        compilations.configureEach {
+            compilerOptions.configure {
+                jvmTarget.set(JvmTarget.JVM_21)
+            }
+        }
+    }
 
-    implementation(kotlin("reflect"))
+    //jvm()
 
-    implementation(project(":kwasm"))
-    implementation(project(":core"))
+    sourceSets {
+        val commonMain by getting
+        //val jvmMain by getting
+        val androidMain by getting
 
-    testImplementation(libs.junit)
+        commonMain.dependencies {
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
 
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+            implementation(projects.core)
+            implementation(projects.kwasm)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
+        androidMain.dependencies {
+            implementation(libs.androidx.documentfile)
+        }
+    }
 }

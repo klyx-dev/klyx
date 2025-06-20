@@ -1,68 +1,76 @@
+import com.android.build.api.dsl.androidLibrary
+import com.klyx.Configs
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    alias(libs.plugins.android.library)
-    kotlin("android")
-    kotlin("plugin.compose")
-    kotlin("plugin.serialization") version libs.versions.kotlin
-}
-
-android {
-    namespace = "com.klyx.core"
-    compileSdk = 36
-
-    defaultConfig {
-        minSdk = 26
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    buildFeatures {
-        compose = true
-    }
+    alias(libs.plugins.kotlinMultiplatform)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
 }
 
 kotlin {
-    jvmToolchain(21)
-}
+    androidLibrary {
+        namespace = "com.klyx.core"
+        compileSdk = Configs.Android.COMPILE_SDK_VERSION
+        minSdk = Configs.Android.MIN_SDK_VERSION
 
-dependencies {
-    //implementation(libs.androidx.core)
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.documentfile)
+        compilations.configureEach {
+            compilerOptions.configure {
+                jvmTarget.set(JvmTarget.JVM_21)
+            }
+        }
+    }
 
-    implementation(kotlin("reflect"))
+    //jvm()
 
-    api(libs.utilcodex)
-    implementation(libs.kotlinx.serialization.json)
-    implementation(libs.json5k)
-    implementation(libs.ktoml.core)
-    implementation(libs.ktoml.file)
+    sourceSets {
+        val commonMain by getting
+        //val jvmMain by getting
+        val androidMain by getting
 
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.commons.compress)
+        commonMain.dependencies {
+            implementation(libs.kotlinx.serialization.json)
+            implementation(libs.json5k)
+            implementation(libs.ktoml.core)
+            implementation(libs.ktoml.file)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.commons.compress)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation("com.github.oshi:oshi-core:6.8.2")
 
-    testImplementation(libs.junit)
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
 
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+            implementation(kotlin("reflect"))
+            api(libs.kotlinx.datetime)
+            implementation(libs.okio)
+
+            implementation(projects.shared)
+
+            // circular dependency
+            //implementation(projects.editor)
+        }
+
+        commonTest.dependencies {
+            implementation(libs.kotlin.test)
+        }
+
+        androidMain {
+            dependencies {
+                api(libs.utilcodex)
+                implementation(libs.androidx.documentfile)
+                implementation(libs.koin.android)
+            }
+        }
+    }
 }
