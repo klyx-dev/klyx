@@ -75,13 +75,7 @@ class EditorViewModel(
                 fileWrapper = file,
                 content = { Box(modifier = Modifier.fillMaxSize()) },
                 editorState = EditorState(
-                    initialText = runCatching {
-                        file.readText()
-                    }.onFailure {
-                        withContext(Dispatchers.Main.immediate) {
-                            notifier.notify("${it.message}")
-                        }
-                    }.getOrElse { "" }
+                    initialText = runCatching { file.readText() }.getOrElse { "" }
                 )
             )
 
