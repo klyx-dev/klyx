@@ -23,7 +23,7 @@ object CommandManager {
         private set
 
     init {
-        EventBus.getInstance().subscribe<KeyEvent> { event ->
+        EventBus.instance.subscribe<KeyEvent> { event ->
             if (event.type == KeyEventType.KeyDown) {
                 activeSequences.entries.removeIf { (command, sequence) ->
                     if (event.matchesSequence(sequence)) {

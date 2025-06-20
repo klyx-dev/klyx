@@ -513,7 +513,7 @@ fun KlyxCodeEditor(
                         editorState = editorState,
                         onKeyEvent = { event: KeyEvent ->
                             dirtyRegion.value = Pair(Float.MAX_VALUE, Float.MAX_VALUE)
-                            EventBus.getInstance().postSync(event)
+                            EventBus.instance.postSync(event)
 
                             if (event.type == KeyEventType.KeyDown) {
                                 updateCursorActivity()

@@ -23,15 +23,7 @@ import kotlin.reflect.KClass
 
 class EventBus private constructor() {
     companion object {
-        @Volatile
-        private var INSTANCE: EventBus? = null
-
-        @JvmStatic
-        fun getInstance(): EventBus {
-            return INSTANCE ?: synchronized(this) {
-                INSTANCE ?: EventBus().also { INSTANCE = it }
-            }
-        }
+        val instance by lazy { EventBus() }
     }
 
     private val eventChannels = ConcurrentHashMap<KClass<*>, Channel<Any>>()
@@ -143,5 +135,5 @@ inline fun <reified T : Any> LifecycleOwner.subscribeToEvent(
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
     crossinline onEvent: suspend (T) -> Unit
 ) {
-    EventBus.getInstance().subscribe<T>(this, minActiveState, onEvent)
+    EventBus.instance.subscribe<T>(this, minActiveState, onEvent)
 }
