@@ -61,7 +61,7 @@ fun KlyxCodeEditor(
     wrapText: Boolean = false,
     scrollbarThickness: Dp = 10.dp,
     fontSize: TextUnit = 18.sp,
-    horizontalPadding: Dp = 10.dp,
+    horizontalPadding: Dp = 4.dp,
     bottomPaddingLines: Int = 5,
     scrollbarColor: Color = Color(0x88FFFFFF),
     typeface: Typeface? = null,

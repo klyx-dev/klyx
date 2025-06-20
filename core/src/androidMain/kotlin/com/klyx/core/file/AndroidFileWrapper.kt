@@ -77,7 +77,7 @@ class AndroidFileWrapper(
 }
 
 
-fun AndroidFileWrapper.requiresPermission(context: Context, isWrite: Boolean): Boolean {
+fun FileWrapper.requiresPermission(context: Context, isWrite: Boolean): Boolean {
     // External storage root check
     val externalDirs = context.getExternalFilesDirs(null).mapNotNull { it?.parentFile?.parentFile?.parentFile }
     val isExternalStorage = externalDirs.any { this.absolutePath.startsWith(it.absolutePath) }
@@ -98,7 +98,7 @@ fun AndroidFileWrapper.requiresPermission(context: Context, isWrite: Boolean): B
     }
 }
 
-private fun AndroidFileWrapper.isInAppSpecificDir(context: Context): Boolean {
+private fun FileWrapper.isInAppSpecificDir(context: Context): Boolean {
     val appSpecificDirs = listOfNotNull(
         context.filesDir,
         context.cacheDir,
@@ -109,15 +109,10 @@ private fun AndroidFileWrapper.isInAppSpecificDir(context: Context): Boolean {
     return appSpecificDirs.any { this.absolutePath.startsWith(it) }
 }
 
-private fun AndroidFileWrapper.canAccess(context: Context): Boolean {
+private fun FileWrapper.canAccess(context: Context): Boolean {
     return if (exists()) {
-        if (canRead() && canWrite()) true
-        else try {
-            if (isDirectory) list().isNotEmpty()
-            else inputStream()?.close() != null
-        } catch (e: Exception) {
-            false
-        }
+        if (canRead() && canWrite()) return true
+        false
     } else {
         val parent = this.parentFile ?: return false
         parent.canWrite()

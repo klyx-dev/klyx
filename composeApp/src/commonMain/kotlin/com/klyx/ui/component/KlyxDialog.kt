@@ -64,17 +64,9 @@ fun KlyxDialog(
                             .fillMaxWidth()
                             .padding(horizontal = 8.dp)
                     ) {
-                        if (neutralButton != null) {
-                            neutralButton()
-                        }
-
-                        if (negativeButton != null) {
-                            negativeButton()
-                        }
-
-                        if (positiveButton != null) {
-                            positiveButton()
-                        }
+                        if (neutralButton != null) neutralButton()
+                        if (negativeButton != null) negativeButton()
+                        if (positiveButton != null) positiveButton()
                     }
                 }
             }

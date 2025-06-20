@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
 import com.klyx.core.file.FileWrapper
 import com.klyx.editor.EditorState
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 
 data class TabState(
@@ -23,7 +25,9 @@ data class TabState(
     val activeTabId: String? = null
 )
 
-class EditorViewModel : ViewModel() {
+class EditorViewModel(
+    private val notifier: Notifier
+) : ViewModel() {
     private val _state = MutableStateFlow(TabState())
     val state = _state.asStateFlow()
 
@@ -69,7 +73,15 @@ class EditorViewModel : ViewModel() {
                 isInternal = isInternal,
                 fileWrapper = file,
                 content = { Box(modifier = Modifier.fillMaxSize()) },
-                editorState = EditorState(initialText = file.readText())
+                editorState = EditorState(
+                    initialText = runCatching {
+                        file.readText()
+                    }.onFailure {
+                        withContext(Dispatchers.Main.immediate) {
+                            notifier.notify("${it.message}")
+                        }
+                    }.getOrElse { "" }
+                )
             )
 
             openTab(fileTab)

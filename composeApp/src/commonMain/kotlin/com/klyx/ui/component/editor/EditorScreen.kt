@@ -30,7 +30,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.LocalAppSettings
-import com.klyx.core.file.AndroidFileWrapper
 import com.klyx.core.file.FileWrapper
 import com.klyx.core.file.language
 import com.klyx.core.file.requiresPermission
@@ -150,7 +149,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
 
                             if (file.path != "untitled") {
                                 LaunchedEffect(Unit) {
-                                    if (file is AndroidFileWrapper && file.requiresPermission(context, isWrite = true)) {
+                                    if (file.requiresPermission(context, isWrite = true)) {
                                         viewModel.closeTab(tab.id)
                                         pendingFile = file
                                         showPermissionDialog = true
