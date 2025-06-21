@@ -17,7 +17,7 @@ fun main() {
             title = "Klyx",
             icon = painterResource(Res.drawable.klyx_logo),
             onPreviewKeyEvent = { event ->
-                EventBus.getInstance().postSync(event)
+                EventBus.instance.postSync(event)
                 true
             }
         ) {
