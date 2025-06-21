@@ -1,5 +1,6 @@
 import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
+import com.klyx.Version
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {

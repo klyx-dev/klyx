@@ -129,3 +129,9 @@ compose.desktop {
         }
     }
 }
+
+compose.resources {
+    publicResClass = false
+    packageOfResClass = "${Configs.KLYX_NAMESPACE}.res"
+    generateResClass = auto
+}
