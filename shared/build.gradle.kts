@@ -28,6 +28,7 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
 
+            api(libs.oshi.core)
             //implementation(projects.core)
         }
 

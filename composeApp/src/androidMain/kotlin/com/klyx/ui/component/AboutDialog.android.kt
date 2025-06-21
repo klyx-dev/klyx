@@ -1,19 +1,29 @@
 package com.klyx.ui.component
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.dp
 import com.klyx.BuildConfig
 import com.klyx.platform
 
 @Composable
 actual fun AboutDialog(onDismissRequest: () -> Unit) {
-    KlyxDialog(
+    AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = "Info",
-        message = """
+        title = { Text("Info") },
+        text = {
+            Text(
+                """
             Klyx ${BuildConfig.VERSION_NAME}
             
             Platform: ${platform().name}
-            OS: ${platform().os}
+            Operating System: ${platform().os}
         """.trimIndent()
+            )
+        },
+        shape = RoundedCornerShape(12.dp),
+        confirmButton = {}
     )
 }

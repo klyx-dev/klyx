@@ -40,7 +40,6 @@ kotlin {
             implementation(libs.commons.compress)
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
-            implementation("com.github.oshi:oshi-core:6.8.2")
 
             implementation(compose.runtime)
             implementation(compose.foundation)
