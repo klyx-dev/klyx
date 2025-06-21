@@ -14,3 +14,10 @@ expect object Environment {
     val InternalSettingsFilePath: String
     val LogsDir: String
 }
+
+fun printAllSystemProperties() {
+    val properties = System.getProperties()
+    properties.forEach { key, value ->
+        println("$key = $value")
+    }
+}

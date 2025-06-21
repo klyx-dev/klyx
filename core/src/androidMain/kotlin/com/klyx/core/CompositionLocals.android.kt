@@ -5,6 +5,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.blankj.utilcode.util.AppUtils
 import com.klyx.core.file.KWatchEvent
 import com.klyx.core.file.asWatchChannel
 import com.klyx.core.file.isTextEqualTo
@@ -33,7 +34,8 @@ actual fun ProvideBaseCompositionLocals(content: @Composable () -> Unit) {
     }
 
     CompositionLocalProvider(
-        LocalAppSettings provides settings
+        LocalAppSettings provides settings,
+        LocalBuildVariant provides if (AppUtils.isAppDebug()) BuildVariant.Debug else BuildVariant.Release
     ) {
         content()
     }

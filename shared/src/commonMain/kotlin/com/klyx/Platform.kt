@@ -6,6 +6,7 @@ import oshi.SystemInfo
 interface Platform {
     val name: String
     val os: String
+    val architecture: String
 }
 
 private val systemInfo by lazy { SystemInfo() }

@@ -3,8 +3,9 @@ package com.klyx
 import android.os.Build
 
 class AndroidPlatform : Platform {
-    override val name: String = "Android ${Build.VERSION.SDK_INT}"
-    override val os: String = System.getProperty("os.name") ?: "Android"
+    override val name = "Android ${Build.VERSION.SDK_INT}"
+    override val os = System.getProperty("os.name") ?: "Android"
+    override val architecture = System.getProperty("os.arch") ?: "unknown"
 }
 
 actual fun platform(): Platform = AndroidPlatform()

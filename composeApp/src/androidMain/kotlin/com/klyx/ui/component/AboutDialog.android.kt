@@ -19,7 +19,8 @@ actual fun AboutDialog(onDismissRequest: () -> Unit) {
             Klyx ${BuildConfig.VERSION_NAME}
             
             Platform: ${platform().name}
-            Operating System: ${platform().os}
+            OS (kernel) name: ${platform().os}
+            OS architecture: ${platform().architecture}
         """.trimIndent()
             )
         },

@@ -14,7 +14,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import com.klyx.core.LocalAppSettings
+import com.klyx.core.LocalBuildVariant
 import com.klyx.core.ProvideBaseCompositionLocals
+import com.klyx.core.isDebug
+import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
@@ -28,6 +31,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             ProvideBaseCompositionLocals {
+                val buildVariant = LocalBuildVariant.current
+
                 val factory: ExtensionFactory = koinInject()
 
                 LaunchedEffect(Unit) {
@@ -71,6 +76,12 @@ class MainActivity : ComponentActivity() {
                     dynamicColor = settings.dynamicColor,
                     themeName = settings.theme
                 )
+
+                LaunchedEffect(Unit) {
+                    if (buildVariant.isDebug) {
+                        printAllSystemProperties()
+                    }
+                }
             }
         }
     }
