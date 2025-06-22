@@ -15,6 +15,7 @@ internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
     when (event.key) {
         Key.Backspace -> {
             if (buffer.isEmpty()) return
+            val selectionRange = getResolvedSelectionRange()
 
             if (selectionRange.collapsed) {
                 if (cursorPosition.offset == 0) return
@@ -64,6 +65,8 @@ internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
             if (event.utf16CodePoint != 0) {
                 val char = event.utf16CodePoint.toChar()
                 if (char.isDefined() && !char.isISOControl()) {
+                    val selectionRange = getResolvedSelectionRange()
+
                     if (selectionRange.collapsed) {
                         insert(char.toString())
                     } else {
