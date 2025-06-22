@@ -12,5 +12,8 @@ interface Platform {
 private val systemInfo by lazy { SystemInfo() }
 
 val Platform.isAndroid get() = SystemInfo.getCurrentPlatform() == PlatformEnum.ANDROID
+val Platform.isWindows get() = SystemInfo.getCurrentPlatform() == PlatformEnum.WINDOWS
+
+val lineSeparator: String = System.lineSeparator()
 
 expect fun platform(): Platform

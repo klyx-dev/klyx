@@ -36,6 +36,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".TestActivity"
+            android:exported="true" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
