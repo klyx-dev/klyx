@@ -145,8 +145,8 @@ class CodeEditorState(
     }
 
     fun deleteSelected() {
-        clearSelection()
         deleteRange(getResolvedSelectionRange())
+        clearSelection()
     }
 
     fun deleteRange(range: IntRange) {
