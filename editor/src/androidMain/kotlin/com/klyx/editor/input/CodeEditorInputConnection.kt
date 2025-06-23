@@ -18,6 +18,7 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
+import android.R.id as androidRId
 
 @OptIn(ExperimentalCodeEditorApi::class)
 class CodeEditorInputConnection(
@@ -61,7 +62,6 @@ class CodeEditorInputConnection(
 
     override fun commitText(text: CharSequence, newCursorPosition: Int): Boolean {
         println("commitText: $text, newCursorPosition: $newCursorPosition")
-
         state.insert(text.toString())
         return true
     }
@@ -69,10 +69,14 @@ class CodeEditorInputConnection(
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
         println("deleteSurroundingText: beforeLength=$beforeLength, afterLength=$afterLength")
 
-        if (beforeLength == 1 && afterLength == 0) {
-            return sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_DEL))
+        if (state.isTextSelected()) {
+            println("Delete selected")
+            state.deleteSelected()
+        } else {
+            state.deleteAroundCursor(beforeLength, afterLength)
         }
-        return false
+
+        return true
     }
 
     override fun deleteSurroundingTextInCodePoints(beforeLength: Int, afterLength: Int): Boolean {
@@ -117,7 +121,29 @@ class CodeEditorInputConnection(
 
     override fun performContextMenuAction(id: Int): Boolean {
         println("performContextMenuAction: id=$id")
-        return false
+        return when (id) {
+            androidRId.copy -> {
+                state.copy()
+                true
+            }
+
+            androidRId.paste -> {
+                state.paste()
+                true
+            }
+
+            androidRId.cut -> {
+                state.cut()
+                true
+            }
+
+            androidRId.selectAll -> {
+                state.selectAll()
+                true
+            }
+
+            else -> false
+        }
     }
 
     override fun performEditorAction(editorAction: Int): Boolean {

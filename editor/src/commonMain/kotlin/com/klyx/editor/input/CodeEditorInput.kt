@@ -119,6 +119,7 @@ internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
                     Key.V -> paste()
                     Key.C -> copy()
                     Key.X -> cut()
+                    Key.A -> selectAll()
                 }
             }
 

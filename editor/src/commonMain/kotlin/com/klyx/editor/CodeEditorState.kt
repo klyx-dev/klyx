@@ -86,7 +86,8 @@ class CodeEditorState(
                 ),
                 onCutRequested = ::cut,
                 onPasteRequested = ::paste,
-                onCopyRequested = ::copy
+                onCopyRequested = ::copy,
+                onSelectAllRequested = ::selectAll
             )
         }
     }
@@ -152,6 +153,12 @@ class CodeEditorState(
         deleteRange(range.first, range.last)
     }
 
+    fun deleteAroundCursor(before: Int, after: Int) {
+        val start = (cursorPosition.offset - before).coerceAtLeast(0)
+        val end = (cursorPosition.offset + after).coerceAtMost(buffer.length)
+        deleteRange(start, end)
+    }
+
     fun select(range: TextRange) {
         selection = Selection(
             start = Selection.AnchorInfo(direction, range.start, selectableId),
@@ -215,6 +222,10 @@ class CodeEditorState(
         }
 
         return str
+    }
+
+    fun selectAll() {
+        select(TextRange(0, buffer.length))
     }
 
     internal fun getCursorRect(offset: Int = cursorPosition.offset) = textLayoutResult.getCursorRect(offset.coerceAtMost(text.length))
