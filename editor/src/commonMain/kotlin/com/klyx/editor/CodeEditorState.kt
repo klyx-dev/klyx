@@ -86,7 +86,7 @@ class CodeEditorState(
                 ),
                 onCutRequested = ::cut,
                 onPasteRequested = ::paste,
-                onCopyRequested = ::copyText
+                onCopyRequested = ::copy
             )
         }
     }
@@ -167,7 +167,7 @@ class CodeEditorState(
         hideTextToolbarIfShown()
     }
 
-    fun copyText(): String? {
+    fun copy(): String? {
         val selectionRange = getResolvedSelectionRange()
 
         if (selectionRange.collapsed) return null

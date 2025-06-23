@@ -117,7 +117,7 @@ internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
             if (event.isCtrlPressed) {
                 when (event.key) {
                     Key.V -> paste()
-                    Key.C -> copyText()
+                    Key.C -> copy()
                     Key.X -> cut()
                 }
             }
