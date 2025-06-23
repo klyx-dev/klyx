@@ -4,6 +4,7 @@ import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -23,6 +24,9 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.substring
+import androidx.compose.ui.util.fastCoerceAtLeast
+import androidx.compose.ui.util.fastCoerceAtMost
+import androidx.compose.ui.util.fastCoerceIn
 import com.klyx.core.FpsTracker
 import com.klyx.core.event.EventBus
 import com.klyx.editor.clipboard.clipEntryOf
@@ -31,8 +35,8 @@ import com.klyx.editor.cursor.CursorPosition
 import com.klyx.editor.input.handleKeyEvent
 import com.klyx.editor.selection.Selection
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Stable
 @ExperimentalCodeEditorApi
@@ -58,6 +62,11 @@ class CodeEditorState(
     internal var selectionAnchor: Int? = null
 
     internal var textLayoutResult: TextLayoutResult? = null
+
+    internal var scrollX by mutableFloatStateOf(0f)
+    internal var scrollY by mutableFloatStateOf(0f)
+    internal val scrollOffset get() = Offset(scrollX, scrollY)
+    internal var canvasSize = Size.Zero
 
     private val fpsTracker = FpsTracker()
     val fps = fpsTracker.fps
@@ -98,6 +107,25 @@ class CodeEditorState(
                 textToolbar.hide()
             }
         }
+    }
+
+    internal fun scroll(amount: Offset) {
+        scrollX += amount.x
+        scrollY += amount.y
+
+        if (textLayoutResult == null) return
+        val result = textLayoutResult!!
+        val height = result.size.height.toFloat()
+        val width = result.size.width.toFloat()
+
+        scrollX = scrollX.fastCoerceIn(-width + 20f.fastCoerceAtMost(width), 0f)
+
+        val extraBottomPadding = getLineHeight((result.lineCount - 1).fastCoerceAtLeast(0)) * 4
+
+        scrollY = scrollY.fastCoerceIn(
+            minimumValue = -height + extraBottomPadding.fastCoerceAtMost(height),
+            maximumValue = 0f
+        )
     }
 
     private fun moveCursor(offset: Int) {

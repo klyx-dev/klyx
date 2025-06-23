@@ -56,7 +56,7 @@ private data class CodeEditorInputElement(
 }
 
 @ExperimentalCodeEditorApi
-fun Modifier.codeEditorInput(
+internal fun Modifier.codeEditorInput(
     state: CodeEditorState,
     keyboardController: SoftwareKeyboardController? = null
 ) = this then CodeEditorInputElement(state, keyboardController)

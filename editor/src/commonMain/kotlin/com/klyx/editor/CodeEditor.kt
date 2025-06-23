@@ -13,25 +13,25 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
@@ -39,6 +39,7 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.klyx.editor.cursor.CURSOR_BLINK_RATE
 import com.klyx.editor.cursor.CursorPosition
 import com.klyx.editor.input.codeEditorInput
@@ -64,6 +66,7 @@ fun CodeEditor(
     fontSize: TextUnit = 18.sp
 ) {
     val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val colorScheme = MaterialTheme.colorScheme
 
@@ -84,33 +87,41 @@ fun CodeEditor(
     LaunchedEffect(Unit) { state.startFpsTracker() }
 
     val focusRequester = remember { FocusRequester() }
+    var gutterWidth by remember { mutableFloatStateOf(0f) }
 
     Row(
         modifier = modifier
-            .imePadding()
     ) {
         CodeEditorCanvas(
             modifier = Modifier
-                .width(40.dp)
+                .width(with(density) { gutterWidth.toDp() })
                 .fillMaxHeight()
+                .zIndex(100f)
         ) {
-            drawRect(colorScheme.surfaceContainerHigh)
+            gutterWidth = 40.dp.toPx()
 
-            if (state.textLayoutResult != null) {
-                for (line in 0 until state.lineCount) {
-                    drawText(
-                        textMeasurer.measure(
-                            text = (line + 1).toString(),
-                            style = TextStyle(
-                                fontFamily = fontFamily,
-                                fontSize = fontSize,
-                                color = colorScheme.onSurface,
-                                textAlign = TextAlign.End
+            clipRect {
+                drawRect(
+                    color = colorScheme.surfaceContainerHigh,
+                    size = size
+                )
+
+                if (state.textLayoutResult != null) {
+                    for (line in 0 until state.lineCount) {
+                        drawText(
+                            textMeasurer.measure(
+                                text = (line + 1).toString(),
+                                style = TextStyle(
+                                    fontFamily = fontFamily,
+                                    fontSize = fontSize,
+                                    color = colorScheme.onSurface,
+                                    textAlign = TextAlign.End
+                                ),
+                                constraints = Constraints(maxWidth = gutterWidth.roundToInt())
                             ),
-                            constraints = Constraints(maxWidth = 40.dp.roundToPx())
-                        ),
-                        topLeft = Offset(2f, state.getLineTop(line))
-                    )
+                            topLeft = Offset(2f, state.getLineTop(line) + state.scrollY)
+                        )
+                    }
                 }
             }
         }
@@ -134,13 +145,13 @@ fun CodeEditor(
                             state.hideTextToolbarIfShown()
 
                             state.cursorPosition = CursorPosition(
-                                offset = state.getOffsetForPosition(position)
+                                offset = state.getOffsetForPosition(position - state.scrollOffset)
                             )
                         },
                         onLongPress = { position ->
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
 
-                            val offset = state.getOffsetForPosition(position)
+                            val offset = state.getOffsetForPosition(position - state.scrollOffset)
                             val wordBoundary = state.getWordBoundary(offset)
                             state.select(wordBoundary)
                             state.cursorPosition = CursorPosition(wordBoundary.end)
@@ -149,44 +160,45 @@ fun CodeEditor(
                         }
                     )
                 }
+                .codeEditorScroll(state)
         ) {
-            drawRect(colorScheme.background)
+            state.canvasSize = size
+            clipRect {
+                drawRect(colorScheme.background)
 
-            val result = textMeasurer.measure(
-                text = state.text,
-                style = TextStyle(
-                    fontFamily = fontFamily,
-                    fontSize = fontSize,
-                    color = colorScheme.onSurface
-                    //fontWeight = FontWeight.Bold,
-                    //letterSpacing = 1.em
-                ),
-                constraints = Constraints(
-                    maxWidth = size.width.roundToInt()
-                ),
-                softWrap = false
-            )
-            state.textLayoutResult = result
+                val result = textMeasurer.measure(
+                    text = state.text,
+                    style = TextStyle(
+                        fontFamily = fontFamily,
+                        fontSize = fontSize,
+                        color = colorScheme.onSurface
+                    ),
+                    softWrap = false
+                )
+                state.textLayoutResult = result
 
-            drawText(result)
+                drawText(
+                    textLayoutResult = result,
+                    topLeft = state.scrollOffset
+                )
 
-            val cursorRect = state.getCursorRect()
-            //println(cursorRect.size)
+                val cursorRect = state.getCursorRect()
 
-            drawLine(
-                color = colorScheme.primary,
-                alpha = cursorAlpha,
-                start = cursorRect.topCenter,
-                end = cursorRect.bottomCenter,
-                strokeWidth = 2f,
-                cap = StrokeCap.Round
-            )
+                drawLine(
+                    color = colorScheme.primary,
+                    alpha = cursorAlpha,
+                    start = cursorRect.topCenter + state.scrollOffset,
+                    end = cursorRect.bottomCenter + state.scrollOffset,
+                    strokeWidth = 2f,
+                    cap = StrokeCap.Round,
+                )
 
-            drawPath(
-                path = state.getPathForSelectionRange(),
-                color = colorScheme.primaryContainer,
-                alpha = 0.5f
-            )
+                drawPath(
+                    path = state.getPathForSelectionRange().apply { translate(state.scrollOffset) },
+                    color = colorScheme.primaryContainer,
+                    alpha = 0.5f,
+                )
+            }
         }
     }
 }
