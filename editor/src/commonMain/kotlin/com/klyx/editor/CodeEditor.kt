@@ -11,6 +11,8 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -18,10 +20,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -32,8 +34,6 @@ import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.platform.LocalTextToolbar
-import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
@@ -42,7 +42,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.editor.cursor.CURSOR_BLINK_RATE
+import com.klyx.editor.cursor.CursorPosition
 import com.klyx.editor.input.codeEditorInput
+import kotlin.math.roundToInt
 
 @Composable
 @ExperimentalCodeEditorApi
@@ -51,7 +53,6 @@ fun CodeEditor(
     state: CodeEditorState = rememberCodeEditorState(),
     fontFamily: FontFamily = FontFamily.Monospace,
 ) {
-    val textToolbar = LocalTextToolbar.current
     val haptics = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -69,6 +70,13 @@ fun CodeEditor(
         label = "CursorAlpha"
     )
 
+//    val fps by state.fps
+//    LaunchedEffect(fps) {
+//        println("FPS: $fps")
+//    }
+
+    LaunchedEffect(Unit) { state.startFpsTracker() }
+
     val focusRequester = remember { FocusRequester() }
 
     CodeEditorCanvas(
@@ -82,21 +90,24 @@ fun CodeEditor(
             .focusable(interactionSource = remember { MutableInteractionSource() })
             .pointerInput(state) {
                 detectTapGestures(
-                    onTap = {
+                    onTap = { position ->
                         focusRequester.requestFocus()
+                        if (state.isTextSelected()) state.clearSelection()
+                        state.hideTextToolbarIfShown()
 
-                        if (textToolbar.status == TextToolbarStatus.Shown) {
-                            textToolbar.hide()
-                        }
+                        state.cursorPosition = CursorPosition(
+                            offset = state.getOffsetForPosition(position)
+                        )
                     },
-                    onLongPress = { offset ->
+                    onLongPress = { position ->
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
 
-                        textToolbar.showMenu(
-                            rect = Rect(offset, Size.Zero),
-                            onCopyRequested = state::copyText,
-                            onPasteRequested = state::paste
-                        )
+                        val offset = state.getOffsetForPosition(position)
+                        val wordBoundary = state.getWordBoundary(offset)
+                        state.select(wordBoundary)
+                        state.cursorPosition = CursorPosition(wordBoundary.end)
+
+                        state.showTextToolbar(position)
                     }
                 )
             }
@@ -108,27 +119,32 @@ fun CodeEditor(
             style = TextStyle(
                 fontFamily = fontFamily,
                 fontSize = 18.sp,
+                //fontWeight = FontWeight.Bold,
                 //letterSpacing = 1.em
             ),
-            softWrap = true,
-            constraints = Constraints.fixed(size.width.toInt(), size.height.toInt())
+            constraints = Constraints(
+                maxWidth = size.width.roundToInt()
+            )
         )
+        state.textLayoutResult = result
+
+        // Draw line numbers
+        val lineCount = state.lineCount
+        for (i in 0 until lineCount) {
+
+        }
 
         drawText(
             textLayoutResult = result,
             brush = Brush.linearGradient(
-                listOf(
-                    Color.Red,
-                    Color.Blue,
-                    Color.Green
-                )
+                listOf(Color.Red, Color.Blue, Color.Green)
             )
         )
 
-        val cursorRect = result.getCursorRect(state.cursorPosition.offset)
-        println(cursorRect.size)
+        val cursorRect = state.getCursorRect()
+        //println(cursorRect.size)
 
-        drawRect(
+        drawLine(
             brush = Brush.linearGradient(
                 listOf(
                     Color.Red,
@@ -137,17 +153,14 @@ fun CodeEditor(
                 )
             ),
             alpha = cursorAlpha,
-            topLeft = cursorRect.topLeft,
-            size = cursorRect.size.copy(width = 2.dp.toPx())
+            start = cursorRect.topCenter,
+            end = cursorRect.bottomCenter,
+            strokeWidth = 2f,
+            cap = StrokeCap.Round
         )
 
-        val selectionRange = state.getResolvedSelectionRange()
-
         drawPath(
-            path = result.getPathForRange(
-                start = selectionRange.start,
-                end = selectionRange.end
-            ),
+            path = state.getPathForSelectionRange(),
             color = Color.Yellow,
             alpha = 0.5f
         )
@@ -177,3 +190,6 @@ private object CodeEditorMeasurePolicy : MeasurePolicy {
         }
     }
 }
+
+@Stable
+fun Size.toConstraints() = Constraints(maxWidth = width.toInt(), maxHeight = height.toInt())

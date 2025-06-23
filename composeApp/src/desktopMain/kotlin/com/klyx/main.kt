@@ -63,7 +63,7 @@ fun main() {
 //                    )
 
                     BasicTextEditor(
-                        state = rememberTextEditorState("Hellow, ${platform().os.family}".toAnnotatedString()),
+                        state = rememberTextEditorState("Hellow, ${platform().os}".toAnnotatedString()),
                         modifier = Modifier.fillMaxSize()
                     )
                 }

@@ -5,7 +5,7 @@ import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 
-@ExperimentalCodeEditorApi
+@OptIn(ExperimentalCodeEditorApi::class)
 internal expect suspend fun PlatformTextInputSessionScope.createInputRequest(
     state: CodeEditorState
 ): PlatformTextInputMethodRequest
