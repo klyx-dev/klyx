@@ -57,12 +57,12 @@ class CodeEditorState(
     internal val direction = ResolvedTextDirection.Ltr
     internal var selectionAnchor: Int? = null
 
-    internal lateinit var textLayoutResult: TextLayoutResult
+    internal var textLayoutResult: TextLayoutResult? = null
 
     private val fpsTracker = FpsTracker()
     val fps = fpsTracker.fps
 
-    val lineCount get() = textLayoutResult.lineCount
+    val lineCount get() = textLayoutResult!!.lineCount
 
     init {
         cursorPosition = CursorPosition(buffer.length)
@@ -228,12 +228,14 @@ class CodeEditorState(
         select(TextRange(0, buffer.length))
     }
 
-    internal fun getCursorRect(offset: Int = cursorPosition.offset) = textLayoutResult.getCursorRect(offset.coerceAtMost(text.length))
-    internal fun getPathForRange(start: Int, end: Int) = textLayoutResult.getPathForRange(start, end)
-    internal fun getPathForRange(range: TextRange) = textLayoutResult.getPathForRange(range.start, range.end)
+    internal fun getCursorRect(offset: Int = cursorPosition.offset) = textLayoutResult!!.getCursorRect(offset.coerceAtMost(text.length))
+    internal fun getPathForRange(start: Int, end: Int) = textLayoutResult!!.getPathForRange(start, end)
+    internal fun getPathForRange(range: TextRange) = textLayoutResult!!.getPathForRange(range.start, range.end)
     internal fun getPathForSelectionRange() = getPathForRange(getResolvedSelectionRange())
-    internal fun getOffsetForPosition(position: Offset) = textLayoutResult.getOffsetForPosition(position)
-    internal fun getLineHeight(lineIndex: Int) = textLayoutResult.getLineBottom(lineIndex) - textLayoutResult.getLineTop(lineIndex)
+    internal fun getOffsetForPosition(position: Offset) = textLayoutResult!!.getOffsetForPosition(position)
+    internal fun getLineHeight(lineIndex: Int) = getLineBottom(lineIndex) - getLineTop(lineIndex)
+    internal fun getLineTop(lineIndex: Int) = textLayoutResult!!.getLineTop(lineIndex)
+    internal fun getLineBottom(lineIndex: Int) = textLayoutResult!!.getLineBottom(lineIndex)
 
     /**
      * Returns the text range of the word at the given character offset.
@@ -245,13 +247,13 @@ class CodeEditorState(
      * Word boundaries are defined more precisely in Unicode Standard Annex #29
      * <http://www.unicode.org/reports/tr29/#Word_Boundaries>.
      */
-    fun getWordBoundary(offset: Int) = textLayoutResult.getWordBoundary(offset)
+    fun getWordBoundary(offset: Int) = textLayoutResult!!.getWordBoundary(offset)
     fun getCurrentWordBoundary() = getWordBoundary(cursorPosition.offset)
 
     /**
      * Returns the bounding box of the character for given character offset.
      */
-    fun getBoundingBox(offset: Int) = textLayoutResult.getBoundingBox(offset)
+    fun getBoundingBox(offset: Int) = textLayoutResult!!.getBoundingBox(offset)
 
     /**
      * Returns the line number on which the specified text offset appears.
@@ -262,7 +264,7 @@ class CodeEditorState(
      * @param offset a character offset
      * @return the 0 origin line number.
      */
-    fun getLineForOffset(offset: Int) = textLayoutResult.getLineForOffset(offset)
+    fun getLineForOffset(offset: Int) = textLayoutResult!!.getLineForOffset(offset)
 
     /**
      * Returns the start offset of the given line, inclusive.
@@ -279,7 +281,7 @@ class CodeEditorState(
      * @param lineIndex the line number
      * @return the start offset of the line
      */
-    fun getLineStart(lineIndex: Int) = textLayoutResult.getLineStart(lineIndex)
+    fun getLineStart(lineIndex: Int) = textLayoutResult!!.getLineStart(lineIndex)
 
     /**
      * Returns the end offset of the given line.
@@ -302,7 +304,7 @@ class CodeEditorState(
      *   it's false.
      * @return an exclusive end offset of the line.
      */
-    fun getLineEnd(lineIndex: Int, visibleEnd: Boolean = false) = textLayoutResult.getLineEnd(lineIndex, visibleEnd)
+    fun getLineEnd(lineIndex: Int, visibleEnd: Boolean = false) = textLayoutResult!!.getLineEnd(lineIndex, visibleEnd)
 
     /**
      * Returns a TextRange with start <= end, regardless of selection direction or handlesCrossed.

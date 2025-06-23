@@ -1,6 +1,6 @@
 package com.klyx.editor
 
-import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -9,7 +9,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -20,10 +26,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -38,7 +45,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.editor.cursor.CURSOR_BLINK_RATE
@@ -52,9 +61,11 @@ fun CodeEditor(
     modifier: Modifier = Modifier,
     state: CodeEditorState = rememberCodeEditorState(),
     fontFamily: FontFamily = FontFamily.Monospace,
+    fontSize: TextUnit = 18.sp
 ) {
     val haptics = LocalHapticFeedback.current
     val keyboardController = LocalSoftwareKeyboardController.current
+    val colorScheme = MaterialTheme.colorScheme
 
     val scope = rememberCoroutineScope()
     val textMeasurer = rememberTextMeasurer()
@@ -64,106 +75,119 @@ fun CodeEditor(
         initialValue = 1f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = CURSOR_BLINK_RATE, easing = FastOutLinearInEasing),
+            animation = tween(durationMillis = CURSOR_BLINK_RATE, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
         label = "CursorAlpha"
     )
 
-//    val fps by state.fps
-//    LaunchedEffect(fps) {
-//        println("FPS: $fps")
-//    }
-
     LaunchedEffect(Unit) { state.startFpsTracker() }
 
     val focusRequester = remember { FocusRequester() }
 
-    CodeEditorCanvas(
+    Row(
         modifier = modifier
-            .sizeIn(minWidth = 100.dp, minHeight = 100.dp)
-            .focusRequester(focusRequester)
-            .codeEditorInput(
-                state = state,
-                keyboardController = keyboardController
-            )
-            .focusable(interactionSource = remember { MutableInteractionSource() })
-            .pointerInput(state) {
-                detectTapGestures(
-                    onTap = { position ->
-                        focusRequester.requestFocus()
-                        if (state.isTextSelected()) state.clearSelection()
-                        state.hideTextToolbarIfShown()
-
-                        state.cursorPosition = CursorPosition(
-                            offset = state.getOffsetForPosition(position)
-                        )
-                    },
-                    onLongPress = { position ->
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-
-                        val offset = state.getOffsetForPosition(position)
-                        val wordBoundary = state.getWordBoundary(offset)
-                        state.select(wordBoundary)
-                        state.cursorPosition = CursorPosition(wordBoundary.end)
-
-                        state.showTextToolbar(position)
-                    }
-                )
-            }
+            .imePadding()
     ) {
-        drawRect(Color.White)
+        CodeEditorCanvas(
+            modifier = Modifier
+                .width(40.dp)
+                .fillMaxHeight()
+        ) {
+            drawRect(colorScheme.surfaceContainerHigh)
 
-        val result = textMeasurer.measure(
-            text = state.text,
-            style = TextStyle(
-                fontFamily = fontFamily,
-                fontSize = 18.sp,
-                //fontWeight = FontWeight.Bold,
-                //letterSpacing = 1.em
-            ),
-            constraints = Constraints(
-                maxWidth = size.width.roundToInt()
-            )
-        )
-        state.textLayoutResult = result
-
-        // Draw line numbers
-        val lineCount = state.lineCount
-        for (i in 0 until lineCount) {
-
+            if (state.textLayoutResult != null) {
+                for (line in 0 until state.lineCount) {
+                    drawText(
+                        textMeasurer.measure(
+                            text = (line + 1).toString(),
+                            style = TextStyle(
+                                fontFamily = fontFamily,
+                                fontSize = fontSize,
+                                color = colorScheme.onSurface,
+                                textAlign = TextAlign.End
+                            ),
+                            constraints = Constraints(maxWidth = 40.dp.roundToPx())
+                        ),
+                        topLeft = Offset(2f, state.getLineTop(line))
+                    )
+                }
+            }
         }
 
-        drawText(
-            textLayoutResult = result,
-            brush = Brush.linearGradient(
-                listOf(Color.Red, Color.Blue, Color.Green)
-            )
-        )
+        Spacer(modifier = Modifier.width(2.dp))
 
-        val cursorRect = state.getCursorRect()
-        //println(cursorRect.size)
-
-        drawLine(
-            brush = Brush.linearGradient(
-                listOf(
-                    Color.Red,
-                    Color.Blue,
-                    Color.Green
+        CodeEditorCanvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(focusRequester)
+                .codeEditorInput(
+                    state = state,
+                    keyboardController = keyboardController
                 )
-            ),
-            alpha = cursorAlpha,
-            start = cursorRect.topCenter,
-            end = cursorRect.bottomCenter,
-            strokeWidth = 2f,
-            cap = StrokeCap.Round
-        )
+                .focusable(interactionSource = remember { MutableInteractionSource() })
+                .pointerInput(state) {
+                    detectTapGestures(
+                        onTap = { position ->
+                            focusRequester.requestFocus()
+                            if (state.isTextSelected()) state.clearSelection()
+                            state.hideTextToolbarIfShown()
 
-        drawPath(
-            path = state.getPathForSelectionRange(),
-            color = Color.Yellow,
-            alpha = 0.5f
-        )
+                            state.cursorPosition = CursorPosition(
+                                offset = state.getOffsetForPosition(position)
+                            )
+                        },
+                        onLongPress = { position ->
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+
+                            val offset = state.getOffsetForPosition(position)
+                            val wordBoundary = state.getWordBoundary(offset)
+                            state.select(wordBoundary)
+                            state.cursorPosition = CursorPosition(wordBoundary.end)
+
+                            state.showTextToolbar(position)
+                        }
+                    )
+                }
+        ) {
+            drawRect(colorScheme.background)
+
+            val result = textMeasurer.measure(
+                text = state.text,
+                style = TextStyle(
+                    fontFamily = fontFamily,
+                    fontSize = fontSize,
+                    color = colorScheme.onSurface
+                    //fontWeight = FontWeight.Bold,
+                    //letterSpacing = 1.em
+                ),
+                constraints = Constraints(
+                    maxWidth = size.width.roundToInt()
+                ),
+                softWrap = false
+            )
+            state.textLayoutResult = result
+
+            drawText(result)
+
+            val cursorRect = state.getCursorRect()
+            //println(cursorRect.size)
+
+            drawLine(
+                color = colorScheme.primary,
+                alpha = cursorAlpha,
+                start = cursorRect.topCenter,
+                end = cursorRect.bottomCenter,
+                strokeWidth = 2f,
+                cap = StrokeCap.Round
+            )
+
+            drawPath(
+                path = state.getPathForSelectionRange(),
+                color = colorScheme.primaryContainer,
+                alpha = 0.5f
+            )
+        }
     }
 }
 

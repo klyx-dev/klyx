@@ -37,8 +37,7 @@ class TestActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         Row {
-                            Text("Hello")
-                            Spacer(modifier = Modifier.width(20.dp))
+                            Spacer(modifier = Modifier.width(2.dp))
 
                             CodeEditor(
                                 state = rememberCodeEditorState("Hello"),
