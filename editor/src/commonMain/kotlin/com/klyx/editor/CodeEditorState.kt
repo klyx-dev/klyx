@@ -67,6 +67,7 @@ class CodeEditorState(
     internal var scrollY by mutableFloatStateOf(0f)
     internal val scrollOffset get() = Offset(scrollX, scrollY)
     internal var canvasSize = Size.Zero
+    internal val viewport get() = Rect(-scrollOffset, canvasSize)
 
     private val fpsTracker = FpsTracker()
     val fps = fpsTracker.fps
@@ -109,10 +110,7 @@ class CodeEditorState(
         }
     }
 
-    internal fun scroll(amount: Offset) {
-        scrollX += amount.x
-        scrollY += amount.y
-
+    private fun coerceScrollOffset() {
         if (textLayoutResult == null) return
         val result = textLayoutResult!!
         val height = result.size.height.toFloat()
@@ -128,7 +126,48 @@ class CodeEditorState(
         )
     }
 
+    internal fun scroll(amount: Offset) {
+        scrollX += amount.x
+        scrollY += amount.y
+        coerceScrollOffset()
+    }
+
+    internal fun scrollTo(position: Offset) {
+        scrollX = position.x
+        scrollY = position.y
+        coerceScrollOffset()
+    }
+
+    internal fun ensureCursorInView() {
+        if (textLayoutResult == null) return
+
+        val cursorRect = getCursorRect()
+        val padding = 100f
+
+        var newScrollX = scrollX
+        var newScrollY = scrollY
+
+        // adjust horizontal scroll
+        if (cursorRect.left < viewport.left + padding) {
+            newScrollX = -(cursorRect.left - padding)
+        } else if (cursorRect.right > viewport.right - padding) {
+            newScrollX = viewport.width - cursorRect.right - padding
+        }
+
+        // adjust vertical scroll
+        if (cursorRect.top < viewport.top + padding) {
+            newScrollY = -(cursorRect.top - padding)
+        } else if (cursorRect.bottom > viewport.bottom - padding) {
+            newScrollY = viewport.height - cursorRect.bottom - padding
+        }
+
+        if (newScrollX != scrollX || newScrollY != scrollY) {
+            scrollTo(Offset(newScrollX, newScrollY))
+        }
+    }
+
     private fun moveCursor(offset: Int) {
+        ensureCursorInView()
         cursorPosition = cursorPosition.copy(
             offset = (cursorPosition.offset + offset).coerceIn(0, buffer.length)
         )
@@ -256,7 +295,10 @@ class CodeEditorState(
         select(TextRange(0, buffer.length))
     }
 
-    internal fun getCursorRect(offset: Int = cursorPosition.offset) = textLayoutResult!!.getCursorRect(offset.coerceAtMost(text.length))
+    internal fun getCursorRect(offset: Int = cursorPosition.offset) = runCatching {
+        textLayoutResult!!.getCursorRect(offset.coerceAtMost(buffer.length))
+    }.getOrElse { Rect.Zero }
+
     internal fun getPathForRange(start: Int, end: Int) = textLayoutResult!!.getPathForRange(start, end)
     internal fun getPathForRange(range: TextRange) = textLayoutResult!!.getPathForRange(range.start, range.end)
     internal fun getPathForSelectionRange() = getPathForRange(getResolvedSelectionRange())

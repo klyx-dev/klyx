@@ -14,6 +14,8 @@ import com.klyx.lineSeparator
 
 @ExperimentalCodeEditorApi
 internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
+    ensureCursorInView()
+
     when (event.key) {
         Key.Backspace -> {
             if (buffer.isEmpty()) return
