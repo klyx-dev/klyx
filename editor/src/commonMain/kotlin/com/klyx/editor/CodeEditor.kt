@@ -28,7 +28,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -41,9 +40,11 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
@@ -71,10 +72,18 @@ fun CodeEditor(
 ) {
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
+    val clipboard = LocalClipboard.current
+    val textToolbar = LocalTextToolbar.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val colorScheme = MaterialTheme.colorScheme
-
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        state.clipboard = clipboard
+        state.textToolbar = textToolbar
+        state.coroutineScope = scope
+    }
+
     val textMeasurer = rememberTextMeasurer()
 
     val transition = rememberInfiniteTransition()
@@ -87,8 +96,6 @@ fun CodeEditor(
         ),
         label = "CursorAlpha"
     )
-
-    LaunchedEffect(Unit) { state.startFpsTracker() }
 
     val focusRequester = remember { FocusRequester() }
     var gutterWidth by remember { mutableFloatStateOf(0f) }
@@ -165,7 +172,7 @@ fun CodeEditor(
                             state.select(wordBoundary)
                             state.cursorPosition = CursorPosition(wordBoundary.end)
 
-                            state.showTextToolbar(position, editable)
+                            state.showTextToolbar(editable)
                         }
                     )
                 }

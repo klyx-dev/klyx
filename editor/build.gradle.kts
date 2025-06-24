@@ -40,6 +40,8 @@ kotlin {
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
 
+                implementation(kotlin("reflect"))
+
                 implementation(projects.core)
                 implementation(projects.shared)
             }

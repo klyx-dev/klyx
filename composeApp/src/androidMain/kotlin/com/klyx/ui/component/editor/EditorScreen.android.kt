@@ -1,6 +1,5 @@
 package com.klyx.ui.component.editor
 
-import android.graphics.Typeface
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,16 +29,19 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.file.FileWrapper
-import com.klyx.core.file.language
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
 import com.klyx.core.requestStoragePermission
-import com.klyx.editor.compose.KlyxCodeEditor
+import com.klyx.editor.CodeEditor
+import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.rememberCodeEditorState
 import com.klyx.tab.Tab
+import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(ExperimentalCodeEditorApi::class)
 @Composable
 actual fun EditorScreen(modifier: Modifier) {
     val context = LocalContext.current
@@ -55,7 +57,7 @@ actual fun EditorScreen(modifier: Modifier) {
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openTabs.size })
     val scope = rememberCoroutineScope()
-    val typeface = remember { Typeface.MONOSPACE }
+    val fontFamily = rememberFontFamily(editorSettings.fontFamily)
 
     var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
     var pendingFile: FileWrapper? by remember { mutableStateOf(null) }
@@ -126,7 +128,7 @@ actual fun EditorScreen(modifier: Modifier) {
                 },
                 isDirty = { index ->
                     val tab = openTabs.getOrNull(index)
-                    if (tab is Tab.FileTab) tab.editorState.isModified else false
+                    if (tab is Tab.FileTab) tab.isModified else false
                 }
             )
 
@@ -143,8 +145,6 @@ actual fun EditorScreen(modifier: Modifier) {
                     tab is Tab.FileTab -> {
                         val file = tab.data as? FileWrapper
                         if (file != null) {
-                            val editorState = tab.editorState
-
                             if (file.path != "untitled") {
                                 LaunchedEffect(Unit) {
                                     if (file.requiresPermission(context, isWrite = true)) {
@@ -156,13 +156,13 @@ actual fun EditorScreen(modifier: Modifier) {
                                 }
                             }
 
-                            KlyxCodeEditor(
-                                editorState = editorState,
-                                typeface = typeface,
+                            CodeEditor(
+                                modifier = Modifier.fillMaxSize(),
+                                state = tab.editorState,
+                                fontFamily = fontFamily,
+                                fontSize = editorSettings.fontSize.sp,
                                 editable = !tab.isInternal,
-                                language = file.language(),
-                                pinnedLineNumbers = editorSettings.pinLineNumbers,
-                                fontSize = editorSettings.fontSize.sp
+                                pinLineNumber = editorSettings.pinLineNumbers
                             )
                         } else {
                             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

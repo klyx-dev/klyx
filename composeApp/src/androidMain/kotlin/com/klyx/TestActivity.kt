@@ -44,7 +44,7 @@ class TestActivity : ComponentActivity() {
                             CodeEditor(
                                 state = rememberCodeEditorState("Hello"),
                                 modifier = Modifier.fillMaxSize(),
-                                editable = false,
+                                editable = true,
                                 pinLineNumber = false,
                                 fontFamily = FontFamily(
                                     Font(

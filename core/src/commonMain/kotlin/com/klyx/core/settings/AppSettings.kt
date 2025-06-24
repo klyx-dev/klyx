@@ -33,5 +33,9 @@ data class AppSettings(
     val theme: String? = null,
 
     @SerialComment("The editor settings")
-    val editor: EditorSettings = EditorSettings()
+    val editor: EditorSettings = EditorSettings(),
+
+    @SerialComment("Whether to show the FPS counter in the UI")
+    @SerialName("show_fps")
+    val showFps: Boolean = false
 )

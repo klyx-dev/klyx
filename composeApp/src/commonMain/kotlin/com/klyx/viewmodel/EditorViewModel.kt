@@ -9,21 +9,25 @@ import androidx.lifecycle.viewModelScope
 import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
 import com.klyx.core.file.FileWrapper
-import com.klyx.editor.EditorState
+import com.klyx.editor.CodeEditorState
+import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ifNull
 import com.klyx.tab.Tab
+import com.klyx.tab.TabId
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import java.awt.SystemColor.text
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
-    val activeTabId: String? = null
+    val activeTabId: TabId? = null
 )
 
+@OptIn(ExperimentalCodeEditorApi::class)
 @Suppress("MemberVisibilityCanBePrivate")
 class EditorViewModel(
     private val notifier: Notifier
@@ -47,7 +51,7 @@ class EditorViewModel(
     fun openTab(
         name: String,
         type: String? = null,
-        id: String? = null,
+        id: TabId? = null,
         data: Any? = null,
         content: @Composable () -> Unit,
     ) {
@@ -72,8 +76,7 @@ class EditorViewModel(
                 name = tabTitle,
                 isInternal = isInternal,
                 fileWrapper = file,
-                content = { Box(modifier = Modifier.fillMaxSize()) },
-                editorState = EditorState(
+                editorState = CodeEditorState(
                     initialText = runCatching { file.readText() }.getOrElse { "" }
                 )
             )
@@ -82,7 +85,7 @@ class EditorViewModel(
         }
     }
 
-    fun closeTab(tabId: String) {
+    fun closeTab(tabId: TabId) {
         _state.update { current ->
             val updatedTabs = current.openTabs.filterNot { it.id == tabId }
             val newActiveTabId = when {
@@ -97,7 +100,7 @@ class EditorViewModel(
         }
     }
 
-    fun setActiveTab(tabId: String) {
+    fun setActiveTab(tabId: TabId) {
         _state.update { current ->
             if (current.openTabs.any { it.id == tabId }) {
                 current.copy(activeTabId = tabId)
@@ -107,7 +110,7 @@ class EditorViewModel(
         }
     }
 
-    fun getTab(tabId: String): Tab? {
+    fun getTab(tabId: TabId): Tab? {
         return _state.value.openTabs.find { it.id == tabId }
     }
 
@@ -121,7 +124,7 @@ class EditorViewModel(
         return (current.openTabs.find { it is Tab.FileTab && it.id == current.activeTabId } as? Tab.FileTab)?.fileWrapper
     }
 
-    fun replaceTab(tabId: String, newTab: Tab) {
+    fun replaceTab(tabId: TabId, newTab: Tab) {
         _state.update { current ->
             val updatedTabs = current.openTabs.map { tab ->
                 if (tab.id == tabId) newTab else tab
@@ -142,11 +145,11 @@ class EditorViewModel(
         }
     }
 
-    fun isTabOpen(tabId: String): Boolean {
+    fun isTabOpen(tabId: TabId): Boolean {
         return _state.value.openTabs.any { it.id == tabId }
     }
 
-    fun isTabActive(tabId: String): Boolean {
+    fun isTabActive(tabId: TabId): Boolean {
         return _state.value.activeTabId == tabId
     }
 
@@ -158,11 +161,11 @@ class EditorViewModel(
         return _state.value.activeTabId == fileId
     }
 
-    fun isFileTab(tabId: String): Boolean {
+    fun isFileTab(tabId: TabId): Boolean {
         return _state.value.openTabs.any { it is Tab.FileTab && it.id == tabId }
     }
 
-    fun isFileTabInternal(tabId: String): Boolean {
+    fun isFileTabInternal(tabId: TabId): Boolean {
         return _state.value.openTabs.any { it is Tab.FileTab && it.isInternal && it.id == tabId }
     }
 
@@ -171,14 +174,15 @@ class EditorViewModel(
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
 
         return if (tab is Tab.FileTab) {
-            val editorState = tab.editorState
+            val text by tab.editorState
             val file = tab.fileWrapper
 
             if (file.path == "untitled") return false
 
             if (file.canWrite()) {
-                file.writeText(editorState.text)
-                editorState.markAsSaved()
+                println(text)
+                file.writeText(text)
+                tab.markAsSaved()
                 true
             } else false
         } else false
@@ -192,7 +196,8 @@ class EditorViewModel(
             val editorState = tab.editorState
 
             try {
-                newFile.writeText(editorState.text)
+                val text by editorState
+                newFile.writeText(text)
             } catch (e: Exception) {
                 return false
             }
@@ -201,12 +206,11 @@ class EditorViewModel(
                 id = newFile.id,
                 name = newFile.name,
                 fileWrapper = newFile,
-                content = { Box(modifier = Modifier.fillMaxSize()) },
-                editorState = EditorState(initialText = editorState.text)
+                editorState = CodeEditorState(editorState)
             )
 
             replaceTab(tab.id, newTab)
-            editorState.markAsSaved()
+            tab.markAsSaved()
             true
         } else false
     }
@@ -227,7 +231,7 @@ class EditorViewModel(
                         false
                     }
 
-                    if (saved) editorState.markAsSaved()
+                    if (saved) tab.markAsSaved()
                     results[tab.name] = saved
                 }
             }

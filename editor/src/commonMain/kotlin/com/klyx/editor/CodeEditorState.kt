@@ -1,13 +1,11 @@
 package com.klyx.editor
 
-import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -16,8 +14,6 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.Clipboard
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.text.TextLayoutResult
@@ -37,16 +33,17 @@ import com.klyx.editor.selection.Selection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.reflect.KProperty
 
 @Stable
 @ExperimentalCodeEditorApi
 class CodeEditorState(
-    initialText: String = "",
-    private val clipboard: Clipboard,
-    private val textToolbar: TextToolbar,
-    private val coroutineScope: CoroutineScope
+    initialText: String = ""
 ) {
     internal val buffer = StringBuilder(initialText)
+    internal lateinit var clipboard: Clipboard
+    internal lateinit var textToolbar: TextToolbar
+    internal lateinit var coroutineScope: CoroutineScope
 
     private var _text by mutableStateOf(initialText)
     val text get() = _text
@@ -69,10 +66,9 @@ class CodeEditorState(
     internal var canvasSize = Size.Zero
     internal val viewport get() = Rect(-scrollOffset, canvasSize)
 
-    private val fpsTracker = FpsTracker()
-    val fps = fpsTracker.fps
-
     val lineCount get() = textLayoutResult!!.lineCount
+
+    private val textChangedListeners = mutableSetOf<(String) -> Unit>()
 
     init {
         cursorPosition = CursorPosition(buffer.length)
@@ -84,19 +80,12 @@ class CodeEditorState(
         }
     }
 
-    @Stable
-    internal suspend fun startFpsTracker() = fpsTracker.start()
-
-    internal fun showTextToolbar(
-        position: Offset,
-        editable: Boolean = true
-    ) {
+    internal fun showTextToolbar(editable: Boolean = true) {
         coroutineScope.launch(Dispatchers.Main) {
+            val path = getPathForSelectionRange()
+
             textToolbar.showMenu(
-                rect = Rect(
-                    offset = position,
-                    size = Size.VisibilityThreshold
-                ),
+                rect = path.getBounds().apply { translate(scrollOffset) },
                 onCutRequested = if (editable) {
                     { cut() }
                 } else null,
@@ -180,8 +169,23 @@ class CodeEditorState(
         )
     }
 
+    fun addTextChangedListener(listener: (String) -> Unit) {
+        textChangedListeners.add(listener)
+    }
+
+    fun removeTextChangedListener(listener: (String) -> Unit) {
+        textChangedListeners.remove(listener)
+    }
+
+    private fun notifyTextChanged(newText: String) {
+        for (listener in textChangedListeners) {
+            listener(newText)
+        }
+    }
+
     private fun updateText() {
         _text = buffer.toString()
+        notifyTextChanged(_text)
     }
 
     fun setText(newText: String) {
@@ -404,6 +408,9 @@ class CodeEditorState(
 
     val CursorPosition.line get() = getLineForOffset(offset)
     val CursorPosition.column get() = offset - getLineStart(line)
+
+    operator fun getValue(thisRef: Any?, property: KProperty<*>) = _text
+    operator fun setValue(thisRef: Any?, property: KProperty<*>, text: String) = setText(text)
 }
 
 @ExperimentalCodeEditorApi
@@ -411,16 +418,14 @@ class CodeEditorState(
 fun rememberCodeEditorState(
     initialText: String = "",
 ): CodeEditorState {
-    val clipboard = LocalClipboard.current
-    val textToolbar = LocalTextToolbar.current
-    val scope = rememberCoroutineScope()
-
-    return remember(initialText, clipboard) {
-        CodeEditorState(
-            initialText = initialText,
-            clipboard = clipboard,
-            textToolbar = textToolbar,
-            coroutineScope = scope
-        )
+    return remember(initialText) {
+        CodeEditorState(initialText = initialText)
     }
+}
+
+@ExperimentalCodeEditorApi
+fun CodeEditorState(other: CodeEditorState) = CodeEditorState(initialText = other.buffer.toString()).apply {
+    clipboard = other.clipboard
+    textToolbar = other.textToolbar
+    coroutineScope = other.coroutineScope
 }

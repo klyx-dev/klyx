@@ -125,7 +125,7 @@ actual fun EditorTab(
         if (tab is Tab.FileTab) {
             val file = tab.fileWrapper
 
-            if (file.path != "untitled") {
+            if (file.path != "untitled" && !tab.isInternal) {
                 Spacer(modifier = Modifier.width(4.dp))
 
                 Text(

@@ -1,8 +1,5 @@
 package com.klyx.core.file
 
-import java.io.File
-import javax.naming.Context
-
 interface FileWrapper {
     val absolutePath: String
     val canonicalPath: String

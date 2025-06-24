@@ -10,13 +10,17 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -38,6 +42,8 @@ import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.Environment
+import com.klyx.core.FpsTracker
+import com.klyx.core.LocalAppSettings
 import com.klyx.core.Notifier
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
@@ -58,6 +64,10 @@ actual fun MainMenuBar(modifier: Modifier) {
     val activity = LocalActivity.current
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
+    val settings = LocalAppSettings.current
+
+    val fpsTracker = remember { FpsTracker() }
+    val fps by fpsTracker.fps
 
     val viewModel = koinViewModel<EditorViewModel>()
     val notifier: Notifier = koinInject()
@@ -235,6 +245,10 @@ actual fun MainMenuBar(modifier: Modifier) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        fpsTracker.start()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -246,20 +260,34 @@ actual fun MainMenuBar(modifier: Modifier) {
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            IconButton(
-                onClick = {
-                    activeMenu = menuItems.keys.first()
-                    showMenuBar = true
-                },
-                modifier = Modifier.onGloballyPositioned { layoutCoordinates ->
-                    val position = layoutCoordinates.localToWindow(Offset.Zero)
-                    iconPosition = IntOffset(position.x.toInt() + 20, position.y.toInt() + 15)
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Menu,
-                    contentDescription = null
-                )
+                IconButton(
+                    onClick = {
+                        activeMenu = menuItems.keys.first()
+                        showMenuBar = true
+                    },
+                    modifier = Modifier.onGloballyPositioned { layoutCoordinates ->
+                        val position = layoutCoordinates.localToWindow(Offset.Zero)
+                        iconPosition = IntOffset(position.x.toInt() + 20, position.y.toInt() + 15)
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Menu,
+                        contentDescription = null
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                if (settings.showFps) {
+                    Text(
+                        text = "${"%.2f".format(fps)} FPS",
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
             }
         }
 
