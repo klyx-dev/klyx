@@ -33,6 +33,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
@@ -65,7 +66,8 @@ fun CodeEditor(
     state: CodeEditorState = rememberCodeEditorState(),
     fontFamily: FontFamily = FontFamily.Monospace,
     fontSize: TextUnit = 18.sp,
-    editable: Boolean = true
+    editable: Boolean = true,
+    pinLineNumber: Boolean = true
 ) {
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
@@ -102,27 +104,31 @@ fun CodeEditor(
         ) {
             gutterWidth = 40.dp.toPx()
 
-            clipRect {
-                drawRect(
-                    color = colorScheme.surfaceContainerHigh,
-                    size = size
-                )
+            translate(
+                left = if (pinLineNumber) 0f else state.scrollX
+            ) {
+                clipRect {
+                    drawRect(
+                        color = colorScheme.surfaceContainerHigh,
+                        size = size
+                    )
 
-                if (state.textLayoutResult != null) {
-                    for (line in 0 until state.lineCount) {
-                        drawText(
-                            textMeasurer.measure(
-                                text = (line + 1).toString(),
-                                style = TextStyle(
-                                    fontFamily = fontFamily,
-                                    fontSize = fontSize,
-                                    color = colorScheme.onSurface,
-                                    textAlign = TextAlign.End
+                    if (state.textLayoutResult != null) {
+                        for (line in 0 until state.lineCount) {
+                            drawText(
+                                textMeasurer.measure(
+                                    text = (line + 1).toString(),
+                                    style = TextStyle(
+                                        fontFamily = fontFamily,
+                                        fontSize = fontSize,
+                                        color = colorScheme.onSurface,
+                                        textAlign = TextAlign.End
+                                    ),
+                                    constraints = Constraints(maxWidth = gutterWidth.roundToInt())
                                 ),
-                                constraints = Constraints(maxWidth = gutterWidth.roundToInt())
-                            ),
-                            topLeft = Offset(2f, state.getLineTop(line) + state.scrollY)
-                        )
+                                topLeft = Offset(2f, state.getLineTop(line) + state.scrollY)
+                            )
+                        }
                     }
                 }
             }
@@ -167,7 +173,9 @@ fun CodeEditor(
         ) {
             state.canvasSize = size
 
-            clipRect {
+            clipRect(
+                left = if (pinLineNumber) 0f else state.scrollX
+            ) {
                 drawRect(colorScheme.background)
 
                 val result = textMeasurer.measure(

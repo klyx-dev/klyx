@@ -45,6 +45,7 @@ class TestActivity : ComponentActivity() {
                                 state = rememberCodeEditorState("Hello"),
                                 modifier = Modifier.fillMaxSize(),
                                 editable = false,
+                                pinLineNumber = false,
                                 fontFamily = FontFamily(
                                     Font(
                                         googleFont = GoogleFont("JetBrains Mono"),
