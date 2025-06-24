@@ -87,15 +87,22 @@ class CodeEditorState(
     @Stable
     internal suspend fun startFpsTracker() = fpsTracker.start()
 
-    internal fun showTextToolbar(position: Offset) {
+    internal fun showTextToolbar(
+        position: Offset,
+        editable: Boolean = true
+    ) {
         coroutineScope.launch(Dispatchers.Main) {
             textToolbar.showMenu(
                 rect = Rect(
                     offset = position,
                     size = Size.VisibilityThreshold
                 ),
-                onCutRequested = ::cut,
-                onPasteRequested = ::paste,
+                onCutRequested = if (editable) {
+                    { cut() }
+                } else null,
+                onPasteRequested = if (editable) {
+                    { paste() }
+                } else null,
                 onCopyRequested = ::copy,
                 onSelectAllRequested = ::selectAll
             )

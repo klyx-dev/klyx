@@ -16,22 +16,26 @@ import kotlinx.coroutines.launch
 @ExperimentalCodeEditorApi
 private class CodeEditorInputModifierNode(
     var state: CodeEditorState,
+    var editable: Boolean,
     var keyboardController: SoftwareKeyboardController?,
 ) : Modifier.Node(), FocusEventModifierNode, PlatformTextInputModifierNode {
     private var focusedJob: Job? = null
 
     override fun onFocusEvent(focusState: FocusState) {
         focusedJob?.cancel()
-        focusedJob = if (focusState.isFocused) {
-            keyboardController?.show()
-            coroutineScope.launch {
-                establishTextInputSession {
-                    startInputMethod(createInputRequest(state))
+
+        if (editable) {
+            focusedJob = if (focusState.isFocused) {
+                keyboardController?.show()
+                coroutineScope.launch {
+                    establishTextInputSession {
+                        startInputMethod(createInputRequest(state))
+                    }
                 }
+            } else {
+                keyboardController?.hide()
+                null
             }
-        } else {
-            keyboardController?.hide()
-            null
         }
     }
 }
@@ -39,18 +43,21 @@ private class CodeEditorInputModifierNode(
 @ExperimentalCodeEditorApi
 private data class CodeEditorInputElement(
     private val state: CodeEditorState,
+    private val editable: Boolean,
     private val keyboardController: SoftwareKeyboardController?
 ) : ModifierNodeElement<CodeEditorInputModifierNode>() {
     override fun InspectorInfo.inspectableProperties() {
         name = "codeEditorInput"
         properties["state"] = state
+        properties["editable"] = editable
         properties["keyboardController"] = keyboardController
     }
 
-    override fun create() = CodeEditorInputModifierNode(state, keyboardController)
+    override fun create() = CodeEditorInputModifierNode(state, editable, keyboardController)
 
     override fun update(node: CodeEditorInputModifierNode) {
         node.state = state
+        node.editable = editable
         node.keyboardController = keyboardController
     }
 }
@@ -58,5 +65,6 @@ private data class CodeEditorInputElement(
 @ExperimentalCodeEditorApi
 internal fun Modifier.codeEditorInput(
     state: CodeEditorState,
+    editable: Boolean = true,
     keyboardController: SoftwareKeyboardController? = null
-) = this then CodeEditorInputElement(state, keyboardController)
+) = this then CodeEditorInputElement(state, editable, keyboardController)

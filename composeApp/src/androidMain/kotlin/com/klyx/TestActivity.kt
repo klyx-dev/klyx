@@ -44,6 +44,7 @@ class TestActivity : ComponentActivity() {
                             CodeEditor(
                                 state = rememberCodeEditorState("Hello"),
                                 modifier = Modifier.fillMaxSize(),
+                                editable = false,
                                 fontFamily = FontFamily(
                                     Font(
                                         googleFont = GoogleFont("JetBrains Mono"),

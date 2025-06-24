@@ -64,7 +64,8 @@ fun CodeEditor(
     modifier: Modifier = Modifier,
     state: CodeEditorState = rememberCodeEditorState(),
     fontFamily: FontFamily = FontFamily.Monospace,
-    fontSize: TextUnit = 18.sp
+    fontSize: TextUnit = 18.sp,
+    editable: Boolean = true
 ) {
     val haptics = LocalHapticFeedback.current
     val density = LocalDensity.current
@@ -135,6 +136,7 @@ fun CodeEditor(
                 .focusRequester(focusRequester)
                 .codeEditorInput(
                     state = state,
+                    editable = editable,
                     keyboardController = keyboardController
                 )
                 .focusable(interactionSource = remember { MutableInteractionSource() })
@@ -157,7 +159,7 @@ fun CodeEditor(
                             state.select(wordBoundary)
                             state.cursorPosition = CursorPosition(wordBoundary.end)
 
-                            state.showTextToolbar(position)
+                            state.showTextToolbar(position, editable)
                         }
                     )
                 }
@@ -184,16 +186,18 @@ fun CodeEditor(
                     topLeft = state.scrollOffset
                 )
 
-                val cursorRect = state.getCursorRect()
+                if (editable) {
+                    val cursorRect = state.getCursorRect()
 
-                drawLine(
-                    color = colorScheme.primary,
-                    alpha = cursorAlpha,
-                    start = cursorRect.topCenter + state.scrollOffset,
-                    end = cursorRect.bottomCenter + state.scrollOffset,
-                    strokeWidth = 2f,
-                    cap = StrokeCap.Round,
-                )
+                    drawLine(
+                        color = colorScheme.primary,
+                        alpha = cursorAlpha,
+                        start = cursorRect.topCenter + state.scrollOffset,
+                        end = cursorRect.bottomCenter + state.scrollOffset,
+                        strokeWidth = 2f,
+                        cap = StrokeCap.Round,
+                    )
+                }
 
                 drawPath(
                     path = state.getPathForSelectionRange().apply { translate(state.scrollOffset) },
