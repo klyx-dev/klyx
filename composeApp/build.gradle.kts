@@ -78,7 +78,7 @@ android {
         minSdk = Configs.Android.MIN_SDK_VERSION
         targetSdk = Configs.Android.TARGET_SDK_VERSION
         versionCode = Version.AppVersionCode
-        versionName = Version.STABLE_VERSION_NAME
+        versionName = Version.VERSION_NAME
     }
 
     packaging {

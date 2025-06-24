@@ -1,14 +1,15 @@
 package com.klyx
 
 object Version {
-    const val STABLE_VERSION_NAME = "1.4.0"
+    const val STABLE_VERSION_NAME = "1.5.0"
     const val PRE_RELEASE_VERSION_SUFFIX = "dev"
 
+    val VERSION_NAME = "1.5.0-alpha.0"
     val AppVersionCode get() = calculateVersionCode()
 
     private fun calculateVersionCode(): Int {
         val semverRegex = Regex("""(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta|rc)\.(\d+))?""")
-        val match = semverRegex.matchEntire(STABLE_VERSION_NAME) ?: error("Invalid semver format: $STABLE_VERSION_NAME")
+        val match = semverRegex.matchEntire(VERSION_NAME) ?: error("Invalid semver format: $VERSION_NAME")
 
         val (majorStr, minorStr, patchStr, preReleaseType, preReleaseNumStr) = match.destructured
 
