@@ -34,7 +34,6 @@ import com.klyx.core.hasStoragePermission
 import com.klyx.core.requestStoragePermission
 import com.klyx.editor.CodeEditor
 import com.klyx.editor.ExperimentalCodeEditorApi
-import com.klyx.editor.rememberCodeEditorState
 import com.klyx.tab.Tab
 import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel

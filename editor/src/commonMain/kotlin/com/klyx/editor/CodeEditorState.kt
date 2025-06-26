@@ -10,9 +10,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.TextToolbar
 import androidx.compose.ui.platform.TextToolbarStatus
@@ -23,12 +20,9 @@ import androidx.compose.ui.text.substring
 import androidx.compose.ui.util.fastCoerceAtLeast
 import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.util.fastCoerceIn
-import com.klyx.core.FpsTracker
-import com.klyx.core.event.EventBus
 import com.klyx.editor.clipboard.clipEntryOf
 import com.klyx.editor.clipboard.paste
 import com.klyx.editor.cursor.CursorPosition
-import com.klyx.editor.input.handleKeyEvent
 import com.klyx.editor.selection.Selection
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,12 +66,6 @@ class CodeEditorState(
 
     init {
         cursorPosition = CursorPosition(buffer.length)
-
-        EventBus.instance.subscribe<KeyEvent> { event ->
-            if (event.type == KeyEventType.KeyDown) {
-                handleKeyEvent(event)
-            }
-        }
     }
 
     internal fun showTextToolbar(editable: Boolean = true) {
@@ -314,7 +302,7 @@ class CodeEditorState(
     internal fun getPathForRange(range: TextRange) = textLayoutResult!!.getPathForRange(range.start, range.end)
     internal fun getPathForSelectionRange() = getPathForRange(getResolvedSelectionRange())
     internal fun getOffsetForPosition(position: Offset) = textLayoutResult!!.getOffsetForPosition(position)
-    internal fun getLineHeight(lineIndex: Int) = getLineBottom(lineIndex) - getLineTop(lineIndex)
+    internal fun getLineHeight(lineIndex: Int) = textLayoutResult!!.multiParagraph.getLineHeight(lineIndex)
     internal fun getLineTop(lineIndex: Int) = textLayoutResult!!.getLineTop(lineIndex)
     internal fun getLineBottom(lineIndex: Int) = textLayoutResult!!.getLineBottom(lineIndex)
 

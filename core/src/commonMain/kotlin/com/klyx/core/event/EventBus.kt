@@ -129,6 +129,8 @@ class EventBus private constructor() {
         eventChannels.clear()
         eventFlows.clear()
     }
+
+    fun unsubscribeAll() = clear()
 }
 
 inline fun <reified T : Any> LifecycleOwner.subscribeToEvent(

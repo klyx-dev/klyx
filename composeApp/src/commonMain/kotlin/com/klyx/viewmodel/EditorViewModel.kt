@@ -1,9 +1,6 @@
 package com.klyx.viewmodel
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.core.Notifier
@@ -20,7 +17,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
-import java.awt.SystemColor.text
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
@@ -76,9 +72,7 @@ class EditorViewModel(
                 name = tabTitle,
                 isInternal = isInternal,
                 fileWrapper = file,
-                editorState = CodeEditorState(
-                    initialText = runCatching { file.readText() }.getOrElse { "" }
-                )
+                editorState = CodeEditorState(initialText = runCatching { file.readText() }.getOrElse { "" })
             )
 
             openTab(fileTab)
@@ -129,6 +123,7 @@ class EditorViewModel(
             val updatedTabs = current.openTabs.map { tab ->
                 if (tab.id == tabId) newTab else tab
             }
+
             current.copy(
                 openTabs = updatedTabs,
                 activeTabId = if (current.activeTabId == tabId) newTab.id else current.activeTabId
@@ -180,7 +175,6 @@ class EditorViewModel(
             if (file.path == "untitled") return false
 
             if (file.canWrite()) {
-                println(text)
                 file.writeText(text)
                 tab.markAsSaved()
                 true

@@ -11,7 +11,6 @@ import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputContentInfo
-import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
@@ -167,8 +166,8 @@ class CodeEditorInputConnection(
     }
 
     override fun sendKeyEvent(event: KeyEvent): Boolean {
-        scope.launch {
-            EventBus.instance.post(event.asComposeKeyEvent())
+        if (event.action == KeyEvent.ACTION_DOWN) {
+            state.handleKeyEvent(event.asComposeKeyEvent())
         }
         return true
     }
