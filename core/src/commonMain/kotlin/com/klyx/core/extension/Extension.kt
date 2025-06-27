@@ -1,17 +1,18 @@
 package com.klyx.core.extension
 
-import java.io.File
+import com.klyx.core.file.KxFile
+import com.klyx.core.file.resolve
 
 data class Extension(
     val toml: ExtensionToml,
     val path: String,
-    val wasmFiles: List<File> = emptyList(),
-    val themeFiles: List<File> = emptyList(),
+    val wasmFiles: List<KxFile> = emptyList(),
+    val themeFiles: List<KxFile> = emptyList(),
     val isDevExtension: Boolean = false
 )
 
 @Throws(Exception::class)
-fun parseExtension(dir: File, toml: ExtensionToml): Extension {
+fun parseExtension(dir: KxFile, toml: ExtensionToml): Extension {
     val themes = dir.resolve("themes").listFiles { file ->
         file.extension == "json"
     }?.toList() ?: emptyList()

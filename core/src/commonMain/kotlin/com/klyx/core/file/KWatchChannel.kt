@@ -2,22 +2,8 @@ package com.klyx.core.file
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
-import java.io.File
-import java.nio.file.FileSystems
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.StandardWatchEventKinds.ENTRY_CREATE
-import java.nio.file.StandardWatchEventKinds.ENTRY_DELETE
-import java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY
-import java.nio.file.WatchKey
-import java.nio.file.WatchService
-import java.nio.file.attribute.BasicFileAttributes
 
 // https://github.com/vishna/watchservice-ktx
 
@@ -30,138 +16,40 @@ import java.nio.file.attribute.BasicFileAttributes
  * watching a single directory or watching directory tree recursively
  * @param [tag] - any kind of data that should be associated with this channel, optional
  */
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 @OptIn(DelicateCoroutinesApi::class)
-class KWatchChannel(
-    val file: File,
-    val scope: CoroutineScope = GlobalScope,
-    val mode: Mode,
-    val tag: Any? = null,
-    private val channel: Channel<KWatchEvent> = Channel()
-) : Channel<KWatchEvent> by channel {
+expect class KWatchChannel(
+    file: KxFile,
+    scope: CoroutineScope = GlobalScope,
+    mode: Mode,
+    tag: Any? = null,
+    channel: Channel<KWatchEvent> = Channel()
+) : Channel<KWatchEvent> {
+    val file: KxFile
+    val scope: CoroutineScope
+    val mode: Mode
+    val tag: Any?
+}
 
-    private val watchService: WatchService = FileSystems.getDefault().newWatchService()
-    private val registeredKeys = ArrayList<WatchKey>()
-    private val path: Path = if (file.isFile) {
-        file.parentFile
-    } else {
-        file
-    }.toPath()
+/**
+ * Describes the mode this channels is running in
+ */
+enum class Mode {
+    /**
+     * Watches only the given file
+     */
+    SingleFile,
 
     /**
-     * Registers this channel to watch any changes in path directory and its subdirectories
-     * if applicable. Removes any previous subscriptions.
+     * Watches changes in the given directory, changes in subdirectories will be
+     * ignored
      */
-    private fun registerPaths() {
-        registeredKeys.apply {
-            forEach { it.cancel() }
-            clear()
-        }
-        if (mode == Mode.Recursive) {
-            Files.walkFileTree(path, object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(subPath: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    registeredKeys += subPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE)
-                    return FileVisitResult.CONTINUE
-                }
-            })
-        } else {
-            registeredKeys += path.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE)
-        }
-    }
-
-    init {
-        // commence emitting events from channel
-        scope.launch(Dispatchers.IO) {
-            // sending channel initialization event
-            channel.send(
-                KWatchEvent(
-                    file = path.toFile(),
-                    tag = tag,
-                    kind = KWatchEvent.Kind.Initialized
-                )
-            )
-
-            var shouldRegisterPath = true
-
-            while (!isClosedForSend) {
-
-                if (shouldRegisterPath) {
-                    registerPaths()
-                    shouldRegisterPath = false
-                }
-
-                val monitorKey = watchService.take()
-                val dirPath = monitorKey.watchable() as? Path ?: break
-                monitorKey.pollEvents().forEach {
-                    val eventPath = dirPath.resolve(it.context() as Path)
-
-                    if (mode == Mode.SingleFile && eventPath.toFile().absolutePath != file.absolutePath) {
-                        return@forEach
-                    }
-
-                    val eventType = when (it.kind()) {
-                        ENTRY_CREATE -> KWatchEvent.Kind.Created
-                        ENTRY_DELETE -> KWatchEvent.Kind.Deleted
-                        else -> KWatchEvent.Kind.Modified
-                    }
-
-                    val event = KWatchEvent(
-                        file = eventPath.toFile(),
-                        tag = tag,
-                        kind = eventType
-                    )
-
-                    // if any folder is created or deleted... and we are supposed
-                    // to watch subtree we re-register the whole tree
-                    if (mode == Mode.Recursive &&
-                        event.kind in listOf(KWatchEvent.Kind.Created, KWatchEvent.Kind.Deleted) &&
-                        event.file.isDirectory
-                    ) {
-                        shouldRegisterPath = true
-                    }
-
-                    channel.send(event)
-                }
-
-                if (!monitorKey.reset()) {
-                    monitorKey.cancel()
-                    close()
-                    break
-                } else if (isClosedForSend) {
-                    break
-                }
-            }
-        }
-    }
-
-    override fun close(cause: Throwable?): Boolean {
-        registeredKeys.apply {
-            forEach { it.cancel() }
-            clear()
-        }
-
-        return channel.close(cause)
-    }
+    SingleDirectory,
 
     /**
-     * Describes the mode this channels is running in
+     * Watches changes in subdirectories
      */
-    enum class Mode {
-        /**
-         * Watches only the given file
-         */
-        SingleFile,
-
-        /**
-         * Watches changes in the given directory, changes in subdirectories will be
-         * ignored
-         */
-        SingleDirectory,
-
-        /**
-         * Watches changes in subdirectories
-         */
-        Recursive
-    }
+    Recursive
 }
 
 /**
@@ -175,13 +63,13 @@ class KWatchChannel(
  * @param [scope] - coroutine context for the channel, optional
  */
 @OptIn(DelicateCoroutinesApi::class)
-fun File.asWatchChannel(
-    mode: KWatchChannel.Mode? = null,
+fun KxFile.asWatchChannel(
+    mode: Mode? = null,
     tag: Any? = null,
     scope: CoroutineScope = GlobalScope
 ) = KWatchChannel(
     file = this,
-    mode = mode ?: if (isFile) KWatchChannel.Mode.SingleFile else KWatchChannel.Mode.Recursive,
+    mode = mode ?: if (isFile) Mode.SingleFile else Mode.Recursive,
     scope = scope,
     tag = tag
 )

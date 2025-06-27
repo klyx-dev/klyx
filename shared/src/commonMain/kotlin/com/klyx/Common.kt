@@ -12,3 +12,7 @@ inline fun <T, R> T?.ifNull(defaultValue: () -> R): R where T : R {
 
 val Enum<*>.spacedName: String
     get() = name.replace(Regex("(?<=[a-z])(?=[A-Z])"), " ")
+
+fun nothing(exception: Throwable? = null): Nothing = throw exception.ifNull { UnknownError() }
+fun nothing(message: String): Nothing = nothing(RuntimeException(message))
+fun unsupported(message: String? = null): Nothing = throw UnsupportedOperationException(message)

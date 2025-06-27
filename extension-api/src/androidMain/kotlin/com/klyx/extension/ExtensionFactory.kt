@@ -2,6 +2,7 @@ package com.klyx.extension
 
 import android.content.Context
 import com.klyx.core.extension.Extension
+import com.klyx.core.file.rawFile
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.impl.Android
 import com.klyx.extension.impl.FileSystem
@@ -15,14 +16,16 @@ class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
         val id = extension.toml.id
 
         extension.themeFiles.forEach { file ->
-            ThemeManager.loadThemeFamily(file.inputStream().asSource()).getOrThrow()
+            if (file.inputStream() == null) return@forEach
+
+            ThemeManager.loadThemeFamily(file.inputStream()!!.asSource()).getOrThrow()
         }
 
         return extension.wasmFiles.firstOrNull()?.let { wasm ->
             val memorySize = extension.toml.requestedMemorySize ?: 1 // Default to 1MB if not specified
             val builder = KWasmProgram
                 .builder(ByteBufferMemoryProvider(memorySize * 1024L * 1024L))
-                .withBinaryModule(id, wasm)
+                .withBinaryModule(id, wasm.rawFile())
 
             for (module in modules) {
                 for (func in module.getHostFunctions()) {

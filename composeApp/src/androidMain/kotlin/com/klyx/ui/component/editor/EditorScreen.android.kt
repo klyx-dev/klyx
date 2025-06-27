@@ -28,7 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.LocalAppSettings
-import com.klyx.core.file.FileWrapper
+import com.klyx.core.file.KxFile
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
 import com.klyx.core.requestStoragePermission
@@ -59,7 +59,7 @@ actual fun EditorScreen(modifier: Modifier) {
     val fontFamily = rememberFontFamily(editorSettings.fontFamily)
 
     var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingFile: FileWrapper? by remember { mutableStateOf(null) }
+    var pendingFile: KxFile? by remember { mutableStateOf(null) }
     var permissionGranted by rememberSaveable { mutableStateOf(context.hasStoragePermission()) }
 
     DisposableEffect(Unit) {
@@ -142,32 +142,27 @@ actual fun EditorScreen(modifier: Modifier) {
 
                 when {
                     tab is Tab.FileTab -> {
-                        val file = tab.data as? FileWrapper
-                        if (file != null) {
-                            if (file.path != "untitled") {
-                                LaunchedEffect(Unit) {
-                                    if (file.requiresPermission(context, isWrite = true)) {
-                                        viewModel.closeTab(tab.id)
-                                        pendingFile = file
-                                        showPermissionDialog = true
-                                        return@LaunchedEffect
-                                    }
+                        val file = tab.file
+
+                        if (file.path != "untitled") {
+                            LaunchedEffect(Unit) {
+                                if (file.requiresPermission(context, isWrite = true)) {
+                                    viewModel.closeTab(tab.id)
+                                    pendingFile = file
+                                    showPermissionDialog = true
+                                    return@LaunchedEffect
                                 }
                             }
-
-                            CodeEditor(
-                                modifier = Modifier.fillMaxSize(),
-                                state = tab.editorState,
-                                fontFamily = fontFamily,
-                                fontSize = editorSettings.fontSize.sp,
-                                editable = !tab.isInternal,
-                                pinLineNumber = editorSettings.pinLineNumbers
-                            )
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("Invalid file")
-                            }
                         }
+
+                        CodeEditor(
+                            modifier = Modifier.fillMaxSize(),
+                            state = tab.editorState,
+                            fontFamily = fontFamily,
+                            fontSize = editorSettings.fontSize.sp,
+                            editable = !tab.isInternal,
+                            pinLineNumber = editorSettings.pinLineNumbers
+                        )
                     }
 
                     else -> {

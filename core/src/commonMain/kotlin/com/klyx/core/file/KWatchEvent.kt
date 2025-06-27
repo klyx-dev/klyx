@@ -1,7 +1,5 @@
 package com.klyx.core.file
 
-import java.io.File
-
 // https://github.com/vishna/watchservice-ktx
 
 /**
@@ -11,7 +9,7 @@ data class KWatchEvent(
     /**
      * Absolute path of modified folder/file
      */
-    val file: File,
+    val file: KxFile,
 
     /**
      * Kind of file system event

@@ -30,16 +30,26 @@ kotlin {
         val jvmMain by getting
         val androidMain by getting
 
+        val commonJvmMain by creating {
+            dependsOn(commonMain)
+
+            dependencies {
+                implementation(kotlin("stdlib"))
+            }
+        }
+
+        androidMain.dependsOn(commonJvmMain)
+        jvmMain.dependsOn(commonJvmMain)
+
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.json5k)
             implementation(libs.ktoml.core)
-            implementation(libs.ktoml.file)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.cio)
             implementation(libs.commons.compress)
-            implementation(libs.koin.core)
-            implementation(libs.koin.compose)
+            api(libs.koin.core)
+            api(libs.koin.compose)
 
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -54,6 +64,7 @@ kotlin {
             api(libs.kotlinx.datetime)
             api(libs.kotlinx.io.core)
             implementation(libs.okio)
+            implementation(libs.kotlinx.coroutines.core)
 
             implementation(projects.shared)
 
@@ -68,8 +79,9 @@ kotlin {
         androidMain {
             dependencies {
                 api(libs.utilcodex)
-                implementation(libs.androidx.documentfile)
+                api(libs.androidx.documentfile)
                 implementation(libs.koin.android)
+                implementation(libs.kotlinx.coroutines.android)
             }
         }
     }

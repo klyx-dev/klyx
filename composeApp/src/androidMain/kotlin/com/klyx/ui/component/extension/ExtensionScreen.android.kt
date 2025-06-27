@@ -65,8 +65,7 @@ import com.klyx.core.extension.ExtensionFilter
 import com.klyx.core.extension.ExtensionToml
 import com.klyx.core.extension.fetchExtensions
 import com.klyx.core.extension.installExtension
-import com.klyx.core.file.AndroidFileWrapper
-import com.klyx.core.file.wrapFile
+import com.klyx.core.file.toKxFile
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.net.isConnected
@@ -112,11 +111,10 @@ actual fun ExtensionScreen(modifier: Modifier) {
     val selectDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
             if (uri.host != "com.termux.documents") {
-                val dir = AndroidFileWrapper(context, DocumentFile.fromTreeUri(context, uri)!!)
+                val dir = DocumentFile.fromTreeUri(context, uri)!!.toKxFile()
 
                 scope.launch {
                     ExtensionManager.installExtension(
-                        context = context,
                         dir = dir,
                         factory = factory,
                         isDevExtension = true
@@ -257,8 +255,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                                         isInstalling = true
                                                         installExtension(extension).onSuccess { file ->
                                                             ExtensionManager.installExtension(
-                                                                context = context,
-                                                                dir = file.wrapFile(),
+                                                                dir = file,
                                                                 factory = factory,
                                                                 isDevExtension = false
                                                             ).onSuccess {

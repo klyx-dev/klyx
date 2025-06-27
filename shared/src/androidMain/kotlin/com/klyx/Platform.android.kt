@@ -1,6 +1,7 @@
 package com.klyx
 
 import android.os.Build
+import java.io.File
 
 class AndroidPlatform : Platform {
     override val name = "Android ${Build.VERSION.SDK_INT}"
@@ -9,3 +10,4 @@ class AndroidPlatform : Platform {
 }
 
 actual fun platform(): Platform = AndroidPlatform()
+actual val fileSeparatorChar: Char get() = File.separatorChar

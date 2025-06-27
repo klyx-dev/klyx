@@ -47,8 +47,9 @@ import com.klyx.core.LocalAppSettings
 import com.klyx.core.Notifier
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
-import com.klyx.core.file.AndroidFileWrapper
-import com.klyx.core.file.wrapFile
+import com.klyx.core.file.KxFile
+import com.klyx.core.file.asDocumentFile
+import com.klyx.core.file.toKxFile
 import com.klyx.ui.component.AboutDialog
 import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.viewmodel.EditorViewModel
@@ -57,7 +58,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import java.io.File
 
 @Composable
 actual fun MainMenuBar(modifier: Modifier) {
@@ -75,19 +75,15 @@ actual fun MainMenuBar(modifier: Modifier) {
 
     val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
-            viewModel.openFile(
-                if (AndroidFileWrapper.shouldWrap(uri)) {
-                    AndroidFileWrapper(context, DocumentFile.fromSingleUri(context, uri)!!)
-                } else UriUtils.uri2File(uri).wrapFile()
-            )
+            val file = runCatching { UriUtils.uri2FileNoCacheCopy(uri) }.getOrNull()?.asDocumentFile()
+            viewModel.openFile((file ?: DocumentFile.fromSingleUri(context, uri)!!).toKxFile())
         }
     }
 
     val createFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
         if (uri != null) {
-            val file = if (AndroidFileWrapper.shouldWrap(uri)) {
-                AndroidFileWrapper(context, DocumentFile.fromSingleUri(context, uri)!!)
-            } else UriUtils.uri2File(uri).wrapFile()
+            val file = (runCatching { UriUtils.uri2FileNoCacheCopy(uri) }.getOrNull()?.asDocumentFile()
+                ?: DocumentFile.fromSingleUri(context, uri)!!).toKxFile()
 
             val saved = viewModel.saveAs(file)
             if (saved) notifier.notify("Saved")
@@ -103,11 +99,11 @@ actual fun MainMenuBar(modifier: Modifier) {
                 MenuItem("About Klyx...") { showAbout = true },
                 MenuItem(),
                 MenuItem("Open Settings", "Ctrl-,") {
-                    viewModel.openFile(File(Environment.SettingsFilePath).wrapFile())
+                    viewModel.openFile(KxFile(Environment.SettingsFilePath))
                 },
                 MenuItem("Open Default Settings") {
                     viewModel.openFile(
-                        File(Environment.InternalSettingsFilePath).wrapFile(),
+                        KxFile(Environment.InternalSettingsFilePath),
                         tabTitle = "Default Settings",
                         isInternal = true
                     )
@@ -150,7 +146,7 @@ actual fun MainMenuBar(modifier: Modifier) {
             "File" to listOf(
                 MenuItem("New File", "Ctrl-N") {
                     //createFile.launch("untitled")
-                    viewModel.openFile(File("untitled").wrapFile())
+                    viewModel.openFile(KxFile("untitled"))
                 },
                 MenuItem("Open File...", "Ctrl-O") {
                     openFile.launch(arrayOf("*/*"))

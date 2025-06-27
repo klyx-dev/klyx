@@ -1,11 +1,9 @@
 package com.klyx.core.extension
 
 import com.akuleshov7.ktoml.Toml
-import com.akuleshov7.ktoml.source.decodeFromStream
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
-import java.io.InputStream
 
 /**
  * This is inspired by [zed](zed.dev) extension toml.
@@ -41,16 +39,11 @@ data class ExtensionToml(
         fun from(toml: String): ExtensionToml {
             return Toml.decodeFromString(toml)
         }
-
-        @JvmStatic
-        fun from(inputStream: InputStream): ExtensionToml {
-            return Toml.decodeFromStream(inputStream)
-        }
     }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (javaClass != other?.javaClass) return false
+        if (other == null || this::class != other::class) return false
 
         other as ExtensionToml
 

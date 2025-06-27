@@ -5,7 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
-import com.klyx.core.file.FileWrapper
+import com.klyx.core.file.KxFile
+import com.klyx.core.file.id
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ifNull
@@ -62,7 +63,7 @@ class EditorViewModel(
     }
 
     fun openFile(
-        file: FileWrapper,
+        file: KxFile,
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
@@ -71,7 +72,7 @@ class EditorViewModel(
                 id = file.id,
                 name = tabTitle,
                 isInternal = isInternal,
-                fileWrapper = file,
+                file = file,
                 editorState = CodeEditorState(initialText = runCatching { file.readText() }.getOrElse { "" })
             )
 
@@ -113,9 +114,9 @@ class EditorViewModel(
         return current.openTabs.find { it.id == current.activeTabId }
     }
 
-    fun getActiveFile(): FileWrapper? {
+    fun getActiveFile(): KxFile? {
         val current = _state.value
-        return (current.openTabs.find { it is Tab.FileTab && it.id == current.activeTabId } as? Tab.FileTab)?.fileWrapper
+        return (current.openTabs.find { it is Tab.FileTab && it.id == current.activeTabId } as? Tab.FileTab)?.file
     }
 
     fun replaceTab(tabId: TabId, newTab: Tab) {
@@ -170,11 +171,11 @@ class EditorViewModel(
 
         return if (tab is Tab.FileTab) {
             val text by tab.editorState
-            val file = tab.fileWrapper
+            val file = tab.file
 
             if (file.path == "untitled") return false
 
-            if (file.canWrite()) {
+            if (file.canWrite) {
                 file.writeText(text)
                 tab.markAsSaved()
                 true
@@ -182,7 +183,7 @@ class EditorViewModel(
         } else false
     }
 
-    fun saveAs(newFile: FileWrapper): Boolean {
+    fun saveAs(newFile: KxFile): Boolean {
         val current = _state.value
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
 
@@ -199,7 +200,7 @@ class EditorViewModel(
             val newTab = Tab.FileTab(
                 id = newFile.id,
                 name = newFile.name,
-                fileWrapper = newFile,
+                file = newFile,
                 editorState = CodeEditorState(editorState)
             )
 
@@ -214,7 +215,7 @@ class EditorViewModel(
 
         _state.value.openTabs.forEach { tab ->
             if (tab is Tab.FileTab) {
-                val file = tab.fileWrapper
+                val file = tab.file
                 val editorState = tab.editorState
 
                 if (file.path != "untitled") {

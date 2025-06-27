@@ -7,19 +7,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import com.blankj.utilcode.util.AppUtils
 import com.klyx.core.file.KWatchEvent
+import com.klyx.core.file.KxFile
 import com.klyx.core.file.asWatchChannel
 import com.klyx.core.file.isTextEqualTo
 import com.klyx.core.settings.SettingsManager
 import kotlinx.coroutines.channels.consumeEach
-import java.io.File
 
 @Composable
 actual fun ProvideBaseCompositionLocals(content: @Composable () -> Unit) {
     val settings by SettingsManager.settings
-    val settingsFile = remember { File(Environment.SettingsFilePath) }
+    val settingsFile = remember { KxFile(Environment.SettingsFilePath) }
 
     LaunchedEffect(Unit) {
         SettingsManager.load()
+        println(settingsFile.absolutePath)
 
         var oldContent = settingsFile.readText()
 

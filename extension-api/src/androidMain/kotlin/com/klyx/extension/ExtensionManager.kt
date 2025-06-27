@@ -1,6 +1,5 @@
 package com.klyx.extension
 
-import android.content.Context
 import androidx.compose.runtime.mutableStateListOf
 import com.blankj.utilcode.util.FileUtils
 import com.klyx.core.Environment
@@ -8,13 +7,14 @@ import com.klyx.core.extension.Extension
 import com.klyx.core.extension.ExtensionToml
 import com.klyx.core.extension.parseExtension
 import com.klyx.core.extension.parseToml
-import com.klyx.core.file.AndroidFileWrapper
-import com.klyx.core.file.FileWrapper
-import com.klyx.core.file.JvmFileWrapper
-import com.klyx.core.file.asJvmFile
+import com.klyx.core.file.KxFile
 import com.klyx.core.file.find
+import com.klyx.core.file.rawFile
+import com.klyx.core.file.resolve
+import com.klyx.core.file.toKxFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.asSource
 import java.io.File
 import java.io.IOException
 
@@ -22,23 +22,18 @@ object ExtensionManager {
     val installedExtensions = mutableStateListOf<Extension>()
 
     suspend fun installExtension(
-        context: Context,
-        dir: FileWrapper,
+        dir: KxFile,
         factory: ExtensionFactory,
         isDevExtension: Boolean = false
     ): Result<Any> = withContext(Dispatchers.IO) {
         val tomlFile = dir.find("extension.toml")
             ?: return@withContext Result.failure(Exception("extension.toml not found in selected folder"))
 
-        val tomlInput = when (tomlFile) {
-            is AndroidFileWrapper -> tomlFile.inputStream() ?: return@withContext Result.failure(Exception("Failed to read extension.toml"))
-            is JvmFileWrapper -> tomlFile.asJvmFile().inputStream()
-            else -> return@withContext Result.failure(Exception("Failed to read extension.toml"))
-        }
+        val tomlInput = tomlFile.inputStream() ?: return@withContext Result.failure(Exception("Failed to read extension.toml"))
 
         val toml = tomlInput.use { input ->
             try {
-                parseToml(input)
+                parseToml(input.asSource())
             } catch (e: Exception) {
                 return@withContext Result.failure(e)
             }
@@ -47,9 +42,9 @@ object ExtensionManager {
         val internalDir = File(
             if (isDevExtension) Environment.DevExtensionsDir else Environment.ExtensionsDir,
             toml.id
-        )
+        ).toKxFile()
 
-        if (internalDir.exists()) {
+        if (internalDir.exists) {
             runCatching {
                 val extension = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
                 installedExtensions.add(extension)
@@ -62,23 +57,19 @@ object ExtensionManager {
 
         internalDir.mkdirs()
 
-        fun copyRecursive(source: FileWrapper, dest: File) {
+        fun copyRecursive(source: KxFile, dest: KxFile) {
             source.listFiles()?.forEach { file ->
                 try {
-                    val destFile = File(dest, file.name)
+                    val destFile = dest.resolve(file.name)
 
                     if (file.isDirectory) {
                         destFile.mkdirs()
                         copyRecursive(file, destFile)
                     } else {
-                        val inputStream = when (file) {
-                            is AndroidFileWrapper -> file.inputStream()
-                            is JvmFileWrapper -> file.asJvmFile().inputStream()
-                            else -> null
-                        }
+                        val inputStream = file.inputStream()
 
                         inputStream?.use { input ->
-                            destFile.outputStream().use { output ->
+                            destFile.outputStream()?.use { output ->
                                 input.copyTo(output)
                             }
                         }
@@ -119,22 +110,27 @@ object ExtensionManager {
     }
 
     suspend fun loadExtensions(factory: ExtensionFactory) = withContext(Dispatchers.IO) {
-        val extensionsDir = File(Environment.ExtensionsDir)
-        if (!extensionsDir.exists()) extensionsDir.mkdirs()
+        val extensionsDir = KxFile(Environment.ExtensionsDir)
+        if (!extensionsDir.exists) extensionsDir.rawFile().mkdirs()
 
-        extensionsDir.listFiles { file -> file.isDirectory }?.forEach { file ->
-            val toml = parseToml(file.resolve("extension.toml").inputStream())
-            val extension = parseExtension(file, toml)
-            installedExtensions.add(extension)
-            factory.loadExtension(extension)
-        }
+        extensionsDir.listFiles { it.isDirectory }?.forEach { loadExtension(it, factory) }
 
-        val devExtensionsDir = File(Environment.DevExtensionsDir)
-        if (!devExtensionsDir.exists()) devExtensionsDir.mkdirs()
+        val devExtensionsDir = KxFile(Environment.DevExtensionsDir)
+        if (!devExtensionsDir.exists) devExtensionsDir.rawFile().mkdirs()
 
-        devExtensionsDir.listFiles { file -> file.isDirectory }?.forEach { file ->
-            val toml = parseToml(file.resolve("extension.toml").inputStream())
-            val extension = parseExtension(file, toml).copy(isDevExtension = true)
+        devExtensionsDir.listFiles { it.isDirectory }?.forEach { loadExtension(it, factory, true) }
+    }
+
+    private suspend fun loadExtension(
+        file: KxFile,
+        factory: ExtensionFactory,
+        isDevExtension: Boolean = false
+    ) {
+        val input = file.resolve("extension.toml").inputStream()
+
+        if (input != null) {
+            val toml = parseToml(input.asSource())
+            val extension = parseExtension(file, toml).copy(isDevExtension = isDevExtension)
             installedExtensions.add(extension)
             factory.loadExtension(extension)
         }

@@ -2,9 +2,12 @@ package com.klyx.core.extension
 
 import com.akuleshov7.ktoml.Toml
 import com.klyx.core.Environment
+import com.klyx.core.decodeBase64
 import com.klyx.core.fetchBody
 import com.klyx.core.fetchText
+import com.klyx.core.file.KxFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -12,9 +15,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.apache.commons.codec.binary.Base64
-import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
-import java.io.File
 
 const val BASE_RAW_URL = "https://raw.githubusercontent.com/klyx-dev/extensions/main"
 const val EXTENSIONS_INDEX_URL = "$BASE_RAW_URL/extensions.toml"
@@ -70,50 +70,24 @@ suspend fun fetchExtensions(): Result<List<ExtensionToml>> = withContext(Dispatc
                 ExtensionFetchException("Failed to fetch extension.toml content for $name")
             )
 
-            extensions.add(Toml.decodeFromString(Base64.decodeBase64(tomlContent).decodeToString()))
+            extensions.add(Toml.decodeFromString(decodeBase64(tomlContent).decodeToString()))
         } ?: return@withContext Result.failure(ExtensionFetchException("Failed to fetch extension Git URL for $name"))
     }
 
     Result.success(extensions)
 }
 
-suspend fun installExtension(toml: ExtensionToml): Result<File> = withContext(Dispatchers.IO) {
+suspend fun installExtension(toml: ExtensionToml): Result<KxFile> = withContext(Dispatchers.IO) {
     if (toml.repository.isBlank()) {
         return@withContext Result.failure(ExtensionInstallException("Extension repository is blank"))
     }
 
     val (username, reponame) = parseRepoInfo(toml.repository)
     val zip = downloadRepoZip(repo = "$username/$reponame")
-    val internalDir = File(Environment.ExtensionsDir, toml.id)
+    val internalDir = KxFile("${Environment.ExtensionsDir}/${toml.id}")
 
     zip.extractRepoZip(internalDir)
     Result.success(internalDir)
 }
 
-private suspend fun ByteArray.extractRepoZip(targetDir: File): Boolean = withContext(Dispatchers.IO) {
-    ZipArchiveInputStream(inputStream()).use { input ->
-        var entry = input.nextEntry
-
-        while (entry != null) {
-            val name = entry.name.substringAfter("/")
-
-            if (name.isEmpty()) {
-                entry = input.nextEntry
-                continue
-            }
-
-            val outputFile = File(targetDir, name)
-
-            if (entry.isDirectory) {
-                outputFile.mkdirs()
-            } else {
-                outputFile.parentFile?.mkdirs()
-                outputFile.outputStream().use(input::copyTo)
-            }
-
-            entry = input.nextEntry
-        }
-    }
-
-    true
-}
+internal expect suspend fun ByteArray.extractRepoZip(targetDir: KxFile)

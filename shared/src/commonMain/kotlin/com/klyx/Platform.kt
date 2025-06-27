@@ -16,4 +16,6 @@ val Platform.isWindows get() = SystemInfo.getCurrentPlatform() == PlatformEnum.W
 
 val lineSeparator: String = System.lineSeparator()
 
+expect val fileSeparatorChar: Char
+
 expect fun platform(): Platform

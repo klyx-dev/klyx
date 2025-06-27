@@ -1,5 +1,7 @@
 package com.klyx
 
+import java.io.File
+
 class JVMPlatform : Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"
     override val os: String = System.getProperty("os.name")
@@ -7,3 +9,4 @@ class JVMPlatform : Platform {
 }
 
 actual fun platform(): Platform = JVMPlatform()
+actual val fileSeparatorChar: Char get() = File.separatorChar

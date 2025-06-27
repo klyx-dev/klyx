@@ -8,7 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.klyx.core.file.FileWrapper
+import com.klyx.core.file.KxFile
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import kotlinx.datetime.Clock
@@ -32,12 +32,12 @@ sealed class Tab(
     @Stable
     data class FileTab(
         override val name: String,
-        val fileWrapper: FileWrapper,
+        val file: KxFile,
         val editorState: CodeEditorState,
         val isInternal: Boolean = false,
         override val id: TabId = "${Clock.System.now().toEpochMilliseconds()}",
         override val content: @Composable () -> Unit = { Box(modifier = Modifier.fillMaxSize()) },
-    ) : Tab(name, id, fileWrapper, content) {
+    ) : Tab(name, id, file, content) {
 
         var isModified by mutableStateOf(false)
 

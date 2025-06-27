@@ -31,10 +31,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.core.Environment
-import com.klyx.core.file.AndroidFileWrapper
-import com.klyx.core.file.JvmFileWrapper
 import com.klyx.core.file.KWatchEvent.Kind
-import com.klyx.core.file.asJvmFile
 import com.klyx.core.file.asWatchChannel
 import com.klyx.tab.Tab
 import com.klyx.ui.theme.DefaultKlyxShape
@@ -53,11 +50,11 @@ actual fun EditorTab(
 
     LaunchedEffect(tab) {
         if (tab is Tab.FileTab) {
-            val file = tab.fileWrapper
-            if (file.exists().not()) return@LaunchedEffect
+            val file = tab.file
+            if (!file.exists) return@LaunchedEffect
 
-            if (file is JvmFileWrapper) {
-                file.asJvmFile().asWatchChannel().consumeEach { event ->
+            if (!file.isFromTermux()) {
+                file.asWatchChannel().consumeEach { event ->
                     if (event.kind == Kind.Deleted || event.kind == Kind.Created) {
                         recomposeScope.invalidate()
                     }
@@ -109,7 +106,7 @@ actual fun EditorTab(
             Spacer(modifier = Modifier.width(6.dp))
         }
 
-        val isTabFileMissing = { (tab is Tab.FileTab && tab.fileWrapper.exists().not() && tab.fileWrapper.name != "untitled") }
+        val isTabFileMissing = { (tab is Tab.FileTab && tab.file.exists.not() && tab.file.name != "untitled") }
 
         Text(
             text = tab.name,
@@ -123,7 +120,7 @@ actual fun EditorTab(
         )
 
         if (tab is Tab.FileTab) {
-            val file = tab.fileWrapper
+            val file = tab.file
 
             if (file.path != "untitled" && !tab.isInternal) {
                 Spacer(modifier = Modifier.width(4.dp))
@@ -138,7 +135,7 @@ actual fun EditorTab(
 
                         result = result.substringBeforeLast("/")
 
-                        if (file is AndroidFileWrapper && file.isFromTermux()) {
+                        if (file.isFromTermux()) {
                             result = "~/termux${result.substringAfterLast("com.termux/files/home")}"
                         }
 
