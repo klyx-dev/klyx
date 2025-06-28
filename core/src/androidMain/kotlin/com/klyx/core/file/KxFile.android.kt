@@ -7,6 +7,9 @@ import androidx.documentfile.provider.DocumentFile
 import com.klyx.ifNull
 import com.klyx.nothing
 import com.klyx.unsupported
+import kotlinx.io.Source
+import kotlinx.io.asSource
+import kotlinx.io.buffered
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.BufferedReader
@@ -87,6 +90,11 @@ actual open class KxFile(
 
     fun isFromTermux() = raw.uri.host == "com.termux.documents"
     fun canWatchFileEvents() = file != null
+
+    actual fun source(): Source {
+        val input = inputStream() ?: nothing("Failed to open input stream for $absolutePath")
+        return input.asSource().buffered().peek()
+    }
 }
 
 private fun DocumentFile.deleteRecursively(): Boolean {

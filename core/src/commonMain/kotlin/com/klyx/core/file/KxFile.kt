@@ -1,6 +1,7 @@
 package com.klyx.core.file
 
 import com.klyx.fileSeparatorChar
+import kotlinx.io.Source
 
 /**
  * Represents a file or directory in the file system.
@@ -42,6 +43,8 @@ expect open class KxFile {
     fun writeBytes(bytes: ByteArray)
     fun writeText(text: String, charset: String = "UTF-8")
     fun readLines(charset: String = "UTF-8"): List<String>
+
+    fun source(): Source
 
     override fun toString(): String
 }

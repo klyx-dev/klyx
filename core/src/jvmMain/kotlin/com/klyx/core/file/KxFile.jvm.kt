@@ -1,5 +1,8 @@
 package com.klyx.core.file
 
+import kotlinx.io.Source
+import kotlinx.io.asSource
+import kotlinx.io.buffered
 import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Path
@@ -51,6 +54,8 @@ actual open class KxFile(
     actual fun readLines(charset: String): List<String> = raw.readLines(Charset.forName(charset))
 
     actual override fun toString(): String = absolutePath
+
+    actual fun source(): Source = inputStream().asSource().buffered().peek()
 }
 
 fun File.toKxFile(): KxFile = KxFile(this)
