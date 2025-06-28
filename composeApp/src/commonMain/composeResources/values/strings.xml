@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<resources>
+    <string name="klyx_menu_title">Klyx</string>
+    <string name="file_menu_title">File</string>
+    <string name="help_menu_title">Help</string>
+
+    <string name="menu_item_about_klyx">About Klyx...</string>
+    <string name="menu_item_open_settings">Open Settings</string>
+    <string name="menu_item_open_default_settings">Open Default Settings</string>
+    <string name="tab_title_default_settings">Default Settings</string>
+    <string name="menu_item_command_palette">Command Palette</string>
+    <string name="menu_item_extensions">Extensions</string>
+    <string name="tab_title_extensions">Extensions</string>
+    <string name="menu_item_restart_app">Restart App</string>
+    <string name="menu_item_quit">Quit</string>
+
+    <string name="menu_item_new_file">New File</string>
+    <string name="default_new_file_name">untitled</string>
+    <string name="menu_item_open_file">Open File...</string>
+    <string name="file_picker_all_files_mimetype">*/*</string>
+    <string name="menu_item_save">Save</string>
+    <string name="menu_item_save_as">Save As...</string>
+    <string name="menu_item_save_all">Save All</string>
+
+    <string name="menu_item_documentation">Documentation</string>
+    <string name="menu_item_keyboard_shortcuts">Keyboard Shortcuts</string>
+    <string name="menu_item_report_issue">Report Issue</string>
+
+    <string name="notification_saved">Saved</string>
+    <string name="notification_no_active_file">No active file</string>
+    <string name="notification_no_files_to_save">No files to save</string>
+    <string name="notification_all_files_saved">All files saved</string>
+    <string name="notification_failed_to_save">Failed to save: %s</string>
+
+    <string name="label_fps_suffix"> FPS</string>
+</resources>

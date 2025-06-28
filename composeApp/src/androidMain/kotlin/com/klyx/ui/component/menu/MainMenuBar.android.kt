@@ -51,14 +51,49 @@ import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.asDocumentFile
 import com.klyx.core.file.toKxFile
+import com.klyx.core.string
+import com.klyx.menu.menu
+import com.klyx.res.Res.string
+import com.klyx.res.default_new_file_name
+import com.klyx.res.file_menu_title
+import com.klyx.res.file_picker_all_files_mimetype
+import com.klyx.res.help_menu_title
+import com.klyx.res.klyx_menu_title
+import com.klyx.res.label_fps_suffix
+import com.klyx.res.menu_item_about_klyx
+import com.klyx.res.menu_item_command_palette
+import com.klyx.res.menu_item_documentation
+import com.klyx.res.menu_item_extensions
+import com.klyx.res.menu_item_keyboard_shortcuts
+import com.klyx.res.menu_item_new_file
+import com.klyx.res.menu_item_open_default_settings
+import com.klyx.res.menu_item_open_file
+import com.klyx.res.menu_item_open_settings
+import com.klyx.res.menu_item_quit
+import com.klyx.res.menu_item_report_issue
+import com.klyx.res.menu_item_restart_app
+import com.klyx.res.menu_item_save
+import com.klyx.res.menu_item_save_all
+import com.klyx.res.menu_item_save_as
+import com.klyx.res.notification_all_files_saved
+import com.klyx.res.notification_failed_to_save
+import com.klyx.res.notification_no_active_file
+import com.klyx.res.notification_no_files_to_save
+import com.klyx.res.notification_saved
+import com.klyx.res.tab_title_default_settings
+import com.klyx.res.tab_title_extensions
 import com.klyx.ui.component.AboutDialog
 import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.viewmodel.EditorViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+
+private fun s(resource: StringResource, vararg formatArgs: Any) = string(resource, formatArgs)
 
 @Composable
 actual fun MainMenuBar(modifier: Modifier) {
@@ -74,20 +109,24 @@ actual fun MainMenuBar(modifier: Modifier) {
     val notifier: Notifier = koinInject()
     val scope = rememberCoroutineScope()
 
-    val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val openFile = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
         if (uri != null) {
             val file = runCatching { UriUtils.uri2FileNoCacheCopy(uri) }.getOrNull()?.asDocumentFile()
             viewModel.openFile((file ?: DocumentFile.fromSingleUri(context, uri)!!).toKxFile())
         }
     }
 
-    val createFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+    val createFile = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(stringResource(string.file_picker_all_files_mimetype))
+    ) { uri ->
         if (uri != null) {
             val file = (runCatching { UriUtils.uri2FileNoCacheCopy(uri) }.getOrNull()?.asDocumentFile()
                 ?: DocumentFile.fromSingleUri(context, uri)!!).toKxFile()
 
             val saved = viewModel.saveAs(file)
-            if (saved) notifier.notify("Saved")
+            if (saved) notifier.notify(s(string.notification_saved))
         }
     }
 
@@ -95,111 +134,99 @@ actual fun MainMenuBar(modifier: Modifier) {
     var showMenuBar by remember { mutableStateOf(false) }
 
     val menuItems = remember {
-        mapOf(
-            "Klyx" to listOf(
-                MenuItem("About Klyx...") { showAbout = true },
-                MenuItem(),
-                MenuItem("Open Settings", "Ctrl-,") {
+        menu {
+            group(string.klyx_menu_title) {
+                item(string.menu_item_about_klyx) { showAbout = true }
+                divider()
+                item(string.menu_item_open_settings, "Ctrl-,") {
                     viewModel.openFile(KxFile(Environment.SettingsFilePath))
-                },
-                MenuItem("Open Default Settings") {
+                }
+                item(string.menu_item_open_default_settings) {
                     viewModel.openFile(
                         KxFile(Environment.InternalSettingsFilePath),
-                        tabTitle = "Default Settings",
+                        tabTitle = s(string.tab_title_default_settings),
                         isInternal = true
                     )
-                },
-                MenuItem(),
-                MenuItem("Command Palette", "Ctrl-Shift-P") {
+                }
+                divider()
+                item(string.menu_item_command_palette, "Ctrl-Shift-P") {
                     CommandManager.showPalette()
-                },
-                MenuItem("Extensions", "Ctrl-Shift-X") {
+                }
+                item(string.menu_item_extensions, "Ctrl-Shift-X") {
                     val id = "extension"
 
                     if (viewModel.isTabOpen(id)) {
                         viewModel.setActiveTab(id)
                     } else {
-                        viewModel.openTab("Extensions", id = id) {
+                        viewModel.openTab(s(string.tab_title_extensions), id = id) {
                             ExtensionScreen(modifier = Modifier.fillMaxSize())
                         }
                         viewModel.setActiveTab(id)
                     }
-                },
-//                MenuItem("Terminal") {
-//                    val id = "terminal"
-//
-//                    if (viewModel.isTabOpen(id)) {
-//                        viewModel.setActiveTab(id)
-//                    } else {
-//                        viewModel.openTab("Terminal", id = id) {
-//                            TerminalScreen(modifier = Modifier.fillMaxSize())
-//                        }
-//                        viewModel.setActiveTab(id)
-//                    }
-//                },
-                MenuItem(),
-                MenuItem("Restart App") { AppUtils.relaunchApp(true) },
-                MenuItem("Quit", "Ctrl-Q") {
+                }
+                divider()
+                item(string.menu_item_restart_app) { AppUtils.relaunchApp(true) }
+                item(string.menu_item_quit, "Ctrl-Q") {
                     activity?.finishAffinity()
                     sendSignal(myPid(), SIGNAL_KILL)
                 }
-            ),
+            }
 
-            "File" to listOf(
-                MenuItem("New File", "Ctrl-N") {
+            group(string.file_menu_title) {
+                item(string.menu_item_new_file, "Ctrl-N") {
                     //createFile.launch("untitled")
-                    viewModel.openFile(KxFile("untitled"))
-                },
-                MenuItem("Open File...", "Ctrl-O") {
-                    openFile.launch(arrayOf("*/*"))
-                },
-                MenuItem(),
-                MenuItem("Save", "Ctrl-S") {
+                    viewModel.openFile(KxFile(s(string.default_new_file_name)))
+                }
+                item(string.menu_item_open_file, "Ctrl-O") {
+                    openFile.launch(arrayOf(s(string.file_picker_all_files_mimetype)))
+                }
+                divider()
+                item(string.menu_item_save, "Ctrl-S") {
                     val file = viewModel.getActiveFile()
                     if (file == null) {
-                        notifier.notify("No active file")
-                        return@MenuItem
+                        notifier.notify(s(string.notification_no_active_file))
+                        return@item
                     }
 
-                    if (file.path == "untitled") {
+                    if (file.path == s(string.default_new_file_name)) {
                         createFile.launch(file.name)
                     } else {
                         val saved = viewModel.saveCurrent()
-                        if (saved) notifier.notify("Saved")
+                        if (saved) notifier.notify(s(string.notification_saved))
                     }
-                },
-                MenuItem("Save As...", "Ctrl-Shift-S") {
+                }
+                item(string.menu_item_save_as, "Ctrl-Shift-S") {
                     val file = viewModel.getActiveFile()
                     if (file == null) {
-                        notifier.notify("No active file")
-                        return@MenuItem
+                        notifier.notify(s(string.notification_no_active_file))
+                        return@item
                     }
                     createFile.launch(file.name)
-                },
-                MenuItem("Save All", "Ctrl-Alt-S") {
+                }
+                item(string.menu_item_save_all, "Ctrl-Alt-S") {
                     val results = viewModel.saveAll()
                     if (results.isEmpty()) {
-                        notifier.notify("No files to save")
+                        notifier.notify(s(string.notification_no_files_to_save))
                     } else {
                         val failedFiles = results.filter { !it.value }.keys
                         if (failedFiles.isEmpty()) {
-                            notifier.notify("All files saved")
+                            notifier.notify(s(string.notification_all_files_saved))
                         } else {
-                            notifier.notify("Failed to save: ${failedFiles.joinToString(", ")}")
+                            notifier.notify(s(string.notification_failed_to_save, failedFiles.joinToString(", ")))
                         }
                     }
-                },
-            ),
+                }
+            }
 
-            "Help" to listOf(
-                MenuItem("Documentation") { uriHandler.openUri("https://github.com/klyx-dev/klyx/tree/main/docs") },
-                MenuItem("Keyboard Shortcuts") {
+            group(string.help_menu_title) {
+                item(string.menu_item_documentation) { uriHandler.openUri("https://github.com/klyx-dev/klyx/tree/main/docs") }
+                item(string.menu_item_keyboard_shortcuts) {
                     uriHandler.openUri("https://github.com/klyx-dev/klyx/blob/main/docs/keyboard-shortcuts.md")
-                },
-                MenuItem(),
-                MenuItem("Report Issue") { uriHandler.openUri("https://github.com/klyx-dev/klyx/issues/new") }
-            )
-        )
+                }
+                divider()
+                item(string.menu_item_report_issue) { uriHandler.openUri("https://github.com/klyx-dev/klyx/issues/new") }
+            }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -282,7 +309,7 @@ actual fun MainMenuBar(modifier: Modifier) {
 
                 if (settings.showFps) {
                     Text(
-                        text = "${"%.2f".format(fps)} FPS",
+                        text = "${"%.2f".format(fps)}${stringResource(string.label_fps_suffix)}",
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }

@@ -22,16 +22,9 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import com.klyx.menu.MenuItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-
-data class MenuItem(
-    val title: String = "",
-    val shortcutKey: String? = null,
-    val isDivider: Boolean = title.isEmpty(),
-    val dismissRequestOnClicked: Boolean = true,
-    val onClick: suspend () -> Unit = {}
-)
 
 @Composable
 fun PopupMenu(
