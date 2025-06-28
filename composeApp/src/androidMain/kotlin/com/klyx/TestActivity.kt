@@ -42,7 +42,23 @@ class TestActivity : ComponentActivity() {
                             Spacer(modifier = Modifier.width(2.dp))
 
                             CodeEditor(
-                                state = rememberCodeEditorState("Hello"),
+                                state = rememberCodeEditorState("""
+                                    fun main() {
+                                        println("Hellow")
+                                    }
+                                    
+                                    fun main() {
+                                        println("Hellow")
+                                    }
+                                    
+                                    fun main() {
+                                        println("Hellow")
+                                    }
+                                    
+                                    fun main() {
+                                        println("Hellow")
+                                    }
+                                """.trimIndent()),
                                 modifier = Modifier.fillMaxSize(),
                                 editable = true,
                                 pinLineNumber = false,

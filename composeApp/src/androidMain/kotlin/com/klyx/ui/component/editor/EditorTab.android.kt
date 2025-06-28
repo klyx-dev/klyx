@@ -53,7 +53,7 @@ actual fun EditorTab(
             val file = tab.file
             if (!file.exists) return@LaunchedEffect
 
-            if (!file.isFromTermux()) {
+            if (!file.isFromTermux() && file.canWatchFileEvents()) {
                 file.asWatchChannel().consumeEach { event ->
                     if (event.kind == Kind.Deleted || event.kind == Kind.Created) {
                         recomposeScope.invalidate()

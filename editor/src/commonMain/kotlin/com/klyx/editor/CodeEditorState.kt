@@ -100,13 +100,16 @@ class CodeEditorState(
         val height = result.size.height.toFloat()
         val width = result.size.width.toFloat()
 
-        scrollX = scrollX.fastCoerceIn(-width + 20f.fastCoerceAtMost(width), 0f)
+        scrollX = scrollX.fastCoerceIn(
+            maximumValue = width - 50f.fastCoerceAtMost(width),
+            minimumValue = 0f
+        )
 
         val extraBottomPadding = getLineHeight((result.lineCount - 1).fastCoerceAtLeast(0)) * 4
 
         scrollY = scrollY.fastCoerceIn(
-            minimumValue = -height + extraBottomPadding.fastCoerceAtMost(height),
-            maximumValue = 0f
+            maximumValue = height - extraBottomPadding.fastCoerceAtMost(height),
+            minimumValue = 0f
         )
     }
 
@@ -133,16 +136,16 @@ class CodeEditorState(
 
         // adjust horizontal scroll
         if (cursorRect.left < viewport.left + padding) {
-            newScrollX = -(cursorRect.left - padding)
+            newScrollX = cursorRect.left - padding
         } else if (cursorRect.right > viewport.right - padding) {
-            newScrollX = viewport.width - cursorRect.right - padding
+            newScrollX = cursorRect.right - viewport.width + padding
         }
 
         // adjust vertical scroll
         if (cursorRect.top < viewport.top + padding) {
-            newScrollY = -(cursorRect.top - padding)
+            newScrollY = cursorRect.top - padding
         } else if (cursorRect.bottom > viewport.bottom - padding) {
-            newScrollY = viewport.height - cursorRect.bottom - padding
+            newScrollY = cursorRect.bottom - viewport.height + padding
         }
 
         if (newScrollX != scrollX || newScrollY != scrollY) {

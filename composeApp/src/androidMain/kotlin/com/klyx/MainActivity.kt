@@ -1,6 +1,8 @@
 package com.klyx
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -13,9 +15,12 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
+import androidx.lifecycle.lifecycleScope
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalBuildVariant
 import com.klyx.core.ProvideBaseCompositionLocals
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.isDebug
 import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.Appearance
@@ -23,6 +28,7 @@ import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
 import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionManager
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
@@ -84,5 +90,20 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    @SuppressLint("RestrictedApi")
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        lifecycleScope.launch {
+            EventBus.instance.post(event.asComposeKeyEvent())
+        }
+        return super.dispatchKeyEvent(event)
+    }
+
+    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
+        lifecycleScope.launch {
+            EventBus.instance.post(event.asComposeKeyEvent())
+        }
+        return super.onKeyShortcut(keyCode, event)
     }
 }

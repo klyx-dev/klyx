@@ -86,6 +86,7 @@ actual open class KxFile(
     fun outputStream(): OutputStream? = file?.outputStream() ?: context.contentResolver.openOutputStream(raw.uri)
 
     fun isFromTermux() = raw.uri.host == "com.termux.documents"
+    fun canWatchFileEvents() = file != null
 }
 
 private fun DocumentFile.deleteRecursively(): Boolean {

@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -58,9 +58,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.zIndex
 import com.klyx.editor.cursor.CURSOR_BLINK_RATE
 import com.klyx.editor.cursor.CursorPosition
@@ -95,19 +97,20 @@ fun CodeEditor(
         state.coroutineScope = scope
     }
 
-    val lines = remember(state.text) { state.text.lines() }
+    val lines = state.text.lines()
     val textMeasurer = rememberTextMeasurer()
-    val lineLayoutCache = remember { LineLayoutCache() }
 
-    val style by produceState(TextStyle.Default, fontSize, fontFamily, colorScheme) {
-        value = TextStyle(
-            fontFamily = fontFamily,
-            fontSize = fontSize,
-            color = colorScheme.onSurface
-        )
-
-        awaitDispose { lineLayoutCache.clear() }
+    val style by remember(colorScheme, fontFamily, fontSize) {
+        derivedStateOf {
+            TextStyle(
+                fontFamily = fontFamily,
+                fontSize = fontSize,
+                color = colorScheme.onSurface
+            )
+        }
     }
+
+    val lineLayoutCache = remember(style) { LineLayoutCache() }
 
     val transition = rememberInfiniteTransition()
     val cursorAlpha by transition.animateFloat(
@@ -130,27 +133,37 @@ fun CodeEditor(
         ).multiParagraph.getLineHeight(0)
     }
 
-    val visibleRange by remember {
+    val visibleRange by remember(lineHeight) {
         derivedStateOf {
             if (state.canvasSize.height <= 0f) return@derivedStateOf 0 .. 0
 
-            val raw = -state.scrollY / lineHeight
-            println("raw: $raw")
-
-            val firstVisibleLine = maxOf(0, floor(-state.scrollY / lineHeight).toInt())
-            val visibleLineCount = (ceil(state.canvasSize.height / lineHeight).toInt() + 2).coerceAtMost(state.lineCount)
+            val firstVisibleLine = maxOf(0, floor(state.scrollY / lineHeight).toInt())
+            val visibleLineCount = (ceil(state.canvasSize.height / lineHeight).toInt() + 2).fastCoerceAtMost(lines.size - 1)
             val lastVisibleLine = minOf(lines.size - 1, firstVisibleLine + visibleLineCount)
-            println(visibleLineCount)
 
-            (firstVisibleLine .. lastVisibleLine).also(::println)
+            firstVisibleLine .. lastVisibleLine
         }
     }
 
-    val fullTextLayoutResult = remember(state.text, style, textMeasurer) {
-        textMeasurer.measure(
-            text = state.text,
+    SideEffect {
+        lineLayoutCache.clear()
+        measureWholeText(
+            textMeasurer = textMeasurer,
+            state = state,
             style = style,
-            softWrap = false
+            density = density,
+            lineHeight = lineHeight
+        )
+        println("Cleared")
+    }
+
+    remember(state.text, style, textMeasurer, colorScheme) {
+        measureWholeText(
+            textMeasurer = textMeasurer,
+            state = state,
+            style = style,
+            density = density,
+            lineHeight = lineHeight
         )
     }
 
@@ -165,7 +178,7 @@ fun CodeEditor(
 
             onDrawBehind {
                 translate(
-                    left = if (pinLineNumber) 0f else state.scrollX
+                    left = if (pinLineNumber) 0f else -state.scrollX
                 ) {
                     clipRect {
                         drawRect(
@@ -201,33 +214,22 @@ fun CodeEditor(
                 .codeEditorScroll(state)
         ) {
             state.canvasSize = size
-            state.textLayoutResult = fullTextLayoutResult
 
             onDrawBehind {
                 clipRect(
-                    left = if (pinLineNumber) 0f else state.scrollX
+                    left = if (pinLineNumber) 0f else -state.scrollX
                 ) {
                     drawRect(colorScheme.background)
 
-                    for (lineIndex in visibleRange) {
-                        val line = lines[lineIndex]
-                        val yPosition = lineIndex * state.getLineHeight(lineIndex) + state.scrollY
-
-                        // skip empty lines or lines outside visible area
-                        if (line.isEmpty() || yPosition + lineHeight < 0 || yPosition > size.height) continue
-
-                        val lineLayout = with(lineLayoutCache) {
-                            textMeasurer.getOrMeasure(
-                                line = line,
-                                style = style
-                            )
-                        }
-
-                        drawText(
-                            textLayoutResult = lineLayout,
-                            topLeft = Offset(state.scrollX, yPosition)
-                        )
-                    }
+                    drawEditorContent(
+                        visibleRange = visibleRange,
+                        lines = lines,
+                        lineHeight = lineHeight,
+                        state = state,
+                        lineLayoutCache = lineLayoutCache,
+                        textMeasurer = textMeasurer,
+                        style = style
+                    )
 
                     if (editable) {
                         drawCursor(state, colorScheme.primary, cursorAlpha)
@@ -239,6 +241,50 @@ fun CodeEditor(
                 }
             }
         }
+    }
+}
+
+@ExperimentalCodeEditorApi
+private fun measureWholeText(
+    textMeasurer: TextMeasurer,
+    state: CodeEditorState,
+    style: TextStyle,
+    density: Density,
+    lineHeight: Float
+) {
+    textMeasurer.measure(
+        text = state.text,
+        style = style.copy(
+            lineHeight = with(density) { lineHeight.toSp() }
+        ),
+        softWrap = false
+    ).also { state.textLayoutResult = it }
+}
+
+@ExperimentalCodeEditorApi
+private fun DrawScope.drawEditorContent(
+    visibleRange: IntRange,
+    lines: List<String>,
+    lineHeight: Float,
+    state: CodeEditorState,
+    lineLayoutCache: LineLayoutCache,
+    textMeasurer: TextMeasurer,
+    style: TextStyle
+) {
+    for (lineIndex in visibleRange) {
+        val line = lines[lineIndex]
+        val yPosition = lineIndex * lineHeight - state.scrollY
+
+        if (line.isEmpty() || yPosition + lineHeight < 0 || yPosition > size.height) continue
+
+        val lineLayout = with(lineLayoutCache) {
+            textMeasurer.getOrMeasure(line, style)
+        }
+
+        drawText(
+            textLayoutResult = lineLayout,
+            topLeft = Offset(-state.scrollX, yPosition)
+        )
     }
 }
 
@@ -256,13 +302,13 @@ private suspend fun PointerInputScope.handleTouchInput(
             state.hideTextToolbarIfShown()
 
             state.cursorPosition = CursorPosition(
-                offset = state.getOffsetForPosition(position - state.scrollOffset)
+                offset = state.getOffsetForPosition(position + state.scrollOffset)
             )
         },
         onLongPress = { position ->
             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
 
-            val offset = state.getOffsetForPosition(position - state.scrollOffset)
+            val offset = state.getOffsetForPosition(position + state.scrollOffset)
             val wordBoundary = state.getWordBoundary(offset)
             state.select(wordBoundary)
             state.cursorPosition = CursorPosition(wordBoundary.end)
@@ -286,7 +332,7 @@ private fun DrawScope.drawLineNumber(
 ) {
     for (line in visibleRange) {
         val lineNumber = line + 1
-        val yPosition = line * lineHeight + state.scrollY
+        val yPosition = line * lineHeight - state.scrollY
 
         // skip if line is not visible
         if (yPosition + lineHeight < 0 || yPosition > size.height) continue
@@ -319,7 +365,7 @@ private fun DrawScope.drawSelection(
     state.getPathForSelectionRange().let { selectionPath ->
         if (!selectionPath.isEmpty) {
             drawPath(
-                path = selectionPath.apply { translate(state.scrollOffset) },
+                path = selectionPath.apply { translate(-state.scrollOffset) },
                 color = color,
                 alpha = 0.5f
             )
@@ -337,8 +383,8 @@ private fun DrawScope.drawCursor(
     drawLine(
         color = color,
         alpha = cursorAlpha,
-        start = cursorRect.topCenter + state.scrollOffset,
-        end = cursorRect.bottomCenter + state.scrollOffset,
+        start = cursorRect.topCenter - state.scrollOffset,
+        end = cursorRect.bottomCenter - state.scrollOffset,
         strokeWidth = 2f,
         cap = StrokeCap.Round,
     )

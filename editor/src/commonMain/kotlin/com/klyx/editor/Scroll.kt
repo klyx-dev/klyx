@@ -9,7 +9,7 @@ internal fun Modifier.codeEditorScroll(state: CodeEditorState) = this then Modif
     detectDragGestures(
         onDrag = { change, dragAmount ->
             change.consume()
-            state.scroll(dragAmount)
+            state.scroll(-dragAmount)
         }
     )
 }
