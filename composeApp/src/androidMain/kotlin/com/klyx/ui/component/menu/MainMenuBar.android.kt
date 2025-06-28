@@ -40,6 +40,7 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
+import com.blankj.utilcode.util.AppUtils
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.Environment
 import com.klyx.core.FpsTracker
@@ -137,6 +138,7 @@ actual fun MainMenuBar(modifier: Modifier) {
 //                    }
 //                },
                 MenuItem(),
+                MenuItem("Restart App") { AppUtils.relaunchApp(true) },
                 MenuItem("Quit", "Ctrl-Q") {
                     activity?.finishAffinity()
                     sendSignal(myPid(), SIGNAL_KILL)

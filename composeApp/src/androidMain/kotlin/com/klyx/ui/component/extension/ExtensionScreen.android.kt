@@ -192,7 +192,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                     modifier = Modifier.padding(horizontal = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    items(filteredExtensions, key = { it.id }) { extension ->
+                    items(filteredExtensions) { extension ->
                         Card(
                             shape = DefaultKlyxShape,
                             colors = CardDefaults.cardColors(

@@ -1,7 +1,6 @@
 package com.klyx.core.cmd
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
@@ -16,7 +15,7 @@ import com.klyx.core.theme.ThemeManager
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object CommandManager {
-    actual val commands = mutableStateListOf<Command>()
+    actual val commands = mutableStateSetOf<Command>()
     actual val recentlyUsedCommands = mutableStateSetOf<Command>()
 
     private val activeSequences = mutableMapOf<Command, ShortcutSequence>()

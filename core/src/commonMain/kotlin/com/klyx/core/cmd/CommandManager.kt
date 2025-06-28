@@ -1,11 +1,10 @@
 package com.klyx.core.cmd
 
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.snapshots.SnapshotStateSet
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect object CommandManager {
-    val commands: SnapshotStateList<Command>
+    val commands: SnapshotStateSet<Command>
     val recentlyUsedCommands: SnapshotStateSet<Command>
 
     var showCommandPalette: Boolean

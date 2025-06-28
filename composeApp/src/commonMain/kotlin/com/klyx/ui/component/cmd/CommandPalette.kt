@@ -40,7 +40,7 @@ import com.klyx.ui.theme.harmonizeWithPrimary
 
 @Composable
 fun CommandPalette(
-    commands: List<Command>,
+    commands: Set<Command>,
     recentlyUsedCommands: Set<Command>,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier
