@@ -126,7 +126,7 @@ actual fun MainMenuBar(modifier: Modifier) {
                 ?: DocumentFile.fromSingleUri(context, uri)!!).toKxFile()
 
             val saved = viewModel.saveAs(file)
-            if (saved) notifier.notify(s(string.notification_saved))
+            if (saved) notifier.success(s(string.notification_saved))
         }
     }
 
@@ -192,7 +192,7 @@ actual fun MainMenuBar(modifier: Modifier) {
                         createFile.launch(file.name)
                     } else {
                         val saved = viewModel.saveCurrent()
-                        if (saved) notifier.notify(s(string.notification_saved))
+                        if (saved) notifier.success(s(string.notification_saved))
                     }
                 }
                 item(string.menu_item_save_as, "Ctrl-Shift-S") {
@@ -210,9 +210,9 @@ actual fun MainMenuBar(modifier: Modifier) {
                     } else {
                         val failedFiles = results.filter { !it.value }.keys
                         if (failedFiles.isEmpty()) {
-                            notifier.notify(s(string.notification_all_files_saved))
+                            notifier.success(s(string.notification_all_files_saved))
                         } else {
-                            notifier.notify(s(string.notification_failed_to_save, failedFiles.joinToString(", ")))
+                            notifier.error(s(string.notification_failed_to_save, failedFiles.joinToString(", ")))
                         }
                     }
                 }

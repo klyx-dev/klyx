@@ -1,16 +1,16 @@
 package com.klyx.core
 
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.asFloatState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.withFrameNanos
 
 @Stable
 class FpsTracker {
     private var lastFrameTimeNs: Long = 0L
-    private var _fps = mutableStateOf(0f)
+    private var _fps = mutableFloatStateOf(0f)
 
-    val fps get() = _fps.asFloatState()
+    val fps: FloatState get() = _fps
 
     suspend fun start() {
         lastFrameTimeNs = withFrameNanos { it }

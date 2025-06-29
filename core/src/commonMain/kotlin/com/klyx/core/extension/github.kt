@@ -49,7 +49,11 @@ suspend fun fetchExtensionEntries(): ExtensionsIndex {
 
 suspend fun fetchExtensions(): Result<List<ExtensionToml>> = withContext(Dispatchers.IO) {
     val extensions = mutableListOf<ExtensionToml>()
-    val entries = fetchExtensionEntries()
+    val entries = try {
+        fetchExtensionEntries()
+    } catch (e: Exception) {
+        return@withContext Result.failure(e)
+    }
 
     for ((name, entry) in entries) {
         val submoduleInfo = Json.parseToJsonElement(

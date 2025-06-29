@@ -99,11 +99,11 @@ actual fun ExtensionScreen(modifier: Modifier) {
         if (networkState.isConnected) {
             isLoading = true
             fetchExtensions().onSuccess { extensions += it }.onFailure {
-                notifier.notify("${it.message}")
+                notifier.error(it.message ?: it.stackTrace.first().toString())
             }
             isLoading = false
         } else {
-            notifier.notify("No internet connection")
+            notifier.warning("No internet connection")
             isLoading = false
         }
     }
@@ -119,7 +119,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                         factory = factory,
                         isDevExtension = true
                     ).onFailure {
-                        notifier.notify("Failed to install extension: ${it.message}")
+                        notifier.error("Failed to install extension: ${it.message}")
                     }
                 }
             } else {
@@ -259,12 +259,12 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                                                 factory = factory,
                                                                 isDevExtension = false
                                                             ).onSuccess {
-                                                                notifier.notify("Extension installed successfully")
+                                                                notifier.success("Extension installed successfully")
                                                             }.onFailure {
-                                                                notifier.notify("Failed to install extension: ${it.message}")
+                                                                notifier.error("Failed to install extension: ${it.message}")
                                                             }
                                                         }.onFailure {
-                                                            notifier.notify("Failed to install extension: ${it.message}")
+                                                            notifier.error("Failed to install extension: ${it.message}")
                                                         }
                                                         isInstalling = false
                                                     }

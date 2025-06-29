@@ -222,20 +222,6 @@ val surfaceContainerHighDarkHighContrast = Color(0xFF373C3F)
 val surfaceContainerHighestDarkHighContrast = Color(0xFF42484A)
 
 
-expect fun Color.blend(
-    color: Color,
-    @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
-): Color
-
-@Composable
-fun Color.harmonizeWithPrimary(
-    @FloatRange(
-        from = 0.0,
-        to = 1.0
-    ) fraction: Float = 0.2f
-): Color = blend(MaterialTheme.colorScheme.primary, fraction)
-
-
 
 
 

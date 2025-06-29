@@ -36,7 +36,7 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
-import com.klyx.ui.theme.harmonizeWithPrimary
+import com.klyx.core.theme.harmonizeWithPrimary
 
 @Composable
 fun CommandPalette(

@@ -51,6 +51,21 @@ class MenuGroupBuilder {
         item(string(resource), shortcutKey, dismissRequestOnClicked, onClick)
     }
 
+    operator fun String.invoke(onClick: suspend () -> Unit) {
+        item(this, onClick = onClick)
+    }
+
+    /**
+     * ```kotlin
+     * (title to shortcutKey) {
+     *     // item clicked
+     * }
+     * ```
+     */
+    operator fun Pair<String, String>.invoke(onClick: suspend () -> Unit) {
+        item(first, second, onClick = onClick)
+    }
+
     fun divider() {
         items += MenuItem() // title empty means divider
     }

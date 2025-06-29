@@ -1,5 +1,8 @@
 package com.klyx.core.theme
 
+import androidx.annotation.FloatRange
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val colorNameMap = mapOf(
@@ -48,3 +51,26 @@ fun String.toColor(): Color {
 private fun throwUnknownColor(): Nothing {
     throw IllegalArgumentException("Unknown color")
 }
+
+fun Color.blend(
+    color: Color,
+    @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
+): Color {
+    val inverseFraction = 1 - fraction
+
+    val r = this.red * inverseFraction + color.red * fraction
+    val g = this.green * inverseFraction + color.green * fraction
+    val b = this.blue * inverseFraction + color.blue * fraction
+    val a = this.alpha * inverseFraction + color.alpha * fraction
+
+    return Color(r, g, b, a)
+}
+
+@Composable
+fun Color.harmonizeWithPrimary(
+    @FloatRange(
+        from = 0.0,
+        to = 1.0
+    ) fraction: Float = 0.2f
+): Color = blend(MaterialTheme.colorScheme.primary, fraction)
+
