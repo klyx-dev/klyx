@@ -278,10 +278,20 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                                             ).onSuccess {
                                                                 notifier.success(string(string.extension_install_success))
                                                             }.onFailure {
-                                                                notifier.error(string(string.extension_install_failed, it.message.toString()))
+                                                                notifier.error(
+                                                                    string(
+                                                                        string.extension_install_failed,
+                                                                        it.message ?: it.stackTrace.first().toString()
+                                                                    )
+                                                                )
                                                             }
                                                         }.onFailure {
-                                                            notifier.error(string(string.extension_install_failed, it.message.toString()))
+                                                            notifier.error(
+                                                                string(
+                                                                    string.extension_install_failed,
+                                                                    it.message ?: it.stackTrace.first().toString()
+                                                                )
+                                                            )
                                                         }
                                                         isInstalling = false
                                                     }

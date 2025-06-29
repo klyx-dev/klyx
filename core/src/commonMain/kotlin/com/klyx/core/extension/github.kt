@@ -87,7 +87,12 @@ suspend fun installExtension(toml: ExtensionToml): Result<KxFile> = withContext(
     }
 
     val (username, reponame) = parseRepoInfo(toml.repository)
-    val zip = downloadRepoZip(repo = "$username/$reponame")
+
+    val zip = try {
+        downloadRepoZip(repo = "$username/$reponame")
+    } catch (e: Exception) {
+        return@withContext Result.failure(e)
+    }
     val internalDir = KxFile("${Environment.ExtensionsDir}/${toml.id}")
 
     zip.extractRepoZip(internalDir)
