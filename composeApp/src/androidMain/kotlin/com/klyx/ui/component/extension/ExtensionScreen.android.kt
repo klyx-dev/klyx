@@ -70,11 +70,28 @@ import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.rememberNetworkState
+import com.klyx.core.string
 import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionManager
+import com.klyx.res.Res.string
+import com.klyx.res.action_install
+import com.klyx.res.action_uninstall
+import com.klyx.res.extension_author_label_plural
+import com.klyx.res.extension_author_label_singular
+import com.klyx.res.extension_downloads
+import com.klyx.res.extension_install_dev_button
+import com.klyx.res.extension_install_failed
+import com.klyx.res.extension_install_success
+import com.klyx.res.extension_screen_title
+import com.klyx.res.extension_search_placeholder
+import com.klyx.res.extension_select_directory_unsupported_provider
+import com.klyx.res.extension_uninstall_restart_prompt
+import com.klyx.res.no_extensions
+import com.klyx.res.no_internet_connection
 import com.klyx.spacedName
 import com.klyx.ui.theme.DefaultKlyxShape
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -103,7 +120,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
             }
             isLoading = false
         } else {
-            notifier.warning("No internet connection")
+            notifier.warning(string(string.no_internet_connection))
             isLoading = false
         }
     }
@@ -119,11 +136,11 @@ actual fun ExtensionScreen(modifier: Modifier) {
                         factory = factory,
                         isDevExtension = true
                     ).onFailure {
-                        notifier.error("Failed to install extension: ${it.message}")
+                        notifier.error(string(string.extension_install_failed, it.message.toString()))
                     }
                 }
             } else {
-                notifier.notify("Select a directory from your device's storage. External storage providers are not supported.")
+                notifier.notify(string(string.extension_select_directory_unsupported_provider))
             }
         }
     }
@@ -134,7 +151,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = "Extensions",
+                text = stringResource(string.extension_screen_title),
                 style = MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.weight(1f)
             )
@@ -147,7 +164,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                 )
             ) {
                 Text(
-                    text = "Install Dev Extension",
+                    text = stringResource(string.extension_install_dev_button),
                     modifier = Modifier.background(Color.Transparent)
                 )
             }
@@ -161,7 +178,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp, vertical = 4.dp),
-            placeholder = { Text("Search extensions...") },
+            placeholder = { Text(stringResource(string.extension_search_placeholder)) },
             singleLine = true,
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) }
         )
@@ -240,8 +257,8 @@ actual fun ExtensionScreen(modifier: Modifier) {
 
                                     Text(
                                         text = if (extension in installedExtensions) {
-                                            "Uninstall"
-                                        } else "Install",
+                                            stringResource(string.action_uninstall)
+                                        } else stringResource(string.action_install),
                                         style = MaterialTheme.typography.bodyMedium,
                                         modifier = Modifier
                                             .clip(DefaultKlyxShape)
@@ -249,7 +266,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                             .clickable(role = Role.Button, enabled = !isInstalling) {
                                                 if (extension in installedExtensions) {
                                                     ExtensionManager.uninstallExtension(extension)
-                                                    notifier.notify("Restart the app to complete the uninstall process.")
+                                                    notifier.notify(string(string.extension_uninstall_restart_prompt))
                                                 } else {
                                                     scope.launch {
                                                         isInstalling = true
@@ -259,12 +276,12 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                                                 factory = factory,
                                                                 isDevExtension = false
                                                             ).onSuccess {
-                                                                notifier.success("Extension installed successfully")
+                                                                notifier.success(string(string.extension_install_success))
                                                             }.onFailure {
-                                                                notifier.error("Failed to install extension: ${it.message}")
+                                                                notifier.error(string(string.extension_install_failed, it.message.toString()))
                                                             }
                                                         }.onFailure {
-                                                            notifier.error("Failed to install extension: ${it.message}")
+                                                            notifier.error(string(string.extension_install_failed, it.message.toString()))
                                                         }
                                                         isInstalling = false
                                                     }
@@ -281,7 +298,14 @@ actual fun ExtensionScreen(modifier: Modifier) {
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = "Author${if (extension.authors.size > 1) "s" else ""}: ${extension.authors.joinToString(",")}",
+                                        text = stringResource(
+                                            if (extension.authors.size > 1) {
+                                                string.extension_author_label_plural
+                                            } else {
+                                                string.extension_author_label_singular
+                                            },
+                                            extension.authors.joinToString(",")
+                                        ),
                                         style = MaterialTheme.typography.labelMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -298,7 +322,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                         )
                                     } else {
                                         Text(
-                                            text = "Downloads: N/A",
+                                            text = stringResource(string.extension_downloads, "N/A"),
                                             style = MaterialTheme.typography.labelMedium
                                         )
                                     }
@@ -361,7 +385,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No extensions")
+                    Text(stringResource(string.no_extensions))
                 }
             }
         }
