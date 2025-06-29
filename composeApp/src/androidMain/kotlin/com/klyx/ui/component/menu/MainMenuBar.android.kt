@@ -41,6 +41,7 @@ import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.AppUtils
+import com.blankj.utilcode.util.FileUtils
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.Environment
 import com.klyx.core.FpsTracker
@@ -162,6 +163,14 @@ actual fun MainMenuBar(modifier: Modifier) {
                             ExtensionScreen(modifier = Modifier.fillMaxSize())
                         }
                         viewModel.setActiveTab(id)
+                    }
+                }
+                divider()
+                "Clear Old Logs" {
+                    if (FileUtils.deleteAllInDir(Environment.LogsDir)) {
+                        notifier.success("All logs cleared.")
+                    } else {
+                        notifier.error("Failed to clear logs.")
                     }
                 }
                 divider()

@@ -1,5 +1,6 @@
 package com.klyx.core.file
 
+import java.awt.Desktop
 import java.security.MessageDigest
 
 actual fun KxFile.isBinaryEqualTo(other: KxFile): Boolean {
@@ -33,4 +34,11 @@ actual fun KxFile.hash(algorithm: String): String {
         }
     }
     return digest.digest().joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * Launch system file opener
+ */
+actual fun openFile(file: KxFile) {
+    Desktop.getDesktop().open(file.rawFile())
 }

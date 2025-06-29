@@ -50,3 +50,8 @@ fun KxFile.isMetaEqualTo(other: KxFile): Boolean {
             this.length == other.length &&
             this.lastModified == other.lastModified
 }
+
+/**
+ * Launch system file opener
+ */
+expect fun openFile(file: KxFile)

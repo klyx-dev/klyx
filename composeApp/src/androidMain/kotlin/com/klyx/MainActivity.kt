@@ -18,9 +18,13 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalBuildVariant
+import com.klyx.core.Notifier
 import com.klyx.core.ProvideBaseCompositionLocals
+import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
+import com.klyx.core.event.subscribeToEvent
+import com.klyx.core.file.openFile
 import com.klyx.core.isDebug
 import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.Appearance
@@ -40,9 +44,22 @@ class MainActivity : ComponentActivity() {
                 val buildVariant = LocalBuildVariant.current
 
                 val factory: ExtensionFactory = koinInject()
+                val notifier: Notifier = koinInject()
 
                 LaunchedEffect(Unit) {
                     ExtensionManager.loadExtensions(factory)
+
+                    subscribeToEvent<CrashEvent> { event ->
+                        val isLogFileSaved = event.logFile != null
+
+                        notifier.error(
+                            title = "Unexpected error",
+                            message = if (isLogFileSaved) "A crash report was saved.\nTap to open." else "Failed to save crash report.",
+                            durationMillis = 6000L
+                        ) {
+                            if (isLogFileSaved) openFile(event.logFile!!)
+                        }
+                    }
                 }
 
                 val settings = LocalAppSettings.current

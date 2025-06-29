@@ -2,8 +2,11 @@ package com.klyx.core.file
 
 import android.Manifest
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.core.content.FileProvider
+import com.klyx.core.ContextHolder
 import java.security.MessageDigest
 
 actual fun KxFile.isBinaryEqualTo(other: KxFile): Boolean {
@@ -81,3 +84,21 @@ private fun KxFile.canAccess(): Boolean {
     }
 }
 
+/**
+ * Launch system file opener
+ */
+actual fun openFile(file: KxFile) {
+    val context = ContextHolder.context
+    val uri = FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.provider",
+        file.rawFile()
+    )
+
+    val intent = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(uri, "text/plain")
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    context.startActivity(Intent.createChooser(intent, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}

@@ -135,7 +135,7 @@ class EventBus private constructor() {
 
 inline fun <reified T : Any> LifecycleOwner.subscribeToEvent(
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
-    crossinline onEvent: suspend (T) -> Unit
+    crossinline onEvent: suspend (event: T) -> Unit
 ) {
     EventBus.instance.subscribe<T>(this, minActiveState, onEvent)
 }

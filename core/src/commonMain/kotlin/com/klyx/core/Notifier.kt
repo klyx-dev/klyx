@@ -13,44 +13,160 @@ class Notifier(
 
     fun notify(
         message: String,
-        canUserDismiss: Boolean = false
-    ) = info(message, canUserDismiss)
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) = info(message, canUserDismiss,durationMillis, onClick)
 
     fun notify(
         title: String,
         message: String,
-        canUserDismiss: Boolean = false
-    ) = info(title, message, canUserDismiss)
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) = info(title, message, canUserDismiss,durationMillis, onClick)
 
-    fun error(message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(message = message, type = NotificationType.Error, canUserDismiss = canUserDismiss))
+    fun error(
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                message = message,
+                type = NotificationType.Error,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun error(title: String, message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(title = title, message = message, type = NotificationType.Error, canUserDismiss = canUserDismiss))
+    fun error(
+        title: String,
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                title = title,
+                message = message,
+                type = NotificationType.Error,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun success(message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(message = message, type = NotificationType.Success, canUserDismiss = canUserDismiss))
+    fun success(
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                message = message,
+                type = NotificationType.Success,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun success(title: String, message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(title = title, message = message, type = NotificationType.Success, canUserDismiss = canUserDismiss))
+    fun success(
+        title: String,
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                title = title,
+                message = message,
+                type = NotificationType.Success,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun info(message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(message = message, type = NotificationType.Info, canUserDismiss = canUserDismiss))
+    fun info(
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                message = message,
+                type = NotificationType.Info,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun info(title: String, message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(title = title, message = message, type = NotificationType.Info, canUserDismiss = canUserDismiss))
+    fun info(
+        title: String,
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                title = title,
+                message = message,
+                type = NotificationType.Info,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun warning(message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(message = message, type = NotificationType.Warning, canUserDismiss = canUserDismiss))
+    fun warning(
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                message = message,
+                type = NotificationType.Warning,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 
-    fun warning(title: String, message: String, canUserDismiss: Boolean = false) {
-        notify(Notification(title = title, message = message, type = NotificationType.Warning, canUserDismiss = canUserDismiss))
+    fun warning(
+        title: String,
+        message: String,
+        canUserDismiss: Boolean = false,
+        durationMillis: Long = 4000L,
+        onClick: (() -> Unit)? = null
+    ) {
+        notify(
+            Notification(
+                title = title,
+                message = message,
+                type = NotificationType.Warning,
+                canUserDismiss = canUserDismiss,
+                onClick = onClick,
+                durationMillis = durationMillis
+            )
+        )
     }
 }
