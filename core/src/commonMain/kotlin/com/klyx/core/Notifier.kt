@@ -1,9 +1,14 @@
 package com.klyx.core
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.notification.Notification
 import com.klyx.core.notification.NotificationManager
 import com.klyx.core.notification.NotificationType
 import com.klyx.core.notification.Toast
+
+val LocalNotifier = staticCompositionLocalOf<Notifier> {
+    noLocalProvidedFor<Notifier>()
+}
 
 class Notifier(
     private val manager: NotificationManager

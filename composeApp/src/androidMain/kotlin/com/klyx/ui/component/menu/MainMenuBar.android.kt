@@ -48,7 +48,7 @@ import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.Environment
 import com.klyx.core.FpsTracker
 import com.klyx.core.LocalAppSettings
-import com.klyx.core.Notifier
+import com.klyx.core.LocalNotifier
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
@@ -93,7 +93,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 private fun s(resource: StringResource, vararg formatArgs: Any) = string(resource, formatArgs)
@@ -104,12 +103,12 @@ actual fun MainMenuBar(modifier: Modifier) {
     val context = LocalContext.current
     val uriHandler = LocalUriHandler.current
     val settings = LocalAppSettings.current
+    val notifier = LocalNotifier.current
 
     val fpsTracker = remember { FpsTracker() }
     val fps by fpsTracker.fps
 
     val viewModel = koinViewModel<EditorViewModel>()
-    val notifier: Notifier = koinInject()
     val scope = rememberCoroutineScope()
 
     val openFile = rememberLauncherForActivityResult(

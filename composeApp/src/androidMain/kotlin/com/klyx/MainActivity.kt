@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalBuildVariant
-import com.klyx.core.Notifier
-import com.klyx.core.ProvideBaseCompositionLocals
+import com.klyx.core.LocalNotifier
+import com.klyx.core.SharedLocalProvider
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
@@ -40,11 +40,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            ProvideBaseCompositionLocals {
+            SharedLocalProvider {
                 val buildVariant = LocalBuildVariant.current
+                val notifier = LocalNotifier.current
 
                 val factory: ExtensionFactory = koinInject()
-                val notifier: Notifier = koinInject()
 
                 LaunchedEffect(Unit) {
                     ExtensionManager.loadExtensions(factory)

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
 @Composable
-actual fun ProvideBaseCompositionLocals(content: @Composable () -> Unit) {
+actual fun PlatformLocalProvider(content: @Composable () -> Unit) {
     CompositionLocalProvider {
         content()
     }

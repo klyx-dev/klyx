@@ -144,7 +144,7 @@ actual fun EditorScreen(modifier: Modifier) {
                     tab is Tab.FileTab -> {
                         val file = tab.file
 
-                        if (file.path != "untitled") {
+                        if (file.path != "/untitled") {
                             LaunchedEffect(Unit) {
                                 if (file.requiresPermission(context, isWrite = true)) {
                                     viewModel.closeTab(tab.id)

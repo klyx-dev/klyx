@@ -67,6 +67,7 @@ class EditorViewModel(
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
+        println("[EditorViewModel] Open file path: ${file.path}")
         viewModelScope.launch(Dispatchers.IO) {
             val fileTab = Tab.FileTab(
                 id = file.id,

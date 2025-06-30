@@ -2,7 +2,8 @@ package com.klyx.core.notification
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
+import com.klyx.core.noLocalProvidedFor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -42,7 +43,8 @@ class NotificationManager {
 }
 
 @Composable
-fun rememberNotificationManager(): NotificationManager {
-    return remember { NotificationManager() }
-}
+fun rememberNotificationManager() = LocalNotificationManager.current
 
+val LocalNotificationManager = staticCompositionLocalOf<NotificationManager> {
+    noLocalProvidedFor<NotificationManager>()
+}

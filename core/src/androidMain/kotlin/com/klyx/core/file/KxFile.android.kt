@@ -1,6 +1,7 @@
 package com.klyx.core.file
 
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.core.net.toFile
 import androidx.documentfile.provider.DocumentFile
@@ -91,7 +92,7 @@ actual open class KxFile(
     fun inputStream(): InputStream? = file?.inputStream() ?: context.contentResolver.openInputStream(raw.uri)
     fun outputStream(): OutputStream? = file?.outputStream() ?: context.contentResolver.openOutputStream(raw.uri)
 
-    fun isFromTermux() = raw.uri.host == "com.termux.documents"
+    fun isFromTermux() = raw.uri.isFromTermux()
     fun canWatchFileEvents() = file != null
 
     actual fun source(): Source {
@@ -119,6 +120,8 @@ private fun DocumentFile.deleteRecursively(): Boolean {
         false
     }
 }
+
+fun Uri.isFromTermux() = host == "com.termux.documents"
 
 fun DocumentFile.toKxFile(): KxFile = KxFile(this)
 
