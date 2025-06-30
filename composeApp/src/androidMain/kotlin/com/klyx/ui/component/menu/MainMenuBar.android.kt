@@ -45,10 +45,13 @@ import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.AppUtils
 import com.blankj.utilcode.util.FileUtils
 import com.blankj.utilcode.util.UriUtils
+import com.klyx.core.DocsUrl
 import com.klyx.core.Environment
 import com.klyx.core.FpsTracker
+import com.klyx.core.KeyboardShortcutsUrl
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
+import com.klyx.core.ReportIssueUrl
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
@@ -86,8 +89,12 @@ import com.klyx.res.notification_saved
 import com.klyx.res.tab_title_default_settings
 import com.klyx.res.tab_title_extensions
 import com.klyx.ui.component.AboutDialog
+import com.klyx.ui.component.WelcomeScreen
 import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.viewmodel.EditorViewModel
+import com.klyx.viewmodel.openExtensionScreen
+import com.klyx.viewmodel.openSettings
+import com.klyx.viewmodel.showWelcome
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -141,7 +148,7 @@ actual fun MainMenuBar(modifier: Modifier) {
                 item(string.menu_item_about_klyx) { showAbout = true }
                 divider()
                 item(string.menu_item_open_settings, "Ctrl-,") {
-                    viewModel.openFile(KxFile(Environment.SettingsFilePath))
+                    viewModel.openSettings()
                 }
                 item(string.menu_item_open_default_settings) {
                     viewModel.openFile(
@@ -155,16 +162,7 @@ actual fun MainMenuBar(modifier: Modifier) {
                     CommandManager.showPalette()
                 }
                 item(string.menu_item_extensions, "Ctrl-Shift-X") {
-                    val id = "extension"
-
-                    if (viewModel.isTabOpen(id)) {
-                        viewModel.setActiveTab(id)
-                    } else {
-                        viewModel.openTab(s(string.tab_title_extensions), id = id) {
-                            ExtensionScreen(modifier = Modifier.fillMaxSize())
-                        }
-                        viewModel.setActiveTab(id)
-                    }
+                    viewModel.openExtensionScreen()
                 }
                 divider()
                 "Clear Old Logs" {
@@ -229,12 +227,15 @@ actual fun MainMenuBar(modifier: Modifier) {
             }
 
             group(string.help_menu_title) {
-                item(string.menu_item_documentation) { uriHandler.openUri("https://github.com/klyx-dev/klyx/tree/main/docs") }
+                item(string.menu_item_documentation) { uriHandler.openUri(DocsUrl) }
                 item(string.menu_item_keyboard_shortcuts) {
-                    uriHandler.openUri("https://github.com/klyx-dev/klyx/blob/main/docs/keyboard-shortcuts.md")
+                    uriHandler.openUri(KeyboardShortcutsUrl)
+                }
+                "Show Welcome" {
+                    viewModel.showWelcome()
                 }
                 divider()
-                item(string.menu_item_report_issue) { uriHandler.openUri("https://github.com/klyx-dev/klyx/issues/new") }
+                item(string.menu_item_report_issue) { uriHandler.openUri(ReportIssueUrl) }
             }
         }
     }

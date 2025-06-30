@@ -1,23 +1,30 @@
 package com.klyx.viewmodel
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.klyx.core.Environment
 import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
+import com.klyx.core.string
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ifNull
+import com.klyx.res.Res.string
+import com.klyx.res.tab_title_extensions
 import com.klyx.tab.Tab
 import com.klyx.tab.TabId
+import com.klyx.ui.component.WelcomeScreen
+import com.klyx.ui.component.extension.ExtensionScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
@@ -47,13 +54,12 @@ class EditorViewModel(
 
     fun openTab(
         name: String,
-        type: String? = null,
         id: TabId? = null,
         data: Any? = null,
         content: @Composable () -> Unit,
     ) {
         val tab = Tab.AnyTab(
-            id = id.ifNull { "${type ?: "unknown"}_${Clock.System.now().toEpochMilliseconds()}" },
+            id = id.ifNull { name },
             name = name,
             data = data,
             content = content
@@ -234,5 +240,24 @@ class EditorViewModel(
         }
 
         return results
+    }
+}
+
+fun EditorViewModel.openSettings() = openFile(KxFile(Environment.SettingsFilePath))
+
+fun EditorViewModel.openExtensionScreen() {
+    val id = "extension"
+
+    if (isTabOpen(id)) setActiveTab(id) else {
+        openTab(string(string.tab_title_extensions), id = id) {
+            ExtensionScreen(modifier = Modifier.fillMaxSize())
+        }
+        setActiveTab(id)
+    }
+}
+
+fun EditorViewModel.showWelcome() {
+    openTab("Welcome") {
+        WelcomeScreen(modifier = Modifier.fillMaxSize())
     }
 }
