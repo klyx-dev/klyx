@@ -8,8 +8,11 @@ import com.klyx.ifNull
 import com.klyx.nothing
 import com.klyx.unsupported
 import kotlinx.io.Source
+import kotlinx.io.asInputStream
 import kotlinx.io.asSource
 import kotlinx.io.buffered
+import kotlinx.io.readByteArray
+import kotlinx.io.readString
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.BufferedReader
@@ -66,10 +69,9 @@ actual open class KxFile(
             ?: raw.listFiles().map(::KxFile).filter(filter).toTypedArray()
     }
 
-    actual fun readBytes(): ByteArray = file?.readBytes() ?: inputStream()?.readBytes() ?: emptyByteArray()
+    actual fun readBytes(): ByteArray = source().readByteArray()
 
-    actual fun readText(charset: String): String = file?.readText(Charset.forName(charset))
-        ?: inputStream()?.bufferedReader(Charset.forName(charset))?.use { it.readText() } ?: ""
+    actual fun readText(charset: String): String = source().readString(Charset.forName(charset))
 
     actual fun writeBytes(bytes: ByteArray) {
         file?.writeBytes(bytes) ?: outputStream()?.use { it.write(bytes) }
@@ -80,8 +82,9 @@ actual open class KxFile(
             ?: outputStream()?.bufferedWriter(Charset.forName(charset)))?.use { it.write(text) }
     }
 
-    actual fun readLines(charset: String): List<String> = file?.readLines(Charset.forName(charset))
-        ?: inputStream()?.bufferedReader(Charset.forName(charset))?.use(BufferedReader::readLines) ?: emptyList()
+    actual fun readLines(charset: String): List<String> {
+        return source().asInputStream().bufferedReader(Charset.forName(charset)).use(BufferedReader::readLines)
+    }
 
     actual override fun toString(): String = absolutePath
 
