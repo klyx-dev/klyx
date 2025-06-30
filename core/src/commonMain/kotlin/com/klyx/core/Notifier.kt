@@ -16,7 +16,7 @@ class Notifier(
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
         onClick: (() -> Unit)? = null
-    ) = info(message, canUserDismiss,durationMillis, onClick)
+    ) = notifyType(NotificationType.Info, null, message, canUserDismiss, durationMillis, onClick)
 
     fun notify(
         title: String,
@@ -24,148 +24,56 @@ class Notifier(
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
         onClick: (() -> Unit)? = null
-    ) = info(title, message, canUserDismiss,durationMillis, onClick)
+    ) = notifyType(NotificationType.Info, title, message, canUserDismiss, durationMillis, onClick)
 
     fun error(
         message: String,
+        title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
         onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                message = message,
-                type = NotificationType.Error,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
-
-    fun error(
-        title: String,
-        message: String,
-        canUserDismiss: Boolean = false,
-        durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                title = title,
-                message = message,
-                type = NotificationType.Error,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
+    ) = notifyType(NotificationType.Error, title, message, canUserDismiss, durationMillis, onClick)
 
     fun success(
         message: String,
+        title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
         onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                message = message,
-                type = NotificationType.Success,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
-
-    fun success(
-        title: String,
-        message: String,
-        canUserDismiss: Boolean = false,
-        durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                title = title,
-                message = message,
-                type = NotificationType.Success,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
+    ) = notifyType(NotificationType.Success, title, message, canUserDismiss, durationMillis, onClick)
 
     fun info(
         message: String,
+        title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
         onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                message = message,
-                type = NotificationType.Info,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
-
-    fun info(
-        title: String,
-        message: String,
-        canUserDismiss: Boolean = false,
-        durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                title = title,
-                message = message,
-                type = NotificationType.Info,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
+    ) = notifyType(NotificationType.Info, title, message, canUserDismiss, durationMillis, onClick)
 
     fun warning(
         message: String,
+        title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
         onClick: (() -> Unit)? = null
-    ) {
-        notify(
-            Notification(
-                message = message,
-                type = NotificationType.Warning,
-                canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
-            )
-        )
-    }
+    ) = notifyType(NotificationType.Warning, title, message, canUserDismiss, durationMillis, onClick)
 
-    fun warning(
-        title: String,
+    private fun notifyType(
+        type: NotificationType,
+        title: String?,
         message: String,
-        canUserDismiss: Boolean = false,
-        durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        canUserDismiss: Boolean,
+        durationMillis: Long,
+        onClick: (() -> Unit)?
     ) {
         notify(
             Notification(
-                title = title,
+                title = title ?: type.name,
                 message = message,
-                type = NotificationType.Warning,
+                type = type,
                 canUserDismiss = canUserDismiss,
-                onClick = onClick,
-                durationMillis = durationMillis
+                durationMillis = durationMillis,
+                onClick = onClick
             )
         )
     }
