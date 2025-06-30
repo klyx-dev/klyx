@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -38,7 +40,9 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerInputScope
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.Measurable
@@ -64,14 +68,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastCoerceAtMost
 import androidx.compose.ui.zIndex
+import com.klyx.core.noLocalProvidedFor
 import com.klyx.editor.cursor.CURSOR_BLINK_RATE
 import com.klyx.editor.cursor.CursorPosition
 import com.klyx.editor.input.codeEditorInput
+import com.klyx.editor.rendering.drawEditorContent
 import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.roundToInt
+
+internal val LocalTextMeasurer = compositionLocalOf<TextMeasurer> {
+    noLocalProvidedFor<TextMeasurer>()
+}
+
+internal val LocalEditorTextStyle = compositionLocalOf { TextStyle.Default }
 
 @Composable
 @ExperimentalCodeEditorApi
@@ -98,7 +110,7 @@ fun CodeEditor(
     }
 
     val lines = state.text.lines()
-    val textMeasurer = rememberTextMeasurer()
+    val textMeasurer = rememberTextMeasurer(cacheSize = 200)
 
     val style by remember(colorScheme, fontFamily, fontSize) {
         derivedStateOf {
@@ -154,7 +166,6 @@ fun CodeEditor(
             density = density,
             lineHeight = lineHeight
         )
-        println("Cleared")
     }
 
     remember(state.text, style, textMeasurer, colorScheme) {
@@ -167,76 +178,87 @@ fun CodeEditor(
         )
     }
 
-    Row(modifier = modifier) {
-        CodeEditorCanvas(
-            modifier = Modifier
-                .width(with(density) { gutterWidth.toDp() })
-                .fillMaxHeight()
-                .zIndex(100f)
+    CompositionLocalProvider(
+        LocalTextMeasurer provides textMeasurer,
+        LocalEditorTextStyle provides style
+    ) {
+        Row(
+            modifier = modifier.pointerHoverIcon(
+                icon = PointerIcon.Text,
+                overrideDescendants = true
+            )
         ) {
-            gutterWidth = 40.dp.toPx()
+            CodeEditorCanvas(
+                modifier = Modifier
+                    .width(with(density) { gutterWidth.toDp() })
+                    .fillMaxHeight()
+                    .zIndex(100f)
+            ) {
+                gutterWidth = 40.dp.toPx()
 
-            onDrawBehind {
-                translate(
-                    left = if (pinLineNumber) 0f else -state.scrollX
-                ) {
-                    clipRect {
-                        drawRect(
-                            color = colorScheme.surfaceContainerHigh,
-                            size = size
-                        )
+                onDrawBehind {
+                    translate(
+                        left = if (pinLineNumber) 0f else -state.scrollX
+                    ) {
+                        clipRect {
+                            drawRect(
+                                color = colorScheme.surfaceContainerHigh,
+                                size = size
+                            )
 
-                        drawLineNumber(
+                            drawLineNumber(
+                                visibleRange = visibleRange,
+                                lineHeight = lineHeight,
+                                state = state,
+                                lineLayoutCache = lineLayoutCache,
+                                textMeasurer = textMeasurer,
+                                fontFamily = fontFamily,
+                                fontSize = fontSize,
+                                color = colorScheme.onSurface.copy(alpha = 0.7f),
+                                gutterWidth = gutterWidth
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(2.dp))
+
+            CodeEditorCanvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusRequester(focusRequester)
+                    .codeEditorInput(state, editable, keyboardController)
+                    .focusable(interactionSource = remember { MutableInteractionSource() })
+                    .pointerInput(state) { handleTouchInput(focusRequester, state, haptics, editable) }
+                    .codeEditorScroll(state)
+                    .drawEditorContent(state)
+            ) {
+                state.canvasSize = size
+
+                onDrawBehind {
+                    clipRect(
+                        left = if (pinLineNumber) 0f else -state.scrollX
+                    ) {
+                        drawRect(colorScheme.background)
+
+                        drawEditorContent(
                             visibleRange = visibleRange,
+                            lines = lines,
                             lineHeight = lineHeight,
                             state = state,
                             lineLayoutCache = lineLayoutCache,
                             textMeasurer = textMeasurer,
-                            fontFamily = fontFamily,
-                            fontSize = fontSize,
-                            color = colorScheme.onSurface.copy(alpha = 0.7f),
-                            gutterWidth = gutterWidth
+                            style = style
                         )
-                    }
-                }
-            }
-        }
 
-        Spacer(modifier = Modifier.width(2.dp))
+                        if (editable) {
+                            drawCursor(state, colorScheme.primary, cursorAlpha)
+                        }
 
-        CodeEditorCanvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .focusRequester(focusRequester)
-                .codeEditorInput(state, editable, keyboardController)
-                .focusable(interactionSource = remember { MutableInteractionSource() })
-                .pointerInput(state) { handleTouchInput(focusRequester, state, haptics, editable) }
-                .codeEditorScroll(state)
-        ) {
-            state.canvasSize = size
-
-            onDrawBehind {
-                clipRect(
-                    left = if (pinLineNumber) 0f else -state.scrollX
-                ) {
-                    drawRect(colorScheme.background)
-
-                    drawEditorContent(
-                        visibleRange = visibleRange,
-                        lines = lines,
-                        lineHeight = lineHeight,
-                        state = state,
-                        lineLayoutCache = lineLayoutCache,
-                        textMeasurer = textMeasurer,
-                        style = style
-                    )
-
-                    if (editable) {
-                        drawCursor(state, colorScheme.primary, cursorAlpha)
-                    }
-
-                    if (state.isTextSelected()) {
-                        drawSelection(state, colorScheme.primaryContainer)
+                        if (state.isTextSelected()) {
+                            drawSelection(state, colorScheme.primaryContainer)
+                        }
                     }
                 }
             }
