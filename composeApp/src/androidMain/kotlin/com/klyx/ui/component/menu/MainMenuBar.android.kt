@@ -9,6 +9,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -298,11 +300,22 @@ actual fun MainMenuBar(modifier: Modifier) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val interactionSource = remember { MutableInteractionSource() }
+                val isHovered by interactionSource.collectIsHoveredAsState()
+
+                LaunchedEffect(isHovered) {
+                    if (isHovered) {
+                        activeMenu = menuItems.keys.first()
+                        showMenuBar = true
+                    }
+                }
+
                 IconButton(
                     onClick = {
                         activeMenu = menuItems.keys.first()
                         showMenuBar = true
                     },
+                    interactionSource = interactionSource,
                     modifier = Modifier.onGloballyPositioned { layoutCoordinates ->
                         val position = layoutCoordinates.localToWindow(Offset.Zero)
                         iconPosition = IntOffset(position.x.toInt() + 20, position.y.toInt() + 15)
