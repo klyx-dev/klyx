@@ -12,6 +12,9 @@ class NotificationManager {
     private val _notifications = mutableStateListOf<Notification>()
     val notifications: List<Notification> = _notifications
 
+    private val _toasts = mutableStateListOf<Toast>()
+    val toasts: List<Toast> = _toasts
+
     fun show(notification: Notification) {
         _notifications.add(notification)
         CoroutineScope(Dispatchers.Main).launch {
@@ -22,6 +25,19 @@ class NotificationManager {
 
     fun dismiss(id: NotificationId) {
         _notifications.removeAll { it.id == id }
+    }
+
+    fun showToast(toast: Toast) {
+        _toasts.add(toast)
+        CoroutineScope(Dispatchers.Main).launch {
+            delay(toast.durationMillis)
+            dismissToast(toast)
+        }
+    }
+
+    fun dismissToast(toast: Toast) {
+        toast.onDismiss()
+        _toasts.remove(toast)
     }
 }
 

@@ -31,7 +31,7 @@ import com.klyx.core.notification.Notification
 import com.klyx.core.notification.NotificationType
 
 @Composable
-fun NotificationCard(
+internal fun NotificationCard(
     notification: Notification,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier

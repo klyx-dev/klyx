@@ -3,6 +3,7 @@ package com.klyx.core
 import com.klyx.core.notification.Notification
 import com.klyx.core.notification.NotificationManager
 import com.klyx.core.notification.NotificationType
+import com.klyx.core.notification.Toast
 
 class Notifier(
     private val manager: NotificationManager
@@ -74,6 +75,20 @@ class Notifier(
                 canUserDismiss = canUserDismiss,
                 durationMillis = durationMillis,
                 onClick = onClick
+            )
+        )
+    }
+
+    fun toast(
+        message: String,
+        durationMillis: Long = 3000L,
+        onDismiss: () -> Unit = {}
+    ) {
+        manager.showToast(
+            Toast(
+                message = message,
+                durationMillis = durationMillis,
+                onDismiss = onDismiss
             )
         )
     }
