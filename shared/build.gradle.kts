@@ -1,7 +1,5 @@
 import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
-import com.klyx.Version
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -19,6 +17,16 @@ kotlin {
 
     jvm()
 
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "shared"
+        }
+    }
+
     sourceSets {
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -34,6 +42,12 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+
+        nativeMain {
+            dependencies {
+
+            }
         }
     }
 }

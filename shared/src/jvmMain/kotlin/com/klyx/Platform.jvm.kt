@@ -10,3 +10,4 @@ class JVMPlatform : Platform {
 
 actual fun platform(): Platform = JVMPlatform()
 actual val fileSeparatorChar: Char get() = File.separatorChar
+actual val lineSeparator: String get() = System.lineSeparator()
