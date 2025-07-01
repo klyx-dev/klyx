@@ -59,7 +59,7 @@ kotlin {
     }.forEach { target ->
         target.compilations.configureEach {
             cinterops.create(grammar.interopName.get()) {
-                defFileProperty.set(generateTask.interopFile.asFile)
+                definitionFile.set(generateTask.interopFile.asFile.get())
                 includeDirs.allHeaders(grammarDir.resolve("bindings/c"))
                 extraOpts("-libraryPath", libsDir.dir(konanTarget.name))
                 tasks.getByName(interopProcessingTaskName).mustRunAfter(generateTask)

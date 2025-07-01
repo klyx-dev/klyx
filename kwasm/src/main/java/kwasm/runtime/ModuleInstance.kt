@@ -51,6 +51,7 @@ import kwasm.validation.ValidationContext
  * It is an invariant of the semantics that all export instances in a given module instance have
  * different names.
  */
+@ConsistentCopyVisibility
 data class ModuleInstance internal constructor(
     val types: TypeIndex,
     val functionAddresses: AddressIndex<Identifier.Function, Address.Function>,

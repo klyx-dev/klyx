@@ -11,3 +11,4 @@ class AndroidPlatform : Platform {
 
 actual fun platform(): Platform = AndroidPlatform()
 actual val fileSeparatorChar: Char get() = File.separatorChar
+actual val lineSeparator: String get() = System.lineSeparator()

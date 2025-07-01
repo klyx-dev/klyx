@@ -31,6 +31,7 @@ package kwasm.runtime
  *              }
  * ```
  */
+@ConsistentCopyVisibility
 data class Store internal constructor(
     val functions: List<FunctionInstance> = emptyList(),
     val tables: List<Table> = emptyList(),
