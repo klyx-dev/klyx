@@ -24,22 +24,21 @@ kotlin {
     }
 
     jvm()
+//
+//    listOf(
+//        iosX64(),
+//        iosArm64(),
+//        iosSimulatorArm64()
+//    ).forEach {
+//        it.binaries.framework {
+//            baseName = "coreKit"
+//        }
+//    }
 
     sourceSets {
         val commonMain by getting
         val jvmMain by getting
         val androidMain by getting
-
-        val commonJvmMain by creating {
-            dependsOn(commonMain)
-
-            dependencies {
-                implementation(kotlin("stdlib"))
-            }
-        }
-
-        androidMain.dependsOn(commonJvmMain)
-        jvmMain.dependsOn(commonJvmMain)
 
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)

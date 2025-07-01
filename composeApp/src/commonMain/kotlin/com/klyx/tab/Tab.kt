@@ -9,21 +9,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.klyx.core.file.KxFile
+import com.klyx.core.generateId
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
-import kotlinx.datetime.Clock
 
 typealias TabId = String
 
 sealed class Tab(
     open val name: String,
-    open val id: TabId = "${Clock.System.now().toEpochMilliseconds()}",
+    open val id: TabId = generateId(),
     open val data: Any? = null,
     open val content: @Composable () -> Unit,
 ) {
     data class AnyTab(
         override val name: String,
-        override val id: TabId = "${Clock.System.now().toEpochMilliseconds()}",
+        override val id: TabId = generateId(),
         override val data: Any? = null,
         override val content: @Composable () -> Unit,
     ) : Tab(name, id, data, content)
@@ -35,7 +35,7 @@ sealed class Tab(
         val file: KxFile,
         val editorState: CodeEditorState,
         val isInternal: Boolean = false,
-        override val id: TabId = "${Clock.System.now().toEpochMilliseconds()}",
+        override val id: TabId = generateId(),
         override val content: @Composable () -> Unit = { Box(modifier = Modifier.fillMaxSize()) },
     ) : Tab(name, id, file, content) {
 
