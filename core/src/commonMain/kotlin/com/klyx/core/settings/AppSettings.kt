@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 data class AppSettings(
     @SerialComment("""
         Whether to use dynamic colors or not.
-        
+
         **This is only available on Android**.
     """)
     @SerialName("dynamic_color")

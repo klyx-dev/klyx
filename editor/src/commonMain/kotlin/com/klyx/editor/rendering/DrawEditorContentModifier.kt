@@ -1,6 +1,7 @@
 package com.klyx.editor.rendering
 
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DrawModifierNode
@@ -22,6 +23,10 @@ private class DrawEditorContentModifier(
     override fun ContentDrawScope.draw() {
         val textMeasurer = currentValueOf(LocalTextMeasurer)
         val style = currentValueOf(LocalEditorTextStyle)
+
+        drawRect(
+            color = Color.Yellow
+        )
 
         drawText(
             textMeasurer = textMeasurer,

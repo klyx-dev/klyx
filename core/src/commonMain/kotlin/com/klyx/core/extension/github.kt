@@ -16,7 +16,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-const val BASE_RAW_URL = "https://raw.githubusercontent.com/klyx-dev/extensions/main"
+private const val BASE_RAW_URL = "https://raw.githubusercontent.com/klyx-dev/extensions/main"
 const val EXTENSIONS_INDEX_URL = "$BASE_RAW_URL/extensions.toml"
 
 const val BASE_GITHUB_API_EXTENSIONS_URL = "https://api.github.com/repos/klyx-dev/extensions/contents"

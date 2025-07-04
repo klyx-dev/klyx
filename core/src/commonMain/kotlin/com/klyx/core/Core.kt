@@ -1,5 +1,7 @@
 package com.klyx.core
 
-import kotlinx.datetime.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-fun generateId() = "${Clock.System.now().toEpochMilliseconds()}_${(0 .. 1000).random()}"
+@OptIn(ExperimentalUuidApi::class)
+fun generateId() = Uuid.random().toHexString()

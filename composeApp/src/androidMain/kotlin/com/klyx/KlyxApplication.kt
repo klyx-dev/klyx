@@ -12,13 +12,14 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
 import com.klyx.extension.ExtensionFactory
 import com.klyx.viewmodel.EditorViewModel
-import kotlinx.datetime.Clock
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import java.io.File
 import kotlin.system.exitProcess
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 class KlyxApplication : Application() {
     companion object {
@@ -58,6 +59,7 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
     EventBus.instance.postSync(CrashEvent(thread, throwable, file))
 }
 
+@OptIn(ExperimentalTime::class)
 private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
     val logFile = File(Environment.LogsDir, "log_${Clock.System.now().toEpochMilliseconds()}.txt")
     return if (logFile.createNewFile()) {

@@ -7,6 +7,7 @@ import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
+import com.klyx.core.generateId
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ifNull
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
@@ -53,7 +53,7 @@ class EditorViewModel(
         content: @Composable () -> Unit,
     ) {
         val tab = Tab.AnyTab(
-            id = id.ifNull { "${type ?: "unknown"}_${Clock.System.now().toEpochMilliseconds()}" },
+            id = id.ifNull { "${type ?: "unknown"}_${generateId()}" },
             name = name,
             data = data,
             content = content
