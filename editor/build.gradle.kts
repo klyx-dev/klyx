@@ -45,9 +45,9 @@ kotlin {
                 implementation(projects.core)
                 implementation(projects.shared)
 
-                rootProject.project("tree-sitter").subprojects.forEach {
-                    implementation(project(":tree-sitter:${it.name}"))
-                }
+//                rootProject.project("tree-sitter").subprojects.forEach {
+//                    implementation(project(":tree-sitter:${it.name}"))
+//                }
             }
         }
 
