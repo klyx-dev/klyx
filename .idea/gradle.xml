@@ -23,7 +23,7 @@
         <option name="testRunner" value="CHOOSE_PER_TEST" />
         <option name="externalProjectPath" value="$PROJECT_DIR$" />
         <option name="gradleHome" value="C:\Gradle\gradle-8.10.1" />
-        <option name="gradleJvm" value="21" />
+        <option name="gradleJvm" value="jbr-21" />
         <option name="modules">
           <set>
             <option value="$PROJECT_DIR$" />
@@ -36,10 +36,6 @@
             <option value="$PROJECT_DIR$/kwasm" />
             <option value="$PROJECT_DIR$/rope" />
             <option value="$PROJECT_DIR$/shared" />
-            <option value="$PROJECT_DIR$/tree-sitter" />
-            <option value="$PROJECT_DIR$/tree-sitter/java" />
-            <option value="$PROJECT_DIR$/tree-sitter/json" />
-            <option value="$PROJECT_DIR$/tree-sitter/kotlin" />
           </set>
         </option>
       </GradleProjectSettings>
