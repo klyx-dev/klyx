@@ -30,6 +30,7 @@ import com.klyx.core.file.openFile
 import com.klyx.core.isDebug
 import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.Appearance
+import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
 import com.klyx.extension.ExtensionFactory
@@ -75,21 +76,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 val settings = LocalAppSettings.current
-                val isSystemInDarkTheme = isSystemInDarkTheme()
-
-                val darkMode by remember(settings) {
-                    derivedStateOf {
-                        if (settings.dynamicColor) {
-                            when (settings.appearance) {
-                                Appearance.Dark -> true
-                                Appearance.Light -> false
-                                Appearance.System -> isSystemInDarkTheme
-                            }
-                        } else {
-                            ThemeManager.getThemeByName(settings.theme)?.isDark() ?: isSystemInDarkTheme
-                        }
-                    }
-                }
+                val darkMode = LocalIsDarkMode.current
 
                 val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
 

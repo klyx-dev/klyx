@@ -31,6 +31,8 @@ kotlin {
             implementation(libs.androidx.google.fonts)
             implementation(libs.androidx.material3)
             implementation(libs.koin.android)
+
+            implementation("com.itsaky.androidide.treesitter:android-tree-sitter:4.3.1")
         }
 
         commonMain.dependencies {

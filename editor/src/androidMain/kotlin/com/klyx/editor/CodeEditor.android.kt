@@ -1,21 +1,19 @@
 package com.klyx.editor
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.resolveAsTypeface
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.graphics.toColorInt
+import com.klyx.editor.language.JsonLanguage
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
@@ -33,7 +31,6 @@ actual fun CodeEditor(
 ) {
     val isDarkMode = isSystemInDarkTheme()
     val fontFamilyResolver = LocalFontFamilyResolver.current
-    val colorScheme = MaterialTheme.colorScheme
 
     val style by remember {
         derivedStateOf {
@@ -69,39 +66,33 @@ actual fun CodeEditor(
                 this.colorScheme = object : EditorColorScheme(isDarkMode) {
                     override fun applyDefault() {
                         super.applyDefault()
-                        setColor(WHOLE_BACKGROUND, colorScheme.background.toArgb())
-                        setColor(TEXT_NORMAL, colorScheme.onSurface.toArgb())
-                        setColor(LINE_NUMBER_BACKGROUND, colorScheme.surface.toArgb())
-                        setColor(LINE_NUMBER, colorScheme.onSurface.toArgb())
-                        setColor(LINE_NUMBER_CURRENT, colorScheme.onSurface.toArgb())
-                        setColor(LINE_DIVIDER, colorScheme.outline.toArgb())
-                        setColor(CURRENT_LINE, colorScheme.surfaceContainerLow.toArgb())
-                        setColor(SCROLL_BAR_THUMB, colorScheme.surfaceVariant.toArgb())
-                        setColor(
-                            SCROLL_BAR_THUMB_PRESSED,
-                            colorScheme.surfaceColorAtElevation(5.dp).toArgb()
-                        )
-                        setColor(
-                            SELECTED_TEXT_BACKGROUND,
-                            colorScheme.primaryContainer.copy(alpha = 0.6f).toArgb()
-                        )
-                        setColor(SELECTION_HANDLE, colorScheme.primaryContainer.toArgb())
-                        setColor(MATCHED_TEXT_BACKGROUND, getColor(SELECTED_TEXT_BACKGROUND))
-                        setColor(
-                            COMPLETION_WND_BACKGROUND,
-                            colorScheme.surfaceColorAtElevation(6.dp).toArgb()
-                        )
-                        setColor(
-                            COMPLETION_WND_TEXT_PRIMARY,
-                            colorScheme.onSurface.toArgb()
-                        )
-                        setColor(
-                            COMPLETION_WND_TEXT_SECONDARY,
-                            colorScheme.onSurfaceVariant.toArgb()
-                        )
-                        setColor(COMPLETION_WND_ITEM_CURRENT, colorScheme.primary.toArgb())
+
+                        setColor(WHOLE_BACKGROUND, "#282c34".toColorInt())
+                        setColor(TEXT_NORMAL, "#abb2bf".toColorInt())
+
+                        setColor(COMMENT, "#5c6370".toColorInt())
+                        setColor(KEYWORD, "#c678dd".toColorInt())
+                        setColor(FUNCTION_NAME, "#61afef".toColorInt())
+                        setColor(LITERAL, "#98c379".toColorInt())
+                        setColor(OPERATOR, "#56b6c2".toColorInt())
+
+                        setColor(IDENTIFIER_NAME, "#abb2bf".toColorInt())
+                        setColor(IDENTIFIER_VAR, "#e06c75".toColorInt())
+                        setColor(ATTRIBUTE_NAME, "#d19a66".toColorInt())
+
+                        setColor(LINE_NUMBER_BACKGROUND, "#282c34".toColorInt())
+                        setColor(LINE_NUMBER, "#4b5263".toColorInt())
+                        setColor(LINE_NUMBER_CURRENT, "#abb2bf".toColorInt())
+
+                        setColor(CURRENT_LINE, "#2c313c".toColorInt())
+                        setColor(SELECTED_TEXT_BACKGROUND, "#3e4451".toColorInt())
+                        setColor(HIGHLIGHTED_DELIMITERS_FOREGROUND, "#abb2bf".toColorInt())
+                        setColor(NON_PRINTABLE_CHAR, "#5c6370".toColorInt())
+                        setColor(HARD_WRAP_MARKER, "#3e445144".toColorInt())
                     }
                 }
+
+                setEditorLanguage(JsonLanguage())
             }
         }
     )

@@ -61,7 +61,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
 
             implementation(kotlin("reflect"))
-            api(libs.kotlinx.datetime)
             api(libs.kotlinx.io.core)
             implementation(libs.okio)
             implementation(libs.kotlinx.coroutines.core)

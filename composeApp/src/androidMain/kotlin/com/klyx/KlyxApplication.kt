@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.Process
 import android.util.Log
 import android.widget.Toast
+import com.itsaky.androidide.treesitter.TreeSitter
 import com.klyx.core.Environment
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.CrashEvent
@@ -32,6 +33,7 @@ class KlyxApplication : Application() {
         super.onCreate()
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
         instance = this
+        TreeSitter.loadLibrary()
 
         initKoin(module {
             viewModelOf(::EditorViewModel)
@@ -52,6 +54,8 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
             "App Crashed. ${if (file != null) "A crash report was saved." else "Failed to save crash report."}",
             Toast.LENGTH_LONG
         ).show()
+
+        System.err.println(file?.readText())
 
         Process.sendSignal(Process.myPid(), Process.SIGNAL_KILL)
         exitProcess(Process.SIGNAL_KILL)

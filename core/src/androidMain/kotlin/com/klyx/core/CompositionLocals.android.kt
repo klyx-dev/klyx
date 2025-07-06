@@ -15,7 +15,7 @@ actual fun PlatformLocalProvider(content: @Composable () -> Unit) {
 
     CompositionLocalProvider(
         LocalSharedPreferences provides prefs,
-        LocalBuildVariant provides if (AppUtils.isAppDebug()) BuildVariant.Debug else BuildVariant.Release
+        LocalBuildVariant provides if (AppUtils.isAppDebug()) BuildVariant.Debug else BuildVariant.Release,
     ) {
         content()
     }
