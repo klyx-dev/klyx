@@ -154,7 +154,7 @@ class CodeEditorState(
     }
 
     private fun moveCursor(offset: Int) {
-        ensureCursorInView()
+        //ensureCursorInView()
         cursorPosition = cursorPosition.copy(
             offset = (cursorPosition.offset + offset).coerceIn(0, buffer.length)
         )
