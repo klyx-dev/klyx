@@ -1,6 +1,7 @@
 package com.klyx
 
 import android.app.Application
+import android.os.Build
 import android.os.Process
 import android.util.Log
 import android.widget.Toast
@@ -66,7 +67,15 @@ private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
         val logString = buildString {
             appendLine("=== Crash Log ===")
             appendLine("Time: ${Clock.System.now()}")
-            appendLine("Thread: ${thread.name} (id=${thread.id})")
+
+            val id = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+                thread.threadId()
+            } else {
+                @Suppress("DEPRECATION")
+                thread.id
+            }
+
+            appendLine("Thread: ${thread.name} (id=$id)")
             appendLine("Exception: ${throwable::class.qualifiedName}")
             appendLine("Message: ${throwable.message}")
             appendLine()

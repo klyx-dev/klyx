@@ -34,7 +34,6 @@
             <option value="$PROJECT_DIR$/extension-api" />
             <option value="$PROJECT_DIR$/ktreesitter-plugin" />
             <option value="$PROJECT_DIR$/kwasm" />
-            <option value="$PROJECT_DIR$/rope" />
             <option value="$PROJECT_DIR$/shared" />
           </set>
         </option>
