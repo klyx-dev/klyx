@@ -59,7 +59,8 @@ kotlin {
 
         androidMain {
             dependencies {
-
+                implementation(project.dependencies.platform("io.github.rosemoe:editor-bom:0.23.7"))
+                implementation("io.github.rosemoe:editor")
             }
         }
     }
