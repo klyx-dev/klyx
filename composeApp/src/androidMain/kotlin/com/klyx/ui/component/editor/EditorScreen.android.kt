@@ -161,7 +161,13 @@ actual fun EditorScreen(modifier: Modifier) {
                             fontFamily = fontFamily,
                             fontSize = editorSettings.fontSize.sp,
                             editable = !tab.isInternal,
-                            pinLineNumber = editorSettings.pinLineNumbers
+                            pinLineNumber = editorSettings.pinLineNumbers,
+                            language = when (tab.file.extension) {
+                                "kt", "kts" -> "kotlin"
+                                "js" -> "javascript"
+                                "json" -> "json"
+                                else -> null
+                            }
                         )
                     }
 

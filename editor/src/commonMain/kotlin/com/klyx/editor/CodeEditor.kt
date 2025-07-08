@@ -28,5 +28,6 @@ expect fun CodeEditor(
     fontFamily: FontFamily = FontFamily.Monospace,
     fontSize: TextUnit = 18.sp,
     editable: Boolean = true,
-    pinLineNumber: Boolean = true
+    pinLineNumber: Boolean = true,
+    language: String? = null
 )

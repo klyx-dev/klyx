@@ -13,7 +13,8 @@ actual fun CodeEditor(
     fontFamily: FontFamily,
     fontSize: TextUnit,
     editable: Boolean,
-    pinLineNumber: Boolean
+    pinLineNumber: Boolean,
+    language: String?
 ) {
     // TODO
 }

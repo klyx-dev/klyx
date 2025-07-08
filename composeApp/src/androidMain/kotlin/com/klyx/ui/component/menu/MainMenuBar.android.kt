@@ -14,7 +14,6 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -87,10 +86,7 @@ import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_no_files_to_save
 import com.klyx.res.notification_saved
 import com.klyx.res.tab_title_default_settings
-import com.klyx.res.tab_title_extensions
 import com.klyx.ui.component.AboutDialog
-import com.klyx.ui.component.WelcomeScreen
-import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openSettings
@@ -196,7 +192,7 @@ actual fun MainMenuBar(modifier: Modifier) {
                         return@item
                     }
 
-                    if (file.path == s(string.default_new_file_name)) {
+                    if (file.path == "/" + s(string.default_new_file_name)) {
                         createFile.launch(file.name)
                     } else {
                         val saved = viewModel.saveCurrent()

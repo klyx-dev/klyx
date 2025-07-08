@@ -2,11 +2,15 @@ package com.klyx.editor
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.resolveAsTypeface
@@ -15,6 +19,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.graphics.toColorInt
 import com.klyx.editor.language.JsonLanguage
 import io.github.rosemoe.sora.event.ContentChangeEvent
+import io.github.rosemoe.sora.lang.EmptyLanguage
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import io.github.rosemoe.sora.widget.subscribeAlways
@@ -27,8 +32,19 @@ actual fun CodeEditor(
     fontFamily: FontFamily,
     fontSize: TextUnit,
     editable: Boolean,
-    pinLineNumber: Boolean
+    pinLineNumber: Boolean,
+    language: String?
 ) {
+    val scope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
+    val textToolbar = LocalTextToolbar.current
+
+    LaunchedEffect(state) {
+        state.coroutineScope = scope
+        state.textToolbar = textToolbar
+        state.clipboard = clipboard
+    }
+
     val isDarkMode = isSystemInDarkTheme()
     val fontFamilyResolver = LocalFontFamilyResolver.current
 
@@ -92,7 +108,12 @@ actual fun CodeEditor(
                     }
                 }
 
-                setEditorLanguage(JsonLanguage())
+                setEditorLanguage(
+                    when (language) {
+                        "json" -> JsonLanguage()
+                        else -> EmptyLanguage()
+                    }
+                )
             }
         }
     )
