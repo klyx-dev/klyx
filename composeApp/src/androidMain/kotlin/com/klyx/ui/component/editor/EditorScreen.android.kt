@@ -127,6 +127,8 @@ actual fun EditorScreen(modifier: Modifier) {
                     }
                 },
                 onClose = { index ->
+                    keyboardController?.hide()
+
                     openTabs.getOrNull(index)?.let { tab ->
                         viewModel.closeTab(tab.id)
                     }
