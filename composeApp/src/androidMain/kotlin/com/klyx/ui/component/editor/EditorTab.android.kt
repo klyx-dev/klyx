@@ -116,8 +116,9 @@ actual fun EditorTab(
             Spacer(modifier = Modifier.width(6.dp))
         }
 
-        val isTabFileMissing =
-            { (tab is Tab.FileTab && tab.file.exists.not() && tab.file.path != "/untitled") }
+        val isTabFileMissing = {
+            (tab is Tab.FileTab && tab.file.exists.not() && tab.file.path != "/untitled")
+        }
 
         Text(
             text = tab.name,

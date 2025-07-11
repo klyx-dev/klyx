@@ -1,17 +1,24 @@
 package com.klyx.core.cmd
 
+import com.klyx.core.cmd.key.KeyShortcut
+import com.klyx.core.cmd.key.keyShortcutOf
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
 @DslMarker
-annotation class CommandDsl
+private annotation class CommandDsl
 
 data class Command(
     val name: String,
     val description: String? = null,
+    @Deprecated(
+        message = "Use `shortcuts` instead.",
+        replaceWith = ReplaceWith("shortcuts")
+    )
     val shortcutKey: String? = null,
+    val shortcuts: List<KeyShortcut> = emptyList(),
     val execute: Command.() -> Unit
 ) {
     fun run() = execute(this)
@@ -21,7 +28,7 @@ data class Command(
 class CommandBuilder {
     private var name: String? = null
     private var description: String? = null
-    private var shortcutKey: String? = null
+    private var shortcuts = mutableListOf<KeyShortcut>()
     private var execute: Command.() -> Unit = {
         error("No execution logic provided for command '${this.name}'")
     }
@@ -35,9 +42,22 @@ class CommandBuilder {
         this.description = description?.takeIf { it.isNotBlank() }
     }
 
+    @Deprecated(
+        message = "Use `shortcut` instead.",
+        replaceWith = ReplaceWith("shortcut(keyShortcutOf(shortcutKey))")
+    )
     fun shortcutKey(shortcutKey: String?) = apply {
-        this.shortcutKey = shortcutKey?.takeIf { it.isNotBlank() }
+        shortcutKey?.takeIf { it.isNotBlank() }?.let {
+            @Suppress("DEPRECATION")
+            shortcut(keyShortcutOf(it))
+        }
     }
+
+    fun shortcut(vararg shortcut: KeyShortcut) = apply {
+        shortcuts += shortcut
+    }
+
+    fun shortcut(shortcuts: Collection<KeyShortcut>) = shortcut(*shortcuts.toTypedArray())
 
     @OptIn(ExperimentalTypeInference::class)
     fun execute(@BuilderInference block: Command.() -> Unit) = apply {
@@ -46,7 +66,13 @@ class CommandBuilder {
 
     fun build(): Command {
         val finalName = requireNotNull(name) { "Command must have a name." }
-        return Command(finalName, description, shortcutKey, execute)
+        return Command(
+            name = finalName,
+            description = description,
+            shortcutKey = shortcuts.joinToString(" ") { it.toString() },
+            shortcuts = shortcuts,
+            execute = execute
+        )
     }
 }
 

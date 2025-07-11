@@ -110,6 +110,13 @@ fun Key.toKeyString(): String? {
         Key.Spacebar -> "Space"
         Key.Tab -> "Tab"
         Key.Escape -> "Esc"
+        Key.Comma -> ","
+        Key.Period -> "."
+        Key.Slash -> "/"
+        Key.Backslash -> "\\"
+        Key.Minus -> "-"
+        Key.Plus -> "+"
+        Key.Equals -> "="
         else -> null // Return null if no match is found
     }
 }

@@ -4,12 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.type
-import com.klyx.core.cmd.key.ShortcutSequence
+import com.klyx.core.cmd.key.KeyShortcutSequence
+import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.cmd.key.matchesSequence
-import com.klyx.core.cmd.key.parseShortcut
+import com.klyx.core.cmd.key.sequence
 import com.klyx.core.event.EventBus
 import com.klyx.core.theme.ThemeManager
 
@@ -18,7 +20,7 @@ actual object CommandManager {
     actual val commands = mutableStateSetOf<Command>()
     actual val recentlyUsedCommands = mutableStateSetOf<Command>()
 
-    private val activeSequences = mutableMapOf<Command, ShortcutSequence>()
+    private val activeSequences = mutableMapOf<Command, KeyShortcutSequence>()
 
     actual var showCommandPalette by mutableStateOf(false)
 
@@ -35,22 +37,22 @@ actual object CommandManager {
                 }
 
                 for (command in commands) {
-                    command.shortcutKey?.let { key ->
-                        val sequence = parseShortcut(key)
-                        if (event.matchesSequence(sequence)) {
-                            if (sequence.advance()) {
-                                command.run()
-                            } else {
-                                activeSequences[command] = sequence
-                            }
+                    val sequence = command.shortcuts.sequence()
+                    if (event.matchesSequence(sequence)) {
+                        if (sequence.advance()) {
+                            command.run()
+                        } else {
+                            activeSequences[command] = sequence
                         }
                     }
                 }
             }
         }
 
-        addCommand(Command("Toggle theme selector", shortcutKey = "Ctrl-K Ctrl-T") {
-            ThemeManager.toggleThemeSelector()
+        addCommand(command {
+            name("Toggle Theme Selector")
+            shortcut(keyShortcutOf(Key.K, ctrl = true) and keyShortcutOf(Key.T, ctrl = true))
+            execute { ThemeManager.toggleThemeSelector() }
         })
     }
 

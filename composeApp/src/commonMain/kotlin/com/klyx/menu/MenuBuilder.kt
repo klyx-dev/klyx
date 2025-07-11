@@ -5,74 +5,87 @@ import org.jetbrains.compose.resources.StringResource
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.experimental.ExperimentalTypeInference
 
+@DslMarker
+private annotation class MenuBuilderDsl
+
+@MenuBuilderDsl
 class MenuBuilder {
     private val groups = mutableMapOf<String, List<MenuItem>>()
 
-    fun group(title: String, builder: MenuGroupBuilder.() -> Unit) {
+    @OptIn(ExperimentalTypeInference::class)
+    fun group(
+        title: String,
+        @BuilderInference
+        builder: MenuGroupBuilder.() -> Unit
+    ) = apply {
         val groupBuilder = MenuGroupBuilder().apply(builder)
         groups[title] = groupBuilder.items
     }
 
-    fun group(resource: StringResource, builder: MenuGroupBuilder.() -> Unit) {
-        group(string(resource), builder)
-    }
+    @OptIn(ExperimentalTypeInference::class)
+    fun group(
+        resource: StringResource,
+        @BuilderInference
+        builder: MenuGroupBuilder.() -> Unit
+    ) = apply { group(string(resource), builder) }
 
-    operator fun String.invoke(builder: MenuGroupBuilder.() -> Unit) {
-        group(this, builder)
-    }
+    @OptIn(ExperimentalTypeInference::class)
+    operator fun String.invoke(
+        @BuilderInference
+        builder: MenuGroupBuilder.() -> Unit
+    ) = apply { group(this, builder) }
 
     fun build(): Map<String, List<MenuItem>> = groups
 }
 
+@MenuBuilderDsl
 class MenuGroupBuilder {
+    @PublishedApi
     internal val items = mutableListOf<MenuItem>()
 
+    @OptIn(ExperimentalTypeInference::class)
+    fun item(
+        @BuilderInference builder: MenuItemBuilder.() -> Unit
+    ) = apply { items += menuItem(builder) }
+
+    @OptIn(ExperimentalTypeInference::class)
     fun item(
         title: String,
-        shortcutKey: String? = null,
-        dismissRequestOnClicked: Boolean = true,
-        onClick: suspend () -> Unit = {}
-    ) {
-        items += MenuItem(
-            title = title,
-            shortcutKey = shortcutKey,
-            dismissRequestOnClicked = dismissRequestOnClicked,
-            onClick = onClick
-        )
+        @BuilderInference
+        builder: MenuItemBuilder.() -> Unit
+    ) = apply {
+        items += menuItem {
+            title(title)
+            apply(builder)
+        }
     }
 
+    @OptIn(ExperimentalTypeInference::class)
     fun item(
         resource: StringResource,
-        shortcutKey: String? = null,
-        dismissRequestOnClicked: Boolean = true,
-        onClick: suspend () -> Unit = {}
-    ) {
-        item(string(resource), shortcutKey, dismissRequestOnClicked, onClick)
+        @BuilderInference
+        builder: MenuItemBuilder.() -> Unit
+    ) = apply {
+        items += menuItem {
+            title(resource)
+            apply(builder)
+        }
     }
 
-    operator fun String.invoke(onClick: suspend () -> Unit) {
-        item(this, onClick = onClick)
+    operator fun String.invoke(onClick: suspend () -> Unit) = item {
+        title(this@invoke)
+        onClick { onClick() }
     }
 
-    /**
-     * ```kotlin
-     * (title to shortcutKey) {
-     *     // item clicked
-     * }
-     * ```
-     */
-    operator fun Pair<String, String>.invoke(onClick: suspend () -> Unit) {
-        item(first, second, onClick = onClick)
-    }
-
-    fun divider() {
-        items += MenuItem() // title empty means divider
-    }
+    fun divider() = item { divider() }
 }
 
-@OptIn(ExperimentalContracts::class)
-inline fun menu(builder: MenuBuilder.() -> Unit): Map<String, List<MenuItem>> {
+@OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
+inline fun menu(
+    @BuilderInference builder: MenuBuilder.() -> Unit
+): Map<String, List<MenuItem>> {
     contract { callsInPlace(builder, InvocationKind.EXACTLY_ONCE) }
     return MenuBuilder().apply(builder).build()
 }

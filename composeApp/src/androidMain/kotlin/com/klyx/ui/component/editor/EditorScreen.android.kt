@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
@@ -30,6 +31,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
+import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
@@ -106,7 +108,7 @@ actual fun EditorScreen(modifier: Modifier) {
     LaunchedEffect(Unit) {
         CommandManager.addCommand(command {
             name("Close Active Tab")
-            shortcutKey("Ctrl-W")
+            shortcut(keyShortcutOf(ctrl = true, key = Key.W))
             execute { viewModel.closeActiveTab() }
         })
     }

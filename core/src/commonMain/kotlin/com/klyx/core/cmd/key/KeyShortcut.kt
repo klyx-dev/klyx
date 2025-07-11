@@ -7,16 +7,52 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import com.klyx.core.cmd.toKeyString
 
 data class KeyShortcut(
-    val key: Key,
-    val ctrl: Boolean = false,
-    val shift: Boolean = false,
-    val alt: Boolean = false,
-    val meta: Boolean = false
-)
+    val ctrl: Boolean,
+    val shift: Boolean,
+    val alt: Boolean,
+    val meta: Boolean,
+    val key: Key
+) {
+    override fun toString(): String {
+        return buildString {
+            if (ctrl) append("Ctrl-")
+            if (shift) append("Shift-")
+            if (alt) append("Alt-")
+            if (meta) append("Meta-")
+            append(key.toKeyString())
+        }
+    }
 
-data class ShortcutSequence(
+    operator fun plus(other: KeyShortcut) = listOf(this, other)
+    infix fun and(other: KeyShortcut) = plus(other)
+}
+
+fun keyShortcutOf(
+    key: Key,
+    ctrl: Boolean = false,
+    shift: Boolean = false,
+    alt: Boolean = false,
+    meta: Boolean = false
+): KeyShortcut = KeyShortcut(ctrl, shift, alt, meta, key)
+
+@Deprecated(
+    message = "Use `keyShortcutOf(key, ctrl, shift, alt, meta)` instead.",
+    replaceWith = ReplaceWith("keyShortcutOf(key, ctrl, shift, alt, meta)")
+)
+fun keyShortcutOf(
+    shortcut: String,
+): KeyShortcut {
+    return parseShortcut(shortcut).shortcuts.first()
+}
+
+fun Iterable<KeyShortcut>.sequence(): KeyShortcutSequence {
+    return KeyShortcutSequence(shortcuts = toList())
+}
+
+data class KeyShortcutSequence(
     val shortcuts: List<KeyShortcut>,
     var currentIndex: Int = 0
 ) {
@@ -32,8 +68,11 @@ data class ShortcutSequence(
     }
 }
 
-fun parseShortcut(shortcut: String): ShortcutSequence {
-    return ShortcutSequence(
+@Deprecated(
+    message = "Should not be used."
+)
+fun parseShortcut(shortcut: String): KeyShortcutSequence {
+    return KeyShortcutSequence(
         shortcuts = shortcut.split(" ").map { token ->
             val parts = token.split("-")
             val key = when (val last = parts.last().lowercase()) {
@@ -55,7 +94,7 @@ fun parseShortcut(shortcut: String): ShortcutSequence {
                 "insert" -> Key.Insert
                 else -> Key.Companion::class.members.firstOrNull {
                     it.name.equals(last, true)
-                }?.call(Key.Companion) as? Key ?: Key(last.first().code)
+                }?.call(Key.Companion) as? Key ?: Key(last.first().code.toLong())
             }
 
             KeyShortcut(
@@ -77,9 +116,9 @@ fun KeyEvent.matches(shortcut: KeyShortcut): Boolean {
             (shortcut.meta == isMetaPressed)
 }
 
-fun KeyEvent.matchesSequence(sequence: ShortcutSequence): Boolean {
+fun KeyEvent.matchesSequence(sequence: KeyShortcutSequence): Boolean {
     if (sequence.isComplete()) return false
-    
+
     val currentShortcut = sequence.shortcuts[sequence.currentIndex]
     return matches(currentShortcut)
 }
