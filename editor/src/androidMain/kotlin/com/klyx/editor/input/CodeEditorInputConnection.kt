@@ -17,7 +17,6 @@ import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
-import android.R.id as androidRId
 
 @OptIn(ExperimentalCodeEditorApi::class)
 class CodeEditorInputConnection(
@@ -49,7 +48,11 @@ class CodeEditorInputConnection(
         return false
     }
 
-    override fun commitContent(inputContentInfo: InputContentInfo, flags: Int, opts: Bundle?): Boolean {
+    override fun commitContent(
+        inputContentInfo: InputContentInfo,
+        flags: Int,
+        opts: Bundle?
+    ): Boolean {
         println("commitContent: $inputContentInfo, flags: $flags, opts: $opts")
         return false
     }
@@ -61,20 +64,11 @@ class CodeEditorInputConnection(
 
     override fun commitText(text: CharSequence, newCursorPosition: Int): Boolean {
         println("commitText: $text, newCursorPosition: $newCursorPosition")
-        state.insert(text.toString())
         return true
     }
 
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
         println("deleteSurroundingText: beforeLength=$beforeLength, afterLength=$afterLength")
-
-        if (state.isTextSelected()) {
-            println("Delete selected")
-            state.deleteSelected()
-        } else {
-            state.deleteAroundCursor(beforeLength, afterLength)
-        }
-
         return true
     }
 
@@ -120,29 +114,7 @@ class CodeEditorInputConnection(
 
     override fun performContextMenuAction(id: Int): Boolean {
         println("performContextMenuAction: id=$id")
-        return when (id) {
-            androidRId.copy -> {
-                state.copy()
-                true
-            }
-
-            androidRId.paste -> {
-                state.paste()
-                true
-            }
-
-            androidRId.cut -> {
-                state.cut()
-                true
-            }
-
-            androidRId.selectAll -> {
-                state.selectAll()
-                true
-            }
-
-            else -> false
-        }
+        return true
     }
 
     override fun performEditorAction(editorAction: Int): Boolean {
@@ -167,10 +139,6 @@ class CodeEditorInputConnection(
 
     override fun sendKeyEvent(event: KeyEvent): Boolean {
         EventBus.instance.postSync(event.asComposeKeyEvent())
-
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            state.handleKeyEvent(event.asComposeKeyEvent())
-        }
         return true
     }
 

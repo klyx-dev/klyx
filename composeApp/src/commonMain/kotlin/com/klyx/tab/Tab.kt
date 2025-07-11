@@ -12,6 +12,7 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.generateId
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.event.ContentChangeEvent
 
 typealias TabId = String
 
@@ -42,8 +43,7 @@ sealed class Tab(
         var isModified by mutableStateOf(false)
 
         init {
-            editorState.addTextChangedListener {
-                //println(it)
+            editorState.subscribeEvent<ContentChangeEvent> {
                 isModified = true
             }
         }

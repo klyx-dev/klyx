@@ -8,8 +8,8 @@ import androidx.compose.ui.unit.TextUnit
 @Composable
 @ExperimentalCodeEditorApi
 actual fun CodeEditor(
-    modifier: Modifier,
     state: CodeEditorState,
+    modifier: Modifier,
     fontFamily: FontFamily,
     fontSize: TextUnit,
     editable: Boolean,

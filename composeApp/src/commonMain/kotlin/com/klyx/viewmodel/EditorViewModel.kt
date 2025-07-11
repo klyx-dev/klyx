@@ -32,7 +32,7 @@ data class TabState(
 )
 
 @OptIn(ExperimentalCodeEditorApi::class)
-@Suppress("MemberVisibilityCanBePrivate")
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class EditorViewModel(
     private val notifier: Notifier
 ) : ViewModel() {
@@ -225,11 +225,11 @@ class EditorViewModel(
         _state.value.openTabs.forEach { tab ->
             if (tab is Tab.FileTab) {
                 val file = tab.file
-                val editorState = tab.editorState
+                val text by tab.editorState
 
                 if (file.path != "untitled") {
                     val saved = try {
-                        file.writeText(editorState.text)
+                        file.writeText(text)
                         true
                     } catch (e: Exception) {
                         false
