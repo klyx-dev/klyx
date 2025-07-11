@@ -61,7 +61,7 @@ actual fun CodeEditor(
     }
 
     LaunchedEffect(state.content) {
-        state.editor?.setText(state.content)
+        //state.editor?.setText(state.content)
     }
 
     AndroidView(

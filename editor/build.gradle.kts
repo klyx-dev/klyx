@@ -54,9 +54,9 @@ kotlin {
 
         androidMain {
             dependencies {
-                implementation(project.dependencies.platform("io.github.rosemoe:editor-bom:0.23.7"))
-                implementation("io.github.rosemoe:editor")
-                implementation("io.github.rosemoe:editor-lsp")
+                api(project.dependencies.platform("io.github.rosemoe:editor-bom:0.23.7"))
+                api("io.github.rosemoe:editor")
+                api("io.github.rosemoe:editor-lsp")
                 implementation("io.github.rosemoe:language-treesitter")
                 implementation("com.itsaky.androidide.treesitter:tree-sitter-json:4.3.1")
             }

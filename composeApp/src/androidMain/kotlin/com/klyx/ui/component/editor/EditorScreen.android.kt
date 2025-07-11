@@ -3,7 +3,10 @@ package com.klyx.ui.component.editor
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Text
@@ -24,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -35,6 +39,7 @@ import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
+import com.klyx.core.language
 import com.klyx.core.requestStoragePermission
 import com.klyx.editor.CodeEditor
 import com.klyx.editor.ExperimentalCodeEditorApi
@@ -144,7 +149,8 @@ actual fun EditorScreen(modifier: Modifier) {
                 userScrollEnabled = false,
                 modifier = Modifier
                     .fillMaxSize()
-                    .imePadding(),
+                    .imePadding()
+                    .systemBarsPadding(),
             ) { page ->
                 val tab = openTabs.getOrNull(page)
 
@@ -163,20 +169,28 @@ actual fun EditorScreen(modifier: Modifier) {
                             }
                         }
 
-                        CodeEditor(
-                            modifier = Modifier.fillMaxSize(),
-                            state = tab.editorState,
-                            fontFamily = fontFamily,
-                            fontSize = editorSettings.fontSize.sp,
-                            editable = !tab.isInternal,
-                            pinLineNumber = editorSettings.pinLineNumbers,
-                            language = when (tab.file.extension) {
-                                "kt", "kts" -> "kotlin"
-                                "js" -> "javascript"
-                                "json" -> "json"
-                                else -> null
-                            }
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            CodeEditor(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth(),
+                                state = tab.editorState,
+                                fontFamily = fontFamily,
+                                fontSize = editorSettings.fontSize.sp,
+                                editable = !tab.isInternal,
+                                pinLineNumber = editorSettings.pinLineNumbers,
+                                language = tab.file.language().lowercase()
+                            )
+
+                            StatusBar(
+                                tab.editorState,
+                                modifier = Modifier
+                                    .height(25.dp)
+                                    .fillMaxWidth()
+                            )
+                        }
                     }
 
                     else -> {
