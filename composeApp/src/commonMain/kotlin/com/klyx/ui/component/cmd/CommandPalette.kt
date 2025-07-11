@@ -106,7 +106,7 @@ fun CommandPalette(
                             .clip(RoundedCornerShape(6.dp))
                             .clickable {
                                 CommandManager.addRecentlyUsedCommand(command)
-                                command.execute(command)
+                                command.run()
                                 onDismissRequest()
                             }
                     ) {
