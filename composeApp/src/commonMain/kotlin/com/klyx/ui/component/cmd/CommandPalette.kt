@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastJoinToString
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.klyx.core.cmd.Command
@@ -115,9 +116,13 @@ fun CommandPalette(
                         ) {
                             Text(
                                 text = command.name,
-                                modifier = if (isRecentlyUsed) Modifier else Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f),
+                                modifier = if (isRecentlyUsed) {
+                                    Modifier
+                                } else {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                },
                                 fontSize = 14.sp
                             )
 
@@ -129,13 +134,15 @@ fun CommandPalette(
                                         .padding(start = 8.dp)
                                         .weight(1f),
                                     fontSize = 9.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.harmonizeWithPrimary(0.6f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.harmonizeWithPrimary(
+                                        0.6f
+                                    )
                                 )
                             }
 
-                            command.shortcutKey?.let {
+                            if (command.shortcuts.isNotEmpty()) {
                                 Text(
-                                    text = it,
+                                    text = command.shortcuts.fastJoinToString(" ") { it.toString() },
                                     color = Color(0xFF1369FF).harmonizeWithPrimary(0.5f),
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace
