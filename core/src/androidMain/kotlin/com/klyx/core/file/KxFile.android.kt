@@ -93,7 +93,7 @@ actual open class KxFile(
     fun outputStream(): OutputStream? = file?.outputStream() ?: context.contentResolver.openOutputStream(raw.uri)
 
     fun isFromTermux() = raw.uri.isFromTermux()
-    fun canWatchFileEvents() = file != null
+    fun canWatchFileEvents() = file != null && !isFromTermux()
 
     actual fun source(): Source {
         val input = inputStream() ?: nothing("Failed to open input stream for $absolutePath")

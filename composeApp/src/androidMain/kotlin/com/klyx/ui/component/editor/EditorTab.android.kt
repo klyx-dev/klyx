@@ -12,10 +12,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.contentColorFor
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,8 +33,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.klyx.core.Environment
 import com.klyx.core.file.KWatchEvent.Kind
@@ -37,6 +46,7 @@ import com.klyx.tab.Tab
 import com.klyx.ui.theme.DefaultKlyxShape
 import kotlinx.coroutines.channels.consumeEach
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 actual fun EditorTab(
     tab: Tab,
@@ -106,7 +116,8 @@ actual fun EditorTab(
             Spacer(modifier = Modifier.width(6.dp))
         }
 
-        val isTabFileMissing = { (tab is Tab.FileTab && tab.file.exists.not() && tab.file.path != "/untitled") }
+        val isTabFileMissing =
+            { (tab is Tab.FileTab && tab.file.exists.not() && tab.file.path != "/untitled") }
 
         Text(
             text = tab.name,
@@ -155,15 +166,35 @@ actual fun EditorTab(
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        Icon(
-            imageVector = Icons.Default.Close,
-            contentDescription = "Close tab",
-            tint = textColor,
-            modifier = Modifier
-                .size(15.dp)
-                .clip(DefaultKlyxShape)
-                .clickable(onClick = onClose)
-                .padding(2.dp)
-        )
+        TooltipBox(
+            state = rememberTooltipState(isPersistent = true),
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+            tooltip = {
+                PlainTooltip(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ) {
+                    val color = LocalContentColor.current
+
+                    Text(buildAnnotatedString {
+                        append("Close Tab  ")
+                        withStyle(SpanStyle(color = color.copy(alpha = 0.7f))) {
+                            append("Ctrl-W")
+                        }
+                    })
+                }
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = "Close tab",
+                tint = textColor,
+                modifier = Modifier
+                    .size(15.dp)
+                    .clip(DefaultKlyxShape)
+                    .clickable(onClick = onClose)
+                    .padding(2.dp)
+            )
+        }
     }
 }

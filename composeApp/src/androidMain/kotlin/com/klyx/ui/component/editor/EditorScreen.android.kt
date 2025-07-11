@@ -28,6 +28,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.klyx.core.LocalAppSettings
+import com.klyx.core.cmd.CommandManager
+import com.klyx.core.cmd.command
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
@@ -84,12 +86,6 @@ actual fun EditorScreen(modifier: Modifier) {
         }
     }
 
-    LaunchedEffect(Unit) {
-        snapshotFlow { openTabs }.collect { tabs ->
-
-        }
-    }
-
     LaunchedEffect(pagerState, openTabs.size) {
         snapshotFlow { pagerState.currentPage }.collect { page ->
             openTabs.getOrNull(page)?.let { tab ->
@@ -105,6 +101,14 @@ actual fun EditorScreen(modifier: Modifier) {
                 pagerState.animateScrollToPage(index)
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        CommandManager.addCommand(command {
+            name("Close Active Tab")
+            shortcutKey("Ctrl-W")
+            execute { viewModel.closeActiveTab() }
+        })
     }
 
     Column(modifier = modifier) {
@@ -173,7 +177,10 @@ actual fun EditorScreen(modifier: Modifier) {
 
                     else -> {
                         tab?.content?.invoke() ?: run {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text("Unknown Tab: ${tab?.name ?: ""}")
                             }
                         }

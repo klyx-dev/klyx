@@ -59,8 +59,8 @@ actual fun CodeEditor(
     val typeface by fontFamilyResolver.resolveAsTypeface(style.fontFamily)
 
     AndroidView(
-        factory = {
-            CodeEditor(it).apply {
+        factory = { context ->
+            CodeEditor(context).apply {
                 setText(state.text)
 
                 subscribeAlways<ContentChangeEvent> {

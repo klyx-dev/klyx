@@ -60,6 +60,7 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
+import com.klyx.core.LocalNotifier
 import com.klyx.core.Notifier
 import com.klyx.core.extension.ExtensionFilter
 import com.klyx.core.extension.ExtensionToml
@@ -90,6 +91,7 @@ import com.klyx.res.no_extensions
 import com.klyx.res.no_internet_connection
 import com.klyx.spacedName
 import com.klyx.ui.theme.DefaultKlyxShape
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -98,11 +100,9 @@ import org.koin.compose.koinInject
 @Composable
 actual fun ExtensionScreen(modifier: Modifier) {
     val context = LocalContext.current
-    val uriHandler = LocalUriHandler.current
-    val colorScheme = MaterialTheme.colorScheme
+    val notifier = LocalNotifier.current
 
     val factory: ExtensionFactory = koinInject()
-    val notifier: Notifier = koinInject()
 
     val scope = rememberCoroutineScope()
     val networkState by rememberNetworkState()
@@ -125,25 +125,31 @@ actual fun ExtensionScreen(modifier: Modifier) {
         }
     }
 
-    val selectDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        if (uri != null) {
-            if (uri.host != "com.termux.documents") {
-                val dir = DocumentFile.fromTreeUri(context, uri)!!.toKxFile()
+    val selectDir =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+            if (uri != null) {
+                if (uri.host != "com.termux.documents") {
+                    val dir = DocumentFile.fromTreeUri(context, uri)!!.toKxFile()
 
-                scope.launch {
-                    ExtensionManager.installExtension(
-                        dir = dir,
-                        factory = factory,
-                        isDevExtension = true
-                    ).onFailure {
-                        notifier.error(string(string.extension_install_failed, it.message.toString()))
+                    scope.launch {
+                        ExtensionManager.installExtension(
+                            dir = dir,
+                            factory = factory,
+                            isDevExtension = true
+                        ).onFailure {
+                            notifier.error(
+                                string(
+                                    string.extension_install_failed,
+                                    it.message.toString()
+                                )
+                            )
+                        }
                     }
+                } else {
+                    notifier.notify(string(string.extension_select_directory_unsupported_provider))
                 }
-            } else {
-                notifier.notify(string(string.extension_select_directory_unsupported_provider))
             }
         }
-    }
 
     Column(modifier = modifier) {
         Row(
@@ -217,176 +223,12 @@ actual fun ExtensionScreen(modifier: Modifier) {
                             ),
                             modifier = Modifier.animateItem()
                         ) {
-                            var isInstalling by remember { mutableStateOf(false) }
-
-                            Column(
-                                modifier = Modifier
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                                    .fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = buildAnnotatedString {
-                                            val name = extension.name
-                                            val query = searchQuery
-                                            val startIndex = if (query.isNotBlank()) name.indexOf(query, ignoreCase = true) else -1
-                                            if (startIndex >= 0 && query.isNotBlank()) {
-                                                append(name.substring(0, startIndex))
-                                                withStyle(SpanStyle(color = colorScheme.primary)) {
-                                                    append(name.substring(startIndex, startIndex + query.length))
-                                                }
-                                                append(name.substring(startIndex + query.length))
-                                            } else {
-                                                append(name)
-                                            }
-                                        },
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    Text(
-                                        text = "v${extension.version}",
-                                        style = MaterialTheme.typography.titleMedium
-                                    )
-
-                                    Spacer(modifier = Modifier.weight(1f))
-
-                                    Text(
-                                        text = if (extension in installedExtensions) {
-                                            stringResource(string.action_uninstall)
-                                        } else stringResource(string.action_install),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier
-                                            .clip(DefaultKlyxShape)
-                                            .alpha(if (isInstalling) 0.5f else 1f)
-                                            .clickable(role = Role.Button, enabled = !isInstalling) {
-                                                if (extension in installedExtensions) {
-                                                    ExtensionManager.uninstallExtension(extension)
-                                                    notifier.notify(string(string.extension_uninstall_restart_prompt))
-                                                } else {
-                                                    scope.launch {
-                                                        isInstalling = true
-                                                        installExtension(extension).onSuccess { file ->
-                                                            ExtensionManager.installExtension(
-                                                                dir = file,
-                                                                factory = factory,
-                                                                isDevExtension = false
-                                                            ).onSuccess {
-                                                                notifier.success(string(string.extension_install_success))
-                                                            }.onFailure {
-                                                                notifier.error(
-                                                                    string(
-                                                                        string.extension_install_failed,
-                                                                        it.message ?: it.stackTrace.first().toString()
-                                                                    )
-                                                                )
-                                                            }
-                                                        }.onFailure {
-                                                            notifier.error(
-                                                                string(
-                                                                    string.extension_install_failed,
-                                                                    it.message ?: it.stackTrace.first().toString()
-                                                                )
-                                                            )
-                                                        }
-                                                        isInstalling = false
-                                                    }
-                                                }
-                                            }
-                                            .padding(horizontal = 4.dp),
-                                        color = if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                }
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = stringResource(
-                                            if (extension.authors.size > 1) {
-                                                string.extension_author_label_plural
-                                            } else {
-                                                string.extension_author_label_singular
-                                            },
-                                            extension.authors.joinToString(",")
-                                        ),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-
-                                    Spacer(modifier = Modifier.weight(1f))
-
-                                    if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
-                                        Icon(
-                                            Icons.Outlined.Code,
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(18.dp)
-                                                .padding(end = 4.dp)
-                                        )
-                                    } else {
-                                        Text(
-                                            text = stringResource(string.extension_downloads, "N/A"),
-                                            style = MaterialTheme.typography.labelMedium
-                                        )
-                                    }
-                                }
-
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = extension.description,
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-
-                                    Spacer(modifier = Modifier.weight(1f))
-
-                                    val isDevExtension = remember(extension) {
-                                        ExtensionManager.findExtension(extension.id)?.isDevExtension == true
-                                    }
-
-                                    if (!isDevExtension) {
-                                        if (extension.repository.isNotBlank()) {
-                                            Icon(
-                                                KlyxIcons.GithubAlt,
-                                                contentDescription = null,
-                                                modifier = Modifier
-                                                    .size(20.dp)
-                                                    .clip(DefaultKlyxShape)
-                                                    .clickable(role = Role.Button) { uriHandler.openUri(extension.repository) }
-                                                    .padding(4.dp)
-                                            )
-
-                                            Spacer(modifier = Modifier.width(2.dp))
-                                        }
-
-                                        Icon(
-                                            Icons.Outlined.MoreHoriz,
-                                            contentDescription = null,
-                                            modifier = Modifier
-                                                .size(20.dp)
-                                                .clip(DefaultKlyxShape)
-                                                .clickable(role = Role.Button) { notifier.notify("Nothing...") }
-                                                .padding(2.dp)
-                                        )
-                                    }
-                                }
-
-                                if (isInstalling) {
-                                    LinearWavyProgressIndicator(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(2.dp)
-                                    )
-                                }
-                            }
+                            ExtensionItem(
+                                extension = extension,
+                                searchQuery = searchQuery,
+                                installedExtensions = installedExtensions,
+                                scope = scope
+                            )
                         }
                     }
                 }
@@ -399,6 +241,216 @@ actual fun ExtensionScreen(modifier: Modifier) {
                 }
             }
         }
+    }
+}
+
+@Composable
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun ExtensionItem(
+    extension: ExtensionToml,
+    searchQuery: String,
+    installedExtensions: List<ExtensionToml>,
+    scope: CoroutineScope
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val uriHandler = LocalUriHandler.current
+    val notifier = LocalNotifier.current
+
+    val factory: ExtensionFactory = koinInject()
+
+    var isInstalling by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 6.dp)
+            .fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = buildAnnotatedString {
+                    val name = extension.name
+                    val query = searchQuery
+                    val startIndex = if (query.isNotBlank()) {
+                        name.indexOf(query, ignoreCase = true)
+                    } else -1
+
+                    if (startIndex >= 0 && query.isNotBlank()) {
+                        append(name.substring(0, startIndex))
+                        withStyle(SpanStyle(color = colorScheme.primary)) {
+                            append(name.substring(startIndex, startIndex + query.length))
+                        }
+                        append(name.substring(startIndex + query.length))
+                    } else {
+                        append(name)
+                    }
+                },
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = "v${extension.version}",
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Text(
+                text = if (extension in installedExtensions) {
+                    stringResource(string.action_uninstall)
+                } else stringResource(string.action_install),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .clip(DefaultKlyxShape)
+                    .alpha(if (isInstalling) 0.5f else 1f)
+                    .clickable(
+                        role = Role.Button,
+                        enabled = !isInstalling
+                    ) {
+                        if (extension in installedExtensions) {
+                            ExtensionManager.uninstallExtension(extension)
+                            notifier.notify(string(string.extension_uninstall_restart_prompt))
+                        } else {
+                            scope.launch {
+                                isInstalling = true
+                                install(extension, factory, notifier)
+                                isInstalling = false
+                            }
+                        }
+                    }
+                    .padding(horizontal = 4.dp),
+                color = if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(
+                    if (extension.authors.size > 1) {
+                        string.extension_author_label_plural
+                    } else {
+                        string.extension_author_label_singular
+                    },
+                    extension.authors.joinToString(",")
+                ),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
+                Icon(
+                    Icons.Outlined.Code,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(18.dp)
+                        .padding(end = 4.dp)
+                )
+            } else {
+                Text(
+                    text = stringResource(
+                        string.extension_downloads,
+                        "N/A"
+                    ),
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = extension.description,
+                style = MaterialTheme.typography.labelLarge
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            val isDevExtension = remember(extension) {
+                ExtensionManager.findExtension(extension.id)?.isDevExtension == true
+            }
+
+            if (!isDevExtension) {
+                if (extension.repository.isNotBlank()) {
+                    Icon(
+                        KlyxIcons.GithubAlt,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(DefaultKlyxShape)
+                            .clickable(
+                                role = Role.Button
+                            ) {
+                                uriHandler.openUri(extension.repository)
+                            }
+                            .padding(4.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(2.dp))
+                }
+
+                Icon(
+                    Icons.Outlined.MoreHoriz,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(DefaultKlyxShape)
+                        .clickable(role = Role.Button) { notifier.notify("Nothing...") }
+                        .padding(2.dp)
+                )
+            }
+        }
+
+        if (isInstalling) {
+            LinearWavyProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(2.dp)
+            )
+        }
+    }
+}
+
+private suspend fun install(
+    extension: ExtensionToml,
+    factory: ExtensionFactory,
+    notifier: Notifier
+) {
+    installExtension(extension).onSuccess { file ->
+        ExtensionManager.installExtension(
+            dir = file,
+            factory = factory,
+            isDevExtension = false
+        ).fold(
+            onFailure = {
+                notifier.error(
+                    string(
+                        string.extension_install_failed,
+                        it.message ?: it.stackTrace.first().toString()
+                    )
+                )
+            },
+            onSuccess = {
+                notifier.success(string(string.extension_install_success))
+            }
+        )
+    }.onFailure {
+        notifier.error(
+            string(
+                string.extension_install_failed,
+                it.message ?: it.stackTrace.first().toString()
+            )
+        )
     }
 }
 

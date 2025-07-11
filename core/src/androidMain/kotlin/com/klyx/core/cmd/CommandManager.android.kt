@@ -28,7 +28,7 @@ actual object CommandManager {
                 activeSequences.entries.removeIf { (command, sequence) ->
                     if (event.matchesSequence(sequence)) {
                         if (sequence.advance()) {
-                            command.execute(command)
+                            command.run()
                             true
                         } else false
                     } else true
@@ -39,7 +39,7 @@ actual object CommandManager {
                         val sequence = parseShortcut(key)
                         if (event.matchesSequence(sequence)) {
                             if (sequence.advance()) {
-                                command.execute(command)
+                                command.run()
                             } else {
                                 activeSequences[command] = sequence
                             }

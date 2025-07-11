@@ -102,6 +102,8 @@ class EditorViewModel(
         }
     }
 
+    fun closeActiveTab() = _state.value.activeTabId?.let { closeTab(it) }
+
     fun setActiveTab(tabId: TabId) {
         _state.update { current ->
             if (current.openTabs.any { it.id == tabId }) {
