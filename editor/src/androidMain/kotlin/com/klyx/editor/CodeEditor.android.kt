@@ -3,6 +3,7 @@ package com.klyx.editor
 import android.content.Context
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -57,6 +58,10 @@ actual fun CodeEditor(
     val context = LocalContext.current
     val editor = remember(state) {
         setCodeEditorFactory(context, state)
+    }
+
+    LaunchedEffect(state.content) {
+        state.editor?.setText(state.content)
     }
 
     AndroidView(
