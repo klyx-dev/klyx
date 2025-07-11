@@ -1,10 +1,10 @@
 package com.klyx
 
 object Version {
-    const val STABLE_VERSION_NAME = "1.5.0"
+    const val STABLE_VERSION_NAME = "1.6.0"
     const val PRE_RELEASE_VERSION_SUFFIX = "dev"
 
-    val VERSION_NAME = "1.5.0"
+    val VERSION_NAME = "1.6.0"
     val AppVersionCode get() = calculateVersionCode()
 
     private fun calculateVersionCode(): Int {

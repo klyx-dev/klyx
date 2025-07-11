@@ -8,7 +8,11 @@
     "signTag": true
   },
   "github": {
-    "release": true
+    "release": true,
+    "tokenRef": "GITHUB_TOKEN",
+    "assets": [
+      "composeApp/release/klyx-release-v*.apk"
+    ]
   },
   "npm": false,
   "plugins": {

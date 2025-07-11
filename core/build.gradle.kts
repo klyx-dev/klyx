@@ -11,16 +11,13 @@ plugins {
 }
 
 kotlin {
+    jvmToolchain(21)
+
+    @Suppress("UnstableApiUsage")
     androidLibrary {
         namespace = "com.klyx.core"
         compileSdk = Configs.Android.COMPILE_SDK_VERSION
         minSdk = Configs.Android.MIN_SDK_VERSION
-
-        compilations.configureEach {
-            compilerOptions.configure {
-                jvmTarget.set(JvmTarget.JVM_21)
-            }
-        }
     }
 
     jvm()
