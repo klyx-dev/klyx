@@ -116,10 +116,10 @@ class MainActivity : ComponentActivity() {
         return super.dispatchKeyEvent(event)
     }
 
-    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
-        lifecycleScope.launch {
-            EventBus.instance.post(event.asComposeKeyEvent())
-        }
-        return super.onKeyShortcut(keyCode, event)
-    }
+//    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
+//        lifecycleScope.launch {
+//            EventBus.instance.post(event.asComposeKeyEvent())
+//        }
+//        return super.onKeyShortcut(keyCode, event)
+//    }
 }
