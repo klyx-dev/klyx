@@ -59,14 +59,14 @@ interface ExportedFunction {
 }
 
 internal fun FunctionType.toSignature(moduleName: String, functionName: String): String {
-    val functionParams = parameters.map {
+    val functionParams = parameters.joinToString(", ") {
         when (it.valType) {
             ValueType.I32 -> "Int"
             ValueType.I64 -> "Long"
             ValueType.F32 -> "Float"
             ValueType.F64 -> "Double"
         }
-    }.joinToString(", ")
+    }
     val retStr = when (returnValueEnums.firstOrNull()?.valType) {
         ValueType.I32 -> "Int"
         ValueType.I64 -> "Long"

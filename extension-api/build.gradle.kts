@@ -1,6 +1,5 @@
 import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -10,16 +9,13 @@ plugins {
 }
 
 kotlin {
+    jvmToolchain(21)
+
+    @Suppress("UnstableApiUsage")
     androidLibrary {
         namespace = "com.klyx.extension"
         compileSdk = Configs.Android.COMPILE_SDK_VERSION
         minSdk = Configs.Android.MIN_SDK_VERSION
-
-        compilations.configureEach {
-            compilerOptions.configure {
-                jvmTarget.set(JvmTarget.JVM_21)
-            }
-        }
     }
 
     jvm()
@@ -35,8 +31,11 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
 
+            implementation("io.github.charlietap.chasm:chasm:0.9.80")
+
             implementation(projects.core)
             implementation(projects.kwasm)
+            implementation(projects.shared)
         }
 
         commonTest.dependencies {

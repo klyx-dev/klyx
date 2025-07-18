@@ -4,30 +4,55 @@ import android.content.Context
 import com.klyx.core.extension.Extension
 import com.klyx.core.file.rawFile
 import com.klyx.core.theme.ThemeManager
+import com.klyx.expect
 import com.klyx.extension.impl.Android
 import com.klyx.extension.impl.FileSystem
 import com.klyx.extension.impl.Logger
 import kotlinx.io.asSource
 import kwasm.KWasmProgram
 import kwasm.api.ByteBufferMemoryProvider
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
-    suspend fun loadExtension(extension: Extension, callStartFunction: Boolean = false): KWasmProgram? {
+class ExtensionFactory(
+    modules: List<ExtensionHostModule> = emptyList()
+) : KoinComponent {
+    private val context: Context by inject()
+    private val _modules = mutableListOf<ExtensionHostModule>()
+
+    init {
+        _modules.addAll(
+            arrayOf(
+                Android(context),
+                FileSystem(),
+                Logger(),
+                *modules.toTypedArray()
+            )
+        )
+    }
+
+    suspend fun loadExtension(
+        extension: Extension,
+        callInit: Boolean = false
+    ): KWasmProgram? {
         val id = extension.toml.id
 
         extension.themeFiles.forEach { file ->
             if (file.inputStream() == null) return@forEach
 
-            ThemeManager.loadThemeFamily(file.inputStream()!!.asSource()).getOrThrow()
+            ThemeManager
+                .loadThemeFamily(file.inputStream()!!.asSource())
+                .expect("Unable to load the theme")
         }
 
         return extension.wasmFiles.firstOrNull()?.let { wasm ->
-            val memorySize = extension.toml.requestedMemorySize ?: 1 // Default to 1MB if not specified
+            val memorySize =
+                extension.toml.requestedMemorySize ?: 1 // Default to 1MB if not specified
             val builder = KWasmProgram
                 .builder(ByteBufferMemoryProvider(memorySize * 1024L * 1024L))
                 .withBinaryModule(id, wasm.rawFile())
 
-            for (module in modules) {
+            for (module in _modules) {
                 for (func in module.getHostFunctions()) {
                     builder.withHostFunction(
                         namespace = module.namespace,
@@ -39,11 +64,11 @@ class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
 
             val program = builder.build()
 
-            if (callStartFunction) {
+            if (callInit) {
                 runCatching {
-                    program.getFunction(id, "start")()
+                    program.getFunction(id, "init")()
                 }.onFailure {
-                    throw ExtensionLoadException("Failed to call start function: ${it.message}", it)
+                    throw ExtensionLoadException("Failed to call init function: ${it.message}", it)
                 }
             }
 
@@ -52,11 +77,14 @@ class ExtensionFactory(private vararg val modules: ExtensionHostModule) {
     }
 
     companion object {
+        private var factory: ExtensionFactory? = null
+
         @JvmStatic
-        fun create(context: Context) = ExtensionFactory(
-            Android(context),
-            FileSystem(),
-            Logger()
-        )
+        fun getInstance() = run {
+            if (factory == null) {
+                factory = ExtensionFactory()
+            }
+            factory!!
+        }
     }
 }

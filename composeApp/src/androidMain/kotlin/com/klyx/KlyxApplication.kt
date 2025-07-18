@@ -16,6 +16,7 @@ import com.klyx.extension.ExtensionFactory
 import com.klyx.viewmodel.EditorViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
+import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import java.io.File
@@ -37,7 +38,7 @@ class KlyxApplication : Application() {
 
         initKoin(module {
             viewModelOf(::EditorViewModel)
-            single { ExtensionFactory.create(get()) }
+            singleOf(ExtensionFactory::getInstance)
         }) {
             androidLogger()
             androidContext(this@KlyxApplication)
