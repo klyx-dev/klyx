@@ -1,5 +1,9 @@
 package com.klyx.core
 
+import kotlinx.coroutines.runBlocking
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
+
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object Environment {
     actual val AppName: String
@@ -21,4 +25,11 @@ actual object Environment {
     actual val LogsDir: String
         get() = TODO("Not yet implemented")
 
+}
+
+actual fun string(
+    resource: StringResource,
+    vararg formatArgs: Any?
+): String {
+    return runBlocking { String.format(getString(resource), *formatArgs) }
 }

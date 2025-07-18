@@ -11,13 +11,12 @@ data class Extension(
     val isDevExtension: Boolean = false
 )
 
-@Throws(Exception::class)
 fun parseExtension(dir: KxFile, toml: ExtensionToml): Extension {
     val themes = dir.resolve("themes").listFiles { file ->
         file.extension == "json"
     }?.toList() ?: emptyList()
 
-    val wasmFiles = dir.resolve("lib").listFiles { file ->
+    val wasmFiles = dir.resolve("src").listFiles { file ->
         file.extension == "wasm"
     }?.toList() ?: emptyList()
 

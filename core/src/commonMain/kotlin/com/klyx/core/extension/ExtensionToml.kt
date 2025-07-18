@@ -35,7 +35,6 @@ data class ExtensionToml(
     val requestedMemorySize: Int? = null
 ) {
     companion object {
-        @JvmStatic
         fun from(toml: String): ExtensionToml {
             return Toml.decodeFromString(toml)
         }

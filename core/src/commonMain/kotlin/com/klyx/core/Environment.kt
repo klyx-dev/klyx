@@ -26,4 +26,4 @@ fun printAllSystemProperties() {
     }
 }
 
-fun string(resource: StringResource, vararg formatArgs: Any): String = runBlocking { getString(resource, formatArgs) }
+expect fun string(resource: StringResource, vararg formatArgs: Any?): String

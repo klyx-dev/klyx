@@ -26,12 +26,15 @@ import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ToggleButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -111,6 +114,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
 
     var isLoading by remember { mutableStateOf(true) }
     var filter by remember { mutableStateOf(ExtensionFilter.All) }
+    var showDevExtensionInstallationType by remember { mutableStateOf(false) }
 
     LaunchedEffect(networkState) {
         if (networkState.isConnected) {
@@ -143,10 +147,33 @@ actual fun ExtensionScreen(modifier: Modifier) {
                                     it.message.toString()
                                 )
                             )
+                        }.onSuccess {
+                            notifier.success(string(string.extension_install_success))
                         }
                     }
                 } else {
                     notifier.notify(string(string.extension_select_directory_unsupported_provider))
+                }
+            }
+        }
+
+    val selectZip =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) {
+                scope.launch {
+                    ExtensionManager.installExtensionFromZip(
+                        zipFile = DocumentFile.fromSingleUri(context, uri)!!.toKxFile(),
+                        factory = factory,
+                        isDevExtension = true
+                    ).onFailure {
+                        it.printStackTrace()
+                        notifier.error(
+                            string(
+                                string.extension_install_failed,
+                                it.message
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -163,7 +190,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
             )
 
             ElevatedButton(
-                onClick = { selectDir.launch(null) },
+                onClick = { showDevExtensionInstallationType = true },
                 shape = DefaultKlyxShape,
                 colors = ButtonDefaults.elevatedButtonColors(
                     contentColor = MaterialTheme.colorScheme.onSurface
@@ -241,6 +268,19 @@ actual fun ExtensionScreen(modifier: Modifier) {
                 }
             }
         }
+    }
+
+    if (showDevExtensionInstallationType) {
+        SelectInstallationType(
+            onDismissRequest = { showDevExtensionInstallationType = false },
+            onTypeSelected = { type ->
+                showDevExtensionInstallationType = false
+                when (type) {
+                    InstallationType.Directory -> selectDir.launch(null)
+                    InstallationType.Zip -> selectZip.launch(arrayOf("application/zip"))
+                }
+            }
+        )
     }
 }
 
@@ -333,7 +373,7 @@ private fun ExtensionItem(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = stringResource(
+                text = string(
                     if (extension.authors.size > 1) {
                         string.extension_author_label_plural
                     } else {
@@ -357,7 +397,7 @@ private fun ExtensionItem(
                 )
             } else {
                 Text(
-                    text = stringResource(
+                    text = string(
                         string.extension_downloads,
                         "N/A"
                     ),
@@ -484,6 +524,43 @@ internal actual fun ExtensionFilterBar(onFilterChange: (ExtensionFilter) -> Unit
                 }
             ) {
                 Text(filter.spacedName)
+            }
+        }
+    }
+}
+
+private enum class InstallationType {
+    Directory, Zip
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SelectInstallationType(
+    onDismissRequest: () -> Unit,
+    onTypeSelected: (InstallationType) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp)
+        ) {
+            TextButton(
+                onClick = { onTypeSelected(InstallationType.Directory) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "From Directory")
+            }
+
+            TextButton(
+                onClick = { onTypeSelected(InstallationType.Zip) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = "From Zip")
             }
         }
     }

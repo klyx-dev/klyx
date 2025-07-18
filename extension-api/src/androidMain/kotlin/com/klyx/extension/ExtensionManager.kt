@@ -8,6 +8,7 @@ import com.klyx.core.extension.ExtensionToml
 import com.klyx.core.extension.parseExtension
 import com.klyx.core.extension.parseToml
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.extractZip
 import com.klyx.core.file.find
 import com.klyx.core.file.rawFile
 import com.klyx.core.file.resolve
@@ -17,6 +18,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.io.asSource
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 
 object ExtensionManager {
     val installedExtensions = mutableStateListOf<Extension>()
@@ -25,19 +27,13 @@ object ExtensionManager {
         dir: KxFile,
         factory: ExtensionFactory,
         isDevExtension: Boolean = false
-    ): Result<Any> = withContext(Dispatchers.IO) {
+    ): Result<Unit> = withContext(Dispatchers.IO) {
         val tomlFile = dir.find("extension.toml")
-            ?: return@withContext Result.failure(Exception("extension.toml not found in selected folder"))
+            ?: return@withContext Result.failure(Exception("extension.toml not found"))
 
-        val tomlInput = tomlFile.inputStream() ?: return@withContext Result.failure(Exception("Failed to read extension.toml"))
-
-        val toml = tomlInput.use { input ->
-            try {
-                parseToml(input.asSource())
-            } catch (e: Exception) {
-                return@withContext Result.failure(e)
-            }
-        }
+        val toml = tomlFile.inputStream()?.use {
+            parseToml(it.asSource())
+        } ?: return@withContext Result.failure(Exception("Failed to read extension.toml"))
 
         val internalDir = File(
             if (isDevExtension) Environment.DevExtensionsDir else Environment.ExtensionsDir,
@@ -45,94 +41,98 @@ object ExtensionManager {
         ).toKxFile()
 
         if (internalDir.exists) {
-            runCatching {
-                val extension = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
-                installedExtensions.add(extension)
-                factory.loadExtension(extension)
-                return@withContext Result.success(Unit)
-            }.onFailure {
-                return@withContext Result.failure(it)
-            }
+            internalDir.deleteRecursively()
         }
 
         internalDir.mkdirs()
-
-        fun copyRecursive(source: KxFile, dest: KxFile) {
-            source.listFiles()?.forEach { file ->
-                try {
-                    val destFile = dest.resolve(file.name)
-
-                    if (file.isDirectory) {
-                        destFile.mkdirs()
-                        copyRecursive(file, destFile)
-                    } else {
-                        val inputStream = file.inputStream()
-
-                        inputStream?.use { input ->
-                            destFile.outputStream()?.use { output ->
-                                input.copyTo(output)
-                            }
-                        }
-                    }
-                } catch (e: IOException) {
-                    throw e
-                }
-            }
-        }
-
         runCatching { copyRecursive(dir, internalDir) }.onFailure {
             return@withContext Result.failure(it)
         }
 
         runCatching {
-            val extension = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
-            installedExtensions.add(extension)
-            factory.loadExtension(extension)
-        }.onFailure {
-            return@withContext Result.failure(it)
+            val ext = parseExtension(internalDir, toml).copy(isDevExtension = isDevExtension)
+            installedExtensions.removeIf { it.toml.id == ext.toml.id }
+            installedExtensions.add(ext)
+            try {
+                val program = factory.loadExtension(ext, callInit = true)
+            } catch (err: Exception) {
+                installedExtensions.removeIf { it.toml.id == ext.toml.id }
+                internalDir.deleteRecursively()
+                return@withContext Result.failure(err)
+            }
+        }
+    }
+
+    suspend fun installExtensionFromZip(
+        zipFile: KxFile,
+        factory: ExtensionFactory,
+        isDevExtension: Boolean = false
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        if (!zipFile.exists || !zipFile.name.endsWith(".zip")) {
+            return@withContext Result.failure(IllegalArgumentException("Invalid ZIP file"))
         }
 
-        Result.success(Unit)
+        val tempDir = Files.createTempDirectory("extension_tmp_").toFile()
+        try {
+            zipFile.extractZip(tempDir)
+        } catch (e: Exception) {
+            return@withContext Result.failure(IOException("Failed to unzip extension", e))
+        }
+
+        val result = installExtension(tempDir.toKxFile(), factory, isDevExtension)
+        tempDir.deleteRecursively()
+        result
     }
+
+    fun findExtension(id: String) = installedExtensions.find { it.toml.id == id }
 
     fun uninstallExtension(toml: ExtensionToml) {
-        val extension = installedExtensions.find { it.toml == toml } ?: return
-
-        if (!File(extension.path).deleteRecursively()) {
-            FileUtils.delete(extension.path)
+        val ext = installedExtensions.find { it.toml == toml } ?: return
+        if (!File(ext.path).deleteRecursively()) {
+            FileUtils.delete(ext.path)
         }
-
-        installedExtensions.remove(extension)
-    }
-
-    fun findExtension(id: String): Extension? {
-        return installedExtensions.find { it.toml.id == id }
+        installedExtensions.remove(ext)
     }
 
     suspend fun loadExtensions(factory: ExtensionFactory) = withContext(Dispatchers.IO) {
-        val extensionsDir = KxFile(Environment.ExtensionsDir)
-        if (!extensionsDir.exists) extensionsDir.rawFile().mkdirs()
-
-        extensionsDir.listFiles { it.isDirectory }?.forEach { loadExtension(it, factory) }
-
-        val devExtensionsDir = KxFile(Environment.DevExtensionsDir)
-        if (!devExtensionsDir.exists) devExtensionsDir.rawFile().mkdirs()
-
-        devExtensionsDir.listFiles { it.isDirectory }?.forEach { loadExtension(it, factory, true) }
+        listOf(
+            Environment.ExtensionsDir to false,
+            Environment.DevExtensionsDir to true
+        ).forEach { (dirPath, isDev) ->
+            val dir = KxFile(dirPath)
+            if (!dir.exists) dir.rawFile().mkdirs()
+            dir.listFiles { it.isDirectory }?.forEach {
+                loadExtension(it, factory, isDev)
+            }
+        }
     }
 
     private suspend fun loadExtension(
         file: KxFile,
         factory: ExtensionFactory,
-        isDevExtension: Boolean = false
+        isDevExtension: Boolean
     ) {
-        val input = file.resolve("extension.toml").inputStream()
+        file.resolve("extension.toml").inputStream()?.use {
+            val toml = parseToml(it.asSource())
+            val ext = parseExtension(file, toml).copy(isDevExtension = isDevExtension)
+            installedExtensions.add(ext)
+            factory.loadExtension(ext)
+        }
+    }
 
-        if (input != null) {
-            val toml = parseToml(input.asSource())
-            val extension = parseExtension(file, toml).copy(isDevExtension = isDevExtension)
-            installedExtensions.add(extension)
-            factory.loadExtension(extension)
+    private fun copyRecursive(source: KxFile, dest: KxFile) {
+        source.listFiles()?.forEach { file ->
+            val destFile = dest.resolve(file.name)
+            if (file.isDirectory) {
+                destFile.mkdirs()
+                copyRecursive(file, destFile)
+            } else {
+                file.inputStream()?.use { input ->
+                    destFile.outputStream()?.use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            }
         }
     }
 }

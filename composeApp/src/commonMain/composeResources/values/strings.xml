@@ -30,7 +30,7 @@
     <string name="notification_no_active_file">No active file</string>
     <string name="notification_no_files_to_save">No files to save</string>
     <string name="notification_all_files_saved">All files saved</string>
-    <string name="notification_failed_to_save">Failed to save: %1$s</string>
+    <string name="notification_failed_to_save">Failed to save: %s</string>
 
     <string name="label_fps_suffix"> FPS</string>
     <string name="no_internet_connection">No internet connection</string>
@@ -38,14 +38,14 @@
     <string name="action_install">Install</string>
 
     <string name="no_extensions">No extensions</string>
-    <string name="extension_install_failed">Failed to install extension: %1$s</string>
+    <string name="extension_install_failed">Failed to install extension: %s</string>
     <string name="extension_select_directory_unsupported_provider">Select a directory from your device's storage. External storage providers are not supported.</string>
     <string name="extension_screen_title">Extensions</string>
     <string name="extension_install_dev_button">Install Dev Extension</string>
     <string name="extension_search_placeholder">Search extensions...</string>
     <string name="extension_uninstall_restart_prompt">Restart the app to complete the uninstall process.</string>
     <string name="extension_install_success">Extension installed successfully</string>
-    <string name="extension_author_label_singular">Author: %1$s</string>
-    <string name="extension_author_label_plural">Authors: %1$s</string>
-    <string name="extension_downloads">Downloads: %1$s</string>
+    <string name="extension_author_label_singular">Author: %s</string>
+    <string name="extension_author_label_plural">Authors: %s</string>
+    <string name="extension_downloads">Downloads: %s</string>
 </resources>
