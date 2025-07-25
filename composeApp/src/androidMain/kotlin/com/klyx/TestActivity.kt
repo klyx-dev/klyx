@@ -9,12 +9,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
-import com.klyx.core.theme.ThemeParser
-import com.klyx.core.theme.asColorScheme
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ui.theme.KlyxTheme
-import kotlinx.io.asSource
-import kotlinx.io.buffered
 
 class TestActivity : ComponentActivity() {
     @OptIn(ExperimentalCodeEditorApi::class)
@@ -29,14 +25,7 @@ class TestActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         LaunchedEffect(Unit) {
-                            val themeSource = assets.open("themes/one/one.json").asSource()
-                            ThemeParser.parse(themeSource.buffered().peek())
-                                .onSuccess {
-                                    println(it)
-                                    it.asColorScheme()
-                                }.onFailure {
-                                    it.printStackTrace()
-                                }
+
                         }
                     }
                 }

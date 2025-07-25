@@ -12,11 +12,9 @@ import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
-import com.klyx.extension.ExtensionFactory
 import com.klyx.viewmodel.EditorViewModel
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
-import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import java.io.File
@@ -38,7 +36,6 @@ class KlyxApplication : Application() {
 
         initKoin(module {
             viewModelOf(::EditorViewModel)
-            singleOf(ExtensionFactory::getInstance)
         }) {
             androidLogger()
             androidContext(this@KlyxApplication)

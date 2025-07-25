@@ -75,7 +75,6 @@ import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.rememberNetworkState
 import com.klyx.core.string
-import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionManager
 import com.klyx.res.Res.string
 import com.klyx.res.action_install
@@ -97,15 +96,12 @@ import com.klyx.ui.theme.DefaultKlyxShape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 actual fun ExtensionScreen(modifier: Modifier) {
     val context = LocalContext.current
     val notifier = LocalNotifier.current
-
-    val factory: ExtensionFactory = koinInject()
 
     val scope = rememberCoroutineScope()
     val networkState by rememberNetworkState()
@@ -138,7 +134,6 @@ actual fun ExtensionScreen(modifier: Modifier) {
                     scope.launch {
                         ExtensionManager.installExtension(
                             dir = dir,
-                            factory = factory,
                             isDevExtension = true
                         ).onFailure {
                             notifier.error(
@@ -163,7 +158,6 @@ actual fun ExtensionScreen(modifier: Modifier) {
                 scope.launch {
                     ExtensionManager.installExtensionFromZip(
                         zipFile = DocumentFile.fromSingleUri(context, uri)!!.toKxFile(),
-                        factory = factory,
                         isDevExtension = true
                     ).onFailure {
                         it.printStackTrace()
@@ -296,8 +290,6 @@ private fun ExtensionItem(
     val uriHandler = LocalUriHandler.current
     val notifier = LocalNotifier.current
 
-    val factory: ExtensionFactory = koinInject()
-
     var isInstalling by remember { mutableStateOf(false) }
 
     Column(
@@ -357,7 +349,7 @@ private fun ExtensionItem(
                         } else {
                             scope.launch {
                                 isInstalling = true
-                                install(extension, factory, notifier)
+                                install(extension, notifier)
                                 isInstalling = false
                             }
                         }
@@ -463,13 +455,11 @@ private fun ExtensionItem(
 
 private suspend fun install(
     extension: ExtensionToml,
-    factory: ExtensionFactory,
     notifier: Notifier
 ) {
     installExtension(extension).onSuccess { file ->
         ExtensionManager.installExtension(
             dir = file,
-            factory = factory,
             isDevExtension = false
         ).fold(
             onFailure = {

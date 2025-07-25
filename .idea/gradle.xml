@@ -35,6 +35,7 @@
             <option value="$PROJECT_DIR$/ktreesitter-plugin" />
             <option value="$PROJECT_DIR$/kwasm" />
             <option value="$PROJECT_DIR$/shared" />
+            <option value="$PROJECT_DIR$/wasm" />
           </set>
         </option>
       </GradleProjectSettings>

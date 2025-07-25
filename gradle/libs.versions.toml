@@ -27,12 +27,13 @@ composeBom = "2025.06.01"
 material = "1.12.0"
 truth = "1.4.4"
 utilcodex = "1.31.1"
-compose-material3 = "1.4.0-alpha16"
+compose-material3 = "1.4.0-alpha18"
 koin = "4.1.0"
 oshi-core = "6.8.2"
 runner = "1.6.2"
 coreVersion = "1.6.1"
 junitVersion = "1.2.1"
+chicory = "1.5.1"
 
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "core" }
@@ -80,6 +81,8 @@ kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", versio
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
 core = { group = "androidx.test", name = "core", version.ref = "coreVersion" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+
+chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

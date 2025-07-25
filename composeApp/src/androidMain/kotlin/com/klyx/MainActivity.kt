@@ -7,13 +7,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
@@ -29,16 +25,11 @@ import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.isDebug
 import com.klyx.core.printAllSystemProperties
-import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.LocalIsDarkMode
-import com.klyx.core.theme.ThemeManager
-import com.klyx.core.theme.isDark
-import com.klyx.extension.ExtensionFactory
 import com.klyx.extension.ExtensionManager
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.showWelcome
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
@@ -52,10 +43,9 @@ class MainActivity : ComponentActivity() {
                 val prefs = LocalSharedPreferences.current
 
                 val viewModel: EditorViewModel = koinViewModel()
-                val factory: ExtensionFactory = koinInject()
 
                 LaunchedEffect(Unit) {
-                    ExtensionManager.loadExtensions(factory)
+                    ExtensionManager.loadExtensions()
 
                     if (prefs.getBoolean("show_welcome", true)) {
                         viewModel.showWelcome()

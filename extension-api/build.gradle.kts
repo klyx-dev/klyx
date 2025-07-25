@@ -31,11 +31,9 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
 
-            implementation("io.github.charlietap.chasm:chasm:0.9.80")
-
             implementation(projects.core)
-            implementation(projects.kwasm)
             implementation(projects.shared)
+            implementation(projects.wasm)
         }
 
         commonTest.dependencies {

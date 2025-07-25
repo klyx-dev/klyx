@@ -58,6 +58,7 @@ kotlin {
             implementation(projects.core)
             implementation(projects.editor)
             implementation(projects.extensionApi)
+            implementation(projects.wasm)
         }
 
         commonTest.dependencies {

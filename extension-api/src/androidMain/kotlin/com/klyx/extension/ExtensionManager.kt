@@ -25,7 +25,6 @@ object ExtensionManager {
 
     suspend fun installExtension(
         dir: KxFile,
-        factory: ExtensionFactory,
         isDevExtension: Boolean = false
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val tomlFile = dir.find("extension.toml")
@@ -54,7 +53,7 @@ object ExtensionManager {
             installedExtensions.removeIf { it.toml.id == ext.toml.id }
             installedExtensions.add(ext)
             try {
-                val program = factory.loadExtension(ext, callInit = true)
+                ExtensionLoader.loadExtension(ext, shouldCallInit = true)
             } catch (err: Exception) {
                 installedExtensions.removeIf { it.toml.id == ext.toml.id }
                 internalDir.deleteRecursively()
@@ -65,7 +64,6 @@ object ExtensionManager {
 
     suspend fun installExtensionFromZip(
         zipFile: KxFile,
-        factory: ExtensionFactory,
         isDevExtension: Boolean = false
     ): Result<Unit> = withContext(Dispatchers.IO) {
         if (!zipFile.exists || !zipFile.name.endsWith(".zip")) {
@@ -79,7 +77,7 @@ object ExtensionManager {
             return@withContext Result.failure(IOException("Failed to unzip extension", e))
         }
 
-        val result = installExtension(tempDir.toKxFile(), factory, isDevExtension)
+        val result = installExtension(tempDir.toKxFile(), isDevExtension)
         tempDir.deleteRecursively()
         result
     }
@@ -94,7 +92,7 @@ object ExtensionManager {
         installedExtensions.remove(ext)
     }
 
-    suspend fun loadExtensions(factory: ExtensionFactory) = withContext(Dispatchers.IO) {
+    suspend fun loadExtensions() = withContext(Dispatchers.IO) {
         listOf(
             Environment.ExtensionsDir to false,
             Environment.DevExtensionsDir to true
@@ -102,21 +100,20 @@ object ExtensionManager {
             val dir = KxFile(dirPath)
             if (!dir.exists) dir.rawFile().mkdirs()
             dir.listFiles { it.isDirectory }?.forEach {
-                loadExtension(it, factory, isDev)
+                loadExtension(it, isDev)
             }
         }
     }
 
     private suspend fun loadExtension(
         file: KxFile,
-        factory: ExtensionFactory,
         isDevExtension: Boolean
     ) {
         file.resolve("extension.toml").inputStream()?.use {
             val toml = parseToml(it.asSource())
             val ext = parseExtension(file, toml).copy(isDevExtension = isDevExtension)
             installedExtensions.add(ext)
-            factory.loadExtension(ext)
+            ExtensionLoader.loadExtension(ext)
         }
     }
 
