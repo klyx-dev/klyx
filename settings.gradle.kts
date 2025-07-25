@@ -40,7 +40,6 @@ include(":composeApp")
 include(":shared")
 include(":core")
 include(":editor")
-include(":kwasm")
 include(":extension-api")
 include(":wasm")
 
