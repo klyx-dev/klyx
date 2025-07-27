@@ -16,11 +16,12 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
-enum class WasmType(internal val valType: ValType) {
+enum class WasmType(internal vararg val valType: ValType) {
     I32(ValType.I32),
     I64(ValType.I64),
     F32(ValType.F32),
-    F64(ValType.F64)
+    F64(ValType.F64),
+    String(ValType.I32, ValType.I32)
 }
 
 @DslMarker
@@ -45,7 +46,10 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
         _module = block(WasmModuleScope())
     }
 
-    fun callInit(enabled: Boolean = true, function: String = "init-extension") = apply {
+    fun callInit(
+        enabled: Boolean = true,
+        function: String = "init-extension"
+    ) = apply {
         this.callInit = enabled
         this.initFunction = function
     }
@@ -54,15 +58,15 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
         name: String,
         params: List<WasmType>,
         results: List<WasmType>,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: (WasmInstance, args: LongArray) -> LongArray?
     ) = apply {
-        val _params = params.map { it.valType }
-        val _results = results.map { it.valType }
+        val _params = params.flatMap { it.valType.toList() }
+        val _results = results.flatMap { it.valType.toList() }
 
         store.addFunction(
             HostFunction(
-                namespace, name,
+                moduleName, name,
                 FunctionType.of(_params, _results)
             ) { instance, args ->
                 implementation(instance.asWasmInstance(), args)
@@ -74,11 +78,11 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
         name: String,
         params: List<WasmType>,
         results: List<WasmType>,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: (args: LongArray) -> LongArray?
     ) = apply {
         function(
-            namespace = namespace,
+            moduleName = moduleName,
             name = name,
             params = params,
             results = results
@@ -90,11 +94,11 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     fun function(
         name: String,
         params: List<WasmType>,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: suspend (args: LongArray) -> Unit
     ) = apply {
         function(
-            namespace = namespace,
+            moduleName = moduleName,
             name = name,
             params = params,
             results = listOf()
@@ -107,11 +111,11 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     fun function(
         name: String,
         params: List<WasmType>,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: suspend (WasmInstance, args: LongArray) -> Unit
     ) = apply {
         function(
-            namespace = namespace,
+            moduleName = moduleName,
             name = name,
             params = params,
             results = listOf()
@@ -124,11 +128,11 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     fun function(
         name: String,
         results: List<WasmType>,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: () -> LongArray
     ) = apply {
         function(
-            namespace = namespace,
+            moduleName = moduleName,
             name = name,
             params = listOf(),
             results = results
@@ -140,11 +144,11 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     fun function(
         name: String,
         results: List<WasmType>,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: (WasmInstance) -> LongArray
     ) = apply {
         function(
-            namespace = namespace,
+            moduleName = moduleName,
             name = name,
             params = listOf(),
             results = results
@@ -155,11 +159,11 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
 
     fun function(
         name: String,
-        namespace: String = "env",
+        moduleName: String = "env",
         implementation: suspend () -> Unit
     ) = apply {
         function(
-            namespace = namespace,
+            moduleName = moduleName,
             name = name,
             params = listOf(),
             results = listOf()

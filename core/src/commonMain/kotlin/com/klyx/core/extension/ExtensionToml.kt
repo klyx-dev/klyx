@@ -18,7 +18,6 @@ import kotlinx.serialization.decodeFromString
  * authors = ["Your Name <you@example.com>"]
  * description = "My cool extension"
  * repository = "https://github.com/your-name/my-klyx-extension"
- * requested_memory_size = 1 # in MB
  * ```
  */
 @Serializable
@@ -30,9 +29,7 @@ data class ExtensionToml(
     val schemaVersion: Int = 1,
     val authors: Array<String> = arrayOf(),
     val description: String = "",
-    val repository: String = "",
-    @SerialName("requested_memory_size")
-    val requestedMemorySize: Int? = null
+    val repository: String = ""
 ) {
     companion object {
         fun from(toml: String): ExtensionToml {
@@ -47,7 +44,6 @@ data class ExtensionToml(
         other as ExtensionToml
 
         if (schemaVersion != other.schemaVersion) return false
-        if (requestedMemorySize != other.requestedMemorySize) return false
         if (id != other.id) return false
         if (name != other.name) return false
         if (version != other.version) return false
@@ -60,7 +56,6 @@ data class ExtensionToml(
 
     override fun hashCode(): Int {
         var result = schemaVersion
-        result = 31 * result + (requestedMemorySize ?: 0)
         result = 31 * result + id.hashCode()
         result = 31 * result + name.hashCode()
         result = 31 * result + version.hashCode()

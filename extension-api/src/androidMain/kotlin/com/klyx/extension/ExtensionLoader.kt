@@ -35,17 +35,21 @@ object ExtensionLoader : KoinComponent {
         extension.wasmFiles.firstOrNull()?.let { wasm ->
             wasm {
                 module { bytes(wasm.readBytes()) }
-                callInit(enabled = shouldCallInit, function = "init-extension")
 
                 withWasi {
                     inheritSystem()
                     env("PWD", Environment.getExternalStorageDirectory().absolutePath)
                 }
 
+                callInit(
+                    enabled = shouldCallInit,
+                    function = "init-extension"
+                )
+
                 function(
-                    namespace = "klyx:extension/ui",
+                    moduleName = "klyx:extension/system",
                     name = "show-toast",
-                    params = listOf(WasmType.I32, WasmType.I32, WasmType.I32)
+                    params = listOf(WasmType.String, WasmType.I32)
                 ) { instance, args ->
                     val message = instance.memory.readString(args)
                     val duration = args[2].toInt()
