@@ -8,6 +8,7 @@ import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
 import com.klyx.wasm.WasmType
 import com.klyx.wasm.readString
+import com.klyx.wasm.wasi.directory
 import com.klyx.wasm.wasi.env
 import com.klyx.wasm.wasi.withWasi
 import com.klyx.wasm.wasm
@@ -18,6 +19,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 object ExtensionLoader : KoinComponent {
+    val EXTERNAL_STORAGE: String = Environment.getExternalStorageDirectory().absolutePath
+
     private val context: Context by inject()
 
     suspend fun loadExtension(
@@ -38,7 +41,8 @@ object ExtensionLoader : KoinComponent {
 
                 withWasi {
                     inheritSystem()
-                    env("PWD", Environment.getExternalStorageDirectory().absolutePath)
+                    env("PWD", EXTERNAL_STORAGE)
+                    directory(EXTERNAL_STORAGE, EXTERNAL_STORAGE)
                 }
 
                 callInit(

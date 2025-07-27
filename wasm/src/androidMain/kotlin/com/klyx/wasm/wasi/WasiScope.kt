@@ -1,7 +1,8 @@
 package com.klyx.wasm.wasi
 
-import android.os.Environment
 import com.dylibso.chicory.wasi.WasiOptions
+import com.google.common.jimfs.Configuration
+import com.google.common.jimfs.Jimfs
 import com.klyx.nullInputStream
 import com.klyx.nullOutputStream
 import java.io.InputStream
@@ -23,9 +24,12 @@ class WasiScope @PublishedApi internal constructor() {
     internal var environment = mapOf<String, String>()
     internal var directories = mapOf<String, Path>()
 
-    companion object {
-        private val SDCARD_PATH = Environment.getExternalStorageDirectory().absolutePath
-    }
+    internal val fs = Jimfs.newFileSystem(
+        Configuration.unix()
+            .toBuilder()
+            .setAttributeViews("unix")
+            .build()
+    )
 
     init {
         env("RUST_BACKTRACE", "full")
@@ -43,7 +47,6 @@ class WasiScope @PublishedApi internal constructor() {
         this.stdin = System.`in`
         this.stderr = System.err
         this.environment += System.getenv()
-        this.directories += SDCARD_PATH to Path(SDCARD_PATH)
     }
 
     fun arguments(vararg arguments: String) = apply { this.arguments = arguments.toList() }
@@ -69,4 +72,6 @@ class WasiScope @PublishedApi internal constructor() {
 fun WasiScope.env(name: String, value: String) = apply { environment += name to value }
 
 @WasiDsl
-fun WasiScope.directory(guest: String, host: Path) = apply { directories += guest to host }
+fun WasiScope.directory(system: String, wasi: String) = apply {
+    directories += wasi to Path(system)
+}
