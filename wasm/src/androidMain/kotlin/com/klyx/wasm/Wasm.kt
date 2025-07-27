@@ -1,12 +1,12 @@
 package com.klyx.wasm
 
 import com.dylibso.chicory.runtime.HostFunction
-import com.dylibso.chicory.runtime.Store
-import com.dylibso.chicory.wasi.WasiPreview1
 import com.dylibso.chicory.wasm.Parser
 import com.dylibso.chicory.wasm.types.FunctionType
 import com.dylibso.chicory.wasm.types.ValType
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
@@ -27,22 +27,14 @@ enum class WasmType(internal val valType: ValType) {
 internal annotation class WasmDsl
 
 @WasmDsl
-class WasmScope : AutoCloseable {
-    private val scope = MainScope()
-    private val store = Store()
+class WasmScope @PublishedApi internal constructor() : AutoCloseable {
+    val store = WasmStore()
+
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var callInit = false
-    private var initFunction = "init"
+    private var initFunction = "init-extension"
 
     private lateinit var _module: WasmModule
-
-    init {
-        val wasi = WasiPreview1
-            .builder()
-            .withOptions(wasiOptions { inheritSystem() })
-            .withLogger(WasiLogger)
-            .build()
-        store.addFunction(*wasi.toHostFunctions())
-    }
 
     @OptIn(ExperimentalTypeInference::class, ExperimentalContracts::class)
     fun module(
@@ -53,7 +45,7 @@ class WasmScope : AutoCloseable {
         _module = block(WasmModuleScope())
     }
 
-    fun callInit(enabled: Boolean = true, function: String = "init") {
+    fun callInit(enabled: Boolean = true, function: String = "init-extension") = apply {
         this.callInit = enabled
         this.initFunction = function
     }
@@ -64,7 +56,7 @@ class WasmScope : AutoCloseable {
         results: List<WasmType>,
         namespace: String = "env",
         implementation: (WasmInstance, args: LongArray) -> LongArray?
-    ) {
+    ) = apply {
         val _params = params.map { it.valType }
         val _results = results.map { it.valType }
 
@@ -84,7 +76,7 @@ class WasmScope : AutoCloseable {
         results: List<WasmType>,
         namespace: String = "env",
         implementation: (args: LongArray) -> LongArray?
-    ) {
+    ) = apply {
         function(
             namespace = namespace,
             name = name,
@@ -100,7 +92,7 @@ class WasmScope : AutoCloseable {
         params: List<WasmType>,
         namespace: String = "env",
         implementation: suspend (args: LongArray) -> Unit
-    ) {
+    ) = apply {
         function(
             namespace = namespace,
             name = name,
@@ -117,7 +109,7 @@ class WasmScope : AutoCloseable {
         params: List<WasmType>,
         namespace: String = "env",
         implementation: suspend (WasmInstance, args: LongArray) -> Unit
-    ) {
+    ) = apply {
         function(
             namespace = namespace,
             name = name,
@@ -134,7 +126,7 @@ class WasmScope : AutoCloseable {
         results: List<WasmType>,
         namespace: String = "env",
         implementation: () -> LongArray
-    ) {
+    ) = apply {
         function(
             namespace = namespace,
             name = name,
@@ -150,7 +142,7 @@ class WasmScope : AutoCloseable {
         results: List<WasmType>,
         namespace: String = "env",
         implementation: (WasmInstance) -> LongArray
-    ) {
+    ) = apply {
         function(
             namespace = namespace,
             name = name,
@@ -165,7 +157,7 @@ class WasmScope : AutoCloseable {
         name: String,
         namespace: String = "env",
         implementation: suspend () -> Unit
-    ) {
+    ) = apply {
         function(
             namespace = namespace,
             name = name,
@@ -177,20 +169,22 @@ class WasmScope : AutoCloseable {
         }
     }
 
-    fun build(): WasmInstance {
+    @PublishedApi
+    internal fun build(): WasmInstance {
         check(::_module.isInitialized) { "WASM module not initialized" }
-
-        val instance = store.instantiate("klyx-wasm", _module.module)
+        val instance = store.instantiate("klyx-wasm", _module)
 
         if (callInit) {
             runCatching {
-                instance.export(initFunction).apply()
+                val init = instance.function(initFunction)
+                init()
             }.onFailure {
+                it.printStackTrace()
                 throw IllegalStateException("Failed to call init function: ${it.message}", it)
             }
         }
 
-        return instance.asWasmInstance()
+        return instance
     }
 
     override fun close() {

@@ -113,7 +113,7 @@ object ExtensionManager {
             val toml = parseToml(it.asSource())
             val ext = parseExtension(file, toml).copy(isDevExtension = isDevExtension)
             installedExtensions.add(ext)
-            ExtensionLoader.loadExtension(ext)
+            ExtensionLoader.loadExtension(ext, true)
         }
     }
 
