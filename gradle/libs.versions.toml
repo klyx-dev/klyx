@@ -79,8 +79,6 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 
 chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
 chicory-wasi = { module = "com.dylibso.chicory:wasi", version.ref = "chicory" }
-bytebuddy = { module = "net.bytebuddy:byte-buddy", version.ref = "bytebuddy" }
-bytebuddy-android = { module = "net.bytebuddy:byte-buddy-android", version.ref = "bytebuddy" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
