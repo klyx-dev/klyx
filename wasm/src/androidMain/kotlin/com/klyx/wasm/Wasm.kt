@@ -3,10 +3,10 @@ package com.klyx.wasm
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Store
 import com.dylibso.chicory.wasm.Parser
-import com.dylibso.chicory.wasm.WasmModule
 import com.dylibso.chicory.wasm.types.FunctionType
 import com.dylibso.chicory.wasm.types.ValType
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.InputStream
@@ -26,24 +26,26 @@ enum class WasmType(internal val valType: ValType) {
 internal annotation class WasmDsl
 
 @WasmDsl
-class WasmBuilder {
+class WasmScope : AutoCloseable {
     private val scope = MainScope()
     private val store = Store()
     private var callInit = false
+    private var initFunction = "init"
 
     private lateinit var _module: WasmModule
 
     @OptIn(ExperimentalTypeInference::class, ExperimentalContracts::class)
     fun module(
         @BuilderInference
-        block: WasmModuleBuilder.() -> Unit
+        block: WasmModuleScope.() -> WasmModule
     ) {
         contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-        _module = WasmModuleBuilder().apply(block).build()
+        _module = block(WasmModuleScope())
     }
 
-    fun callInit(enabled: Boolean = true) {
+    fun callInit(enabled: Boolean = true, function: String = "init") {
         this.callInit = enabled
+        this.initFunction = function
     }
 
     fun function(
@@ -168,11 +170,11 @@ class WasmBuilder {
     fun build(): WasmInstance {
         check(::_module.isInitialized) { "WASM module not initialized" }
 
-        val instance = store.instantiate("klyx-wasm", _module)
+        val instance = store.instantiate("klyx-wasm", _module.module)
 
         if (callInit) {
             runCatching {
-                instance.export("init").apply()
+                instance.export(initFunction).apply()
             }.onFailure {
                 throw IllegalStateException("Failed to call init function: ${it.message}", it)
             }
@@ -180,44 +182,24 @@ class WasmBuilder {
 
         return instance.asWasmInstance()
     }
+
+    override fun close() {
+        scope.cancel("WASM scope closed")
+    }
 }
 
 @WasmDsl
-class WasmModuleBuilder {
-    private var file: File? = null
-    private var bytes: ByteArray? = null
-    private var inputStream: InputStream? = null
-
-    fun file(file: File) {
-        this.file = file
-    }
-
-    fun bytes(bytes: ByteArray) {
-        this.bytes = bytes
-    }
-
-    fun inputStream(inputStream: InputStream) {
-        this.inputStream = inputStream
-    }
-
-    fun build(): WasmModule {
-        val source = listOf(file, bytes, inputStream).singleOrNull { it != null }
-        require(source != null) { "WASM module source must be provided exactly once using file(), bytes(), or inputStream()" }
-
-        return when (source) {
-            is File -> Parser.parse(source)
-            is ByteArray -> Parser.parse(source)
-            is InputStream -> Parser.parse(source)
-            else -> throw IllegalArgumentException("No source provided")
-        }
-    }
+class WasmModuleScope {
+    fun file(file: File) = WasmModule(Parser.parse(file))
+    fun bytes(bytes: ByteArray) = WasmModule(Parser.parse(bytes))
+    fun inputStream(inputStream: InputStream) = WasmModule(Parser.parse(inputStream))
 }
 
 @OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
 inline fun wasm(
     @BuilderInference
-    block: WasmBuilder.() -> Unit
+    block: WasmScope.() -> Unit
 ): WasmInstance {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    return WasmBuilder().apply(block).build()
+    return WasmScope().apply(block).build()
 }
