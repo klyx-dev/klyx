@@ -14,6 +14,9 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.chicory.runtime)
+                implementation(libs.chicory.wasi)
+                implementation(libs.bytebuddy)
+                implementation(libs.bytebuddy.android)
 
                 implementation(projects.shared)
             }

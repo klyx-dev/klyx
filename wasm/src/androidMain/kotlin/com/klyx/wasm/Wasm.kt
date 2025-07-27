@@ -2,6 +2,7 @@ package com.klyx.wasm
 
 import com.dylibso.chicory.runtime.HostFunction
 import com.dylibso.chicory.runtime.Store
+import com.dylibso.chicory.wasi.WasiPreview1
 import com.dylibso.chicory.wasm.Parser
 import com.dylibso.chicory.wasm.types.FunctionType
 import com.dylibso.chicory.wasm.types.ValType
@@ -33,6 +34,15 @@ class WasmScope : AutoCloseable {
     private var initFunction = "init"
 
     private lateinit var _module: WasmModule
+
+    init {
+        val wasi = WasiPreview1
+            .builder()
+            .withOptions(wasiOptions { inheritSystem() })
+            .withLogger(WasiLogger)
+            .build()
+        store.addFunction(*wasi.toHostFunctions())
+    }
 
     @OptIn(ExperimentalTypeInference::class, ExperimentalContracts::class)
     fun module(

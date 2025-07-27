@@ -34,6 +34,7 @@ runner = "1.6.2"
 coreVersion = "1.6.1"
 junitVersion = "1.2.1"
 chicory = "1.5.1"
+bytebuddy = "1.17.6"
 
 [libraries]
 androidx-core = { module = "androidx.core:core", version.ref = "core" }
@@ -77,6 +78,9 @@ core = { group = "androidx.test", name = "core", version.ref = "coreVersion" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 
 chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
+chicory-wasi = { module = "com.dylibso.chicory:wasi", version.ref = "chicory" }
+bytebuddy = { module = "net.bytebuddy:byte-buddy", version.ref = "bytebuddy" }
+bytebuddy-android = { module = "net.bytebuddy:byte-buddy-android", version.ref = "bytebuddy" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
