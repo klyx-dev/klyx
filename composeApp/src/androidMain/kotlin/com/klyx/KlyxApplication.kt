@@ -1,8 +1,8 @@
 package com.klyx
 
 import android.app.Application
+import android.content.Intent
 import android.os.Build
-import android.os.Process
 import android.util.Log
 import android.widget.Toast
 import com.itsaky.androidide.treesitter.TreeSitter
@@ -18,7 +18,7 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import java.io.File
-import kotlin.system.exitProcess
+import java.util.Date
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -45,6 +45,7 @@ class KlyxApplication : Application() {
 
 private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: Throwable) {
     val file = saveLogs(thread, throwable)
+    EventBus.instance.postSync(CrashEvent(thread, throwable, file))
 
     if (thread.name == "main") {
         Toast.makeText(
@@ -54,12 +55,12 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
         ).show()
 
         System.err.println(file?.readText())
-
-        Process.sendSignal(Process.myPid(), Process.SIGNAL_KILL)
-        exitProcess(Process.SIGNAL_KILL)
     }
 
-    EventBus.instance.postSync(CrashEvent(thread, throwable, file))
+    startActivity(Intent(this, CrashActivity::class.java).apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        putExtra(CrashActivity.EXTRA_CRASH_LOG, file?.readText())
+    })
 }
 
 @OptIn(ExperimentalTime::class)
@@ -68,7 +69,7 @@ private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
     return if (logFile.createNewFile()) {
         val logString = buildString {
             appendLine("=== Crash Log ===")
-            appendLine("Time: ${Clock.System.now()}")
+            appendLine("Time: ${Date()}")
 
             val id = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
                 thread.threadId()

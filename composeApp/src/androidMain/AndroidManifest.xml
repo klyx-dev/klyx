@@ -42,6 +42,10 @@
             android:name=".TestActivity"
             android:exported="true" />
 
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"
