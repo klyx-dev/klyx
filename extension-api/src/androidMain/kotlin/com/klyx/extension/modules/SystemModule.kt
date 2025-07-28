@@ -4,8 +4,6 @@ import android.content.Context
 import android.widget.Toast
 import com.klyx.wasm.HostModule
 import com.klyx.wasm.HostModuleScope
-import com.klyx.wasm.i32
-import com.klyx.wasm.readString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
@@ -16,9 +14,9 @@ class SystemModule : HostModule, KoinComponent {
     override val name = "klyx:extension/system"
 
     override fun HostModuleScope.functions() {
-        function("show-toast", params = string + i32) { instance, args ->
-            val message = instance.memory.readString(args)
-            val duration = args[2].i32
+        function("show-toast", params = string + i32) { args ->
+            val message = args.string
+            val duration = args.i32(index = 2)
 
             withContext(Dispatchers.Main) {
                 Toast.makeText(context, message, duration).show()

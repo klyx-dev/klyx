@@ -64,7 +64,7 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
         params: List<WasmType>,
         results: List<WasmType>,
         moduleName: String = "env",
-        implementation: (WasmInstance, args: LongArray) -> LongArray?
+        implementation: FunctionScope.(args: LongArray) -> LongArray?
     ) = apply {
         val _params = params.flatMap { it.valType.toList() }
         val _results = results.flatMap { it.valType.toList() }
@@ -74,7 +74,7 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
                 moduleName, name,
                 FunctionType.of(_params, _results)
             ) { instance, args ->
-                implementation(instance.asWasmInstance(), args)
+                FunctionScope(instance.asWasmInstance()).run { implementation(args) }
             }
         )
     }
@@ -82,32 +82,15 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     fun function(
         name: String,
         params: List<WasmType>,
-        results: List<WasmType>,
         moduleName: String = "env",
-        implementation: (args: LongArray) -> LongArray?
-    ) = apply {
-        function(
-            moduleName = moduleName,
-            name = name,
-            params = params,
-            results = results
-        ) { instance, args ->
-            implementation(args)
-        }
-    }
-
-    fun function(
-        name: String,
-        params: List<WasmType>,
-        moduleName: String = "env",
-        implementation: suspend (args: LongArray) -> Unit
+        implementation: suspend FunctionScope.(args: LongArray) -> Unit
     ) = apply {
         function(
             moduleName = moduleName,
             name = name,
             params = params,
             results = listOf()
-        ) { instance, args ->
+        ) { args ->
             scope.launch { implementation(args) }
             null
         }
@@ -115,64 +98,29 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
 
     fun function(
         name: String,
-        params: List<WasmType>,
-        moduleName: String = "env",
-        implementation: suspend (WasmInstance, args: LongArray) -> Unit
-    ) = apply {
-        function(
-            moduleName = moduleName,
-            name = name,
-            params = params,
-            results = listOf()
-        ) { instance, args ->
-            scope.launch { implementation(instance, args) }
-            null
-        }
-    }
-
-    fun function(
-        name: String,
         results: List<WasmType>,
         moduleName: String = "env",
-        implementation: () -> LongArray
+        implementation: FunctionScope.() -> LongArray
     ) = apply {
         function(
             moduleName = moduleName,
             name = name,
             params = listOf(),
             results = results
-        ) { instance, args ->
-            implementation()
-        }
-    }
-
-    fun function(
-        name: String,
-        results: List<WasmType>,
-        moduleName: String = "env",
-        implementation: (WasmInstance) -> LongArray
-    ) = apply {
-        function(
-            moduleName = moduleName,
-            name = name,
-            params = listOf(),
-            results = results
-        ) { instance, args ->
-            implementation(instance)
-        }
+        ) { _ -> implementation() }
     }
 
     fun function(
         name: String,
         moduleName: String = "env",
-        implementation: suspend () -> Unit
+        implementation: suspend FunctionScope.() -> Unit
     ) = apply {
         function(
             moduleName = moduleName,
             name = name,
             params = listOf(),
             results = listOf()
-        ) { instance, args ->
+        ) { _ ->
             scope.launch { implementation() }
             null
         }

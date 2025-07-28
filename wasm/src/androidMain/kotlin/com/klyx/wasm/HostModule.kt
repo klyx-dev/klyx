@@ -5,8 +5,8 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
-typealias HostFnSync = (WasmInstance, args: LongArray) -> LongArray?
-typealias HostFnSuspend = suspend (WasmInstance, args: LongArray) -> Unit
+typealias HostFnSync = FunctionScope.(args: LongArray) -> LongArray?
+typealias HostFnSuspend = suspend FunctionScope.(args: LongArray) -> Unit
 
 interface HostModule {
     val name: String
@@ -47,14 +47,6 @@ class HostModuleScope @PublishedApi internal constructor(
 
     fun function(
         name: String,
-        signature: WasmSignature,
-        implementation: (args: LongArray) -> LongArray?
-    ) = apply {
-        function(name, signature) { _, args -> implementation(args) }
-    }
-
-    fun function(
-        name: String,
         params: List<WasmType>,
         implementation: HostFnSuspend
     ) = apply {
@@ -65,57 +57,22 @@ class HostModuleScope @PublishedApi internal constructor(
 
     fun function(
         name: String,
-        params: List<WasmType>,
-        implementation: suspend (args: LongArray) -> Unit
-    ) = apply {
-        function(name, params) { _, args -> implementation(args) }
-    }
-
-    fun function(
-        name: String,
         results: List<WasmType>,
-        implementation: () -> LongArray
+        implementation: FunctionScope.() -> LongArray
     ) = apply {
         function(name, signature { returns(results) }) { implementation() }
     }
 
     fun function(
         name: String,
-        results: List<WasmType>,
-        implementation: (WasmInstance) -> LongArray
-    ) = apply {
-        function(name, signature { returns(results) }) { instance, _ ->
-            implementation(instance)
-        }
-    }
-
-    fun function(
-        name: String,
-        implementation: suspend () -> Unit
+        implementation: suspend FunctionScope.() -> Unit
     ) = apply {
         with(wasmScope) {
             function(
                 name,
                 params = emptyList(),
                 moduleName = this@HostModuleScope.moduleName
-            ) { _, _ ->
-                implementation()
-            }
-        }
-    }
-
-    fun function(
-        name: String,
-        implementation: HostFnSync
-    ) = apply {
-        with(wasmScope) {
-            function(
-                name,
-                params = emptyList(),
-                results = emptyList(),
-                moduleName = this@HostModuleScope.moduleName,
-                implementation
-            )
+            ) { _ -> implementation() }
         }
     }
 }
