@@ -39,13 +39,12 @@ object ExtensionManager {
             toml.id
         ).toKxFile()
 
-        if (internalDir.exists) {
-            internalDir.deleteRecursively()
-        }
+        if (!internalDir.exists) {
+            internalDir.mkdirs()
 
-        internalDir.mkdirs()
-        runCatching { copyRecursive(dir, internalDir) }.onFailure {
-            return@withContext Result.failure(it)
+            runCatching { copyRecursive(dir, internalDir) }.onFailure {
+                return@withContext Result.failure(it)
+            }
         }
 
         runCatching {
@@ -55,6 +54,7 @@ object ExtensionManager {
             try {
                 ExtensionLoader.loadExtension(ext, shouldCallInit = true)
             } catch (err: Exception) {
+                err.printStackTrace()
                 installedExtensions.removeIf { it.toml.id == ext.toml.id }
                 internalDir.deleteRecursively()
                 return@withContext Result.failure(err)

@@ -32,7 +32,8 @@ fun App(
     dynamicColor: Boolean = true,
     darkTheme: Boolean = false,
     useThemeExtension: Boolean = true,
-    themeName: String? = null
+    themeName: String? = null,
+    extraContent: @Composable () -> Unit = {}
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -83,6 +84,8 @@ fun App(
                     EditorScreen()
                 }
             }
+
+            extraContent()
         }
 
         NotificationOverlay()

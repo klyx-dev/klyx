@@ -7,9 +7,16 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
@@ -44,8 +51,9 @@ class MainActivity : ComponentActivity() {
 
                 val viewModel: EditorViewModel = koinViewModel()
 
+                var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
                 LaunchedEffect(Unit) {
-                    ExtensionManager.loadExtensions()
+                    ExtensionManager.loadExtensions().onFailure { extensionLoadFailure = it }
 
                     if (prefs.getBoolean("show_welcome", true)) {
                         viewModel.showWelcome()
@@ -87,7 +95,23 @@ class MainActivity : ComponentActivity() {
                     darkTheme = darkMode,
                     dynamicColor = settings.dynamicColor,
                     themeName = settings.theme
-                )
+                ) {
+                    extensionLoadFailure?.let {
+                        AlertDialog(
+                            onDismissRequest = { extensionLoadFailure = null },
+                            text = {
+                                Text(
+                                    text = "Failed to load extensions:\n${it.message}"
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(onClick = { extensionLoadFailure = null }) {
+                                    Text("OK")
+                                }
+                            }
+                        )
+                    }
+                }
 
                 LaunchedEffect(Unit) {
                     if (buildVariant.isDebug) {
