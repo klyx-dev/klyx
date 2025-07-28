@@ -92,16 +92,21 @@ object ExtensionManager {
         installedExtensions.remove(ext)
     }
 
-    suspend fun loadExtensions() = withContext(Dispatchers.IO) {
-        listOf(
-            Environment.ExtensionsDir to false,
-            Environment.DevExtensionsDir to true
-        ).forEach { (dirPath, isDev) ->
-            val dir = KxFile(dirPath)
-            if (!dir.exists) dir.rawFile().mkdirs()
-            dir.listFiles { it.isDirectory }?.forEach {
-                loadExtension(it, isDev)
+    suspend fun loadExtensions(): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            listOf(
+                Environment.ExtensionsDir to false,
+                Environment.DevExtensionsDir to true
+            ).forEach { (dirPath, isDev) ->
+                val dir = KxFile(dirPath)
+                if (!dir.exists) dir.rawFile().mkdirs()
+                dir.listFiles { it.isDirectory }?.forEach {
+                    loadExtension(it, isDev)
+                }
             }
+            Result.success(Unit)
+        } catch (error: Exception) {
+            Result.failure(error)
         }
     }
 

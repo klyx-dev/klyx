@@ -12,4 +12,4 @@ class WasmStore internal constructor(
 }
 
 @PublishedApi
-internal fun WasmStore.addFunction(vararg function: ImportFunction) = store.addFunction(*function)
+internal fun WasmStore.addFunction(vararg function: ImportFunction) = apply { store.addFunction(*function) }

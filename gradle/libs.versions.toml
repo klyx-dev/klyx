@@ -79,6 +79,7 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 
 chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
 chicory-wasi = { module = "com.dylibso.chicory:wasi", version.ref = "chicory" }
+chicory-annotation = { module = "com.dylibso.chicory:annotation", version.ref = "chicory" }
 jimfs = { module = "com.google.jimfs:jimfs", version.ref = "jimfs" }
 
 [plugins]

@@ -175,7 +175,7 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
 
     @PublishedApi
     internal fun build(): WasmInstance {
-        check(::_module.isInitialized) { "WASM module not initialized" }
+        check(::_module.isInitialized) { "WASM module not initialized. Did you forget to call `module { ... }`?" }
         val instance = store.instantiate("klyx-wasm", _module)
 
         if (callInit) {
@@ -184,7 +184,7 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
                 init()
             }.onFailure {
                 it.printStackTrace()
-                throw IllegalStateException("Failed to call init function: ${it.message}", it)
+                throw it
             }
         }
 
