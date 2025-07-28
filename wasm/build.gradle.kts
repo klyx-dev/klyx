@@ -15,7 +15,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.chicory.runtime)
                 implementation(libs.chicory.wasi)
-                implementation(libs.chicory.annotation)
+                implementation(libs.chicory.annotations)
                 implementation(libs.jimfs)
 
                 implementation(projects.shared)
