@@ -24,6 +24,11 @@ enum class WasmType(internal vararg val valType: ValType) {
     String(ValType.I32, ValType.I32)
 }
 
+val Long.i32 get() = this.toInt()
+val Long.i64 get() = this
+val Long.f32 get() = this.toFloat()
+val Long.f64 get() = this.toDouble()
+
 @DslMarker
 internal annotation class WasmDsl
 
