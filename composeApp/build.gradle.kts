@@ -105,7 +105,7 @@ android {
         }
 
         getByName("debug") {
-            versionNameSuffix = "-${Version.PRE_RELEASE_VERSION_SUFFIX}"
+            versionNameSuffix = Version.DEBUG_VERSION_SUFFIX
         }
     }
 
