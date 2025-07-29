@@ -4,7 +4,7 @@ import com.dylibso.chicory.runtime.Memory
 import com.klyx.asIntPair
 import java.nio.charset.Charset
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 class WasmMemory internal constructor(
     private val memory: Memory
 ) {
@@ -13,7 +13,7 @@ class WasmMemory internal constructor(
     }
 }
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 fun WasmMemory.readString(args: LongArray, offset: Int = 0) = run {
     val (addr, len) = args.takePair(offset).asIntPair()
     readString(addr, len)

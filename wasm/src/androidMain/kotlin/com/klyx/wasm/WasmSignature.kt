@@ -5,13 +5,13 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 data class WasmSignature(
     val params: List<WasmType>,
     val results: List<WasmType>
 )
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 class WasmSignatureBuilder {
     val params = mutableListOf<WasmType>()
     val results = mutableListOf<WasmType>()
@@ -62,7 +62,7 @@ class WasmSignatureBuilder {
 }
 
 @OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
-@ExperimentalWasm
+@ExperimentalWasmApi
 inline fun signature(
     @BuilderInference
     block: WasmSignatureBuilder.() -> WasmSignature

@@ -2,10 +2,10 @@ package com.klyx.wasm
 
 import com.dylibso.chicory.runtime.Instance
 
-@OptIn(ExperimentalWasm::class)
+@OptIn(ExperimentalWasmApi::class)
 internal fun Instance.asWasmInstance() = WasmInstance(this)
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 class WasmInstance internal constructor(
     private val instance: Instance
 ) {

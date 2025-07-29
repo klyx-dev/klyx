@@ -1,6 +1,6 @@
 package com.klyx.wasm
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 class FunctionScope internal constructor(
     val instance: WasmInstance
 ) {

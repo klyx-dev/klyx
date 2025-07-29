@@ -5,13 +5,13 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 typealias HostFnSync = FunctionScope.(args: LongArray) -> LongArray?
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 typealias HostFnSuspend = suspend FunctionScope.(args: LongArray) -> Unit
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 interface HostModule {
     val name: String
 
@@ -19,7 +19,7 @@ interface HostModule {
 }
 
 @WasmDsl
-@ExperimentalWasm
+@ExperimentalWasmApi
 class HostModuleScope @PublishedApi internal constructor(
     private val moduleName: String,
     private val wasmScope: WasmScope
@@ -84,7 +84,7 @@ class HostModuleScope @PublishedApi internal constructor(
 
 @OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
 @WasmDsl
-@ExperimentalWasm
+@ExperimentalWasmApi
 inline fun WasmScope.hostModule(
     name: String,
     @BuilderInference

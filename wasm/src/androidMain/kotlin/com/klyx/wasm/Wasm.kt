@@ -16,7 +16,7 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
-@ExperimentalWasm
+@ExperimentalWasmApi
 enum class WasmType(internal vararg val valType: ValType) {
     I32(ValType.I32),
     I64(ValType.I64),
@@ -34,7 +34,7 @@ val Long.f64 get() = this.toDouble()
 internal annotation class WasmDsl
 
 @WasmDsl
-@ExperimentalWasm
+@ExperimentalWasmApi
 class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     val store = WasmStore()
 
@@ -152,7 +152,7 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
 }
 
 @WasmDsl
-@ExperimentalWasm
+@ExperimentalWasmApi
 class WasmModuleScope {
     fun file(file: File) = WasmModule(Parser.parse(file))
     fun bytes(bytes: ByteArray) = WasmModule(Parser.parse(bytes))
@@ -160,7 +160,7 @@ class WasmModuleScope {
 }
 
 @OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
-@ExperimentalWasm
+@ExperimentalWasmApi
 inline fun wasm(
     @BuilderInference
     block: WasmScope.() -> Unit
