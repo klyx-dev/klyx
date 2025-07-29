@@ -6,6 +6,7 @@ import com.dylibso.chicory.log.Logger
 @DslMarker
 internal annotation class WasiDsl
 
+@ExperimentalWasi
 object WasiLogger : Logger {
     private const val TAG = "[KlyxWasi]"
 

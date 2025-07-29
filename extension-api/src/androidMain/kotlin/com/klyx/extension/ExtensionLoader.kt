@@ -5,7 +5,9 @@ import com.klyx.core.extension.Extension
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
 import com.klyx.extension.modules.SystemModule
+import com.klyx.wasm.ExperimentalWasm
 import com.klyx.wasm.registerHostModule
+import com.klyx.wasm.wasi.ExperimentalWasi
 import com.klyx.wasm.wasi.directory
 import com.klyx.wasm.wasi.env
 import com.klyx.wasm.wasi.withWasi
@@ -15,6 +17,7 @@ import kotlinx.io.asSource
 object ExtensionLoader {
     val EXTERNAL_STORAGE: String = Environment.getExternalStorageDirectory().absolutePath
 
+    @OptIn(ExperimentalWasm::class, ExperimentalWasi::class)
     suspend fun loadExtension(
         extension: Extension,
         shouldCallInit: Boolean = false

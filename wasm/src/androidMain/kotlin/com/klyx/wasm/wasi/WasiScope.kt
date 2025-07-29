@@ -14,6 +14,7 @@ import java.util.concurrent.ThreadLocalRandom
 import kotlin.io.path.Path
 
 @WasiDsl
+@ExperimentalWasi
 class WasiScope @PublishedApi internal constructor() {
     private var random: Random = ThreadLocalRandom.current()
     private var clock = Clock.systemUTC()
@@ -69,9 +70,11 @@ class WasiScope @PublishedApi internal constructor() {
 }
 
 @WasiDsl
+@ExperimentalWasi
 fun WasiScope.env(name: String, value: String) = apply { environment += name to value }
 
 @WasiDsl
+@ExperimentalWasi
 fun WasiScope.directory(system: String, wasi: String) = apply {
     directories += wasi to Path(system)
 }
