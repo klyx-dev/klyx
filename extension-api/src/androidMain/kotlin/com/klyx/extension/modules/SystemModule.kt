@@ -2,7 +2,7 @@ package com.klyx.extension.modules
 
 import android.content.Context
 import android.widget.Toast
-import com.klyx.wasm.ExperimentalWasm
+import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModule
 import com.klyx.wasm.HostModuleScope
 import kotlinx.coroutines.Dispatchers
@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-@OptIn(ExperimentalWasm::class)
+@OptIn(ExperimentalWasmApi::class)
 class SystemModule : HostModule, KoinComponent {
     private val context: Context by inject()
     override val name = "klyx:extension/system"
