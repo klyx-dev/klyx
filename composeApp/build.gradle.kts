@@ -32,6 +32,8 @@ kotlin {
             implementation(libs.androidx.material3)
             implementation(libs.koin.android)
 
+            implementation(libs.material)
+            implementation(libs.sora.language.textmate)
             implementation("com.itsaky.androidide.treesitter:android-tree-sitter:4.3.1")
         }
 
@@ -51,6 +53,9 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
+
+            implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0")
+            implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.24.0")
 
             implementation(projects.shared)
             implementation(projects.core)
@@ -114,6 +119,7 @@ android {
 
     buildFeatures {
         buildConfig = true
+        viewBinding = true
     }
 }
 

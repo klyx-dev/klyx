@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.Klyx" parent="Theme.Material3.Dark.NoActionBar">
+<!--        <item name="windowActionBar">false</item>-->
+    </style>
+</resources>

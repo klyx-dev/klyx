@@ -76,6 +76,7 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", ver
 sora-editor-bom = { module = "io.github.rosemoe:editor-bom", version.ref = "sora-editor" }
 sora-editor = { module = "io.github.rosemoe:editor" }
 sora-editor-lsp = { module = "io.github.rosemoe:editor-lsp" }
+sora-language-textmate = { module = "io.github.rosemoe:language-textmate" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
 core = { group = "androidx.test", name = "core", version.ref = "coreVersion" }
