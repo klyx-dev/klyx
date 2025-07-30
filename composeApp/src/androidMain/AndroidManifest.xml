@@ -43,8 +43,22 @@
             android:exported="true" />
 
         <activity
+            android:name=".RustLspActivity"
+            android:exported="true" />
+
+        <activity
             android:name=".CrashActivity"
             android:exported="false" />
+
+        <service
+            android:name=".RustLanguageServerService"
+            android:enabled="true"
+            android:exported="false"
+            android:process=":languageServerService" />
+
+        <profileable
+            android:shell="true"
+            tools:targetApi="q" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
