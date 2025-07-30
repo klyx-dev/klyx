@@ -1,6 +1,7 @@
 package com.klyx
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -71,6 +72,8 @@ class MainActivity : ComponentActivity() {
                             if (isLogFileSaved) openFile(event.logFile!!)
                         }
                     }
+
+                    startActivity(Intent(this@MainActivity, RustLspActivity::class.java))
                 }
 
                 val settings = LocalAppSettings.current
