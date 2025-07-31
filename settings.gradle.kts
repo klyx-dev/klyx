@@ -42,6 +42,7 @@ include(":core")
 include(":editor")
 include(":extension-api")
 include(":wasm")
+include(":terminal")
 
 //file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
 //    include(":tree-sitter:${it.name}")

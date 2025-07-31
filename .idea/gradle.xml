@@ -34,6 +34,7 @@
             <option value="$PROJECT_DIR$/extension-api" />
             <option value="$PROJECT_DIR$/ktreesitter-plugin" />
             <option value="$PROJECT_DIR$/shared" />
+            <option value="$PROJECT_DIR$/terminal" />
             <option value="$PROJECT_DIR$/wasm" />
           </set>
         </option>
