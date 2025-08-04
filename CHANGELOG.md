@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.0-beta.1](https://github.com/klyx-dev/klyx/compare/v1.7.0-beta.0...v1.7.0-beta.1) (2025-08-04)
+
+### Features
+
+* add FileDownloader ([cea1d7e](https://github.com/klyx-dev/klyx/commit/cea1d7ee0b8099d6aedf954fe8026923e6e1434f))
+* add initial terminal module ([21450d3](https://github.com/klyx-dev/klyx/commit/21450d384d2ffd29a51ea0c5917ba59bab9eea2e))
+* add terminal ([9d2b0ee](https://github.com/klyx-dev/klyx/commit/9d2b0ee82bfa32c7826b2f632a88234f2f875953))
+* use material3 theme ([78fc67a](https://github.com/klyx-dev/klyx/commit/78fc67a86ed004df0b173d3590a4e381ff39211f))
+
 ## [1.7.0-beta.0](https://github.com/klyx-dev/klyx/compare/v1.6.0...v1.7.0-beta.0) (2025-07-28)
 
 ### Features
