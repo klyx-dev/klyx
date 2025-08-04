@@ -46,6 +46,7 @@ import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.AppUtils
 import com.blankj.utilcode.util.FileUtils
 import com.blankj.utilcode.util.UriUtils
+import com.klyx.activities.TerminalActivity
 import com.klyx.core.DocsUrl
 import com.klyx.core.Environment
 import com.klyx.core.FpsTracker
@@ -59,6 +60,7 @@ import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.asDocumentFile
 import com.klyx.core.file.toKxFile
+import com.klyx.core.openActivity
 import com.klyx.core.string
 import com.klyx.menu.menu
 import com.klyx.res.Res.string
@@ -165,6 +167,13 @@ actual fun MainMenuBar(modifier: Modifier) {
                     }
                 }
                 divider()
+                item("Terminal") {
+                    onClick {
+                        with(context) {
+                            openActivity(TerminalActivity::class)
+                        }
+                    }
+                }
                 item(string.menu_item_command_palette) {
                     shortcut(keyShortcutOf(Key.P, ctrl = true, shift = true))
                     onClick { CommandManager.showPalette() }

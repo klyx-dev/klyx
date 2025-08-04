@@ -44,7 +44,7 @@ object ExtensionLoader {
 
                 callInit(
                     enabled = shouldCallInit,
-                    function = "init-extension"
+                    functionName = "init-extension"
                 )
             }
         }

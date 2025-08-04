@@ -43,8 +43,12 @@
             android:exported="true" />
 
         <activity
-            android:name=".CrashActivity"
+            android:name=".activities.CrashActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".activities.TerminalActivity"
+            android:exported="true" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

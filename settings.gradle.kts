@@ -29,6 +29,7 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
@@ -42,7 +43,12 @@ include(":core")
 include(":editor")
 include(":extension-api")
 include(":wasm")
-include(":terminal")
+include(
+    ":terminal:terminal",
+    ":terminal:terminal-view",
+    ":terminal:terminal-emulator",
+    ":terminal:termux-shared"
+)
 
 //file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
 //    include(":tree-sitter:${it.name}")

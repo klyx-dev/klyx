@@ -9,6 +9,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xcontext-parameters")
+    }
+
     jvmToolchain(21)
 
     @Suppress("UnstableApiUsage")

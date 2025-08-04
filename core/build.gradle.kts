@@ -1,6 +1,5 @@
 import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -13,6 +12,10 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xcontext-parameters")
+    }
+
     @Suppress("UnstableApiUsage")
     androidLibrary {
         namespace = "com.klyx.core"
@@ -21,16 +24,6 @@ kotlin {
     }
 
     jvm()
-//
-//    listOf(
-//        iosX64(),
-//        iosArm64(),
-//        iosSimulatorArm64()
-//    ).forEach {
-//        it.binaries.framework {
-//            baseName = "coreKit"
-//        }
-//    }
 
     sourceSets {
         val commonMain by getting

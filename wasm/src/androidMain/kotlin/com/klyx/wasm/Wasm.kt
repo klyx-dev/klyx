@@ -17,18 +17,37 @@ import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
 
 @ExperimentalWasmApi
-enum class WasmType(internal vararg val valType: ValType) {
-    I32(ValType.I32),
-    I64(ValType.I64),
-    F32(ValType.F32),
-    F64(ValType.F64),
-    String(ValType.I32, ValType.I32)
+sealed interface WasmType {
+    val valTypes: List<ValType>
+
+    data object I32 : WasmType {
+        override val valTypes = listOf(ValType.I32)
+    }
+
+    data object I64 : WasmType {
+        override val valTypes = listOf(ValType.I64)
+    }
+
+    data object F32 : WasmType {
+        override val valTypes = listOf(ValType.F32)
+    }
+
+    data object F64 : WasmType {
+        override val valTypes = listOf(ValType.F64)
+    }
+
+    data object String : WasmType {
+        override val valTypes = listOf(ValType.I32, ValType.I32)
+    }
 }
 
-val Long.i32 get() = this.toInt()
+val Long.i32 get() = toInt()
 val Long.i64 get() = this
-val Long.f32 get() = this.toFloat()
-val Long.f64 get() = this.toDouble()
+val Long.f32 get() = toFloat()
+val Long.f64 get() = toDouble()
+
+typealias FunctionName = String
+typealias ModuleName = String
 
 @DslMarker
 internal annotation class WasmDsl
@@ -55,21 +74,21 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
 
     fun callInit(
         enabled: Boolean = true,
-        function: String = "init-extension"
+        functionName: FunctionName = "init-extension"
     ) = apply {
         this.callInit = enabled
-        this.initFunction = function
+        this.initFunction = functionName
     }
 
     fun function(
-        name: String,
+        name: FunctionName,
         params: List<WasmType>,
         results: List<WasmType>,
-        moduleName: String = "env",
+        moduleName: ModuleName = "env",
         implementation: FunctionScope.(args: LongArray) -> LongArray?
     ) = apply {
-        val _params = params.flatMap { it.valType.toList() }
-        val _results = results.flatMap { it.valType.toList() }
+        val _params = params.flatMap { it.valTypes }
+        val _results = results.flatMap { it.valTypes }
 
         store.addFunction(
             HostFunction(
@@ -82,9 +101,9 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     }
 
     fun function(
-        name: String,
+        name: FunctionName,
         params: List<WasmType>,
-        moduleName: String = "env",
+        moduleName: ModuleName = "env",
         implementation: suspend FunctionScope.(args: LongArray) -> Unit
     ) = apply {
         function(
@@ -99,9 +118,9 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     }
 
     fun function(
-        name: String,
+        name: FunctionName,
         results: List<WasmType>,
-        moduleName: String = "env",
+        moduleName: ModuleName = "env",
         implementation: FunctionScope.() -> LongArray
     ) = apply {
         function(
@@ -113,8 +132,8 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
     }
 
     fun function(
-        name: String,
-        moduleName: String = "env",
+        name: FunctionName,
+        moduleName: ModuleName = "env",
         implementation: suspend FunctionScope.() -> Unit
     ) = apply {
         function(

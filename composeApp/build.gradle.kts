@@ -13,6 +13,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xcontext-parameters")
+    }
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
@@ -35,6 +39,8 @@ kotlin {
             implementation(libs.material)
             implementation(libs.sora.language.textmate)
             implementation("com.itsaky.androidide.treesitter:android-tree-sitter:4.3.1")
+
+            implementation(projects.terminal.terminalView)
         }
 
         commonMain.dependencies {
@@ -62,6 +68,7 @@ kotlin {
             implementation(projects.editor)
             implementation(projects.extensionApi)
             implementation(projects.wasm)
+            implementation(projects.terminal.terminal)
         }
 
         commonTest.dependencies {

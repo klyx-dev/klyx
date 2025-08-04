@@ -30,7 +30,7 @@ import okio.use
 data class DownloadProgress(
     val bytesDownloaded: Long,
     val totalBytes: Long,
-    val percentage: Int = if (totalBytes > 0) ((bytesDownloaded * 100) / totalBytes).toInt() else 0,
+    val percentage: Float = if (totalBytes > 0) ((bytesDownloaded * 100) / totalBytes).toFloat() else 0f,
     val isCompleted: Boolean = bytesDownloaded == totalBytes && totalBytes > 0,
     val downloadSpeed: Long = 0, // bytes per second
     val estimatedTimeRemaining: Long = 0 // seconds

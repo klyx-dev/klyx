@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import com.itsaky.androidide.treesitter.TreeSitter
+import com.klyx.activities.CrashActivity
 import com.klyx.core.Environment
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.CrashEvent
@@ -54,7 +55,7 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
             Toast.LENGTH_LONG
         ).show()
 
-        System.err.println(file?.readText())
+        Log.e("Klyx", file?.readText() ?: "App crashed. No crash logs.")
     }
 
     startActivity(Intent(this, CrashActivity::class.java).apply {

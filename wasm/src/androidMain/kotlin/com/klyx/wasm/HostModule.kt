@@ -21,7 +21,7 @@ interface HostModule {
 @WasmDsl
 @ExperimentalWasmApi
 class HostModuleScope @PublishedApi internal constructor(
-    private val moduleName: String,
+    private val moduleName: ModuleName,
     private val wasmScope: WasmScope
 ) {
 
@@ -35,7 +35,7 @@ class HostModuleScope @PublishedApi internal constructor(
     val string get() = WasmType.String
 
     fun function(
-        name: String,
+        name: FunctionName,
         signature: WasmSignature,
         implementation: HostFnSync
     ) = apply {
@@ -51,7 +51,7 @@ class HostModuleScope @PublishedApi internal constructor(
     }
 
     fun function(
-        name: String,
+        name: FunctionName,
         params: List<WasmType>,
         implementation: HostFnSuspend
     ) = apply {
@@ -61,7 +61,7 @@ class HostModuleScope @PublishedApi internal constructor(
     }
 
     fun function(
-        name: String,
+        name: FunctionName,
         results: List<WasmType>,
         implementation: FunctionScope.() -> LongArray
     ) = apply {
@@ -69,7 +69,7 @@ class HostModuleScope @PublishedApi internal constructor(
     }
 
     fun function(
-        name: String,
+        name: FunctionName,
         implementation: suspend FunctionScope.() -> Unit
     ) = apply {
         with(wasmScope) {
@@ -86,7 +86,7 @@ class HostModuleScope @PublishedApi internal constructor(
 @WasmDsl
 @ExperimentalWasmApi
 inline fun WasmScope.hostModule(
-    name: String,
+    name: ModuleName,
     @BuilderInference
     block: HostModuleScope.() -> Unit
 ) {
