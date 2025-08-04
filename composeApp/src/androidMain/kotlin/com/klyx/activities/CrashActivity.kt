@@ -51,21 +51,21 @@ class CrashActivity : ComponentActivity() {
                 val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
                 Scaffold(
-                    modifier = Modifier.Companion.nestedScroll(scrollBehavior.nestedScrollConnection),
+                    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                     topBar = {
                         LargeFlexibleTopAppBar(
                             title = {
                                 Text(
                                     "App Crash Report",
                                     maxLines = 1,
-                                    overflow = TextOverflow.Companion.Ellipsis
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             },
                             subtitle = {
                                 Text(
                                     Date().toString(),
                                     maxLines = 1,
-                                    overflow = TextOverflow.Companion.Ellipsis
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             },
                             navigationIcon = {
@@ -102,7 +102,7 @@ class CrashActivity : ComponentActivity() {
                     }
                 ) { innerPadding ->
                     Column(
-                        modifier = Modifier.Companion
+                        modifier = Modifier
                             .padding(innerPadding)
                             .verticalScroll(rememberScrollState())
                             .horizontalScroll(rememberScrollState())
@@ -110,8 +110,8 @@ class CrashActivity : ComponentActivity() {
                         SelectionContainer {
                             Text(
                                 text = crashLog,
-                                modifier = Modifier.Companion.padding(16.dp),
-                                fontFamily = FontFamily.Companion.Monospace
+                                modifier = Modifier.padding(16.dp),
+                                fontFamily = FontFamily.Monospace
                             )
                         }
                     }
