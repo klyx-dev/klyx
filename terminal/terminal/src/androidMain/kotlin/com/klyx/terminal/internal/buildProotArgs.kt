@@ -14,8 +14,11 @@ import java.io.File
 
 @SuppressLint("SdCardPath", "SetWorldWritable", "SetWorldReadable")
 context(context: Context)
-fun buildProotArgs(user: String) = run {
-    val home = File(ubuntuHome, user)
+fun buildProotArgs(
+    user: String?,
+    withInitScript: Boolean = true
+) = run {
+    val home = File(ubuntuHome, user ?: "")
 
     val args = mutableListOf(
         "--kill-on-exit", "-w",
@@ -60,7 +63,12 @@ fun buildProotArgs(user: String) = run {
     val fdPaths = listOf("0" to "stdin", "1" to "stdout", "2" to "stderr")
     fdPaths.forEach { (fd, name) ->
         val src = "/proc/self/fd/$fd"
-        if (File(src).exists()) bind(src, "/dev/$name")
+        with(File(src)) {
+            if (exists() && canRead() && canWrite()) {
+                Log.i("Terminal", "$src -> /dev/$name")
+                bind(canonicalPath, "/dev/$name")
+            }
+        }
     }
 
     args += listOf(
@@ -71,11 +79,13 @@ fun buildProotArgs(user: String) = run {
         "-L"
     )
 
-    args += listOf(
-        "/bin/bash",
-        klyxBinDir.absolutePath + "/init",
-        "\"$@\""
-    )
+    if (withInitScript) {
+        args += listOf(
+            "/bin/bash",
+            klyxBinDir.absolutePath + "/init",
+            "\"$@\""
+        )
+    }
 
-    args.toList()
+    args.toTypedArray()
 }

@@ -67,6 +67,10 @@ suspend fun setupRootFs(path: String) = run {
         context.assets.open("terminal/init.sh").use { it.readBytes() }
     )
 
+    with(klyxFilesDir.resolve("usr/tmp")) {
+        if (!exists()) mkdirs()
+    }
+
     ubuntuDir.resolve("etc/hostname").writeText("klyx")
     ubuntuDir.resolve("etc/hosts").writeText("""
         127.0.0.1   localhost
@@ -76,7 +80,7 @@ suspend fun setupRootFs(path: String) = run {
 }
 
 context(context: Context)
-private suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {}) {
+suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {}) {
     val outFile = File(context.cacheDir, "$name.tar.gz")
     packageUrl(name).downloadToWithProgress(outFile.absolutePath)
         .onCompletion { onComplete(outFile) }
@@ -84,7 +88,7 @@ private suspend fun downloadPackage(name: String, onComplete: suspend (File) -> 
         .collect { println(it) }
 }
 
-private suspend fun extractTarGz(
+suspend fun extractTarGz(
     inputPath: String,
     outputPath: String
 ) = process("tar", "-xzf", inputPath, "-C", outputPath) {

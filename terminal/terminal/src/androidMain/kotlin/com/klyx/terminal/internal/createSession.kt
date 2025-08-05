@@ -43,7 +43,7 @@ fun createSession(
     TerminalSession(
         klyxBinDir.absolutePath + "/proot",
         cwd.absolutePath,
-        buildProotArgs(user).toTypedArray(),
+        buildProotArgs(user),
         env.map { "${it.key}=${it.value}" }.toTypedArray(),
         TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS,
         client
