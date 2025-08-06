@@ -16,7 +16,9 @@ import java.io.File
 context(context: Context)
 fun buildProotArgs(
     user: String?,
-    withInitScript: Boolean = true
+    withInitScript: Boolean = true,
+    loginUser: Boolean = true,
+    vararg commands: String = emptyArray()
 ) = run {
     val home = File(ubuntuHome, user ?: "")
 
@@ -85,7 +87,14 @@ fun buildProotArgs(
             klyxBinDir.absolutePath + "/init",
             "\"$@\""
         )
+    } else if (loginUser) {
+        args += listOf(
+            "su", "-", user ?: "root",
+            "-c", "bash -lc \"${commands.joinToString(" ")}\""
+        )
+        return args.toTypedArray()
     }
 
+    args += commands
     args.toTypedArray()
 }

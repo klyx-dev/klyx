@@ -9,13 +9,12 @@ import com.klyx.terminal.internal.linker
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.experimental.ExperimentalTypeInference
 
-@OptIn(ExperimentalTypeInference::class, ExperimentalContracts::class)
+@OptIn(ExperimentalContracts::class)
 context(context: Context)
 fun ubuntuProcess(
     vararg commands: String,
-    @BuilderInference
+    loginUser: Boolean = true,
     block: ProcessBuilder.() -> Unit = {}
 ): ProcessBuilder {
     contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
@@ -27,14 +26,16 @@ fun ubuntuProcess(
     return process(
         linker,
         "${klyxBinDir.absolutePath}/proot",
-        *buildProotArgs(currentUser, withInitScript = false),
-        commands.first(),
-        *commands.drop(1).toTypedArray()
+        *buildProotArgs(
+            currentUser,
+            withInitScript = false,
+            loginUser = loginUser,
+            commands = commands
+        )
     ) {
         env(
-            "PATH", """
-                /bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin
-            """.trimIndent()
+            "PATH",
+            "/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/system/bin:/system/xbin"
         )
         env("PROOT_TMP_DIR", klyxFilesDir.resolve("usr/tmp").absolutePath)
     }.apply(block)

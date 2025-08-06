@@ -7,6 +7,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
+import java.io.OutputStream
+import java.lang.Process
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.contracts.ExperimentalContracts
@@ -21,7 +23,8 @@ data class ProcessResult(
     val output: String = "",
     val error: String = "",
     val success: Boolean = exitCode == 0,
-    val duration: Long = 0
+    val duration: Long = 0,
+    val process: Process? = null
 ) {
     fun throwOnError(message: String? = null): ProcessResult {
         if (!success) {
@@ -31,6 +34,61 @@ data class ProcessResult(
             )
         }
         return this
+    }
+}
+
+/**
+ * Wrapper for a running process that provides access to streams
+ */
+class ManagedProcess(
+    val process: Process,
+    private val builder: ProcessBuilder
+) {
+    val inputStream: InputStream get() = process.inputStream
+    val outputStream: OutputStream get() = process.outputStream
+    val errorStream: InputStream get() = process.errorStream
+
+    val isAlive get() = process.isAlive
+    val pid: Int
+        get() {
+            val pid = process::class.java.getDeclaredField("pid").apply { isAccessible = true }
+            return pid.get(process) as? Int ?: 0
+        }
+
+    suspend fun waitFor(): ProcessResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        val exitCode = process.waitFor()
+        val duration = System.currentTimeMillis() - startTime
+
+        ProcessResult(
+            exitCode = exitCode,
+            success = exitCode == 0,
+            duration = duration,
+            process = process
+        )
+    }
+
+    suspend fun waitFor(timeout: Duration): ProcessResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        val finished = process.waitFor(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+        val duration = System.currentTimeMillis() - startTime
+
+        val exitCode = if (finished) process.exitValue() else -1
+
+        ProcessResult(
+            exitCode = exitCode,
+            success = finished && exitCode == 0,
+            duration = duration,
+            process = process
+        )
+    }
+
+    fun destroy() {
+        process.destroy()
+    }
+
+    fun destroyForcibly(): Process {
+        return process.destroyForcibly()
     }
 }
 
@@ -187,37 +245,29 @@ class ProcessBuilder @PublishedApi internal constructor(
         onErrorLine = callback
     }
 
-    suspend fun execute() = withContext(Dispatchers.IO) {
-        val startTime = System.currentTimeMillis()
+    suspend fun start(): ManagedProcess = withContext(Dispatchers.IO) {
+        val processBuilder = buildProcessBuilder()
+        val process = processBuilder.start()
 
-        val processBuilder = java.lang.ProcessBuilder().apply {
-            command(buildCommand())
-
-            workingDir?.let { directory(it) }
-
-            if (envVars.isNotEmpty()) {
-                environment().putAll(envVars)
-            }
-
-            if (inheritIO) {
-                inheritIO()
-            } else {
-                if (outputFile != null) {
-                    redirectOutput(
-                        if (appendOutput) java.lang.ProcessBuilder.Redirect.appendTo(outputFile)
-                        else java.lang.ProcessBuilder.Redirect.to(outputFile)
-                    )
-                }
-
-                if (errorFile != null) {
-                    redirectError(
-                        if (appendError) java.lang.ProcessBuilder.Redirect.appendTo(errorFile)
-                        else java.lang.ProcessBuilder.Redirect.to(errorFile)
-                    )
+        launch {
+            process.outputStream.use { output ->
+                when {
+                    inputText != null -> output.write(inputText!!.toByteArray())
+                    inputFile != null -> inputFile!!.inputStream().use { it.copyTo(output) }
+                    inputStream != null -> inputStream!!.use { it.copyTo(output) }
                 }
             }
         }
 
+        ManagedProcess(process, this@ProcessBuilder)
+    }
+
+    fun startBlocking(): ManagedProcess = runBlocking { start() }
+
+    suspend fun execute() = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+
+        val processBuilder = buildProcessBuilder()
         val process = processBuilder.start()
 
         launch {
@@ -259,10 +309,40 @@ class ProcessBuilder @PublishedApi internal constructor(
         val error = errorDeferred.await()
         val duration = System.currentTimeMillis() - startTime
 
-        ProcessResult(exitCode, output, error, duration = duration)
+        ProcessResult(exitCode, output, error, duration = duration, process = process)
     }
 
     fun executeBlocking() = runBlocking { execute() }
+
+    private fun buildProcessBuilder(): java.lang.ProcessBuilder {
+        return java.lang.ProcessBuilder().apply {
+            command(buildCommand())
+
+            workingDir?.let { directory(it) }
+
+            if (envVars.isNotEmpty()) {
+                environment().putAll(envVars)
+            }
+
+            if (inheritIO) {
+                inheritIO()
+            } else {
+                if (outputFile != null) {
+                    redirectOutput(
+                        if (appendOutput) java.lang.ProcessBuilder.Redirect.appendTo(outputFile)
+                        else java.lang.ProcessBuilder.Redirect.to(outputFile)
+                    )
+                }
+
+                if (errorFile != null) {
+                    redirectError(
+                        if (appendError) java.lang.ProcessBuilder.Redirect.appendTo(errorFile)
+                        else java.lang.ProcessBuilder.Redirect.to(errorFile)
+                    )
+                }
+            }
+        }
+    }
 
     private fun buildCommand(): List<String> {
         return listOf(command) + args
@@ -306,9 +386,14 @@ inline fun process(
 suspend fun String.execute() = process(this).execute()
 fun String.executeBlocking() = process(this).executeBlocking()
 
-suspend fun List<String>.execute() = process(*this.toTypedArray()).execute()
-fun List<String>.executeBlocking() = process(*this.toTypedArray()).executeBlocking()
+suspend fun String.start() = process(this).start()
+fun String.startBlocking() = process(this).startBlocking()
 
+suspend fun List<String>.execute() = process(*this.toTypedArray()).execute()
+fun Collection<String>.executeBlocking() = process(*this.toTypedArray()).executeBlocking()
+
+suspend fun List<String>.start() = process(*this.toTypedArray()).start()
+fun Collection<String>.startBlocking() = process(*this.toTypedArray()).startBlocking()
 
 infix fun ProcessBuilder.pipe(other: ProcessBuilder): PipeBuilder {
     return PipeBuilder(listOf(this, other))
