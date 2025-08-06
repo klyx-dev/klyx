@@ -1,5 +1,6 @@
 package com.klyx.terminal
 
+import android.app.Activity
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -9,7 +10,8 @@ import com.termux.view.TerminalView
 import com.termux.view.TerminalViewClient
 
 class TerminalViewClient(
-    private val terminal: TerminalView
+    private val terminal: TerminalView,
+    private val activity: Activity? = null
 ) : TerminalViewClient {
     /**
      * Callback function on scale events according to [android.view.ScaleGestureDetector.getScaleFactor].

@@ -1,5 +1,6 @@
 package com.klyx.terminal
 
+import android.app.Activity
 import android.util.Log
 import com.blankj.utilcode.util.ClipboardUtils
 import com.termux.terminal.TerminalEmulator
@@ -9,7 +10,7 @@ import com.termux.view.TerminalView
 
 class TerminalSessionClient(
     private val terminal: TerminalView,
-    private val onSessionFinish: (TerminalSession) -> Unit = {}
+    private val activity: Activity? = null
 ) : TerminalSessionClient {
     override fun onTextChanged(changedSession: TerminalSession) {
         terminal.onScreenUpdated()
@@ -20,7 +21,7 @@ class TerminalSessionClient(
     }
 
     override fun onSessionFinished(finishedSession: TerminalSession) {
-        onSessionFinish(finishedSession)
+        activity?.finish()
     }
 
     override fun onCopyTextToClipboard(
