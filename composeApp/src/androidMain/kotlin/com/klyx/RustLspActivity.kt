@@ -2,10 +2,12 @@ package com.klyx
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
+import com.klyx.terminal.klyxBinDir
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
@@ -15,6 +17,7 @@ import io.github.rosemoe.sora.langs.textmate.registry.dsl.languages
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
 import io.github.rosemoe.sora.lsp.client.connection.SocketStreamConnectionProvider
+import io.github.rosemoe.sora.lsp.client.connection.StreamConnectionProvider
 import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.CustomLanguageServerDefinition
 import io.github.rosemoe.sora.lsp.client.languageserver.wrapper.EventHandler
 import io.github.rosemoe.sora.lsp.editor.LspEditor
@@ -29,7 +32,10 @@ import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
 import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.tm4e.core.registry.IThemeSource
+import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.lang.ref.WeakReference
 import java.net.ServerSocket
 import java.util.zip.ZipFile
@@ -92,45 +98,51 @@ class RustLspActivity : BaseEditorActivity() {
         val port = randomPort()
         val projectPath = filesDir?.resolve("rustProject")?.absolutePath ?: ""
 
-        startService(
-            Intent(this@RustLspActivity, RustLanguageServerService::class.java).apply {
-                putExtra("port", port)
-                putExtra("projectPath", projectPath)
-            }
-        )
+//        startService(
+//            Intent(this@RustLspActivity, RustLanguageServerService::class.java).apply {
+//                putExtra("port", port)
+//                putExtra("projectPath", projectPath)
+//            }
+//        )
 
-        val rustServerDefinition =
-            object : CustomLanguageServerDefinition(
-                "rs",
-                ServerConnectProvider {
-                    SocketStreamConnectionProvider(port)
+        val rustServerDefinition = object : CustomLanguageServerDefinition(
+            "rs",
+            ServerConnectProvider { workingDir ->
+                object : StreamConnectionProvider {
+                    lateinit var process: Process
+
+                    override val inputStream: InputStream
+                        get() = process.inputStream
+
+                    override val outputStream: OutputStream
+                        get() = process.outputStream
+
+                    override fun start() {
+                        val execPath = File(klyxBinDir, "rust-analyzer").absolutePath
+
+                        println(workingDir)
+                        val processBuilder = ProcessBuilder(execPath)
+                            .directory(File(workingDir))
+                            .redirectOutput(File(getExternalFilesDir(null), "ra.log"))
+                            .redirectErrorStream(true)
+                            .apply {
+                                environment()["RA_LOG"] = "info"
+                            }
+
+                        process = processBuilder.start()
+                    }
+
+                    override fun close() {
+                        if (::process.isInitialized) {
+                            process.destroy()
+                        }
+                    }
                 }
-            ) {
-
-                // Rust-analyzer specific initialization options
-                override fun getInitializationOptions(uri: java.net.URI?): Any {
-                    return mapOf(
-                        "cargo" to mapOf(
-                            "loadOutDirsFromCheck" to true,
-                            "runBuildScripts" to true
-                        ),
-                        "procMacro" to mapOf(
-                            "enable" to true
-                        ),
-                        "diagnostics" to mapOf(
-                            "disabled" to listOf<String>()
-                        ),
-                        "checkOnSave" to mapOf(
-                            "command" to "check"
-                        )
-                    )
-                }
-
-                private val _eventListener = EventListener(this@RustLspActivity)
-
-                override val eventListener: EventHandler.EventListener
-                    get() = _eventListener
             }
+        ) {
+            private val _eventListener = EventListener(this@RustLspActivity)
+            override val eventListener: EventHandler.EventListener get() = _eventListener
+        }
 
         lspProject = LspProject(projectPath)
         lspProject.addServerDefinition(rustServerDefinition)
@@ -161,7 +173,8 @@ class RustLspActivity : BaseEditorActivity() {
             connected = true
         } catch (e: Exception) {
             connected = false
-            e.printStackTrace()
+            //e.printStackTrace()
+            Log.e("RustLsp", "Unable to connect to Rust Analyzer")
         }
 
         lifecycleScope.launch(Dispatchers.Main) {

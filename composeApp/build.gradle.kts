@@ -65,7 +65,7 @@ kotlin {
 
             implementation(projects.shared)
             implementation(projects.core)
-            implementation(projects.editor)
+            implementation(projects.editor.editor)
             implementation(projects.extensionApi)
             implementation(projects.wasm)
             implementation(projects.terminal.terminal)

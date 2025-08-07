@@ -55,8 +55,8 @@ kotlin {
         androidMain {
             dependencies {
                 api(project.dependencies.platform(libs.sora.editor.bom))
-                api(libs.sora.editor)
-                api(libs.sora.editor.lsp)
+                api(projects.editor.sora.editor)
+                api(projects.editor.sora.editorLsp)
                 implementation("io.github.rosemoe:language-treesitter")
                 implementation("com.itsaky.androidide.treesitter:tree-sitter-json:4.3.1")
             }

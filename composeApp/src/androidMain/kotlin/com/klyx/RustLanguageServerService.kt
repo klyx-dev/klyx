@@ -4,9 +4,14 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
+import com.klyx.terminal.internal.downloadPackage
+import com.klyx.terminal.internal.extractTarGz
+import com.klyx.terminal.klyxFilesDir
+import com.klyx.terminal.localProcess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -46,11 +51,52 @@ class RustLanguageServerService : Service() {
             Log.d(TAG, "Connected to client on port ${socketClient.port}")
 
             runCatching {
-                startRustAnalyzer(
-                    projectPath,
-                    socketClient.getInputStream(),
-                    socketClient.getOutputStream()
+                runBlocking {
+                    downloadPackage("rust-analyzer") {
+                        extractTarGz(it.absolutePath, klyxFilesDir.absolutePath)
+                    }
+                }
+
+                val rustAnalyzerProcess = localProcess("rust-analyzer") {
+                    env("RUST_LOG", "rust_analyzer=info")
+                    workingDirectory(projectPath)
+                }.startBlocking()
+
+                runBlocking { rustAnalyzerProcess.waitFor() }
+
+                val processInputStream = rustAnalyzerProcess.inputStream
+                val processOutputStream = rustAnalyzerProcess.outputStream
+
+                // Create LSP launcher
+                val launcher = LSPLauncher.createClientLauncher(
+                    SimpleLanguageClient(),
+                    socketClient.inputStream,
+                    socketClient.outputStream
                 )
+
+                val server = launcher.remoteProxy
+
+                // Start listening for LSP messages
+                val listening = launcher.startListening()
+
+                // Bridge the streams between socket and process
+                serviceScope.launch {
+                    try {
+                        socketClient.inputStream.copyTo(processOutputStream)
+                    } catch (e: IOException) {
+                        Log.d(TAG, "Input stream closed", e)
+                    }
+                }
+
+                serviceScope.launch {
+                    try {
+                        processInputStream.copyTo(socketClient.outputStream)
+                    } catch (e: IOException) {
+                        Log.d(TAG, "Output stream closed", e)
+                    }
+                }
+
+                listening.get()
             }.onFailure { exception ->
                 Log.e(TAG, "Failed to start Rust Analyzer", exception)
             }
@@ -59,138 +105,6 @@ class RustLanguageServerService : Service() {
             socket.close()
         }
         return START_STICKY
-    }
-
-    private fun startRustAnalyzer(
-        projectPath: String,
-        inputStream: InputStream,
-        outputStream: OutputStream
-    ) {
-        try {
-            // Method 1: Use rust-analyzer binary directly (if available)
-            val rustAnalyzerPath = findRustAnalyzer()
-
-            if (rustAnalyzerPath != null) {
-                Log.d(TAG, "Found rust-analyzer at: $rustAnalyzerPath")
-                val file = File(rustAnalyzerPath)
-                println("Is Executable: ${file.canExecute()}")
-                startRustAnalyzerProcess(rustAnalyzerPath, projectPath, inputStream, outputStream)
-            } else {
-                Log.e(TAG, "rust-analyzer not found. Please install rust-analyzer.")
-                downloadAndExtractRustAnalyzer()
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error starting rust-analyzer", e)
-            throw e
-        }
-    }
-
-    private fun startRustAnalyzerProcess(
-        rustAnalyzerPath: String,
-        projectPath: String,
-        inputStream: InputStream,
-        outputStream: OutputStream
-    ) {
-        try {
-            val processBuilder = ProcessBuilder("/system/bin/linker64", rustAnalyzerPath)
-                .redirectErrorStream(true)
-            processBuilder.directory(File(projectPath))
-
-            // Set environment variables
-            val env = processBuilder.environment()
-            env["RUST_LOG"] = "rust_analyzer=info"
-
-            rustAnalyzerProcess = processBuilder.start()
-
-            val processInputStream = rustAnalyzerProcess!!.inputStream
-            val processOutputStream = rustAnalyzerProcess!!.outputStream
-
-            // Create LSP launcher
-            val launcher = LSPLauncher.createClientLauncher(
-                SimpleLanguageClient(),
-                inputStream,
-                outputStream
-            )
-
-            val server = launcher.remoteProxy
-
-            // Start listening for LSP messages
-            val listening = launcher.startListening()
-
-            // Bridge the streams between socket and process
-            serviceScope.launch {
-                try {
-                    inputStream.copyTo(processOutputStream)
-                } catch (e: IOException) {
-                    Log.d(TAG, "Input stream closed", e)
-                }
-            }
-
-            serviceScope.launch {
-                try {
-                    processInputStream.copyTo(outputStream)
-                } catch (e: IOException) {
-                    Log.d(TAG, "Output stream closed", e)
-                }
-            }
-
-            listening.get()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error in rust-analyzer process", e)
-        }
-    }
-
-    private fun findRustAnalyzer(): String? {
-        val possiblePaths = listOf(
-            "/system/bin/rust-analyzer",
-            "/data/local/tmp/rust-analyzer",
-            "${applicationContext.filesDir}/rust-analyzer",
-            "${applicationContext.cacheDir}/rust-analyzer"
-        )
-
-        for (path in possiblePaths) {
-            val file = File(path)
-            if (file.exists() && file.canExecute()) {
-                return path
-            }
-        }
-
-        // Try to find in PATH
-        try {
-            val process = Runtime.getRuntime().exec(arrayOf("which", "rust-analyzer"))
-            process.waitFor()
-            if (process.exitValue() == 0) {
-                val path = process.inputStream.bufferedReader().readLine()
-                if (path.isNotEmpty()) {
-                    return path.trim()
-                }
-            }
-        } catch (e: Exception) {
-            Log.d(TAG, "Could not find rust-analyzer in PATH", e)
-        }
-
-        return null
-    }
-
-    private fun downloadAndExtractRustAnalyzer() {
-        // Implementation to download rust-analyzer binary
-        // This is a placeholder - you would need to implement downloading
-        // the appropriate rust-analyzer binary for Android architecture
-        Log.d(TAG, "Download and extract rust-analyzer functionality needed")
-
-        // You could download from: https://github.com/rust-lang/rust-analyzer/releases
-        // and extract to applicationContext.filesDir or cacheDir
-
-        val assetName = "rust-analyzer"
-        val outName = "rust-analyzer"
-
-        val input = assets.open(assetName)
-        val outFile = File(applicationContext.filesDir, outName)
-
-        FileOutputStream(outFile).use { input.copyTo(it) }
-        outFile.setExecutable(true)
     }
 
     override fun onDestroy() {

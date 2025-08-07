@@ -31,6 +31,10 @@
             <option value="$PROJECT_DIR$/composeApp" />
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/editor" />
+            <option value="$PROJECT_DIR$/editor/editor" />
+            <option value="$PROJECT_DIR$/editor/sora" />
+            <option value="$PROJECT_DIR$/editor/sora/editor" />
+            <option value="$PROJECT_DIR$/editor/sora/editor-lsp" />
             <option value="$PROJECT_DIR$/extension-api" />
             <option value="$PROJECT_DIR$/ktreesitter-plugin" />
             <option value="$PROJECT_DIR$/shared" />
