@@ -12,14 +12,14 @@ kotlin = "2.2.0"
 kotlinx-coroutines = "1.10.2"
 kotlinx-datetime = "0.7.0"
 kotlinx-io-core = "0.7.0"
-ktor = "3.2.1"
-commonsCompress = "1.27.1"
+ktor = "3.2.3"
+commonsCompress = "1.28.0"
 documentfile = "1.1.0"
 json5k = "0.3.0"
-kotlinxSerialization = "1.8.1"
+kotlinxSerialization = "1.9.0"
 ktoml = "0.7.0"
 ktreesitter = "0.24.1"
-okio = "3.15.0"
+okio = "3.16.0"
 core = "1.16.0"
 lifecycle = "2.9.1"
 composeBom = "2025.06.01"
@@ -29,13 +29,15 @@ utilcodex = "1.31.1"
 compose-material3 = "1.4.0-alpha18"
 koin = "4.1.0"
 oshi-core = "6.8.2"
-runner = "1.6.2"
-coreVersion = "1.6.1"
-junitVersion = "1.2.1"
+runner = "1.7.0"
+coreVersion = "1.7.0"
+junitVersion = "1.3.0"
 chicory = "1.5.1"
 jimfs = "1.3.1"
 sora-editor = "0.23.7"
 lsp4j = "0.24.0"
+espressoCore = "3.7.0"
+appcompat = "1.7.1"
 
 [libraries]
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -89,6 +91,8 @@ chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chico
 chicory-wasi = { module = "com.dylibso.chicory:wasi", version.ref = "chicory" }
 chicory-annotations = { module = "com.dylibso.chicory:annotations", version.ref = "chicory" }
 jimfs = { module = "com.google.jimfs:jimfs", version.ref = "jimfs" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

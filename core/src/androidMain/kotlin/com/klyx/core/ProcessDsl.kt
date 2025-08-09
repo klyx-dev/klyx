@@ -15,6 +15,11 @@ import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.experimental.ExperimentalTypeInference
+import kotlin.io.bufferedReader
+import kotlin.io.copyTo
+import kotlin.io.inputStream
+import kotlin.io.lineSequence
+import kotlin.io.use
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
@@ -259,7 +264,22 @@ class ProcessBuilder @PublishedApi internal constructor(
             }
         }
 
-        ManagedProcess(process, this@ProcessBuilder)
+        val outputDeferred = async {
+            if (captureOutput && outputFile == null) {
+                captureStream(process.inputStream, onOutputLine)
+            } else ""
+        }
+
+        val errorDeferred = async {
+            if (captureError && errorFile == null) {
+                captureStream(process.errorStream, onErrorLine)
+            } else ""
+        }
+
+        ManagedProcess(
+            process,
+            this@ProcessBuilder
+        ).also { outputDeferred.await();errorDeferred.await() }
     }
 
     fun startBlocking(): ManagedProcess = runBlocking { start() }
@@ -314,7 +334,7 @@ class ProcessBuilder @PublishedApi internal constructor(
 
     fun executeBlocking() = runBlocking { execute() }
 
-    private fun buildProcessBuilder(): java.lang.ProcessBuilder {
+    internal fun buildProcessBuilder(): java.lang.ProcessBuilder {
         return java.lang.ProcessBuilder().apply {
             command(buildCommand())
 
@@ -344,7 +364,7 @@ class ProcessBuilder @PublishedApi internal constructor(
         }
     }
 
-    private fun buildCommand(): List<String> {
+    internal fun buildCommand(): List<String> {
         return listOf(command) + args
     }
 
@@ -362,6 +382,9 @@ class ProcessBuilder @PublishedApi internal constructor(
         output.toString().trimEnd()
     }
 }
+
+val ProcessBuilder.commands get() = buildCommand()
+fun ProcessBuilder.asJavaProcessBuilder() = buildProcessBuilder()
 
 @OptIn(ExperimentalTypeInference::class, ExperimentalContracts::class)
 inline fun process(

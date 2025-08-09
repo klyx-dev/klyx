@@ -7,7 +7,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
-import com.klyx.terminal.klyxBinDir
+import com.klyx.core.asJavaProcessBuilder
+import com.klyx.terminal.ubuntuProcess
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
@@ -16,18 +17,21 @@ import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.dsl.languages
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
-import io.github.rosemoe.sora.lsp.client.connection.SocketStreamConnectionProvider
 import io.github.rosemoe.sora.lsp.client.connection.StreamConnectionProvider
-import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.CustomLanguageServerDefinition
+import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.LanguageServerDefinition
 import io.github.rosemoe.sora.lsp.client.languageserver.wrapper.EventHandler
 import io.github.rosemoe.sora.lsp.editor.LspEditor
 import io.github.rosemoe.sora.lsp.editor.LspProject
 import io.github.rosemoe.sora.text.ContentIO
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.InitializeResult
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
 import org.eclipse.lsp4j.services.LanguageServer
@@ -88,27 +92,23 @@ class RustLspActivity : BaseEditorActivity() {
         zipFile.close()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private suspend fun connectToLanguageServer() = withContext(Dispatchers.IO) {
-
         withContext(Dispatchers.Main) {
             toast("(Rust Activity) Starting Rust Analyzer...")
             editor.editable = false
         }
 
-        val port = randomPort()
         val projectPath = filesDir?.resolve("rustProject")?.absolutePath ?: ""
 
-//        startService(
-//            Intent(this@RustLspActivity, RustLanguageServerService::class.java).apply {
-//                putExtra("port", port)
-//                putExtra("projectPath", projectPath)
-//            }
-//        )
+        val definition = object : LanguageServerDefinition() {
+            init {
+                this.ext = "rs"
+                this.languageIds = mapOf("rs" to "rust")
+            }
 
-        val rustServerDefinition = object : CustomLanguageServerDefinition(
-            "rs",
-            ServerConnectProvider { workingDir ->
-                object : StreamConnectionProvider {
+            override fun createConnectionProvider(workingDir: String): StreamConnectionProvider {
+                return object : StreamConnectionProvider {
                     lateinit var process: Process
 
                     override val inputStream: InputStream
@@ -118,18 +118,13 @@ class RustLspActivity : BaseEditorActivity() {
                         get() = process.outputStream
 
                     override fun start() {
-                        val execPath = File(klyxBinDir, "rust-analyzer").absolutePath
+                        val lp = ubuntuProcess("rust-analyzer") {
+                            workingDirectory(workingDir)
+                            env("RA_LOG", "info")
+                        }
 
-                        println(workingDir)
-                        val processBuilder = ProcessBuilder(execPath)
-                            .directory(File(workingDir))
-                            .redirectOutput(File(getExternalFilesDir(null), "ra.log"))
-                            .redirectErrorStream(true)
-                            .apply {
-                                environment()["RA_LOG"] = "info"
-                            }
-
-                        process = processBuilder.start()
+                        process = lp.asJavaProcessBuilder().start()
+                        //process = lp.start().process
                     }
 
                     override fun close() {
@@ -139,13 +134,13 @@ class RustLspActivity : BaseEditorActivity() {
                     }
                 }
             }
-        ) {
+
             private val _eventListener = EventListener(this@RustLspActivity)
             override val eventListener: EventHandler.EventListener get() = _eventListener
         }
 
         lspProject = LspProject(projectPath)
-        lspProject.addServerDefinition(rustServerDefinition)
+        lspProject.addServerDefinition(definition)
 
         withContext(Dispatchers.Main) {
             lspEditor = lspProject.createEditor("$projectPath/src/main.rs")
@@ -157,14 +152,32 @@ class RustLspActivity : BaseEditorActivity() {
         var connected: Boolean
 
         try {
+            //Timeout[Timeouts.INIT] = 30000
             lspEditor.connectWithTimeout()
+
+            val fileUri = "file://$projectPath/src/main.rs"
+            val fileContent = File("$projectPath/src/main.rs").readText()
+
+            Log.d("RustLsp", "Sending didOpen with content length: ${fileContent.length}")
+
+            val didOpenParams = DidOpenTextDocumentParams(
+                TextDocumentItem(
+                    fileUri,
+                    definition.languageIdFor("rs"), // languageId
+                    1,
+                    fileContent
+                ).also { println(it) }
+            )
+
+            lspEditor.requestManager?.didOpen(didOpenParams)
+            lspEditor.openDocument()
 
             // Set up workspace folders for Rust project
             lspEditor.requestManager?.didChangeWorkspaceFolders(
                 DidChangeWorkspaceFoldersParams().apply {
                     this.event = WorkspaceFoldersChangeEvent().apply {
                         added = listOf(
-                            WorkspaceFolder("file://$projectPath", "RustProject")
+                            WorkspaceFolder("file://$projectPath", "rustProject")
                         )
                     }
                 }
@@ -174,7 +187,7 @@ class RustLspActivity : BaseEditorActivity() {
         } catch (e: Exception) {
             connected = false
             //e.printStackTrace()
-            Log.e("RustLsp", "Unable to connect to Rust Analyzer")
+            Log.e("RustLsp", "Unable to connect to Rust Analyzer", e)
         }
 
         lifecycleScope.launch(Dispatchers.Main) {
@@ -285,6 +298,18 @@ class RustLspActivity : BaseEditorActivity() {
                         result.capabilities.documentFormattingProvider != null
                 }
             }
+        }
+
+        override fun onShowMessage(messageParams: MessageParams?) {
+            activityRef.get()?.apply {
+                runOnUiThread {
+                    toast(messageParams?.message ?: "Unknown message")
+                }
+            }
+        }
+
+        override fun onLogMessage(messageParams: MessageParams?) {
+            Log.d("RustLsp", messageParams?.message ?: "Unknown message")
         }
     }
 }

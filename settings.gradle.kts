@@ -40,7 +40,10 @@ plugins {
 include(":composeApp")
 include(":shared")
 include(":core")
-include(":editor:editor")
+include(
+    ":editor:editor",
+    ":editor:lsp"
+)
 include(
     ":editor:sora:editor",
     ":editor:sora:editor-lsp"

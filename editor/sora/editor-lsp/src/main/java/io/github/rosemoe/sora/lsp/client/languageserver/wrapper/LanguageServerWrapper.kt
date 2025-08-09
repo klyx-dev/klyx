@@ -24,6 +24,7 @@
 
 package io.github.rosemoe.sora.lsp.client.languageserver.wrapper
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.annotation.WorkerThread
 import io.github.rosemoe.sora.lsp.client.DefaultLanguageClient
@@ -44,6 +45,7 @@ import kotlinx.coroutines.future.future
 import kotlinx.coroutines.launch
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionCapabilities
+import org.eclipse.lsp4j.CodeActionKindCapabilities
 import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities
 import org.eclipse.lsp4j.CompletionCapabilities
 import org.eclipse.lsp4j.CompletionItemCapabilities
@@ -71,6 +73,7 @@ import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.launch.LSPLauncher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -124,6 +127,7 @@ class LanguageServerWrapper(
      *
      * @return the languageServer capabilities, or null if initialization job didn't complete
      */
+    @SuppressLint("DefaultLocale")
     @WorkerThread
     fun getServerCapabilities(): ServerCapabilities? {
         if (initializeResult != null) {
@@ -343,6 +347,7 @@ class LanguageServerWrapper(
         }
         val workspaceFolder = WorkspaceFolder().apply {
             uri = initParams.rootUri
+            name = File(URI.create(initParams.rootUri)).name
         }
         // Maybe the user should be allowed to customize the WorkspaceFolder?
         // workspaceFolder.setName("");
@@ -351,8 +356,9 @@ class LanguageServerWrapper(
 
         val textDocumentClientCapabilities = TextDocumentClientCapabilities().apply {
             codeAction = CodeActionCapabilities()
-            codeAction.codeActionLiteralSupport =
-                CodeActionLiteralSupportCapabilities()
+            codeAction.codeActionLiteralSupport = CodeActionLiteralSupportCapabilities().apply {
+                codeActionKind = CodeActionKindCapabilities()
+            }
             completion =
                 CompletionCapabilities(CompletionItemCapabilities(true))
             definition = DefinitionCapabilities()
@@ -475,7 +481,7 @@ class LanguageServerWrapper(
             editor.signatureHelpTriggers = signatureHelpTriggers
             editor.signatureHelpReTriggers = signatureHelpReTriggers
             editor.completionTriggers = completionTriggers.toMutableSet().apply {
-                addAll(arrayOf("[","{","(","<","."))
+                addAll(arrayOf("[", "{", "(", "<", "."))
             }.toList()
 
             commonCoroutineScope.future {

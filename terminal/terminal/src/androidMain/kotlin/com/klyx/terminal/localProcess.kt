@@ -7,7 +7,6 @@ import com.klyx.terminal.internal.linker
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.experimental.ExperimentalTypeInference
 
 @PublishedApi
 context(context: Context)
@@ -15,12 +14,12 @@ internal fun isCmdAvailableInLocalPath(cmd: String) = run {
     klyxBinDir.resolve(cmd).exists()
 }
 
-@OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
+@OptIn(ExperimentalContracts::class)
 context(context: Context)
 inline fun localProcess(
     vararg commands: String,
     useProotIfCmdIsNotAvailableLocally: Boolean = true,
-    @BuilderInference
+    useLinker: Boolean = true,
     block: ProcessBuilder.() -> Unit = {}
 ): ProcessBuilder {
     contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
@@ -28,12 +27,14 @@ inline fun localProcess(
     val cmd = commands.first()
     return if (isCmdAvailableInLocalPath(cmd)) {
         process(
-            linker,
-            "${klyxBinDir.absolutePath}/$cmd",
-            *commands.drop(1).toTypedArray()
+            *listOfNotNull(
+                if (useLinker) linker else null,
+                "${klyxBinDir.absolutePath}/$cmd",
+                *commands.drop(1).toTypedArray()
+            ).toTypedArray()
         ) {
-            env("PWD", klyxFilesDir.absolutePath)
-            workingDirectory(klyxFilesDir)
+            //env("PWD", klyxFilesDir.absolutePath)
+            //workingDirectory(klyxFilesDir)
         }.apply(block)
     } else if (useProotIfCmdIsNotAvailableLocally) {
         ubuntuProcess(*commands).apply(block)
