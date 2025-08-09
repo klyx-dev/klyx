@@ -1,9 +1,9 @@
 package com.klyx.terminal.internal
 
 import android.content.Context
-import android.util.Log
 import com.klyx.core.file.DownloadProgress
 import com.klyx.core.file.downloadToWithProgress
+import com.klyx.core.logging.logger
 import com.klyx.core.process
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import java.io.File
+
+private val logger = logger("TerminalSetup")
 
 context(context: Context)
 suspend fun downloadRootFs(
@@ -34,7 +36,7 @@ suspend fun downloadRootFs(
             onComplete(rootFsPath)
         }
     }.catch { error ->
-        Log.e("TerminalSetup", "Error", error)
+        logger.e("Failed to download rootfs", error)
         onError(error)
     }.collect { onProgress(it) }
 }
@@ -47,7 +49,7 @@ suspend fun setupRootFs(path: String) = run {
 
     if (!ubuntuDir.exists()) ubuntuDir.mkdirs()
     if (!extractTarGz(path, ubuntuDir.absolutePath)) {
-        Log.w("TerminalSetup", "Ubuntu rootfs is not extracted properly.")
+        logger.w("Ubuntu rootfs is not extracted properly.")
     }
     SystemFileSystem.delete(Path(path))
 
@@ -72,10 +74,12 @@ suspend fun setupRootFs(path: String) = run {
     }
 
     ubuntuDir.resolve("etc/hostname").writeText("klyx")
-    ubuntuDir.resolve("etc/hosts").writeText("""
+    ubuntuDir.resolve("etc/hosts").writeText(
+        """
         127.0.0.1   localhost
         127.0.1.1   klyx
-    """.trimIndent())
+    """.trimIndent()
+    )
     ubuntuDir.resolve("etc/resolv.conf").writeText("nameserver 8.8.8.8")
 }
 
@@ -92,11 +96,8 @@ suspend fun extractTarGz(
     inputPath: String,
     outputPath: String
 ) = process("tar", "-xzf", inputPath, "-C", outputPath) {
-    onError {
-        Log.e("ExtractProcess", it)
-    }
+    val logger = logger("ExtractTarGz")
 
-    onOutput {
-        Log.i("ExtractProcess", it)
-    }
+    onError(logger::e)
+    onOutput(logger::i)
 }.execute().success

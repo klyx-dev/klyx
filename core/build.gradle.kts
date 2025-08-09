@@ -27,8 +27,28 @@ kotlin {
 
     sourceSets {
         val commonMain by getting
-        val jvmMain by getting
-        val androidMain by getting
+
+        // Must be defined before androidMain and jvmMain
+        val commonJvmAndroid = create("commonJvmAndroid") {
+            dependsOn(commonMain)
+
+            dependencies {
+            }
+        }
+
+        val androidMain by getting {
+            dependsOn(commonJvmAndroid)
+            dependencies {
+
+            }
+        }
+
+        val jvmMain by getting {
+            dependsOn(commonJvmAndroid)
+            dependencies {
+
+            }
+        }
 
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)

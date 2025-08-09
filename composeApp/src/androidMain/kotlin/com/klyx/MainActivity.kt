@@ -1,7 +1,6 @@
 package com.klyx
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -32,6 +31,7 @@ import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.isDebug
+import com.klyx.core.openActivity
 import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
@@ -73,7 +73,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
-                    startActivity(Intent(this@MainActivity, RustLspActivity::class.java))
+                    //openActivity(RustLspActivity::class)
                 }
 
                 val settings = LocalAppSettings.current

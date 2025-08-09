@@ -1,6 +1,7 @@
 package com.klyx.editor
 
 import android.content.Context
+import android.view.ViewGroup
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,7 +66,14 @@ actual fun CodeEditor(
     }
 
     AndroidView(
-        factory = { editor },
+        factory = {
+            editor.apply {
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        },
         onRelease = { it.release() },
         modifier = modifier,
         update = { editor ->
