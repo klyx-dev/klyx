@@ -34,7 +34,7 @@ class WasmSignatureBuilder {
         return WasmSignature(params = this, results = results)
     }
 
-    infix fun List<WasmType>.returns(unit: Unit): WasmSignature =
+    infix fun List<WasmType>.returns(unit: Unit?): WasmSignature =
         WasmSignature(params = this, results = emptyList())
 
     infix fun WasmType.returns(unit: Unit): WasmSignature =

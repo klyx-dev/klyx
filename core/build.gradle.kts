@@ -72,7 +72,7 @@ kotlin {
 
             implementation(kotlin("reflect"))
             api(libs.kotlinx.io.core)
-            implementation(libs.okio)
+            api(libs.okio)
             implementation(libs.kotlinx.coroutines.core)
 
             implementation(projects.shared)

@@ -4,9 +4,16 @@ import android.os.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
+import com.klyx.extension.api.Result
+import com.klyx.extension.api.SystemWorktree
+import com.klyx.extension.api.borrow
+import com.klyx.extension.api.parseResult
+import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
+import com.klyx.wasm.packString
 import com.klyx.wasm.registerHostModule
+import com.klyx.wasm.utils.i32
 import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.directory
 import com.klyx.wasm.wasi.env
@@ -41,11 +48,30 @@ object ExtensionLoader {
                 }
 
                 registerHostModule(SystemModule())
+                registerHostModule(RootModule())
 
                 callInit(
                     enabled = shouldCallInit,
                     functionName = "init-extension"
                 )
+            }.also { instance ->
+                val memory = instance.memory
+
+                val (offset, len) = instance.packString("HTML")
+
+                val func = instance.function("language-server-command")
+                val ptr = func(offset.toLong(), len.toLong(), SystemWorktree.borrow())!![0].i32
+                val result = memory.parseResult(ptr)
+
+                when (result) {
+                    is Result.Ok -> println("Ok")
+                    is Result.Err -> {
+                        val errPtr = memory.uint32(ptr + 4)
+                        val errLen = memory.uint32(ptr + 8)
+                        val err = memory.string(errPtr, errLen)
+                        println("Error: $err")
+                    }
+                }
             }
         }
     }

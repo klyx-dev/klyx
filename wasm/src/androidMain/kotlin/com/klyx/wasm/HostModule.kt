@@ -1,5 +1,6 @@
 package com.klyx.wasm
 
+import kotlinx.coroutines.CoroutineScope
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

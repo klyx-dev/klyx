@@ -76,21 +76,45 @@ class TaggedLogger internal constructor(
     private val logger: InternalLogger
 ) {
     fun v(message: String) = logger.v(tag, message)
+    fun verbose(message: String) = logger.v(tag, message)
+
     fun d(message: String) = logger.d(tag, message)
+    fun debug(message: String) = logger.d(tag, message)
+
     fun i(message: String) = logger.i(tag, message)
+    fun info(message: String) = logger.i(tag, message)
+
     fun w(message: String) = logger.w(tag, message)
+    fun warn(message: String) = logger.w(tag, message)
+
     fun e(message: String, throwable: Throwable? = null) = logger.e(tag, message, throwable)
+    fun error(message: String, throwable: Throwable? = null) = logger.e(tag, message, throwable)
 
     fun wtf(message: String) = logger.wtf(tag, message)
+    fun assert(message: String) = logger.wtf(tag, message)
 
     fun v(messageProvider: () -> String) = v(messageProvider())
+    fun verbose(messageProvider: () -> String) = verbose(messageProvider())
+
     fun d(messageProvider: () -> String) = d(messageProvider())
+    fun debug(messageProvider: () -> String) = debug(messageProvider())
+
     fun i(messageProvider: () -> String) = i(messageProvider())
+    fun info(messageProvider: () -> String) = info(messageProvider())
+
     fun w(messageProvider: () -> String) = w(messageProvider())
+    fun warn(messageProvider: () -> String) = warn(messageProvider())
 
     fun e(throwable: Throwable? = null, messageProvider: () -> String) {
         e(messageProvider(), throwable)
     }
+
+    fun error(throwable: Throwable? = null, messageProvider: () -> String) {
+        error(messageProvider(), throwable)
+    }
+
+    fun wtf(messageProvider: () -> String) = wtf(messageProvider())
+    fun assert(messageProvider: () -> String) = assert(messageProvider())
 
     val tagName: String get() = tag
 }

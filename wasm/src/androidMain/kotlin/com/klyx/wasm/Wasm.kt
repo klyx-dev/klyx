@@ -41,11 +41,6 @@ sealed interface WasmType {
     }
 }
 
-val Long.i32 get() = toInt()
-val Long.i64 get() = this
-val Long.f32 get() = toFloat()
-val Long.f64 get() = toDouble()
-
 typealias FunctionName = String
 typealias ModuleName = String
 

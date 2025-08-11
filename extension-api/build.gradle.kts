@@ -35,6 +35,8 @@ kotlin {
             implementation(compose.material3)
             implementation(compose.ui)
 
+            implementation(libs.kotlinx.datetime)
+
             implementation(projects.core)
             implementation(projects.shared)
             implementation(projects.wasm)
