@@ -27,7 +27,16 @@ kotlin {
         }
     }
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
+        val commonJvmAndroid by creating {
+            dependsOn(commonMain.get())
+        }
+
+        androidMain.get().dependsOn(commonJvmAndroid)
+        jvmMain.get().dependsOn(commonJvmAndroid)
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -35,9 +44,6 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-
-            api(libs.oshi.core)
-            //implementation(projects.core)
         }
 
         commonTest.dependencies {

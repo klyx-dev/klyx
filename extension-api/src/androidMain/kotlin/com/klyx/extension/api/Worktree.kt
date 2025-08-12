@@ -1,6 +1,7 @@
 package com.klyx.extension.api
 
 import com.klyx.core.Environment
+import com.klyx.fs.canExecute
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostFnSync
 import com.klyx.wasm.HostModuleScope
@@ -36,7 +37,9 @@ class Worktree(
             val binaryPath = pathDir.toPath().resolve(binaryName)
 
             if (fs.exists(binaryPath) && !fs.metadata(binaryPath).isDirectory) {
-                // TODO: Consider executable permissions check
+                if (!binaryPath.toString().canExecute()) {
+                    //throw RuntimeException("Binary '$binaryName' is not executable")
+                }
                 return binaryPath.toString()
             }
         }
