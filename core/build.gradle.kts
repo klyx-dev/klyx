@@ -16,7 +16,6 @@ kotlin {
         freeCompilerArgs.addAll("-Xcontext-parameters")
     }
 
-    @Suppress("UnstableApiUsage")
     androidLibrary {
         namespace = "com.klyx.core"
         compileSdk = Configs.Android.COMPILE_SDK_VERSION

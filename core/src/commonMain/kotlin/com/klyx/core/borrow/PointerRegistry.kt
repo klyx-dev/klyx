@@ -56,8 +56,9 @@ internal object PointerRegistry {
     }
 
     fun getPointer(value: Any?) = synchronized(lock) {
-        ptrToValue.entries.find { it.value === value }?.key
+        val raw = ptrToValue.entries.find { it.value === value }?.key
             ?: useAfterDropError("No pointer found for value: $value")
+        Pointer(raw)
     }
 
     fun getTracker(pointer: Pointer) = synchronized(lock) {
@@ -113,9 +114,7 @@ internal object PointerRegistry {
     }
 }
 
-@JvmName("refValue")
 fun <T : Any> ref(value: T) = value.owned()
-fun <T : Any> T.ref() = this.owned()
 
 fun <T : Any> deref(ptr: Pointer): BorrowRef<T> = PointerRegistry.deref(ptr)
 fun <T : Any> derefMut(ptr: Pointer): BorrowMutRef<T> = PointerRegistry.derefMut(ptr)

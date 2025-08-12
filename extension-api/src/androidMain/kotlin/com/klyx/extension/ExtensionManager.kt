@@ -13,6 +13,7 @@ import com.klyx.core.file.find
 import com.klyx.core.file.rawFile
 import com.klyx.core.file.resolve
 import com.klyx.core.file.toKxFile
+import com.klyx.wasm.ExperimentalWasmApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.asSource
@@ -23,6 +24,7 @@ import java.nio.file.Files
 object ExtensionManager {
     val installedExtensions = mutableStateListOf<Extension>()
 
+    @OptIn(ExperimentalWasmApi::class)
     suspend fun installExtension(
         dir: KxFile,
         isDevExtension: Boolean = false
@@ -110,6 +112,7 @@ object ExtensionManager {
         }
     }
 
+    @OptIn(ExperimentalWasmApi::class)
     private suspend fun loadExtension(
         file: KxFile,
         isDevExtension: Boolean

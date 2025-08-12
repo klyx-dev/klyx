@@ -26,7 +26,7 @@ class BorrowRef<T : Any> internal constructor(
         return if (isReleased) {
             "BorrowRef<RELEASED>"
         } else {
-            "BorrowRef<${value::class.simpleName}>(ptr=0x${ptr().toString(16)})"
+            "BorrowRef<${value::class.simpleName}>(ptr=0x${ptr()})"
         }
     }
 }
@@ -59,7 +59,7 @@ class BorrowMutRef<T : Any> internal constructor(
         return if (isReleased) {
             "BorrowMutRef<RELEASED>"
         } else {
-            "BorrowMutRef<${value::class.simpleName}>(ptr=0x${ptr().toString(16)})"
+            "BorrowMutRef<${value::class.simpleName}>(ptr=0x${ptr()})"
         }
     }
 }

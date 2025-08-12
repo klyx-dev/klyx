@@ -11,6 +11,7 @@ import com.klyx.extension.api.parseResult
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
+import com.klyx.wasm.HostModule
 import com.klyx.wasm.packString
 import com.klyx.wasm.registerHostModule
 import com.klyx.wasm.utils.i32
@@ -27,7 +28,8 @@ object ExtensionLoader {
     @OptIn(ExperimentalWasmApi::class, ExperimentalWasiApi::class)
     suspend fun loadExtension(
         extension: Extension,
-        shouldCallInit: Boolean = false
+        shouldCallInit: Boolean = false,
+        vararg hostModule: HostModule
     ) {
         extension.themeFiles.forEach { file ->
             if (file.inputStream() == null) return@forEach
@@ -49,6 +51,7 @@ object ExtensionLoader {
 
                 registerHostModule(SystemModule())
                 registerHostModule(RootModule())
+                registerHostModule(*hostModule)
 
                 callInit(
                     enabled = shouldCallInit,
