@@ -119,21 +119,3 @@ fun <T : Any> T.ref() = this.owned()
 
 fun <T : Any> deref(ptr: Pointer): BorrowRef<T> = PointerRegistry.deref(ptr)
 fun <T : Any> derefMut(ptr: Pointer): BorrowMutRef<T> = PointerRegistry.derefMut(ptr)
-
-fun isValidPtr(ptr: Pointer): Boolean = PointerRegistry.isValidPointer(ptr)
-
-fun dropPtr(ptr: Pointer): Boolean {
-    return try {
-        val owned = PointerRegistry.getOwned<Any>(ptr)
-        owned.drop()
-        true
-    } catch (e: BorrowError) {
-        false
-    }
-}
-
-fun <T : Any> movePtr(ptr: Pointer): Owned<T> {
-    val owned = PointerRegistry.getOwned<T>(ptr)
-    return owned.move()
-}
-

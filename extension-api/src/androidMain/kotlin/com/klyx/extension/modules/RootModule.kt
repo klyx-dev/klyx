@@ -1,8 +1,8 @@
 package com.klyx.extension.modules
 
-import com.klyx.core.borrow.dropPtr
 import com.klyx.core.logging.logger
 import com.klyx.core.pointer.asPointer
+import com.klyx.core.pointer.dropPtr
 import com.klyx.extension.modules.impl.worktreeFunctions
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModule
