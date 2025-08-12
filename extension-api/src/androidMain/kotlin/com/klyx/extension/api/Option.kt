@@ -21,10 +21,9 @@ inline fun <T> Option<T>.onNone(block: () -> Unit): Option<T> {
 /**
  * [tag]: 0 = None, 1 = Some
  */
-@Suppress("UNCHECKED_CAST")
 fun <T> Option(tag: Int, value: T? = null): Option<T> = when (tag) {
     0 -> Option.None
-    1 -> Option.Some(value as T)
+    1 -> Option.Some(requireNotNull(value) { "Some(...) value cannot be null" })
     else -> throw IllegalArgumentException("Invalid Option tag: $tag")
 }
 
