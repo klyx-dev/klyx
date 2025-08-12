@@ -1,5 +1,6 @@
 package com.klyx.core.borrow
 
+import com.klyx.core.pointer.Pointer
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -10,8 +11,10 @@ class Owned<T : Any>(private var value: T?) {
     private val pointer = if (value != null) {
         PointerRegistry.allocatePointer(value!!, tracker, this)
     } else {
-        -1L
+        Pointer.Invalid
     }
+
+    val rawPointer get() = ptr().raw
 
     fun borrow(): BorrowRef<T> {
         if (!tracker.borrowImmutable()) {
@@ -58,7 +61,7 @@ class Owned<T : Any>(private var value: T?) {
             when (tracker.state) {
                 BorrowState.Moved -> {
                     // Clean up pointer registry even if already moved
-                    if (pointer != -1L) PointerRegistry.deallocatePointer(pointer)
+                    if (pointer.isValid()) PointerRegistry.deallocatePointer(pointer)
                     return
                 }
 
@@ -67,7 +70,7 @@ class Owned<T : Any>(private var value: T?) {
             }
         }
         value = null
-        if (pointer != -1L) PointerRegistry.deallocatePointer(pointer)
+        if (pointer.isValid()) PointerRegistry.deallocatePointer(pointer)
     }
 
     // Get the value directly (consuming ownership)
@@ -94,13 +97,13 @@ class Owned<T : Any>(private var value: T?) {
             !isValid() -> "Owned<INVALID>"
             else -> {
                 val name = if (value != null) value!!::class.simpleName else "null"
-                "Owned<$name>(ptr=0x${ptr().toString(16)})"
+                "Owned<$name>(ptr=0x${ptr()})"
             }
         }
     }
 }
 
-fun <T : Any> T.owned(): Owned<T> = Owned(this)
+fun <T : Any> T.owned() = Owned(this)
 fun <T : Any> Owned<T>.valueNow() = borrow().use { it.get() }
 fun <T : Any> Owned<T>.valueNowMut() = borrowMut().use { it.getMut() }
 

@@ -1,11 +1,9 @@
 package com.klyx.core.borrow
 
+import com.klyx.core.pointer.Pointer
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
 
 internal object PointerRegistry {
     private val lock = SynchronizedObject()
@@ -20,19 +18,22 @@ internal object PointerRegistry {
         ptrToTracker[ptr] = tracker
         ptrToOwned[ptr] = owned
         ptrToValue[ptr] = value
-        ptr
+        Pointer(ptr)
     }
 
-    fun deallocatePointer(ptr: Long) {
+    fun deallocatePointer(ptr: Pointer) {
         synchronized(lock) {
-            ptrToTracker.remove(ptr)
-            ptrToOwned.remove(ptr)
-            ptrToValue.remove(ptr)
+            val raw = ptr.raw
+            ptrToTracker.remove(raw)
+            ptrToOwned.remove(raw)
+            ptrToValue.remove(raw)
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> getValue(ptr: Long) = synchronized(lock) {
+    fun <T : Any> getValue(pointer: Pointer) = synchronized(lock) {
+        val ptr = pointer.raw
+
         val tracker = ptrToTracker[ptr]
             ?: invalidPointerError("Invalid pointer: 0x${ptr.toString(16)}")
 
@@ -42,7 +43,9 @@ internal object PointerRegistry {
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> getOwned(ptr: Long) = synchronized(lock) {
+    fun <T : Any> getOwned(pointer: Pointer) = synchronized(lock) {
+        val ptr = pointer.raw
+
         val owned = ptrToOwned[ptr]
             ?: invalidPointerError("No owned found for pointer: 0x${ptr.toString(16)}")
         val tracker = ptrToTracker[ptr]
@@ -57,20 +60,20 @@ internal object PointerRegistry {
             ?: useAfterDropError("No pointer found for value: $value")
     }
 
-    fun getTracker(ptr: Long) = synchronized(lock) {
-        ptrToTracker[ptr]
+    fun getTracker(pointer: Pointer) = synchronized(lock) {
+        ptrToTracker[pointer.raw]
     }
 
-    fun isValidPointer(ptr: Long) = synchronized(lock) {
-        val tracker = ptrToTracker[ptr] ?: return@synchronized false
+    fun isValidPointer(pointer: Pointer) = synchronized(lock) {
+        val tracker = ptrToTracker[pointer.raw] ?: return@synchronized false
         tracker.isValid()
     }
 
     // dereference pointer - create a new borrow from pointer
-    fun <T : Any> deref(ptr: Long): BorrowRef<T> {
-        val tracker = getTracker(ptr)
-            ?: invalidPointerError("Invalid pointer: 0x${ptr.toString(16)}")
-        val value = getValue<T>(ptr)
+    fun <T : Any> deref(pointer: Pointer): BorrowRef<T> {
+        val tracker = getTracker(pointer)
+            ?: invalidPointerError("Invalid pointer: $pointer")
+        val value = getValue<T>(pointer)
 
         if (!tracker.borrowImmutable()) {
             when (tracker.state) {
@@ -84,9 +87,9 @@ internal object PointerRegistry {
     }
 
     // dereference pointer mutably
-    fun <T : Any> derefMut(ptr: Long): BorrowMutRef<T> {
+    fun <T : Any> derefMut(ptr: Pointer): BorrowMutRef<T> {
         val tracker = getTracker(ptr)
-            ?: invalidPointerError("Invalid pointer: 0x${ptr.toString(16)}")
+            ?: invalidPointerError("Invalid pointer: $ptr")
         val value = getValue<T>(ptr)
 
         if (!tracker.borrowMutable()) {
@@ -114,13 +117,12 @@ internal object PointerRegistry {
 fun <T : Any> ref(value: T) = value.owned()
 fun <T : Any> T.ref() = this.owned()
 
-fun <T : Any> deref(ptr: Long): BorrowRef<T> = PointerRegistry.deref(ptr)
-fun <T : Any> derefMut(ptr: Long): BorrowMutRef<T> = PointerRegistry.derefMut(ptr)
-fun <T : Any> ptrValue(ptr: Long): T = PointerRegistry.getValue(ptr)
-fun <T : Any> ptrOwned(ptr: Long): Owned<T> = PointerRegistry.getOwned(ptr)
-fun isValidPtr(ptr: Long): Boolean = PointerRegistry.isValidPointer(ptr)
+fun <T : Any> deref(ptr: Pointer): BorrowRef<T> = PointerRegistry.deref(ptr)
+fun <T : Any> derefMut(ptr: Pointer): BorrowMutRef<T> = PointerRegistry.derefMut(ptr)
 
-fun dropPtr(ptr: Long): Boolean {
+fun isValidPtr(ptr: Pointer): Boolean = PointerRegistry.isValidPointer(ptr)
+
+fun dropPtr(ptr: Pointer): Boolean {
     return try {
         val owned = PointerRegistry.getOwned<Any>(ptr)
         owned.drop()
@@ -130,35 +132,8 @@ fun dropPtr(ptr: Long): Boolean {
     }
 }
 
-fun <T : Any> movePtr(ptr: Long): Owned<T> {
+fun <T : Any> movePtr(ptr: Pointer): Owned<T> {
     val owned = PointerRegistry.getOwned<T>(ptr)
     return owned.move()
 }
-
-@OptIn(ExperimentalContracts::class)
-inline fun <T : Any, R> withDeref(ptr: Long, block: (BorrowRef<T>) -> R): R {
-    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    return deref<T>(ptr).use(block)
-}
-
-@OptIn(ExperimentalContracts::class)
-inline fun <T : Any, R> withDerefMut(ptr: Long, block: (BorrowMutRef<T>) -> R): R {
-    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    return derefMut<T>(ptr).use(block)
-}
-
-@OptIn(ExperimentalContracts::class)
-inline fun <T : Any, R> ptrUseValue(ptr: Long, block: (T) -> R): R {
-    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    return deref<T>(ptr).use { block(it.get()) }
-}
-
-@OptIn(ExperimentalContracts::class)
-inline fun <T : Any, R> ptrUseValueMut(ptr: Long, block: (T) -> R): R {
-    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    return derefMut<T>(ptr).use { block(it.getMut()) }
-}
-
-fun <T : Any> ptrValueNow(ptr: Long) = deref<T>(ptr).use { it.get() }
-fun <T : Any> ptrValueMutNow(ptr: Long) = derefMut<T>(ptr).use { it.getMut() }
 

@@ -1,7 +1,7 @@
 package com.klyx.extension
 
 import android.os.Environment
-import com.klyx.core.borrow.owned
+import com.klyx.core.borrow.ref
 import com.klyx.core.extension.Extension
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
@@ -60,8 +60,8 @@ object ExtensionLoader {
 
                 val func = instance.function("language-server-command")
 
-                val worktree = SystemWorktree.owned()
-                val ptr = func(offset.toLong(), len.toLong(), worktree.ptr())!![0].i32
+                val worktree = ref(SystemWorktree)
+                val ptr = func(offset.toLong(), len.toLong(), worktree.rawPointer)!![0].i32
                 val result = memory.parseResult(ptr)
 
                 when (result) {
