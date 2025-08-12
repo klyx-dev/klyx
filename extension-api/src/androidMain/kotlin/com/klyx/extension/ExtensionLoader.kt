@@ -1,12 +1,12 @@
 package com.klyx.extension
 
 import android.os.Environment
+import com.klyx.core.borrow.owned
 import com.klyx.core.extension.Extension
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
 import com.klyx.extension.api.Result
 import com.klyx.extension.api.SystemWorktree
-import com.klyx.extension.api.borrow
 import com.klyx.extension.api.parseResult
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
@@ -56,11 +56,12 @@ object ExtensionLoader {
                 )
             }.also { instance ->
                 val memory = instance.memory
-
                 val (offset, len) = instance.packString("HTML")
 
                 val func = instance.function("language-server-command")
-                val ptr = func(offset.toLong(), len.toLong(), SystemWorktree.borrow())!![0].i32
+
+                val worktree = SystemWorktree.owned()
+                val ptr = func(offset.toLong(), len.toLong(), worktree.ptr())!![0].i32
                 val result = memory.parseResult(ptr)
 
                 when (result) {

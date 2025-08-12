@@ -2,8 +2,9 @@
 
 package com.klyx.extension.modules.impl
 
+import com.klyx.core.borrow.deref
 import com.klyx.core.logging.logger
-import com.klyx.extension.api.WorktreeRegistry
+import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.worktreeFunction
 import com.klyx.extension.wasm.WasmOption
 import com.klyx.extension.wasm.WasmResult
@@ -31,12 +32,12 @@ fun HostModuleScope.worktreeFunctions() {
     ) { args ->
         val memory = instance.memory
 
-        val worktreeHandle = args.i32(0)
+        val worktreePtr = args[0]
         val path = args.string(1)
         val retPtr = args.i32(3)
 
         val worktree = try {
-            WorktreeRegistry[worktreeHandle.toLong()]
+            deref<Worktree>(worktreePtr).get()
         } catch (ex: Exception) {
             logger.error("Failed to get worktree: ${ex.message}")
             memory.write(retPtr, 0.toLittleEndianBytes())
@@ -63,15 +64,26 @@ fun HostModuleScope.worktreeFunctions() {
     }
 
     worktreeFunction("id", signature { i32 returns i64 }) { args ->
-        val worktree = WorktreeRegistry[args[0]]
+        val worktree = try {
+            deref<Worktree>(args[0]).get()
+        } catch (ex: Exception) {
+            logger.error("Failed to get worktree: ${ex.message}")
+            return@worktreeFunction null
+        }
         longArrayOf(worktree.id)
     }
 
     worktreeFunction("root-path", signature { i32 + i32 returns null }) { args ->
-        val handle = args[0].i32
+        val worktreePtr = args[0]
         val retPtr = args[1].i32
 
-        val worktree = WorktreeRegistry[handle.toLong()]
+        val worktree = try {
+            deref<Worktree>(worktreePtr).get()
+        } catch (ex: Exception) {
+            logger.error("Failed to get worktree: ${ex.message}")
+            memory.write(retPtr, 0.toLittleEndianBytes())
+            return@worktreeFunction null
+        }
         val rootPath = worktree.rootPath.toString()
 
         val str = memory.write(rootPath.toBytesLE()).toWasmString()
@@ -80,10 +92,17 @@ fun HostModuleScope.worktreeFunctions() {
     }
 
     worktreeFunction("which", signature { listOf(i32, i32, i32, i32) returns null }) { args ->
-        val worktree = WorktreeRegistry[args[0]]
-
+        val worktreePtr = args[0]
         val binaryName = args.string(1)
         val retPtr = args.i32(3)
+
+        val worktree = try {
+            deref<Worktree>(worktreePtr).get()
+        } catch (ex: Exception) {
+            logger.error("Failed to get worktree: ${ex.message}")
+            memory.write(retPtr, 0.toLittleEndianBytes())
+            return@worktreeFunction null
+        }
 
         val result = runCatching {
             val which = worktree.which(binaryName)
@@ -105,8 +124,16 @@ fun HostModuleScope.worktreeFunctions() {
     }
 
     worktreeFunction("shell-env", signature { listOf(i32, i32) returns null }) { args ->
-        val worktree = WorktreeRegistry[args[0]]
+        val worktreePtr = args[0]
         val retPtr = args[1].i32
+
+        val worktree = try {
+            deref<Worktree>(worktreePtr).get()
+        } catch (ex: Exception) {
+            logger.error("Failed to get worktree: ${ex.message}")
+            memory.write(retPtr, 0.toLittleEndianBytes())
+            return@worktreeFunction null
+        }
 
         val envVars = worktree.shellEnv()
 

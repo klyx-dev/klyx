@@ -5,3 +5,5 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 fun generateId() = Uuid.random().toHexString()
+
+expect fun Any?.identityHashCode(): Int

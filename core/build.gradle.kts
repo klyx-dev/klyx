@@ -1,4 +1,3 @@
-import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
 
 plugins {
@@ -7,6 +6,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinxAtomicfu)
 }
 
 kotlin {
@@ -25,30 +25,16 @@ kotlin {
 
     jvm()
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
-        val commonMain by getting
-
         // Must be defined before androidMain and jvmMain
-        val commonJvmAndroid = create("commonJvmAndroid") {
-            dependsOn(commonMain)
-
-            dependencies {
-            }
+        val commonJvmAndroid by creating {
+            dependsOn(commonMain.get())
         }
 
-        val androidMain by getting {
-            dependsOn(commonJvmAndroid)
-            dependencies {
-
-            }
-        }
-
-        val jvmMain by getting {
-            dependsOn(commonJvmAndroid)
-            dependencies {
-
-            }
-        }
+        androidMain.get().dependsOn(commonJvmAndroid)
+        jvmMain.get().dependsOn(commonJvmAndroid)
 
         commonMain.dependencies {
             implementation(libs.kotlinx.serialization.json)
@@ -94,4 +80,8 @@ kotlin {
             }
         }
     }
+}
+
+atomicfu {
+    transformJvm = false
 }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.datetime.Clock
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -54,40 +55,16 @@ class Worktree(
     }
 }
 
+val SystemWorktree = Worktree(Environment.DeviceHomeDir)
+
+fun Worktree(path: String) = run {
+    val id = Clock.System.now().toEpochMilliseconds()
+    Worktree(id, path.toPath(true))
+}
+
 @OptIn(ExperimentalWasmApi::class)
 fun HostModuleScope.worktreeFunction(
     name: String,
     signature: WasmSignature = signature { none },
     implementation: HostFnSync
 ) = function("[method]worktree.$name", signature, implementation)
-
-fun Worktree.borrow() = WorktreeRegistry.borrow(this)
-val SystemWorktree = WorktreeRegistry.new(Environment.DeviceHomeDir)
-
-object WorktreeRegistry {
-    private val instances = mutableMapOf<Long, Worktree>()
-    private var nextId = 1L
-
-    fun new(path: String): Worktree {
-        val id = nextId++
-        val worktree = Worktree(id, path.toPath(true))
-        instances[id] = worktree
-        return worktree
-    }
-
-    operator fun get(id: Long): Worktree = instances[id] ?: error("No worktree with id $id")
-
-    fun drop(id: Long) {
-        if (instances.containsKey(id)) {
-            instances.remove(id)?.close()
-        } else {
-            error("No worktree with id $id to drop.")
-        }
-    }
-
-    fun borrow(worktree: Worktree): Long {
-        val id = nextId++
-        instances[id] = worktree
-        return id
-    }
-}
