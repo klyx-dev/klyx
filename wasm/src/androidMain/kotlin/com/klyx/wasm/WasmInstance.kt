@@ -31,7 +31,7 @@ class WasmInstance internal constructor(
  */
 @OptIn(ExperimentalWasmApi::class)
 fun WasmInstance.alloc(size: Int, align: Int = 1): Int {
-    val ptr = realloc(0L, 0L, align.toLong(), size.toLong()).i32
+    val ptr = realloc(0L, 0L, align.toLong(), size.toLong()).raw.i32
     return ptr
 }
 
@@ -56,5 +56,5 @@ fun WasmInstance.free(ptr: Int, oldSize: Int, align: Int = 1) {
  */
 @OptIn(ExperimentalWasmApi::class)
 fun WasmInstance.realloc(ptr: Int, oldSize: Int, newSize: Int, align: Int = 1): Int {
-    return realloc(ptr.toLong(), oldSize.toLong(), align.toLong(), newSize.toLong()).i32
+    return realloc(ptr.toLong(), oldSize.toLong(), align.toLong(), newSize.toLong()).raw.i32
 }

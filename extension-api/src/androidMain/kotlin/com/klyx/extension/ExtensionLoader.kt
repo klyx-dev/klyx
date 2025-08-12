@@ -6,13 +6,12 @@ import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
 import com.klyx.extension.api.Result
 import com.klyx.extension.api.SystemWorktree
-import com.klyx.extension.api.parseResult
+import com.klyx.extension.api.readCommandResult
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModule
 import com.klyx.wasm.registerHostModule
-import com.klyx.wasm.utils.i32
 import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.directory
 import com.klyx.wasm.wasi.env
@@ -59,17 +58,17 @@ object ExtensionLoader {
                 val memory = instance.memory
 
                 val func = instance.function("language-server-command")
-                val ptr = func("JSON", SystemWorktree)[0].i32
+                val ptr = func("JSON", SystemWorktree)
 
-                val result = memory.parseResult(ptr)
+                val result = memory.readCommandResult(ptr)
 
                 when (result) {
-                    is Result.Ok -> println("Ok")
+                    is Result.Ok -> {
+                        println("Ok: ${result.value}")
+                    }
+
                     is Result.Err -> {
-                        val errPtr = memory.uint32(ptr + 4)
-                        val errLen = memory.uint32(ptr + 8)
-                        val err = memory.string(errPtr, errLen)
-                        println("Error: $err")
+                        println("Error: ${result.error}")
                     }
                 }
             }

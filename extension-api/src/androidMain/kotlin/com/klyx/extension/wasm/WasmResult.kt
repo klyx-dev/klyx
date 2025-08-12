@@ -8,8 +8,8 @@ data class WasmResult(
     val dataLen: Int
 ) {
     companion object {
-        fun success(dataPtr: Int, dataLen: Int) = WasmResult(true, dataPtr, dataLen)
-        fun error(errorPtr: Int, errorLen: Int) = WasmResult(false, errorPtr, errorLen)
+        fun ok(dataPtr: Int, dataLen: Int) = WasmResult(true, dataPtr, dataLen)
+        fun err(errorPtr: Int, errorLen: Int) = WasmResult(false, errorPtr, errorLen)
     }
 
     /**

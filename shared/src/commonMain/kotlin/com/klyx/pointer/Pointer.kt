@@ -25,6 +25,9 @@ value class Pointer(val raw: Long) {
 
 fun Long.asPointer() = Pointer(this)
 
+/**
+ * Dereferences a pointer and returns the value if it is valid otherwise throws an exception.
+ */
 fun <T : Any> Pointer.value() = borrow<T>().use { it.get() }
 fun <T : Any> Pointer.valueMut() = borrowMut<T>().use { it.getMut() }
 

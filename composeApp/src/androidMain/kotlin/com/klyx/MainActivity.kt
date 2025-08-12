@@ -31,7 +31,6 @@ import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.isDebug
-import com.klyx.core.openActivity
 import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
@@ -54,7 +53,10 @@ class MainActivity : ComponentActivity() {
 
                 var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
                 LaunchedEffect(Unit) {
-                    ExtensionManager.loadExtensions().onFailure { extensionLoadFailure = it }
+                    ExtensionManager.loadExtensions().onFailure {
+                        it.printStackTrace()
+                        extensionLoadFailure = it
+                    }
 
                     if (prefs.getBoolean("show_welcome", true)) {
                         viewModel.showWelcome()

@@ -2,6 +2,8 @@ package com.klyx.wasm
 
 import com.dylibso.chicory.runtime.ExportFunction
 import com.klyx.borrow.ref
+import com.klyx.pointer.Pointer
+import com.klyx.pointer.asPointer
 
 @ExperimentalWasmApi
 class WasmHostCallable internal constructor(
@@ -10,9 +12,9 @@ class WasmHostCallable internal constructor(
 ) {
     private val memory by lazy { instance.memory }
 
-    operator fun invoke(vararg args: Any?): LongArray {
+    operator fun invoke(vararg args: Any?) = run {
         val result = function.call(*buildArgs(args))
-        return result ?: longArrayOf()
+        result?.get(0)?.asPointer() ?: Pointer.Invalid
     }
 
     private fun buildArgs(args: Array<out Any?>): LongArray {

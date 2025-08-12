@@ -51,11 +51,11 @@ fun HostModuleScope.worktreeFunctions() {
 
         val wasmResult = result.fold(
             onSuccess = { (dataPtr, dataLen) ->
-                WasmResult.success(dataPtr, dataLen)
+                WasmResult.ok(dataPtr, dataLen)
             },
             onFailure = { ex ->
                 val (ptr, len) = memory.writeString(ex.message ?: "unknown error")
-                WasmResult.error(ptr, len)
+                WasmResult.err(ptr, len)
             }
         )
         memory.write(retPtr, wasmResult.toBuffer())
