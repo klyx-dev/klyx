@@ -1,4 +1,4 @@
-package com.klyx.core.borrow
+package com.klyx.borrow
 
 sealed class BorrowError(message: String) : RuntimeException(message)
 class UseAfterDropError(message: String) : BorrowError(message)

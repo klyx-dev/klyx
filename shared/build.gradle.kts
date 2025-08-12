@@ -1,4 +1,3 @@
-import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
 
 plugins {
@@ -6,6 +5,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinxAtomicfu)
 }
 
 kotlin {
@@ -50,4 +50,8 @@ kotlin {
             }
         }
     }
+}
+
+atomicfu {
+    transformJvm = false
 }

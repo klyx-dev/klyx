@@ -1,7 +1,6 @@
 package com.klyx.extension
 
 import android.os.Environment
-import com.klyx.core.borrow.ref
 import com.klyx.core.extension.Extension
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
@@ -12,7 +11,6 @@ import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModule
-import com.klyx.wasm.packString
 import com.klyx.wasm.registerHostModule
 import com.klyx.wasm.utils.i32
 import com.klyx.wasm.wasi.ExperimentalWasiApi
@@ -59,12 +57,10 @@ object ExtensionLoader {
                 )
             }.also { instance ->
                 val memory = instance.memory
-                val (offset, len) = instance.packString("HTML")
 
                 val func = instance.function("language-server-command")
+                val ptr = func("JSON", SystemWorktree)[0].i32
 
-                val worktree = ref(SystemWorktree)
-                val ptr = func(offset.toLong(), len.toLong(), worktree.rawPointer)!![0].i32
                 val result = memory.parseResult(ptr)
 
                 when (result) {

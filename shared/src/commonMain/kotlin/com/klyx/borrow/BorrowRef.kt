@@ -1,4 +1,4 @@
-package com.klyx.core.borrow
+package com.klyx.borrow
 
 // Immutable reference - multiple can exist simultaneously
 class BorrowRef<T : Any> internal constructor(

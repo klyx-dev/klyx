@@ -1,6 +1,6 @@
-package com.klyx.core.borrow
+package com.klyx.borrow
 
-import com.klyx.core.pointer.Pointer
+import com.klyx.pointer.Pointer
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized

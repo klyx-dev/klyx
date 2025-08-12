@@ -1,6 +1,6 @@
-package com.klyx.core.borrow
+package com.klyx.borrow
 
-import com.klyx.core.pointer.Pointer
+import com.klyx.pointer.Pointer
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -104,8 +104,6 @@ class Owned<T : Any>(private var value: T?) {
 }
 
 fun <T : Any> T.owned() = Owned(this)
-fun <T : Any> Owned<T>.valueNow() = borrow().use { it.get() }
-fun <T : Any> Owned<T>.valueNowMut() = borrowMut().use { it.getMut() }
 
 // usage with automatic cleanup
 @OptIn(ExperimentalContracts::class)

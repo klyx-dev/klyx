@@ -1,10 +1,11 @@
-package com.klyx.core.pointer
+package com.klyx.pointer
 
-import com.klyx.core.borrow.BorrowError
-import com.klyx.core.borrow.Owned
-import com.klyx.core.borrow.PointerRegistry
-import com.klyx.core.borrow.deref
-import com.klyx.core.borrow.derefMut
+import com.klyx.borrow.BorrowError
+import com.klyx.borrow.Owned
+import com.klyx.borrow.PointerRegistry
+import com.klyx.borrow.deref
+import com.klyx.borrow.derefMut
+import kotlin.jvm.JvmInline
 
 @JvmInline
 value class Pointer(val raw: Long) {

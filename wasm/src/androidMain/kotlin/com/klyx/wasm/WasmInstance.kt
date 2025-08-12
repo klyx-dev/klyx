@@ -19,8 +19,8 @@ class WasmInstance internal constructor(
 
     val memory by lazy { WasmMemory(this, instance.memory()) }
 
-    fun function(name: String) = instance.export(name).toWasmHostCallable()
-    fun call(name: String, vararg args: Long) = function(name)(*args)
+    fun function(name: String) = instance.export(name).toWasmHostCallable(this)
+    fun call(name: String, vararg args: Any?) = function(name)(*args)
 }
 
 /**
@@ -31,7 +31,7 @@ class WasmInstance internal constructor(
  */
 @OptIn(ExperimentalWasmApi::class)
 fun WasmInstance.alloc(size: Int, align: Int = 1): Int {
-    val ptr = realloc(0L, 0L, align.toLong(), size.toLong())!!.i32
+    val ptr = realloc(0L, 0L, align.toLong(), size.toLong()).i32
     return ptr
 }
 
@@ -56,13 +56,5 @@ fun WasmInstance.free(ptr: Int, oldSize: Int, align: Int = 1) {
  */
 @OptIn(ExperimentalWasmApi::class)
 fun WasmInstance.realloc(ptr: Int, oldSize: Int, newSize: Int, align: Int = 1): Int {
-    return realloc(ptr.toLong(), oldSize.toLong(), align.toLong(), newSize.toLong())!!.i32
-}
-
-@OptIn(ExperimentalWasmApi::class)
-fun WasmInstance.packString(string: String) = run {
-    val len = string.length
-    val offset = alloc(len)
-    memory.writeString(offset, string)
-    offset to len
+    return realloc(ptr.toLong(), oldSize.toLong(), align.toLong(), newSize.toLong()).i32
 }

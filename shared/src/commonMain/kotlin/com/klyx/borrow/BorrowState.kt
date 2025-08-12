@@ -1,4 +1,4 @@
-package com.klyx.core.borrow
+package com.klyx.borrow
 
 enum class BorrowState {
     // Object is owned and can be borrowed

@@ -1,4 +1,4 @@
-package com.klyx.core.borrow
+package com.klyx.borrow
 
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.locks.SynchronizedObject

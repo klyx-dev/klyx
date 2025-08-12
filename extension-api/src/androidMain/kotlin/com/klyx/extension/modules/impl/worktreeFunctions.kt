@@ -3,13 +3,13 @@
 package com.klyx.extension.modules.impl
 
 import com.klyx.core.logging.logger
-import com.klyx.core.pointer.asPointer
-import com.klyx.core.pointer.value
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.worktreeFunction
 import com.klyx.extension.wasm.WasmOption
 import com.klyx.extension.wasm.WasmResult
 import com.klyx.extension.wasm.toWasmString
+import com.klyx.pointer.asPointer
+import com.klyx.pointer.value
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModuleScope
 import com.klyx.wasm.alloc
