@@ -13,24 +13,29 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.datetime.Clock
 import okio.FileSystem
-import okio.Path
 import okio.Path.Companion.toPath
 import okio.buffer
 import java.io.File
 
 class Worktree(
     val id: Long,
-    val rootPath: Path
+    val rootPath: String
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val fs = FileSystem.SYSTEM
 
-    fun readTextFile(path: String) = run {
-        val source = fs.source(rootPath.resolve(path.toPath()))
-        source.buffer().readUtf8()
+    private val worktreePath = rootPath.toPath(true)
+
+    fun readTextFile(path: String): Result<String, String> {
+        return try {
+            val source = fs.source(worktreePath.resolve(path.toPath()))
+            Ok(source.buffer().readUtf8())
+        } catch (err: Exception) {
+            Err(err.message ?: "Failed to read text file: $path in worktree $id")
+        }
     }
 
-    fun which(binaryName: String): String {
+    fun which(binaryName: String): Option<String> {
         val paths = System.getenv("PATH")?.split(File.pathSeparatorChar) ?: emptyList()
 
         for (pathDir in paths) {
@@ -40,11 +45,11 @@ class Worktree(
                 if (!binaryPath.isExecutable()) {
                     //throw RuntimeException("Binary '$binaryName' is not executable")
                 }
-                return binaryPath.toString()
+                return Some(binaryPath.toString())
             }
         }
 
-        throw RuntimeException("Binary '$binaryName' not found in PATH")
+        return None
     }
 
     fun shellEnv(): List<Pair<String, String>> {
@@ -62,11 +67,11 @@ val SystemWorktree = Worktree(Environment.DeviceHomeDir)
 
 fun Worktree(path: String) = run {
     val id = Clock.System.now().toEpochMilliseconds()
-    Worktree(id, path.toPath(true))
+    Worktree(id, path)
 }
 
 @OptIn(ExperimentalWasmApi::class)
-fun HostModuleScope.worktreeFunction(
+internal fun HostModuleScope.worktreeFunction(
     name: String,
     signature: WasmSignature = signature { none },
     implementation: HostFnSync

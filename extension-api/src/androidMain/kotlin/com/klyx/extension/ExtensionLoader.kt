@@ -12,6 +12,7 @@ import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModule
 import com.klyx.wasm.registerHostModule
+import com.klyx.wasm.type.collections.wasmListOf
 import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.directory
 import com.klyx.wasm.wasi.env
@@ -62,9 +63,16 @@ object ExtensionLoader {
 
                 val result = memory.readCommandResult(ptr)
 
+                with(memory) {
+                    println(wasmListOf("hello", "world").toString(this))
+                }
+
                 when (result) {
                     is Result.Ok -> {
-                        println("Ok: ${result.value}")
+                        with(memory) {
+                            println("Ok: ${result.value.toString(memory)}")
+                            println(result.value.args.isEmpty())
+                        }
                     }
 
                     is Result.Err -> {

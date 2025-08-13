@@ -1,5 +1,9 @@
 package com.klyx.extension.api
 
+import com.klyx.wasm.ExperimentalWasmApi
+import com.klyx.wasm.WasmMemory
+import com.klyx.wasm.type.WasmValue
+
 sealed class Result<out T, out E> {
     data class Ok<T>(val value: T) : Result<T, Nothing>()
     data class Err<E>(val error: E) : Result<Nothing, E>()
@@ -43,3 +47,15 @@ fun <T> Result(
 
 fun <T> Result(tag: Byte, okValue: T?, err: String? = null) = Result(tag.toInt(), okValue, err)
 fun <T> Result(tag: UByte, okValue: T?, err: String? = null) = Result(tag.toInt(), okValue, err)
+
+fun <T> Ok(value: T) = Result.Ok(value)
+fun <E> Err(error: E) = Result.Err(error)
+
+@OptIn(ExperimentalWasmApi::class)
+context(memory: WasmMemory)
+fun <T, E> Result<T, E>.toWasmResult(): com.klyx.wasm.type.Result<WasmValue, WasmValue> {
+    return when (this) {
+        is Result.Ok -> com.klyx.wasm.type.Ok(WasmValue(value))
+        is Result.Err -> com.klyx.wasm.type.Err(WasmValue(error))
+    }
+}

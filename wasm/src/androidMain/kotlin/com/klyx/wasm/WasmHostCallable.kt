@@ -4,6 +4,7 @@ import com.dylibso.chicory.runtime.ExportFunction
 import com.klyx.borrow.ref
 import com.klyx.pointer.Pointer
 import com.klyx.pointer.asPointer
+import com.klyx.wasm.utils.toBytesLE
 
 @ExperimentalWasmApi
 class WasmHostCallable internal constructor(
@@ -37,7 +38,7 @@ class WasmHostCallable internal constructor(
                 is Float -> result[i++] = arg.toBits().toLong()
                 is Double -> result[i++] = arg.toBits()
                 is String -> {
-                    val (ptr, len) = memory.writeString(arg)
+                    val (ptr, len) = memory.write(arg.toBytesLE())
                     result[i++] = ptr.toLong()
                     result[i++] = len.toLong()
                 }

@@ -128,7 +128,7 @@ fun ByteArray.writeUInt32LE(value: UInt, offset: Int = 0) {
 /**
  * Writes a little endian 64-bit signed integer to the byte array at the specified offset
  */
-fun ByteArray.writeLong64LE(value: Long, offset: Int = 0) {
+fun ByteArray.writeInt64LE(value: Long, offset: Int = 0) {
     require(offset + 7 < size) { "Buffer overflow: offset $offset, size $size" }
     this[offset] = (value and 0xFF).toByte()
     this[offset + 1] = ((value shr 8) and 0xFF).toByte()
@@ -167,7 +167,7 @@ fun ByteArray.writeFloatLE(value: Float, offset: Int = 0) {
  * Writes a little endian 64-bit double to the byte array at the specified offset
  */
 fun ByteArray.writeDoubleLE(value: Double, offset: Int = 0) {
-    writeLong64LE(value.toRawBits(), offset)
+    writeInt64LE(value.toRawBits(), offset)
 }
 
 /**
@@ -211,7 +211,7 @@ fun UInt.toLittleEndianBytes(): ByteArray {
  */
 fun Long.toLittleEndianBytes(): ByteArray {
     return ByteArray(8).apply {
-        writeLong64LE(this@toLittleEndianBytes, 0)
+        writeInt64LE(this@toLittleEndianBytes, 0)
     }
 }
 
