@@ -1,9 +1,10 @@
 package com.klyx.terminal
 
-import android.app.Activity
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
+import com.klyx.terminal.extrakeys.ExtraKeysView
+import com.klyx.terminal.extrakeys.SpecialButton
 import com.termux.shared.view.KeyboardUtils
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
@@ -11,7 +12,7 @@ import com.termux.view.TerminalViewClient
 
 class TerminalViewClient(
     private val terminal: TerminalView,
-    private val activity: Activity? = null
+    private val extraKeysView: ExtraKeysView
 ) : TerminalViewClient {
     /**
      * Callback function on scale events according to [android.view.ScaleGestureDetector.getScaleFactor].
@@ -66,19 +67,23 @@ class TerminalViewClient(
     }
 
     override fun readControlKey(): Boolean {
-        return false
+        val state = extraKeysView.readSpecialButton(SpecialButton.CTRL, true)
+        return state == true
     }
 
     override fun readAltKey(): Boolean {
-        return false
+        val state = extraKeysView.readSpecialButton(SpecialButton.ALT, true)
+        return state == true
     }
 
     override fun readShiftKey(): Boolean {
-        return false
+        val state = extraKeysView.readSpecialButton(SpecialButton.SHIFT, true)
+        return state == true
     }
 
     override fun readFnKey(): Boolean {
-        return false
+        val state = extraKeysView.readSpecialButton(SpecialButton.FN, true)
+        return state == true
     }
 
     override fun onCodePoint(

@@ -27,6 +27,7 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
 
                 implementation(projects.core)
+                implementation(projects.shared)
             }
         }
 
@@ -38,6 +39,8 @@ kotlin {
 
         androidMain {
             dependencies {
+                implementation(libs.material)
+
                 implementation(projects.terminal.terminalEmulator)
                 implementation(projects.terminal.terminalView)
                 implementation(projects.terminal.termuxShared)

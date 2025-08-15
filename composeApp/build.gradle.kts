@@ -41,6 +41,7 @@ kotlin {
             implementation("com.itsaky.androidide.treesitter:android-tree-sitter:4.3.1")
 
             implementation(projects.terminal.terminalView)
+            implementation(projects.terminal.termuxShared)
         }
 
         commonMain.dependencies {
@@ -60,8 +61,8 @@ kotlin {
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
 
-            implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.24.0")
-            implementation("org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc:0.24.0")
+            implementation(libs.lsp4j)
+            implementation(libs.lsp4j.jsonrpc)
 
             implementation(projects.shared)
             implementation(projects.core)

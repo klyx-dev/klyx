@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.klyx.core.SharedLocalProvider
 import com.klyx.core.file.DownloadProgress
+import com.klyx.core.logging.logger
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
@@ -52,9 +53,7 @@ import kotlinx.coroutines.MainScope
 import java.io.File
 
 class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
-    companion object {
-        private const val TAG = "TerminalActivity"
-    }
+    private val logger = logger()
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -230,7 +229,7 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
                         true
                     } catch (e: Exception) {
                         e.printStackTrace()
-                        Log.e(TAG, "Failed to setup terminal", e)
+                        logger.error("Failed to setup terminal", e)
                         throw e
                     }
                     onComplete()
