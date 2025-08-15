@@ -2,11 +2,16 @@
 
 package com.klyx.wasm.internal
 
+import com.klyx.pointer.Pointer
+
 /** Returns the [Float] value corresponding to a given bit representation. */
 fun floatFromBits(bits: Int): Float = Float.fromBits(bits)
 
 /** Returns the [Double] value corresponding to a given bit representation. */
 fun doubleFromBits(bits: Long): Double = Double.fromBits(bits)
+
+fun floatFromBits(ptr: Pointer) = floatFromBits(ptr.raw.toInt())
+fun doubleFromBits(ptr: Pointer) = doubleFromBits(ptr.raw)
 
 /** Packs two Float values into one Long value for use in inline classes. */
 inline fun packFloats(val1: Float, val2: Float): Long {

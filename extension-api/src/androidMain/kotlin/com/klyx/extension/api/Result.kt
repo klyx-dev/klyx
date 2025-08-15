@@ -59,3 +59,10 @@ fun <T, E> Result<T, E>.toWasmResult(): com.klyx.wasm.type.Result<WasmValue, Was
         is Result.Err -> com.klyx.wasm.type.Err(WasmValue(error))
     }
 }
+
+fun <T, E> Result<T, E>.asKotlinResult() = when (this) {
+    is Result.Err -> kotlin.Result.failure(Exception("$error"))
+    is Result.Ok -> kotlin.Result.success(value)
+}
+
+fun <T> kotlin.Result<T>.asKlyxResult() = fold(::Ok, ::Err)

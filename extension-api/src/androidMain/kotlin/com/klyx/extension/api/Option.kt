@@ -45,3 +45,10 @@ fun <T> Option<T>.toWasmOption(): com.klyx.wasm.type.Option<WasmValue> {
         is Option.None -> com.klyx.wasm.type.None
     }
 }
+
+fun <T> T?.asKlyxOption(): Option<T> = if (this == null) None else Some(this)
+
+fun <T> Option<T>.asKotlinValue() = when (this) {
+    is Option.None -> null
+    is Option.Some -> value
+}
