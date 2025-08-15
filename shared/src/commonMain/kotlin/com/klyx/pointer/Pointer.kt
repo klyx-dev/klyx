@@ -24,6 +24,7 @@ value class Pointer(val raw: Long) {
 }
 
 fun Long.asPointer() = Pointer(this)
+fun Int.asPointer() = Pointer(this.toLong())
 
 /**
  * Dereferences a pointer and returns the value if it is valid otherwise throws an exception.

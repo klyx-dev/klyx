@@ -37,6 +37,8 @@ import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
+import com.klyx.core.io.READ_OK
+import com.klyx.core.io.WRITE_OK
 import com.klyx.core.language
 import com.klyx.core.requestStoragePermission
 import com.klyx.editor.CodeEditor
@@ -158,7 +160,7 @@ actual fun EditorScreen(modifier: Modifier) {
 
                         if (file.path != "/untitled") {
                             LaunchedEffect(Unit) {
-                                if (file.requiresPermission(context, isWrite = true)) {
+                                if (file.requiresPermission(context, WRITE_OK or READ_OK)) {
                                     viewModel.closeTab(tab.id)
                                     pendingFile = file
                                     showPermissionDialog = true

@@ -2,6 +2,9 @@ package com.klyx.wasm.type
 
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
+import com.klyx.wasm.type.collections.toWasmList
+import com.klyx.wasm.utils.toBytesLE
+import com.klyx.wasm.utils.toUBytesLE
 
 @OptIn(ExperimentalWasmApi::class)
 @JvmInline
@@ -19,6 +22,7 @@ value class WasmUByte(val value: UByte) : WasmValue {
     override fun toString(memory: WasmMemory) = toString()
 
     fun toUByte() = value
+    fun toByte() = value.toByte()
 
     companion object : HasWasmReader<WasmUByte> {
         const val SIZE_BYTES = 1
@@ -49,6 +53,7 @@ value class WasmByte(val value: Byte) : WasmValue {
     override fun toString(memory: WasmMemory) = toString()
 
     fun toByte() = value
+    fun toUByte() = value.toUByte()
 
     companion object : HasWasmReader<WasmByte> {
         const val SIZE_BYTES = 1
@@ -63,3 +68,14 @@ value class WasmByte(val value: Byte) : WasmValue {
             }
     }
 }
+
+fun String.toWasmUByte() = WasmUByte(toUByte())
+fun String.toWasmByte() = WasmByte(toByte())
+
+@OptIn(ExperimentalWasmApi::class, ExperimentalUnsignedTypes::class)
+context(memory: WasmMemory)
+fun String.toWasmU8List() = toUBytesLE().toWasm()
+
+@OptIn(ExperimentalWasmApi::class)
+context(memory: WasmMemory)
+fun String.toWasmS8List() = toBytesLE().toWasm()

@@ -377,3 +377,6 @@ fun String.toLengthPrefixedBytesLE(): ByteArray {
         stringBytes.copyInto(this, 4)
     }
 }
+
+@OptIn(ExperimentalUnsignedTypes::class)
+fun String.toUBytesLE() = toBytesLE().toUByteArray()

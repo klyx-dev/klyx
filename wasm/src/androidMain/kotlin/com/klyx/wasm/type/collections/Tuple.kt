@@ -36,6 +36,9 @@ value class Tuple2<A : WasmValue, B : WasmValue>(
         }
     }
 
+    operator fun component1(): A = first
+    operator fun component2(): B = second
+
     companion object {
         fun <A : WasmValue, B : WasmValue> reader(
             firstReader: WasmMemoryReader<A>,
@@ -81,6 +84,10 @@ value class Tuple3<A : WasmValue, B : WasmValue, C : WasmValue>(
             append(")")
         }
     }
+
+    operator fun component1(): A = first
+    operator fun component2(): B = second
+    operator fun component3(): C = third
 
     companion object {
         fun <A : WasmValue, B : WasmValue, C : WasmValue> reader(

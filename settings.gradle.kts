@@ -49,7 +49,7 @@ include(
     ":editor:sora:editor-lsp"
 )
 include(":extension-api")
-include(":wasm")
+include(":wasm", ":wasm-ksp")
 include(
     ":terminal:terminal",
     ":terminal:terminal-view",

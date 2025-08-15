@@ -11,6 +11,10 @@ import com.klyx.wasm.WasmMemory
 interface WasmMemoryReader<T : WasmAny> {
     fun read(memory: WasmMemory, offset: Int): T
 
+    fun read(memory: WasmMemory, ptr: Int, len: Int): T {
+        return read(memory, ptr)
+    }
+
     val elementSize: Int
 }
 

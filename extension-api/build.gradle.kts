@@ -1,4 +1,3 @@
-import com.android.build.api.dsl.androidLibrary
 import com.klyx.Configs
 
 plugins {
@@ -6,6 +5,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -15,7 +15,6 @@ kotlin {
 
     jvmToolchain(21)
 
-    @Suppress("UnstableApiUsage")
     androidLibrary {
         namespace = "com.klyx.extension"
         compileSdk = Configs.Android.COMPILE_SDK_VERSION
@@ -25,10 +24,6 @@ kotlin {
     jvm()
 
     sourceSets {
-        val commonMain by getting
-        val jvmMain by getting
-        val androidMain by getting
-
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -50,4 +45,9 @@ kotlin {
             implementation(libs.androidx.documentfile)
         }
     }
+}
+
+dependencies {
+    add("kspCommonMainMetadata", project(":wasm-ksp"))
+    add("kspAndroid", project(":wasm-ksp"))
 }

@@ -3,6 +3,10 @@ package com.klyx.wasm.type
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmAny
 import com.klyx.wasm.WasmMemory
+import com.klyx.wasm.type.collections.Tuple2
+import com.klyx.wasm.type.collections.Tuple3
+import com.klyx.wasm.type.collections.WasmList
+import com.klyx.wasm.type.collections.toWasmList
 
 @ExperimentalWasmApi
 interface WasmValue : WasmAny {
@@ -44,7 +48,48 @@ fun Float.toWasm() = WasmFloat(this)
 fun Double.toWasm() = WasmDouble(this)
 fun Char.toWasm() = WasmChar(this)
 
+typealias bool = WasmBool
+typealias uint8 = WasmUByte
+typealias int8 = WasmByte
+typealias uint16 = WasmUShort
+typealias int16 = WasmShort
+typealias uint32 = WasmUInt
+typealias int32 = WasmInt
+typealias uint64 = WasmULong
+typealias int64 = WasmLong
+typealias float32 = WasmFloat
+typealias float64 = WasmDouble
+typealias char = WasmChar
+typealias string = WasmString
+
+typealias list<T> = WasmList<T>
+typealias tuple2<A, B> = Tuple2<A, B>
+typealias tuple3<A, B, C> = Tuple3<A, B, C>
+
+typealias Vec<T> = list<T>
+
+typealias u8 = uint8
+typealias i8 = int8
+typealias u16 = uint16
+typealias i16 = int16
+typealias u32 = uint32
+typealias i32 = int32
+typealias u64 = uint64
+typealias i64 = int64
+typealias f32 = float32
+typealias f64 = float64
+typealias c16 = char
+typealias str = string
+
 // Needs WasmMemory in context for allocation
 @OptIn(ExperimentalWasmApi::class)
 context(memory: WasmMemory)
 fun String.toWasm() = WasmString(this)
+
+@OptIn(ExperimentalWasmApi::class)
+context(memory: WasmMemory)
+fun ByteArray.toWasm() = map { it.toWasm() }.toWasmList()
+
+@OptIn(ExperimentalWasmApi::class, ExperimentalUnsignedTypes::class)
+context(memory: WasmMemory)
+fun UByteArray.toWasm() = map { it.toWasm() }.toWasmList()

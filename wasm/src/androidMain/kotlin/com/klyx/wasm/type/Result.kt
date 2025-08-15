@@ -10,9 +10,6 @@ sealed class Result<out T : WasmValue, out E : WasmValue> : WasmValue {
         override fun writeToBuffer(buffer: ByteArray, offset: Int) {
             require(offset + sizeInBytes() <= buffer.size) { "Buffer too small for Result.Ok" }
             buffer[offset] = 0 // discriminant for Ok
-            for (i in 1 until 4) {
-                buffer[offset + i] = 0
-            }
             value.writeToBuffer(buffer, offset + 4)
         }
 
@@ -42,9 +39,6 @@ sealed class Result<out T : WasmValue, out E : WasmValue> : WasmValue {
         override fun writeToBuffer(buffer: ByteArray, offset: Int) {
             require(offset + sizeInBytes() <= buffer.size) { "Buffer too small for Result.Err" }
             buffer[offset] = 1 // discriminant for Err
-            for (i in 1 until 4) {
-                buffer[offset + i] = 0
-            }
             error.writeToBuffer(buffer, offset + 4)
         }
 

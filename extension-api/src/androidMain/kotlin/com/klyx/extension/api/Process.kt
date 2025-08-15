@@ -9,17 +9,22 @@ import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.readLoweredString
 import com.klyx.wasm.type.HasWasmReader
 import com.klyx.wasm.type.Option
+import com.klyx.wasm.type.Vec
 import com.klyx.wasm.type.WasmInt
 import com.klyx.wasm.type.WasmMemoryReader
-import com.klyx.wasm.type.WasmString
-import com.klyx.wasm.type.collections.Tuple2
+import com.klyx.wasm.type.WasmUByte
+import com.klyx.wasm.type.WasmValue
 import com.klyx.wasm.type.collections.WasmList
-import com.klyx.wasm.utils.writeInt32LE
+import com.klyx.wasm.type.int32
+import com.klyx.wasm.type.list
+import com.klyx.wasm.type.str
+import com.klyx.wasm.type.tuple2
+import com.klyx.wasm.type.u8
 
 @OptIn(ExperimentalWasmApi::class)
 data class Command(
-    val command: WasmString,
-    val args: WasmList<WasmString>,
+    val command: str,
+    val args: list<str>,
     val env: EnvVars
 ) : WasmAny {
     override fun toString(memory: WasmMemory): String {
@@ -52,9 +57,9 @@ data class Command(
     companion object : HasWasmReader<Command> {
         override val reader
             get() = object : WasmMemoryReader<Command> {
-                val cmdReader = WasmString.reader
-                val argsReader = WasmList.reader(WasmString.reader)
-                val envReader = WasmList.reader(Tuple2.reader(WasmString.reader, WasmString.reader))
+                val cmdReader = str.reader
+                val argsReader = list.reader(str.reader)
+                val envReader = list.reader(tuple2.reader(str.reader, str.reader))
 
                 override fun read(memory: WasmMemory, offset: Int): Command {
                     var currentOffset = offset
@@ -86,66 +91,41 @@ fun WasmMemory.readCommandResult(pointer: Pointer) = readResult(
 )
 
 data class Output(
-    val status: Option<WasmInt>,
-    val stdout: ByteArray,
-    val stderr: ByteArray
-) : WasmAny {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Output
-
-        if (status != other.status) return false
-        if (!stdout.contentEquals(other.stdout)) return false
-        if (!stderr.contentEquals(other.stderr)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = status.hashCode()
-        result = 31 * result + stdout.contentHashCode()
-        result = 31 * result + stderr.contentHashCode()
-        return result
-    }
-
+    val status: Option<int32>,
+    val stdout: Vec<u8>,
+    val stderr: Vec<u8>
+) : WasmValue {
     override fun writeToBuffer(buffer: ByteArray, offset: Int) {
         var currentOffset = offset
-
         status.writeToBuffer(buffer, currentOffset)
         currentOffset += status.sizeInBytes()
-
-        buffer.writeInt32LE(stdout.size, currentOffset)
-        currentOffset += 4
-        stdout.copyInto(buffer, currentOffset)
-        currentOffset += stdout.size
-
-        buffer.writeInt32LE(stderr.size, currentOffset)
-        currentOffset += 4
-        stderr.copyInto(buffer, currentOffset)
+        stdout.writeToBuffer(buffer, currentOffset)
+        currentOffset += stdout.sizeInBytes()
+        stderr.writeToBuffer(buffer, currentOffset)
     }
 
     override fun sizeInBytes(): Int {
-        return status.sizeInBytes() +
-                4 + stdout.size +
-                4 + stderr.size
+        return status.sizeInBytes() + stdout.sizeInBytes() + stderr.sizeInBytes()
     }
 
     override fun toString(memory: WasmMemory): String {
         return buildString {
             append("Output(")
             append("status=${status.toString(memory)}, ")
-            append("stdout=${stdout.contentToString()}, ")
-            append("stderr=${stderr.contentToString()}")
+            append("stdout=${stdout.toString(memory)}, ")
+            append("stderr=${stderr.toString(memory)}")
             append(")")
         }
     }
+
+    override fun createReader() = reader
 
     companion object : HasWasmReader<Output> {
         override val reader
             get() = object : WasmMemoryReader<Output> {
                 private val statusReader = Option.reader(WasmInt.reader)
+                private val stdoutReader = WasmList.reader(WasmUByte.reader)
+                private val stderrReader = WasmList.reader(WasmUByte.reader)
 
                 override fun read(memory: WasmMemory, offset: Int) = run {
                     var currentOffset = offset
@@ -153,20 +133,16 @@ data class Output(
                     val statusValue = statusReader.read(memory, currentOffset)
                     currentOffset += statusReader.elementSize
 
-                    val stdoutLen = memory.int32(currentOffset)
-                    currentOffset += 4
-                    val stdoutBytes = memory.readBytes(currentOffset, stdoutLen)
-                    currentOffset += stdoutLen
+                    val stdoutValue = stdoutReader.read(memory, currentOffset)
+                    currentOffset += stdoutReader.elementSize
 
-                    val stderrLen = memory.int32(currentOffset)
-                    currentOffset += 4
-                    val stderrBytes = memory.readBytes(currentOffset, stderrLen)
+                    val stderrValue = stderrReader.read(memory, currentOffset)
 
-                    Output(statusValue, stdoutBytes, stderrBytes)
+                    Output(statusValue, stdoutValue, stderrValue)
                 }
 
                 override val elementSize: Int
-                    get() = error("Output has variable size; elementSize is not fixed")
+                    get() = error("`Output` has variable size; elementSize is not fixed")
             }
     }
 }

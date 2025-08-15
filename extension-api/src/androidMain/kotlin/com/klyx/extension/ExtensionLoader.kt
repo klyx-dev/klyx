@@ -7,6 +7,7 @@ import com.klyx.expect
 import com.klyx.extension.api.Result
 import com.klyx.extension.api.SystemWorktree
 import com.klyx.extension.api.readCommandResult
+import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
@@ -47,8 +48,8 @@ object ExtensionLoader {
                     directory(EXTERNAL_STORAGE, EXTERNAL_STORAGE)
                 }
 
-                registerHostModule(SystemModule())
-                registerHostModule(RootModule())
+                registerHostModule(RootModule)
+                registerHostModule(SystemModule, ProcessModule)
                 registerHostModule(*hostModule)
 
                 callInit(

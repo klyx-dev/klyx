@@ -90,7 +90,7 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
                 moduleName, name,
                 FunctionType.of(_params, _results)
             ) { instance, args ->
-                FunctionScope(instance.asWasmInstance()).run { implementation(args) }
+                FunctionScope(instance.asWasmInstance(), args).run { implementation(args) }
             }
         )
     }

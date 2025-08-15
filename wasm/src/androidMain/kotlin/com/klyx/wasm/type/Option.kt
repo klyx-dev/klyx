@@ -9,13 +9,9 @@ sealed class Option<out T : WasmValue> : WasmValue {
     data object None : Option<Nothing>(), HasWasmReader<None> {
         override fun writeToBuffer(buffer: ByteArray, offset: Int) {
             buffer[offset] = 0 // discriminant for None
-
-            for (i in 1 until 4) {
-                buffer[offset + i] = 0
-            }
         }
 
-        override fun sizeInBytes(): Int = 4
+        override fun sizeInBytes(): Int = 4 + 4 // discriminant + padding to align to 4 bytes
 
         override fun createReader() = reader
 
@@ -37,9 +33,6 @@ sealed class Option<out T : WasmValue> : WasmValue {
         override fun writeToBuffer(buffer: ByteArray, offset: Int) {
             require(offset + sizeInBytes() <= buffer.size) { "Buffer too small for Option.Some" }
             buffer[offset] = 1 // discriminant for Some
-            for (i in 1 until 4) {
-                buffer[offset + i] = 0
-            }
             value.writeToBuffer(buffer, offset + 4)
         }
 

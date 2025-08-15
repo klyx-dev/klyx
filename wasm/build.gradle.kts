@@ -2,7 +2,7 @@ import com.klyx.Configs
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
 }
 
 kotlin {
@@ -10,7 +10,12 @@ kotlin {
         freeCompilerArgs.addAll("-Xcontext-parameters")
     }
 
-    androidTarget()
+    androidLibrary {
+        namespace = "com.klyx.wasm"
+        compileSdk = Configs.Android.COMPILE_SDK_VERSION
+        minSdk = Configs.Android.MIN_SDK_VERSION
+    }
+
     jvm()
 
     sourceSets {
@@ -37,14 +42,5 @@ kotlin {
 
             }
         }
-    }
-}
-
-android {
-    namespace = "com.klyx.wasm"
-    compileSdk = Configs.Android.COMPILE_SDK_VERSION
-
-    defaultConfig {
-        minSdk = Configs.Android.MIN_SDK_VERSION
     }
 }

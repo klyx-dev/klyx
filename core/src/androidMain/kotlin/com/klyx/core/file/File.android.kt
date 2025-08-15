@@ -5,8 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Environment
 import androidx.core.content.FileProvider
 import com.klyx.core.ContextHolder
+import com.klyx.core.io.MANAGE_ALL_FILES
+import com.klyx.core.io.READ_OK
+import com.klyx.core.io.WRITE_OK
 import java.security.MessageDigest
 
 actual fun KxFile.isBinaryEqualTo(other: KxFile): Boolean {
@@ -42,24 +46,38 @@ actual fun KxFile.hash(algorithm: String): String {
     return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
-fun KxFile.requiresPermission(context: Context, isWrite: Boolean): Boolean {
+fun KxFile.requiresPermission(context: Context, flags: Int): Boolean {
     // External storage root check
     val externalDirs = context.getExternalFilesDirs(null).mapNotNull { it?.parentFile?.parentFile?.parentFile }
     val isExternalStorage = externalDirs.any { this.absolutePath.startsWith(it.absolutePath) }
 
     return when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-            // For Android 11 and above (Scoped Storage)
-            // Apps can access their own app-specific dirs freely
-            !this.isInAppSpecificDir(context) && !this.canAccess()
+            if (flags and MANAGE_ALL_FILES != 0) {
+                !Environment.isExternalStorageManager()
+            } else {
+                !this.isInAppSpecificDir(context) && !this.canAccess()
+            }
         }
 
         isExternalStorage -> {
-            val permission = if (isWrite) Manifest.permission.WRITE_EXTERNAL_STORAGE else Manifest.permission.READ_EXTERNAL_STORAGE
-            context.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED
+            // If ANY required permission is missing, return true
+            val permissionsToCheck = mutableListOf<String>()
+
+            if (flags and READ_OK != 0) {
+                permissionsToCheck += Manifest.permission.READ_EXTERNAL_STORAGE
+            }
+
+            if (flags and WRITE_OK != 0) {
+                permissionsToCheck += Manifest.permission.WRITE_EXTERNAL_STORAGE
+            }
+
+            permissionsToCheck.any {
+                context.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED
+            }
         }
 
-        else -> false // Internal storage or app-private paths generally don't require extra permission
+        else -> false // Internal storage or app-private dirs
     }
 }
 
@@ -100,5 +118,7 @@ actual fun openFile(file: KxFile) {
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    context.startActivity(Intent.createChooser(intent, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    context.startActivity(
+        Intent.createChooser(intent, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    )
 }

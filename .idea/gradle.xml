@@ -45,6 +45,7 @@
             <option value="$PROJECT_DIR$/terminal/terminal-view" />
             <option value="$PROJECT_DIR$/terminal/termux-shared" />
             <option value="$PROJECT_DIR$/wasm" />
+            <option value="$PROJECT_DIR$/wasm-ksp" />
           </set>
         </option>
       </GradleProjectSettings>

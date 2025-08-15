@@ -24,11 +24,3 @@ infix fun <A : WasmValue, B : WasmValue> A.with(other: B) = Tuple2(this to other
 fun <A : WasmValue, B : WasmValue, C : WasmValue> tupleOf(
     first: A, second: B, third: C
 ) = Tuple3(first, second, third)
-
-// destructuring support
-operator fun <A : WasmValue, B : WasmValue> Tuple2<A, B>.component1(): A = first
-operator fun <A : WasmValue, B : WasmValue> Tuple2<A, B>.component2(): B = second
-
-operator fun <A : WasmValue, B : WasmValue, C : WasmValue> Tuple3<A, B, C>.component1(): A = first
-operator fun <A : WasmValue, B : WasmValue, C : WasmValue> Tuple3<A, B, C>.component2(): B = second
-operator fun <A : WasmValue, B : WasmValue, C : WasmValue> Tuple3<A, B, C>.component3(): C = third

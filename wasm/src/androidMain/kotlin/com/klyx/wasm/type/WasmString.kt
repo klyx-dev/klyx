@@ -43,8 +43,12 @@ value class WasmString(private val packedValue: Long) : WasmValue {
         override val reader
             get() = object : WasmMemoryReader<WasmString> {
                 override fun read(memory: WasmMemory, offset: Int): WasmString {
-                    val ptr = memory.readI32(offset)
-                    val len = memory.readI32(offset + 4)
+                    val ptr = memory.int32(offset)
+                    val len = memory.int32(offset + 4)
+                    return WasmString(ptr, len)
+                }
+
+                override fun read(memory: WasmMemory, ptr: Int, len: Int): WasmString {
                     return WasmString(ptr, len)
                 }
 

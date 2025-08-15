@@ -52,7 +52,7 @@ class WasmSignatureBuilder {
     infix fun Unit.returns(results: List<WasmType>): WasmSignature =
         WasmSignature(params = emptyList(), results = results)
 
-    infix fun Unit.returns(unit: Unit): WasmSignature =
+    infix fun Unit.returns(unit: Unit?): WasmSignature =
         WasmSignature(params = emptyList(), results = emptyList())
 
     val none: WasmSignature

@@ -163,7 +163,7 @@ class WasmList<T : WasmValue>(
         buffer.writeInt32LE(size, offset + 4)
     }
 
-    override fun sizeInBytes(): Int = 8
+    override fun sizeInBytes(): Int = SIZE_BYTES
 
     override fun createReader() = reader(reader)
 
@@ -178,6 +178,10 @@ class WasmList<T : WasmValue>(
                     val listPtr = memory.readI32(offset)
                     val listSize = memory.readI32(offset + 4)
                     return WasmList(listPtr, listSize, memory, elementReader)
+                }
+
+                override fun read(memory: WasmMemory, ptr: Int, len: Int): WasmList<T> {
+                    return WasmList(ptr, len, memory, elementReader)
                 }
             }
         }
@@ -200,6 +204,7 @@ context(memory: WasmMemory)
 fun <T : WasmValue> wasmListOf(values: List<T>): WasmList<T> {
     if (values.isEmpty()) {
         // Return an empty list
+        return WasmList(0, 0, memory, WasmString.reader as WasmMemoryReader<T>)
     }
 
     val firstElement = values.first()
