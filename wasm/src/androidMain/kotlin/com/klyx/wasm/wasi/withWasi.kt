@@ -1,6 +1,5 @@
 package com.klyx.wasm.wasi
 
-import com.dylibso.chicory.wasi.WasiPreview1
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmScope
 import com.klyx.wasm.addFunction
@@ -15,9 +14,7 @@ inline fun WasmScope.withWasi(
     block: WasiScope.() -> Unit
 ) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
-    val wasi = WasiPreview1.builder()
-        .withOptions(WasiScope().apply(block).build())
-        .withLogger(WasiLogger)
-        .build()
-    store.addFunction(*wasi.toHostFunctions())
+
+    val wasiImports = WasiScope().apply(block).build()
+    store.addFunction(*wasiImports.toTypedArray())
 }

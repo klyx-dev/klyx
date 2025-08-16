@@ -117,12 +117,6 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                 }
-
-                LaunchedEffect(Unit) {
-                    if (buildVariant.isDebug) {
-                        printAllSystemProperties()
-                    }
-                }
             }
         }
     }

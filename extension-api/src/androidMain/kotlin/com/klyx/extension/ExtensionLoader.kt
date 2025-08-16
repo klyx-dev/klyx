@@ -11,8 +11,7 @@ import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.HostModule
 import com.klyx.wasm.registerHostModule
 import com.klyx.wasm.wasi.ExperimentalWasiApi
-import com.klyx.wasm.wasi.directory
-import com.klyx.wasm.wasi.env
+import com.klyx.wasm.wasi.StdioSinkProvider
 import com.klyx.wasm.wasi.withWasi
 import com.klyx.wasm.wasm
 import kotlinx.io.asSource
@@ -40,8 +39,11 @@ object ExtensionLoader {
 
                 withWasi {
                     inheritSystem()
-                    env("PWD", EXTERNAL_STORAGE)
                     directory(EXTERNAL_STORAGE, EXTERNAL_STORAGE)
+                    workingDirectory(EXTERNAL_STORAGE)
+
+                    stdout(StdioSinkProvider { System.out })
+                    stderr(StdioSinkProvider { System.err })
                 }
 
                 registerHostModule(RootModule, SystemModule, ProcessModule)

@@ -26,12 +26,14 @@ kotlin {
                 implementation(libs.chicory.runtime)
                 implementation(libs.chicory.wasi)
                 implementation(libs.chicory.annotations)
-                implementation(libs.jimfs)
+                implementation(libs.wasip1.bindings.chicory)
+
+                implementation(libs.wasip1.host)
 
                 implementation(libs.kotlinx.datetime)
+                implementation(libs.kotlinx.io.core)
 
                 implementation(projects.shared)
-                implementation(projects.core)
             }
         }
 

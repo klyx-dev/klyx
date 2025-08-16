@@ -1,80 +1,80 @@
 package com.klyx.wasm.wasi
 
-import com.dylibso.chicory.wasi.WasiOptions
-import com.google.common.jimfs.Configuration
-import com.google.common.jimfs.Jimfs
-import com.klyx.nullInputStream
-import com.klyx.nullOutputStream
-import java.io.InputStream
-import java.io.OutputStream
-import java.nio.file.Path
-import java.time.Clock
-import java.util.Random
-import java.util.concurrent.ThreadLocalRandom
-import kotlin.io.path.Path
+import at.released.weh.bindings.chicory.wasip1.ChicoryWasiPreview1Builder
+import at.released.weh.filesystem.stdio.StdioSink
+import at.released.weh.filesystem.stdio.StdioSource
+import at.released.weh.host.EmbedderHost
 
 @WasiDsl
 @ExperimentalWasiApi
 class WasiScope @PublishedApi internal constructor() {
-    private var random: Random = ThreadLocalRandom.current()
-    private var clock = Clock.systemUTC()
-    private var stdout = nullOutputStream()
-    private var stderr = nullOutputStream()
-    private var stdin = nullInputStream()
     private var arguments = listOf<String>()
-    internal var environment = mapOf<String, String>()
-    internal var directories = mapOf<String, Path>()
+    private var environment = mapOf<String, String>()
+    private var directories = mapOf<String, String>()
 
-    internal val fs = Jimfs.newFileSystem(
-        Configuration.unix()
-            .toBuilder()
-            .setAttributeViews("unix")
-            .build()
-    )
+    private var stdin: StdioSource? = null
+    private var stdout: StdioSink? = null
+    private var stderr: StdioSink? = null
+
+    private var workingDir: String? = null
+
+    private val embedderHost
+        get() = EmbedderHost {
+            setCommandArgs { arguments }
+            setSystemEnv { environment }
+
+            with(this@WasiScope) {
+                stdin?.let { setStdin { it } }
+                stdout?.let { setStdout { it } }
+                stderr?.let { setStderr { it } }
+            }
+
+            fileSystem {
+                directories.forEach { (system, wasi) ->
+                    addPreopenedDirectory(system, wasi)
+                }
+
+                setCurrentWorkingDirectory(workingDir)
+            }
+        }
 
     init {
         env("RUST_BACKTRACE", "full")
     }
 
-    fun random(random: Random) = apply { this.random = random }
-    fun clock(clock: Clock) = apply { this.clock = clock }
-
-    fun stdout(stdout: OutputStream) = apply { this.stdout = stdout }
-    fun stderr(stderr: OutputStream) = apply { this.stderr = stderr }
-    fun stdin(stdin: InputStream) = apply { this.stdin = stdin }
-
     fun inheritSystem() = apply {
-        this.stdout = System.out
-        this.stdin = System.`in`
-        this.stderr = System.err
         this.environment += System.getenv()
+    }
+
+    fun stdin(source: StdioSourceProvider) = apply {
+        this.stdin = source.open()
+    }
+
+    fun stdout(sink: StdioSinkProvider) = apply {
+        this.stdout = sink.open()
+    }
+
+    fun stderr(sink: StdioSinkProvider) = apply {
+        this.stderr = sink.open()
+    }
+
+    fun workingDirectory(directory: String) = apply {
+        this.workingDir = directory
+
+        // TODO: remove?
+        env("PWD", directory)
     }
 
     fun arguments(vararg arguments: String) = apply { this.arguments = arguments.toList() }
     fun environment(environment: Map<String, String>) = apply { this.environment = environment }
-    fun directories(directories: Map<String, Path>) = apply { this.directories = directories }
+    fun directories(directories: Map<String, String>) = apply { this.directories = directories }
+
+    fun directory(system: String, wasi: String) = apply {
+        directories += system to wasi
+    }
+
+    fun env(name: String, value: String) = apply { environment += name to value }
 
     @PublishedApi
-    internal fun build() = WasiOptions::class.java.getDeclaredConstructor(
-        Random::class.java,
-        Clock::class.java,
-        OutputStream::class.java,
-        OutputStream::class.java,
-        InputStream::class.java,
-        List::class.java,
-        Map::class.java,
-        Map::class.java
-    ).apply { isAccessible = true }.newInstance(
-        random, clock, stdout, stderr, stdin, arguments, environment, directories
-    )
-}
-
-@WasiDsl
-@ExperimentalWasiApi
-fun WasiScope.env(name: String, value: String) = apply { environment += name to value }
-
-@WasiDsl
-@ExperimentalWasiApi
-fun WasiScope.directory(system: String, wasi: String) = apply {
-    directories += wasi to Path(system)
+    internal fun build() = ChicoryWasiPreview1Builder { host = embedderHost }.build()
 }
