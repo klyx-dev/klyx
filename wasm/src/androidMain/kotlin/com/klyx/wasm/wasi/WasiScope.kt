@@ -43,6 +43,9 @@ class WasiScope @PublishedApi internal constructor() {
     }
 
     fun inheritSystem() = apply {
+        stdin = null
+        stdout = null
+        stderr = null
         this.environment += System.getenv()
     }
 
