@@ -14,7 +14,7 @@ import java.io.IOException
 import java.io.InputStream
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal actual class StdioSourceProvider(
+actual class StdioSourceProvider(
     private val streamProvider: () -> InputStream,
 ) {
     actual fun open(): StdioSource = InputStreamStdioSource(streamProvider())

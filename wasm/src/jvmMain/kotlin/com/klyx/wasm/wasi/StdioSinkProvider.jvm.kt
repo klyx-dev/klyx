@@ -6,7 +6,7 @@ import kotlinx.io.asSink
 import java.io.OutputStream
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-internal actual class StdioSinkProvider(
+actual class StdioSinkProvider(
     private val streamProvider: () -> OutputStream,
 ) {
     actual fun open(): StdioSink = OutputStreamStdioSink(streamProvider())
