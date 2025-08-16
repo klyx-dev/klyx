@@ -3,6 +3,7 @@ import com.klyx.Configs
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -27,7 +28,10 @@ kotlin {
                 implementation(libs.chicory.annotations)
                 implementation(libs.jimfs)
 
+                implementation(libs.kotlinx.datetime)
+
                 implementation(projects.shared)
+                implementation(projects.core)
             }
         }
 
@@ -43,4 +47,10 @@ kotlin {
             }
         }
     }
+}
+
+dependencies {
+    add("kspCommonMainMetadata", project(":wasm-ksp"))
+    add("kspAndroid", project(":wasm-ksp"))
+    add("kspJvm", project(":wasm-ksp"))
 }

@@ -5,26 +5,13 @@ import kotlin.reflect.KClass
 inline fun <reified T : Any> T.logger() = Logger.getLogger<T>()
 fun logger(tag: String) = Logger.getLogger(tag)
 
-class InternalLogger private constructor() {
+sealed class InternalLogger : Logger {
     companion object {
-        //private val mutex = Mutex()
-        private var INSTANCE: InternalLogger? = null
-
         private val taggedLoggers = mutableMapOf<String, TaggedLogger>()
-
-//        suspend fun getInstance(): InternalLogger {
-//            return INSTANCE ?: mutex.withLock {
-//                INSTANCE ?: InternalLogger().also { INSTANCE = it }
-//            }
-//        }
-
-        fun getInstance(): InternalLogger {
-            return INSTANCE ?: InternalLogger().also { INSTANCE = it }
-        }
 
         fun getLogger(tag: String): TaggedLogger {
             return taggedLoggers.getOrPut(tag) {
-                TaggedLogger(tag, getInstance())
+                TaggedLogger(tag)
             }
         }
 
@@ -35,6 +22,10 @@ class InternalLogger private constructor() {
         inline fun <reified T> getLogger(): TaggedLogger {
             return getLogger(T::class)
         }
+    }
+
+    init {
+        addDestination(ConsoleLogDestination())
     }
 
     private val destinations = mutableListOf<LogDestination>()
@@ -59,39 +50,38 @@ class InternalLogger private constructor() {
         destinations.forEach { it.log(logMessage) }
     }
 
-    fun v(tag: String, message: String) = log(Level.Verbose, tag, message)
-    fun d(tag: String, message: String) = log(Level.Debug, tag, message)
-    fun i(tag: String, message: String) = log(Level.Info, tag, message)
-    fun w(tag: String, message: String) = log(Level.Warn, tag, message)
+    override fun v(tag: String, message: String) = log(Level.Verbose, tag, message)
+    override fun d(tag: String, message: String) = log(Level.Debug, tag, message)
+    override fun i(tag: String, message: String) = log(Level.Info, tag, message)
+    override fun w(tag: String, message: String) = log(Level.Warn, tag, message)
 
-    fun e(tag: String, message: String, throwable: Throwable? = null) {
+    override fun e(tag: String, message: String, throwable: Throwable?) {
         log(Level.Error, tag, message, throwable)
     }
 
-    fun wtf(tag: String, message: String) = log(Level.Assert, tag, message)
+    override fun wtf(tag: String, message: String) = log(Level.Assert, tag, message)
 }
 
 class TaggedLogger internal constructor(
     private val tag: String,
-    private val logger: InternalLogger
-) {
-    fun v(message: String) = logger.v(tag, message)
-    fun verbose(message: String) = logger.v(tag, message)
+) : InternalLogger() {
+    fun v(message: String) = v(tag, message)
+    fun verbose(message: String) = v(tag, message)
 
-    fun d(message: String) = logger.d(tag, message)
-    fun debug(message: String) = logger.d(tag, message)
+    fun d(message: String) = d(tag, message)
+    fun debug(message: String) = d(tag, message)
 
-    fun i(message: String) = logger.i(tag, message)
-    fun info(message: String) = logger.i(tag, message)
+    fun i(message: String) = i(tag, message)
+    fun info(message: String) = i(tag, message)
 
-    fun w(message: String) = logger.w(tag, message)
-    fun warn(message: String) = logger.w(tag, message)
+    fun w(message: String) = w(tag, message)
+    fun warn(message: String) = w(tag, message)
 
-    fun e(message: String, throwable: Throwable? = null) = logger.e(tag, message, throwable)
-    fun error(message: String, throwable: Throwable? = null) = logger.e(tag, message, throwable)
+    fun e(message: String, throwable: Throwable? = null) = e(tag, message, throwable)
+    fun error(message: String, throwable: Throwable? = null) = e(tag, message, throwable)
 
-    fun wtf(message: String) = logger.wtf(tag, message)
-    fun assert(message: String) = logger.wtf(tag, message)
+    fun wtf(message: String) = wtf(tag, message)
+    fun assert(message: String) = wtf(tag, message)
 
     fun v(messageProvider: () -> String) = v(messageProvider())
     fun verbose(messageProvider: () -> String) = verbose(messageProvider())

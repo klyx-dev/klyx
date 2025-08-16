@@ -76,10 +76,22 @@ class HostProcessor(
             writer.appendLine("import com.klyx.wasm.type.*")
             writer.appendLine("import com.klyx.wasm.type.collections.*")
             writer.appendLine()
-            writer.appendLine("object ${moduleName}Module : HostModule {")
+
+            val primaryConstructor = module.primaryConstructor
+            val hasRequiredArgs = primaryConstructor
+                ?.parameters
+                ?.any { !it.hasDefault && it.name != null } == true
+
+            val moduleDeclLine = if (hasRequiredArgs) {
+                "class ${moduleName}Module(private val $lowerName: $moduleName) : HostModule {"
+            } else {
+                "object ${moduleName}Module : HostModule {"
+            }
+
+            writer.appendLine(moduleDeclLine)
             writer.appendLine("    override val name = \"$wasmModuleName\"")
 
-            if (isClass) {
+            if (!hasRequiredArgs && isClass) {
                 writer.appendLine("    private val $lowerName = $moduleName()")
             }
 
@@ -88,11 +100,34 @@ class HostProcessor(
 
             for ((idx, fn) in functions.withIndex()) {
                 val fnName = fn.simpleName.asString()
-                val exportName = (fn.annotations.first {
-                    it.shortName.asString() == "HostFunction"
-                }.arguments.firstOrNull()?.value as? String)?.ifEmpty {
-                    fnName.kebabcase()
-                } ?: fnName.kebabcase()
+                val hostFuncAnnotation = fn.annotations.first {
+                    it.annotationType.resolve()
+                        .declaration
+                        .qualifiedName
+                        ?.asString() == "com.klyx.wasm.annotations.HostFunction"
+                }
+
+                val nameArg = hostFuncAnnotation.arguments
+                    .firstOrNull { it.name?.asString() == "name" }
+                    ?.value as? String
+
+                val caseArgName = hostFuncAnnotation.arguments
+                    .firstOrNull { it.name?.asString() == "case" }
+                    ?.value
+                    ?.toString()
+                    ?.substringAfterLast(".")
+
+                val exportName = when {
+                    !nameArg.isNullOrEmpty() -> nameArg
+                    else -> when (caseArgName) {
+                        "KebabCase" -> fnName.kebabcase()
+                        "SnakeCase" -> fnName.snakecase()
+                        "ScreamingSnakeCase" -> fnName.snakecase().uppercase()
+                        "CamelCase" -> fnName.camelcase()
+                        "PascalCase" -> fnName.pascalcase()
+                        else -> fnName.kebabcase()
+                    }
+                }
 
                 val hasExtensionReceiver = fn.extensionReceiver?.resolve() != null
 
@@ -305,12 +340,29 @@ class HostProcessor(
         }
     }
 
-    private fun String.kebabcase(): String {
-        return this
-            .trim()
+    private fun String.kebabcase(): String =
+        trim()
             .replace(Regex("([a-z])([A-Z])"), "$1-$2")
             .replace(Regex("[\\s_]+"), "-")
             .lowercase()
+
+    private fun String.snakecase(): String =
+        trim()
+            .replace(Regex("([a-z])([A-Z])"), "$1_$2")
+            .replace(Regex("[\\s-]+"), "_")
+            .lowercase()
+
+    private fun String.camelcase(): String {
+        val parts = this.kebabcase().split('-', '_')
+        return parts.first() + parts.drop(1)
+            .joinToString("") {
+                it.replaceFirstChar { c -> c.uppercase() }
+            }
+    }
+
+    private fun String.pascalcase(): String {
+        val parts = this.kebabcase().split('-', '_')
+        return parts.joinToString("") { it.replaceFirstChar { c -> c.uppercase() } }
     }
 
     private fun String.toKotlinLiteral(): String {

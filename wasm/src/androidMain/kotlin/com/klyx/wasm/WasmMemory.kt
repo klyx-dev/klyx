@@ -19,7 +19,29 @@ class WasmMemory internal constructor(
         memory.writeString(offset, data, charset)
     }
 
-    fun write(addr: Int, data: ByteArray) = memory.write(addr, data)
+    fun write(addr: Int, data: ByteArray, offset: Int = 0, size: Int = data.size) {
+        memory.write(addr, data, offset, size)
+    }
+
+    fun writeByte(addr: Int, data: Byte) = memory.writeByte(addr, data)
+    fun writeShort(addr: Int, data: Short) = memory.writeShort(addr, data)
+    fun writeInt(addr: Int, data: Int) = memory.writeI32(addr, data)
+    fun writeLong(addr: Int, data: Long) = memory.writeLong(addr, data)
+    fun writeFloat(addr: Int, data: Float) = memory.writeF32(addr, data)
+    fun writeDouble(addr: Int, data: Double) = memory.writeF64(addr, data)
+
+    fun writeU8(addr: Int, data: UByte) = writeByte(addr, data.toByte())
+    fun writeU16(addr: Int, data: UShort) = writeShort(addr, data.toShort())
+    fun writeU32(addr: Int, data: UInt) = writeInt(addr, data.toInt())
+    fun writeU64(addr: Int, data: ULong) = writeLong(addr, data.toLong())
+
+    fun writeI8(addr: Int, data: Byte) = writeByte(addr, data)
+    fun writeI16(addr: Int, data: Short) = writeShort(addr, data)
+    fun writeI32(addr: Int, data: Int) = writeInt(addr, data)
+    fun writeI64(addr: Int, data: Long) = writeLong(addr, data)
+
+    fun writeF32(addr: Int, data: Float) = writeFloat(addr, data)
+    fun writeF64(addr: Int, data: Double) = writeDouble(addr, data)
 
     fun read(addr: Int) = memory.read(addr)
 

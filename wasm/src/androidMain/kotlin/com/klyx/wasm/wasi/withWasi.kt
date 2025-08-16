@@ -7,13 +7,11 @@ import com.klyx.wasm.addFunction
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.experimental.ExperimentalTypeInference
 
-@OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class, ExperimentalWasmApi::class)
+@OptIn(ExperimentalContracts::class, ExperimentalWasmApi::class)
 @WasiDsl
 @ExperimentalWasiApi
 inline fun WasmScope.withWasi(
-    @BuilderInference
     block: WasiScope.() -> Unit
 ) {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
