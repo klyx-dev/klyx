@@ -140,7 +140,10 @@ compose.desktop {
         mainClass = "com.klyx.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
+            targetFormats(
+                TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb,
+                TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Exe
+            )
             packageName = Configs.KLYX_PACKAGE_NAME
             packageVersion = Version.STABLE_VERSION_NAME
         }
