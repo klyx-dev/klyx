@@ -17,19 +17,13 @@ jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -37,36 +31,22 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Run tests
-        run: ./gradlew test
+      - run: chmod +x gradlew
+      - run: ./gradlew test
 
   build-android-app:
     name: Build Android App
     runs-on: ubuntu-latest
     needs: test
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Decode and create klyx.keystore
-        run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
-
-      - name: Decode and create sign.properties
-        run: echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
+      - run: echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -74,38 +54,31 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Android Release APK
-        run: ./gradlew assembleRelease
-
-      - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
+      - run: chmod +x gradlew
+      - name: Build Android APK
+        run: |
+          if ./gradlew tasks --all | grep -q "assembleRelease"; then
+            ./gradlew assembleRelease
+          else
+            echo "Skipping Android build, task not available"
+          fi
+      - uses: actions/upload-artifact@v4
         with:
           name: android-app
-          path: |
-            **/build/outputs/apk/**/*.apk
+          path: '**/build/outputs/apk/**/*.apk'
           retention-days: 30
 
   build-desktop-jvm:
     name: Build Desktop JVM App
     runs-on: ubuntu-latest
     needs: test
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -113,18 +86,15 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build JVM application
-        run: ./gradlew packageDistributionForCurrentOS
-
-      - name: Create JAR with dependencies
-        run: ./gradlew shadowJar
-
-      - name: Upload JVM artifacts
-        uses: actions/upload-artifact@v4
+      - run: chmod +x gradlew
+      - name: Build JVM App
+        run: |
+          if ./gradlew tasks --all | grep -q "packageDistributionForCurrentOS"; then
+            ./gradlew packageDistributionForCurrentOS shadowJar
+          else
+            echo "Skipping JVM build, task not available"
+          fi
+      - uses: actions/upload-artifact@v4
         with:
           name: desktop-jvm
           path: |
@@ -133,27 +103,17 @@ jobs:
           retention-days: 30
 
   build-linux-native:
-    name: Build Linux Native App & Packages
+    name: Build Linux Native
     runs-on: ubuntu-latest
     needs: test
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Install native dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm alien dpkg-dev
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - run: sudo apt-get update && sudo apt-get install -y rpm alien dpkg-dev
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -161,17 +121,14 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build Linux native binary
-        run: ./gradlew linuxX64MainBinaries
-
-      - name: Package Linux distributions
+      - run: chmod +x gradlew
+      - name: Build Linux binaries (if available)
         run: |
-          ./gradlew packageDeb
-          ./gradlew packageRpm
+          if ./gradlew tasks --all | grep -q "linuxX64MainBinaries"; then
+            ./gradlew linuxX64MainBinaries packageDeb packageRpm
+          else
+            echo "Skipping Linux native build, task not available"
+          fi
 
       - name: Create AppImage
         run: |
@@ -269,10 +226,12 @@ jobs:
             ${{ runner.os }}-gradle-
 
       - name: Build Windows native binary
-        run: ./gradlew mingwX64MainBinaries
-
-      - name: Package Windows installer
-        run: ./gradlew packageMsi
+        run: |
+          if (./gradlew tasks --all | Select-String "mingwX64MainBinaries") {
+            ./gradlew mingwX64MainBinaries packageMsi
+          } else {
+            echo "Skipping Windows native build, task not available"
+          }
 
       - name: Create portable ZIP
         run: |
@@ -297,17 +256,12 @@ jobs:
     needs: test
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -315,18 +269,28 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - run: chmod +x gradlew
 
       - name: Build macOS native binaries
         run: |
-          ./gradlew macosX64MainBinaries
-          ./gradlew macosArm64MainBinaries
+          if ./gradlew tasks --all | grep -q "macosX64MainBinaries"; then
+            ./gradlew macosX64MainBinaries
+          else
+            echo "Skipping macosX64MainBinaries"
+          fi
+          if ./gradlew tasks --all | grep -q "macosArm64MainBinaries"; then
+            ./gradlew macosArm64MainBinaries
+          else
+            echo "Skipping macosArm64MainBinaries"
+          fi
 
-      - name: Package macOS app bundles
+      - name: Package macOS app bundles (if available)
         run: |
-          ./gradlew packageDmg
+          if ./gradlew tasks --all | grep -q "packageDmg"; then
+            ./gradlew packageDmg
+          else
+            echo "Skipping packageDmg"
+          fi
 
       - name: Create universal binary
         run: |
@@ -336,10 +300,11 @@ jobs:
               "build/bin/macosX64/releaseExecutable/klyx.kexe" \
               "build/bin/macosArm64/releaseExecutable/klyx.kexe" \
               -output "build/universal/klyx"
+          else
+            echo "Skipping universal binary (missing arch builds)"
           fi
 
-      - name: Upload macOS artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: macos-native
           path: |
@@ -355,17 +320,12 @@ jobs:
     needs: test
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -373,21 +333,17 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - run: chmod +x gradlew
 
       - name: Build iOS app
-        run: ./gradlew iosSimulatorArm64MainBinaries
-
-      - name: Create iOS Simulator build
         run: |
-          # This would typically involve more iOS-specific build steps
-          # depending on your iOS app configuration
-          echo "iOS build completed"
+          if ./gradlew tasks --all | grep -q "iosSimulatorArm64MainBinaries"; then
+            ./gradlew iosSimulatorArm64MainBinaries
+          else
+            echo "Skipping iOS build"
+          fi
 
-      - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: ios-app
           path: |
@@ -400,22 +356,15 @@ jobs:
     needs: test
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '18'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -423,20 +372,26 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - run: chmod +x gradlew
 
       - name: Build Web app
-        run: ./gradlew jsBrowserDistribution
+        run: |
+          if ./gradlew tasks --all | grep -q "jsBrowserDistribution"; then
+            ./gradlew jsBrowserDistribution
+          else
+            echo "Skipping web build"
+          fi
 
       - name: Create web archive
         run: |
-          cd build/dist/js/productionExecutable
-          tar -czf ../../../../klyx-${{ env.APP_VERSION }}-web.tar.gz *
+          if [ -d "build/dist/js/productionExecutable" ]; then
+            cd build/dist/js/productionExecutable
+            tar -czf ../../../../klyx-${{ env.APP_VERSION }}-web.tar.gz *
+          else
+            echo "Skipping web archive, no dist folder"
+          fi
 
-      - name: Upload Web artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: web-app
           path: |

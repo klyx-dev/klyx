@@ -252,9 +252,7 @@ compose.desktop {
                 TargetFormat.Dmg,
                 TargetFormat.Msi,
                 TargetFormat.Deb,
-                TargetFormat.Rpm,
-                TargetFormat.AppImage,
-                TargetFormat.Exe
+                TargetFormat.Rpm
             )
             packageName = "klyx"
             packageVersion = AppVersioning.stableVersionName
@@ -270,7 +268,7 @@ compose.desktop {
             }
 
             windows {
-                iconFile.set(project.file("src/commonMain/resources/icon.ico"))
+                iconFile.set(project.file("src/commonMain/resources/icon.png"))
                 packageName = "Klyx"
                 dirChooser = true
                 perUserInstall = true
@@ -278,7 +276,7 @@ compose.desktop {
             }
 
             macOS {
-                iconFile.set(project.file("src/commonMain/resources/icon.icns"))
+                iconFile.set(project.file("src/commonMain/resources/icon.png"))
                 packageName = "Klyx"
                 dmgPackageVersion = AppVersioning.stableVersionName
                 packageBuildVersion = AppVersioning.versionCode.toString()
@@ -295,10 +293,9 @@ compose.resources {
 }
 
 detekt {
+    toolVersion = "1.23.8"
+    config.setFrom(file("config/detekt/detekt.yml"))
     buildUponDefaultConfig = true
-    allRules = false
-    config.setFrom("$projectDir/config/detekt/detekt.yml")
-    baseline = file("$projectDir/config/detekt/baseline.xml")
 }
 
 tasks.withType<Detekt>().configureEach {
