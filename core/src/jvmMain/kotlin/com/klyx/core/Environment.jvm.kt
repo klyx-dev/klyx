@@ -3,28 +3,25 @@ package com.klyx.core
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
+import java.nio.file.Paths
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object Environment {
-    actual val AppName: String
-        get() = TODO("Not yet implemented")
-    actual val HomeDir: String
-        get() = TODO("Not yet implemented")
-    actual val InternalHomeDir: String
-        get() = TODO("Not yet implemented")
-    actual val ExtensionsDir: String
-        get() = TODO("Not yet implemented")
-    actual val DevExtensionsDir: String
-        get() = TODO("Not yet implemented")
-    actual val DeviceHomeDir: String
-        get() = TODO("Not yet implemented")
-    actual val SettingsFilePath: String
-        get() = TODO("Not yet implemented")
-    actual val InternalSettingsFilePath: String
-        get() = TODO("Not yet implemented")
-    actual val LogsDir: String
-        get() = TODO("Not yet implemented")
+    private val userHome by lazy { System.getProperty("user.home") }
 
+    actual val AppName = "Klyx"
+    actual val HomeDir by lazy { Paths.get(userHome, ".klyx").toString() }
+    actual val InternalHomeDir by lazy { Paths.get(HomeDir, "internal").toString() }
+    actual val ExtensionsDir by lazy { Paths.get(HomeDir, "extensions").toString() }
+    actual val DevExtensionsDir by lazy { Paths.get(HomeDir, "dev-extensions").toString() }
+    actual val DeviceHomeDir by lazy { Paths.get(userHome).toString() }
+    actual val SettingsFilePath by lazy { Paths.get(HomeDir, "settings.json").toString() }
+
+    actual val InternalSettingsFilePath by lazy {
+        Paths.get(InternalHomeDir, "settings.json").toString()
+    }
+
+    actual val LogsDir by lazy { Paths.get(HomeDir, "logs").toString() }
 }
 
 actual fun string(

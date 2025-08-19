@@ -1,6 +1,7 @@
 package com.klyx.editor
 
 import androidx.compose.runtime.Stable
+import com.klyx.editor.event.Event
 import kotlin.reflect.KProperty
 
 @Stable
@@ -21,6 +22,9 @@ actual class CodeEditorState actual constructor(
         property: KProperty<*>,
         text: String
     ) {
+    }
+
+    actual inline fun <reified E : Event> subscribeEvent(crossinline onEvent: (E) -> Unit) {
     }
 }
 

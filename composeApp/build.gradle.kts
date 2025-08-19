@@ -1,6 +1,6 @@
 import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+import com.klyx.AppVersioning
 import com.klyx.Configs
-import com.klyx.Version
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -91,8 +91,9 @@ android {
         applicationId = Configs.Android.APPLICATION_ID
         minSdk = Configs.Android.MIN_SDK_VERSION
         targetSdk = Configs.Android.TARGET_SDK_VERSION
-        versionCode = Version.AppVersionCode
-        versionName = Version.VERSION_NAME
+
+        versionCode = AppVersioning.versionCode
+        versionName = AppVersioning.resolveVersionName("release")
     }
 
     packaging {
@@ -116,7 +117,7 @@ android {
         }
 
         getByName("debug") {
-            versionNameSuffix = Version.DEBUG_VERSION_SUFFIX
+            versionNameSuffix = AppVersioning.DEBUG_SUFFIX
         }
     }
 
@@ -145,7 +146,7 @@ compose.desktop {
                 TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Exe
             )
             packageName = Configs.KLYX_PACKAGE_NAME
-            packageVersion = Version.STABLE_VERSION_NAME
+            packageVersion = AppVersioning.stableVersionName
         }
     }
 }
