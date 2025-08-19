@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.7.0-beta.2](https://github.com/klyx-dev/klyx/compare/v1.7.0-beta.1...v1.7.0-beta.2) (2025-08-19)
+
+### Features
+
+* add `canExecute` utility function ([abe4df2](https://github.com/klyx-dev/klyx/commit/abe4df221cab09fc8b414f03494d662c035cd5d5))
+* add ability to run commands as login user ([b7330e7](https://github.com/klyx-dev/klyx/commit/b7330e70c7b283ba405f36da34db3b6de648e663))
+* add extension LanguageServer API ([f347a89](https://github.com/klyx-dev/klyx/commit/f347a8989e4a8ff9972c9b766dcca1c946dc3958))
+* add kmp logger ([fc2ab48](https://github.com/klyx-dev/klyx/commit/fc2ab486567df8e19287ad6d7afa894d61c63d4f))
+* add wasm ksp processor ([0e03a72](https://github.com/klyx-dev/klyx/commit/0e03a72d0f9b2cf30a006156fac9e24e6a27974b))
+* enhance wasm interop with complex types ([d08cd99](https://github.com/klyx-dev/klyx/commit/d08cd9909d125ab1a9f67c9c4e78bf20234dbc5f))
+* **extension-api:** implement wasm primitive types ([637dc88](https://github.com/klyx-dev/klyx/commit/637dc88176a15889a71eef07ae7faab828c67752))
+* implement borrow checker for worktree ([398d8fe](https://github.com/klyx-dev/klyx/commit/398d8fe4d45fe6a225d9174dc4508b4a14dcd7da))
+* implement worktree for extension ([aef008f](https://github.com/klyx-dev/klyx/commit/aef008fe7483b18ddda918c655ac94f877a6b8bf))
+* improve proot integration and add ubuntuProcess ([785a286](https://github.com/klyx-dev/klyx/commit/785a2860c83c9cd888f912a871b8ad7243a15b87))
+* improve wasm interop and extension api ([d6cdff2](https://github.com/klyx-dev/klyx/commit/d6cdff2cd754fe68dc81490e74457d347b621485))
+* show version code in about dialog ([6c20160](https://github.com/klyx-dev/klyx/commit/6c201603b2267bb9c5d6051b46a72c132287fb51))
+* **terminal:** implement extra keys ([85bab04](https://github.com/klyx-dev/klyx/commit/85bab0457462e93b9e712fa59e57507d94cf21c4))
+* **wasm:** implement WASI preview 1 (incomplete) ([7c30ec9](https://github.com/klyx-dev/klyx/commit/7c30ec93bb77c68457b0f5122a5903510bdd753e))
+
+### Bug Fixes
+
+* **wasm:** set stdio ([2d3f743](https://github.com/klyx-dev/klyx/commit/2d3f7431cd2279b18e0a90a6469c52a773a83b38))
+
 ## [1.7.0-beta.1](https://github.com/klyx-dev/klyx/compare/v1.7.0-beta.0...v1.7.0-beta.1) (2025-08-04)
 
 ### Features
