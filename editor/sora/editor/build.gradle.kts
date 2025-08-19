@@ -62,8 +62,8 @@ kotlin {
 dependencies {
     implementation(libs.androidx.core)
     testImplementation(libs.junit)
-//    testImplementation(libs.tests.google.truth)
-//    testImplementation(libs.tests.robolectric)
-//    androidTestImplementation(libs.androidx.test.junit)
-//    androidTestImplementation(libs.androidx.test.espresso)
+    testImplementation("com.google.truth:truth:1.4.4")
+    testImplementation("org.robolectric:robolectric:4.15.1")
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }
