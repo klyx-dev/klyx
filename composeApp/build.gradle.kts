@@ -1,8 +1,11 @@
 import com.android.build.gradle.internal.api.ApkVariantOutputImpl
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.klyx.AppVersioning
 import com.klyx.Configs
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -10,6 +13,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
 kotlin {
@@ -24,6 +29,42 @@ kotlin {
     }
 
     jvm("desktop")
+
+    linuxX64 {
+        binaries {
+            executable {
+                entryPoint = "main"
+                baseName = "klyx"
+            }
+        }
+    }
+
+    mingwX64 {
+        binaries {
+            executable {
+                entryPoint = "main"
+                baseName = "klyx"
+            }
+        }
+    }
+
+    macosX64 {
+        binaries {
+            executable {
+                entryPoint = "main"
+                baseName = "klyx"
+            }
+        }
+    }
+
+    macosArm64 {
+        binaries {
+            executable {
+                entryPoint = "main"
+                baseName = "klyx"
+            }
+        }
+    }
 
     sourceSets {
         val desktopMain by getting
@@ -96,6 +137,43 @@ android {
         versionName = AppVersioning.resolveVersionName("release")
     }
 
+    signingConfigs {
+        create("release") {
+            val isCI = System.getenv("GITHUB_ACTIONS")?.toBoolean() ?: false
+
+            val propPath = if (isCI) {
+                "/tmp/sign.properties"
+            } else {
+                "/home/vivek/klyx/key/sign.properties"
+            }
+
+            val propFile = File(propPath)
+            if (propFile.exists()) {
+                val properties = Properties().also {
+                    it.load(propFile.inputStream())
+                }
+
+                keyAlias = properties.getProperty("keyAlias")
+                keyPassword = properties.getProperty("keyPassword")
+                storeFile = if (isCI) {
+                    File("/tmp/klyx.keystore")
+                } else {
+                    File(properties.getProperty("storeFile"))
+                }
+                storePassword = properties.getProperty("storePassword")
+            } else {
+                println("Sign properties file not found at $propPath")
+            }
+        }
+
+        getByName("debug") {
+            storeFile = file(rootProject.file("composeApp/testkey.keystore"))
+            storePassword = "testkey"
+            keyAlias = "testkey"
+            keyPassword = "testkey"
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -114,10 +192,21 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
 
         getByName("debug") {
-            versionNameSuffix = AppVersioning.DEBUG_SUFFIX
+            versionNameSuffix = "+" + AppVersioning.DEBUG_SUFFIX
+            applicationIdSuffix = AppVersioning.DEBUG_SUFFIX
+
+            signingConfig = signingConfigs.getByName("debug")
+
+            resValue("string", "app_name", "klyx - ${AppVersioning.DEBUG_SUFFIX}")
         }
     }
 
@@ -136,17 +225,65 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+tasks.register<ShadowJar>("shadowJar") {
+    archiveBaseName.set("klyx")
+    archiveClassifier.set("all")
+    archiveVersion.set(AppVersioning.stableVersionName)
+
+    from(kotlin.jvm("desktop").compilations.getByName("main").output)
+    configurations = listOf(
+        project.configurations.getByName("desktopRuntimeClasspath")
+    )
+
+    manifest {
+        attributes["Main-Class"] = "${Configs.KLYX_PACKAGE_NAME}.MainKt"
+    }
+
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+    mergeServiceFiles()
+}
+
 compose.desktop {
     application {
-        mainClass = "com.klyx.MainKt"
+        mainClass = "${Configs.KLYX_PACKAGE_NAME}.MainKt"
 
         nativeDistributions {
             targetFormats(
-                TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb,
-                TargetFormat.Rpm, TargetFormat.AppImage, TargetFormat.Exe
+                TargetFormat.Dmg,
+                TargetFormat.Msi,
+                TargetFormat.Deb,
+                TargetFormat.Rpm,
+                TargetFormat.AppImage,
+                TargetFormat.Exe
             )
-            packageName = Configs.KLYX_PACKAGE_NAME
+            packageName = "klyx"
             packageVersion = AppVersioning.stableVersionName
+            description = "Klyx - Kotlin Multiplatform Code Editor"
+            copyright = "Klyx"
+            vendor = "Klyx"
+
+            linux {
+                iconFile.set(project.file("src/commonMain/resources/icon.png"))
+                packageName = "klyx"
+                menuGroup = "Development"
+                appCategory = "Development"
+            }
+
+            windows {
+                iconFile.set(project.file("src/commonMain/resources/icon.ico"))
+                packageName = "Klyx"
+                dirChooser = true
+                perUserInstall = true
+                menuGroup = "Development"
+            }
+
+            macOS {
+                iconFile.set(project.file("src/commonMain/resources/icon.icns"))
+                packageName = "Klyx"
+                dmgPackageVersion = AppVersioning.stableVersionName
+                packageBuildVersion = AppVersioning.versionCode.toString()
+                appCategory = "public.app-category.developer-tools"
+            }
         }
     }
 }
@@ -155,4 +292,73 @@ compose.resources {
     publicResClass = false
     packageOfResClass = "${Configs.KLYX_NAMESPACE}.res"
     generateResClass = auto
+}
+
+detekt {
+    buildUponDefaultConfig = true
+    allRules = false
+    config.setFrom("$projectDir/config/detekt/detekt.yml")
+    baseline = file("$projectDir/config/detekt/baseline.xml")
+}
+
+tasks.withType<Detekt>().configureEach {
+    reports {
+        html.required.set(true)
+        xml.required.set(true)
+        txt.required.set(true)
+        sarif.required.set(true)
+        md.required.set(true)
+    }
+}
+
+tasks.register("assembleAllTargets") {
+    group = "build"
+
+    dependsOn(
+        "assembleRelease",
+        "shadowJar",
+        "packageDistributionForCurrentOS"
+    )
+
+    kotlin.targets.forEach { target ->
+        if (target.name.contains("native") ||
+            target.name.contains("linux") ||
+            target.name.contains("mingw") ||
+            target.name.contains("macos")
+        ) {
+            target.compilations.forEach { compilation ->
+                if (compilation.name == "main") {
+                    dependsOn("${target.name}MainBinaries")
+                }
+            }
+        }
+    }
+}
+
+tasks.register<Zip>("createPortableArchive") {
+    group = "distribution"
+
+    dependsOn("shadowJar")
+
+    from(tasks.named("shadowJar"))
+    from("README.md") {
+        into("docs")
+    }
+    from("LICENSE") {
+        into("docs")
+    }
+
+    archiveBaseName.set("klyx")
+    archiveVersion.set(AppVersioning.stableVersionName)
+    archiveClassifier.set("portable")
+    destinationDirectory.set(file("${layout.buildDirectory}/distributions"))
+}
+
+tasks.register("prepareArtifacts") {
+    group = "distribution"
+
+    dependsOn(
+        "assembleAllTargets",
+        "createPortableArchive"
+    )
 }

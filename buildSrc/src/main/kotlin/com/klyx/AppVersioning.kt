@@ -11,7 +11,7 @@ object AppVersioning {
         //buildMetadata = "build"
     )
 
-    const val DEBUG_SUFFIX = "+dev"
+    const val DEBUG_SUFFIX = "dev"
 
     val stableVersionName = "${baseVersion.major}.${baseVersion.minor}.${baseVersion.patch}"
     val preReleaseVersionName = baseVersion.toString()
