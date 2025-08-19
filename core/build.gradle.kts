@@ -59,6 +59,8 @@ kotlin {
             api(libs.okio)
             implementation(libs.kotlinx.coroutines.core)
 
+            api(libs.kotlin.result)
+
             implementation(projects.shared)
 
             // circular dependency
