@@ -24,12 +24,12 @@ sealed class InternalLogger : Logger {
         }
     }
 
+    private val destinations = mutableListOf<LogDestination>()
+    private var minLogLevel = Level.Verbose
+
     init {
         addDestination(ConsoleLogDestination())
     }
-
-    private val destinations = mutableListOf<LogDestination>()
-    private var minLogLevel = Level.Verbose
 
     fun addDestination(destination: LogDestination) {
         destinations.add(destination)
