@@ -5,7 +5,7 @@ object Version {
     const val PRE_RELEASE_VERSION_SUFFIX = "-beta"
     const val DEBUG_VERSION_SUFFIX = "-dev"
 
-    val VERSION_NAME = "1.7.0-beta.2"
+    val VERSION_NAME = "1.7.0-beta.3"
     val AppVersionCode get() = calculateVersionCode()
 
     private fun calculateVersionCode(): Int {

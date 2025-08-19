@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.7.0-beta.3](https://github.com/klyx-dev/klyx/compare/v1.7.0-beta.2...v1.7.0-beta.3) (2025-08-19)
+
+### Bug Fixes
+
+* Fixed terminal crash ([0691a24](https://github.com/klyx-dev/klyx/commit/0691a24d65c365dad9ce0792175683bb79024f68))
+
 ## [1.7.0-beta.2](https://github.com/klyx-dev/klyx/compare/v1.7.0-beta.1...v1.7.0-beta.2) (2025-08-19)
 
 ### Features
