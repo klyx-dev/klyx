@@ -17,6 +17,7 @@ env:
 jobs:
   build-android-app:
     name: Build Android App
+    needs: quality-checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +57,7 @@ jobs:
 
   build-desktop-jvm:
     name: Build Desktop JVM App
+    needs: quality-checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -116,6 +118,7 @@ jobs:
 
   build-linux-native:
     name: Build Linux Native
+    needs: quality-checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -165,6 +168,7 @@ jobs:
 
   build-windows-native:
     name: Build Windows Native App & Installer
+    needs: quality-checks
     runs-on: windows-latest
 
     steps:
@@ -205,6 +209,7 @@ jobs:
 
   build-macos-native:
     name: Build macOS Native App & DMG
+    needs: quality-checks
     runs-on: macos-latest
 
     steps:
@@ -277,6 +282,7 @@ jobs:
 
   build-ios-app:
     name: Build iOS App
+    needs: quality-checks
     runs-on: macos-latest
 
     steps:
