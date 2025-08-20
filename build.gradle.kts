@@ -1,7 +1,7 @@
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
-// Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     // this is necessary to avoid the plugins to be loaded multiple times
     // in each subproject's classloader
@@ -14,6 +14,8 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.kotlinAndroid) apply false
+
+    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
 }
 
 allprojects {
@@ -28,6 +30,30 @@ allprojects {
                 }
             }
         }
+    }
+}
+
+subprojects {
+    apply(plugin = "io.gitlab.arturbosch.detekt")
+
+    tasks.withType<Detekt>().configureEach {
+        config = files("$rootDir/config/detekt/detekt.yml")
+        buildUponDefaultConfig = true
+
+        ignoreFailures = false
+        jvmTarget = "21"
+
+        reports {
+            html.required.set(true)
+            xml.required.set(true)
+            txt.required.set(true)
+            sarif.required.set(true)
+            md.required.set(true)
+        }
+    }
+
+    tasks.matching { it.name.startsWith("compile") }.configureEach {
+        dependsOn("detekt")
     }
 }
 

@@ -2,7 +2,6 @@ import com.android.build.gradle.internal.api.ApkVariantOutputImpl
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.klyx.AppVersioning
 import com.klyx.Configs
-import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
@@ -14,7 +13,6 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
     id("com.github.johnrengelman.shadow") version "8.1.1"
-    id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
 kotlin {
@@ -269,22 +267,6 @@ compose.resources {
     publicResClass = false
     packageOfResClass = "${Configs.KLYX_NAMESPACE}.res"
     generateResClass = auto
-}
-
-detekt {
-    toolVersion = "1.23.8"
-    config.setFrom(file("config/detekt/detekt.yml"))
-    buildUponDefaultConfig = true
-}
-
-tasks.withType<Detekt>().configureEach {
-    reports {
-        html.required.set(true)
-        xml.required.set(true)
-        txt.required.set(true)
-        sarif.required.set(true)
-        md.required.set(true)
-    }
 }
 
 tasks.register("assembleAllTargets") {

@@ -46,6 +46,7 @@ class HostProcessor(
         return emptyList()
     }
 
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
     private fun generateHostModule(
         resolver: Resolver,
         module: KSClassDeclaration,
@@ -227,6 +228,7 @@ class HostProcessor(
         return wasmTypes.filterNotNull()
     }
 
+    @Suppress("CyclomaticComplexMethod", "NestedBlockDepth")
     private fun generateCallLine(
         resolver: Resolver,
         hasExtensionReceiver: Boolean,
