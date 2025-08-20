@@ -283,9 +283,13 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.build-macos-native.outputs.files) }}
     steps:
+      - name: Get basename
+        id: filename
+        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file | basename }}
+          name: ${{ env.file_name }}
           path: ${{ matrix.file }}
           retention-days: 30
 
