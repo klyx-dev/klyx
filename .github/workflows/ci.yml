@@ -411,11 +411,13 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Upload built site
+        if: hashFiles('build/dist/js/productionExecutable/**/*') != ''
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/dist/js/productionExecutable
 
       - name: Deploy to GitHub Pages
+        if: hashFiles('build/dist/js/productionExecutable/**/*') != ''
         id: deployment
         uses: actions/deploy-pages@v4
 

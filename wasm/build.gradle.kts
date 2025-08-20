@@ -1,4 +1,5 @@
 import com.klyx.Configs
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -29,6 +30,8 @@ kotlin {
         }
     }
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
         val commonAndroidJvm by creating {
             dependsOn(commonMain.get())
@@ -46,6 +49,13 @@ kotlin {
         jvmMain.get().dependsOn(commonAndroidJvm)
 
         commonMain {
+            languageSettings {
+                @OptIn(ExperimentalKotlinGradlePluginApi::class)
+                compilerOptions {
+                    freeCompilerArgs.addAll("-Xexpect-actual-classes")
+                }
+            }
+
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
 
