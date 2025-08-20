@@ -94,9 +94,13 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.build-desktop-jvm.outputs.files) }}
     steps:
+      - name: Get basename
+        id: filename
+        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file | basename }}
+          name: ${{ env.file_name }}
           path: ${{ matrix.file }}
           retention-days: 30
 
@@ -150,9 +154,13 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.build-linux-native.outputs.files) }}
     steps:
+      - name: Get basename
+        id: filename
+        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file | basename }}
+          name: ${{ env.file_name }}
           path: ${{ matrix.file }}
           retention-days: 30
 
@@ -207,9 +215,13 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.build-windows-native.outputs.files) }}
     steps:
+      - name: Get basename
+        id: filename
+        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file | split('\') | last }}
+          name: ${{ env.file_name }}
           path: ${{ matrix.file }}
           retention-days: 30
 
@@ -320,9 +332,13 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.build-ios-app.outputs.files) }}
     steps:
+      - name: Get basename
+        id: filename
+        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file | basename }}
+          name: ${{ env.file_name }}
           path: ${{ matrix.file }}
           retention-days: 30
 
@@ -383,9 +399,13 @@ jobs:
       matrix:
         file: ${{ fromJson(needs.build-web-app.outputs.files) }}
     steps:
+      - name: Get basename
+        id: filename
+        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.file | basename }}
+          name: ${{ env.file_name }}
           path: ${{ matrix.file }}
           retention-days: 30
 
