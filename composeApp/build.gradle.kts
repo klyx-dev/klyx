@@ -30,42 +30,6 @@ kotlin {
 
     jvm("desktop")
 
-    linuxX64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-                baseName = "klyx"
-            }
-        }
-    }
-
-    mingwX64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-                baseName = "klyx"
-            }
-        }
-    }
-
-    macosX64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-                baseName = "klyx"
-            }
-        }
-    }
-
-    macosArm64 {
-        binaries {
-            executable {
-                entryPoint = "main"
-                baseName = "klyx"
-            }
-        }
-    }
-
     sourceSets {
         val desktopMain by getting
 

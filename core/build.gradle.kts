@@ -23,10 +23,19 @@ kotlin {
 
     jvm()
 
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "core"
+        }
+    }
+
     applyDefaultHierarchyTemplate()
 
     sourceSets {
-        // Must be defined before androidMain and jvmMain
         val commonJvmAndroid by creating {
             dependsOn(commonMain.get())
         }
@@ -42,6 +51,17 @@ kotlin {
             implementation(libs.ktor.client.cio)
             implementation(libs.commons.compress)
             api(libs.koin.core)
+
+            implementation(kotlin("reflect"))
+            api(libs.kotlinx.io.core)
+            api(libs.okio)
+            implementation(libs.kotlinx.coroutines.core)
+
+            api(libs.kotlin.result)
+            implementation(projects.shared)
+        }
+
+        commonJvmAndroid.dependencies {
             api(libs.koin.compose)
 
             implementation(compose.runtime)
@@ -53,18 +73,6 @@ kotlin {
             implementation(compose.components.uiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-
-            implementation(kotlin("reflect"))
-            api(libs.kotlinx.io.core)
-            api(libs.okio)
-            implementation(libs.kotlinx.coroutines.core)
-
-            api(libs.kotlin.result)
-
-            implementation(projects.shared)
-
-            // circular dependency
-            //implementation(projects.editor)
         }
 
         commonTest.dependencies {

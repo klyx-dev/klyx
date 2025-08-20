@@ -19,14 +19,35 @@ kotlin {
 
     jvm()
 
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "wasm"
+        }
+    }
+
     sourceSets {
-        commonMain {
+        val commonAndroidJvm by creating {
+            dependsOn(commonMain.get())
+
             dependencies {
-                implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.chicory.runtime)
                 implementation(libs.chicory.wasi)
                 implementation(libs.chicory.annotations)
+
                 implementation(libs.wasip1.bindings.chicory)
+            }
+        }
+
+        androidMain.get().dependsOn(commonAndroidJvm)
+        jvmMain.get().dependsOn(commonAndroidJvm)
+
+        commonMain {
+            dependencies {
+                implementation(libs.kotlinx.coroutines.core)
 
                 implementation(libs.wasip1.host)
 

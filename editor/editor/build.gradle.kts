@@ -1,4 +1,5 @@
 import com.klyx.Configs
+import org.gradle.internal.os.OperatingSystem
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -17,6 +18,18 @@ kotlin {
     }
 
     jvm()
+
+    if (OperatingSystem.current().isMacOsX) {
+        listOf(
+            iosX64(),
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach {
+            it.binaries.framework {
+                baseName = "editor"
+            }
+        }
+    }
 
     sourceSets {
         commonMain {

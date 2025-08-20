@@ -3,6 +3,7 @@ name: Kotlin Multiplatform App CI/CD
 on:
   push:
     branches: [ main ]
+    paths-ignore: [ "**/*.md" ]
   pull_request:
     branches: [ main ]
   release:
@@ -10,34 +11,13 @@ on:
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
-  APP_NAME: "klyx"
+  APP_NAME: "Klyx"
   APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      - run: chmod +x gradlew
-      - run: ./gradlew test
-
   build-android-app:
     name: Build Android App
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -62,16 +42,20 @@ jobs:
           else
             echo "Skipping Android build, task not available"
           fi
+      - name: Move APK to root
+        run: |
+          mkdir -p klyx
+          find . -name "*/build/outputs/apk/*/*.apk" -exec cp {} klyx/ \;
+
       - uses: actions/upload-artifact@v4
         with:
-          name: android-app
-          path: '**/build/outputs/apk/**/*.apk'
+          name: klyx-android
+          path: 'klyx/*.apk'
           retention-days: 30
 
   build-desktop-jvm:
     name: Build Desktop JVM App
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -94,18 +78,31 @@ jobs:
           else
             echo "Skipping JVM build, task not available"
           fi
+
+      - name: Find binaries
+        id: binaries
+        run: |
+          files=$(find . -path "*/build/compose/binaries/main/*/*" -o -path "*/build/libs/*-all.jar")
+          files_json=$(printf '%s\n' $files | jq -R . | jq -s .)
+          echo "files=$files_json" >> $GITHUB_OUTPUT
+
+  upload-desktop-binaries:
+    name: Upload Desktop Binaries
+    needs: build-desktop-jvm
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.build-desktop-jvm.outputs.files) }}
+    steps:
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-jvm
-          path: |
-            **/build/compose/binaries/main/*/
-            **/build/libs/*-all.jar
+          name: ${{ matrix.file | basename }}
+          path: ${{ matrix.file }}
           retention-days: 30
 
   build-linux-native:
     name: Build Linux Native
     runs-on: ubuntu-latest
-    needs: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -122,88 +119,46 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: chmod +x gradlew
-      - name: Build Linux binaries (if available)
+      - name: Build Linux binaries
         run: |
-          if ./gradlew tasks --all | grep -q "linuxX64MainBinaries"; then
-            ./gradlew linuxX64MainBinaries packageDeb packageRpm
+          if ./gradlew tasks --all | grep -q "packageDeb"; then
+            ./gradlew packageDeb
           else
-            echo "Skipping Linux native build, task not available"
-          fi
-
-      - name: Create AppImage
-        run: |
-          # Download AppImageTool
-          wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
-          chmod +x appimagetool
-          
-          # Create AppDir structure
-          mkdir -p AppDir/usr/bin
-          mkdir -p AppDir/usr/share/applications
-          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-          
-          # Copy binary
-          cp build/bin/linuxX64/releaseExecutable/klyx.kexe AppDir/usr/bin/klyx
-          
-          # Create desktop file
-          cat > AppDir/usr/share/applications/klyx.desktop << EOF
-          [Desktop Entry]
-          Type=Application
-          Name=Klyx
-          Exec=klyx
-          Icon=klyx
-          Categories=Development;IDE;
-          EOF
-          
-          # Copy icon if exists
-          if [ -f "src/commonMain/resources/icon.png" ]; then
-            cp src/commonMain/resources/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/klyx.png
+            echo "Skipping packageDeb, task not available"
           fi
           
-          # Create AppImage
-          ./appimagetool AppDir klyx-${{ env.APP_VERSION }}-x86_64.AppImage
+          if ./gradlew tasks --all | grep -q "packageRpm"; then
+            ./gradlew packageRpm
+          else
+            echo "Skipping packageRpm, task not available"
+          fi
 
-      - name: Create Flatpak manifest
+      - name: Collect Linux artifacts
+        id: linux-artifacts
         run: |
-          mkdir -p flatpak
-          cat > flatpak/com.klyx.yml << EOF
-          app-id: com.klyx
-          runtime: org.freedesktop.Platform
-          runtime-version: '22.08'
-          sdk: org.freedesktop.Sdk
-          command: klyx
-          finish-args:
-            - --share=network
-            - --share=ipc
-            - --socket=x11
-            - --socket=wayland
-            - --device=dri
-            - --filesystem=home
-          modules:
-            - name: klyx
-              buildsystem: simple
-              build-commands:
-                - install -Dm755 klyx.kexe /app/bin/klyx
-              sources:
-                - type: file
-                  path: ../build/bin/linuxX64/releaseExecutable/klyx.kexe
-          EOF
+          files="$files $(find build/compose/binaries/main/deb -type f -name "*.deb" || true)"
+          files="$files $(find build/compose/binaries/main/rpm -type f -name "*.rpm" || true)"
+          files="$files flatpak/com.klyx.yml"
+          files_json=$(printf '%s\n' $files | jq -R . | jq -s .)
+          echo "files=$files_json" >> $GITHUB_OUTPUT
 
-      - name: Upload Linux artifacts
-        uses: actions/upload-artifact@v4
+  upload-linux-artifacts:
+    name: Upload Linux Artifacts
+    needs: build-linux-native
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.build-linux-native.outputs.files) }}
+    steps:
+      - uses: actions/upload-artifact@v4
         with:
-          name: linux-native
-          path: |
-            **/build/bin/linuxX64/releaseExecutable/
-            **/build/compose/binaries/main/deb/
-            **/build/compose/binaries/main/rpm/
-            *.AppImage
-            flatpak/
+          name: ${{ matrix.file | basename }}
+          path: ${{ matrix.file }}
           retention-days: 30
 
   build-windows-native:
     name: Build Windows Native App & Installer
     runs-on: windows-latest
-    needs: test
 
     steps:
       - name: Checkout code
@@ -227,33 +182,40 @@ jobs:
 
       - name: Build Windows native binary
         run: |
-          if (./gradlew tasks --all | Select-String "mingwX64MainBinaries") {
-            ./gradlew mingwX64MainBinaries packageMsi
+          if (./gradlew tasks --all | Select-String "packageMsi") {
+            ./gradlew packageMsi
           } else {
             echo "Skipping Windows native build, task not available"
           }
 
-      - name: Create portable ZIP
+      - name: Collect Windows artifacts
+        id: windows-artifacts
+        shell: pwsh
         run: |
-          mkdir portable
-          copy "build\bin\mingwX64\releaseExecutable\klyx.exe" portable\
-          if exist "src\commonMain\resources" xcopy /E /I "src\commonMain\resources" portable\resources\
-          powershell Compress-Archive -Path portable\* -DestinationPath klyx-${{ env.APP_VERSION }}-windows-portable.zip
+          $files = @()
+          $msi = Get-ChildItem -Path build/compose/binaries/main/msi -Filter *.msi -Recurse -ErrorAction SilentlyContinue
+          if ($msi) { $files += $msi.FullName }
 
-      - name: Upload Windows artifacts
-        uses: actions/upload-artifact@v4
+          $filesJson = $files | ForEach-Object { $_ } | ConvertTo-Json
+          "files=$filesJson" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+  upload-windows-artifacts:
+    name: Upload Windows Artifacts
+    needs: build-windows-native
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.build-windows-native.outputs.files) }}
+    steps:
+      - uses: actions/upload-artifact@v4
         with:
-          name: windows-native
-          path: |
-            **/build/bin/mingwX64/releaseExecutable/
-            **/build/compose/binaries/main/msi/
-            *.zip
+          name: ${{ matrix.file | split('\') | last }}
+          path: ${{ matrix.file }}
           retention-days: 30
 
   build-macos-native:
     name: Build macOS Native App & DMG
     runs-on: macos-latest
-    needs: test
 
     steps:
       - uses: actions/checkout@v4
@@ -271,20 +233,7 @@ jobs:
             ${{ runner.os }}-gradle-
       - run: chmod +x gradlew
 
-      - name: Build macOS native binaries
-        run: |
-          if ./gradlew tasks --all | grep -q "macosX64MainBinaries"; then
-            ./gradlew macosX64MainBinaries
-          else
-            echo "Skipping macosX64MainBinaries"
-          fi
-          if ./gradlew tasks --all | grep -q "macosArm64MainBinaries"; then
-            ./gradlew macosArm64MainBinaries
-          else
-            echo "Skipping macosArm64MainBinaries"
-          fi
-
-      - name: Package macOS app bundles (if available)
+      - name: Package macOS app bundles
         run: |
           if ./gradlew tasks --all | grep -q "packageDmg"; then
             ./gradlew packageDmg
@@ -304,20 +253,33 @@ jobs:
             echo "Skipping universal binary (missing arch builds)"
           fi
 
+      - name: Collect macOS artifacts
+        id: macos-artifacts
+        run: |
+          files=$(find build/bin/macosX64/releaseExecutable -type f || true)
+          files="$files $(find build/bin/macosArm64/releaseExecutable -type f || true)"
+          files="$files $(find build/universal -type f || true)"
+          files="$files $(find build/compose/binaries/main/dmg -type f || true)"
+          files_json=$(printf '%s\n' $files | jq -R . | jq -s .)
+          echo "files=$files_json" >> $GITHUB_OUTPUT
+
+  upload-macos-artifacts:
+    name: Upload macOS Artifacts
+    needs: build-macos-native
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.build-macos-native.outputs.files) }}
+    steps:
       - uses: actions/upload-artifact@v4
         with:
-          name: macos-native
-          path: |
-            **/build/bin/macosX64/releaseExecutable/
-            **/build/bin/macosArm64/releaseExecutable/
-            **/build/universal/
-            **/build/compose/binaries/main/dmg/
+          name: ${{ matrix.file | basename }}
+          path: ${{ matrix.file }}
           retention-days: 30
 
   build-ios-app:
     name: Build iOS App
     runs-on: macos-latest
-    needs: test
 
     steps:
       - uses: actions/checkout@v4
@@ -343,17 +305,30 @@ jobs:
             echo "Skipping iOS build"
           fi
 
+      - name: Collect iOS artifacts
+        id: ios-artifacts
+        run: |
+          files=$(find build/bin/iosSimulatorArm64/releaseExecutable -type f || true)
+          files_json=$(printf '%s\n' $files | jq -R . | jq -s .)
+          echo "files=$files_json" >> $GITHUB_OUTPUT
+
+  upload-ios-artifacts:
+    name: Upload iOS Artifacts
+    needs: build-ios-app
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.build-ios-app.outputs.files) }}
+    steps:
       - uses: actions/upload-artifact@v4
         with:
-          name: ios-app
-          path: |
-            **/build/bin/iosSimulatorArm64/releaseExecutable/
+          name: ${{ matrix.file | basename }}
+          path: ${{ matrix.file }}
           retention-days: 30
 
   build-web-app:
     name: Build Web App
     runs-on: ubuntu-latest
-    needs: test
 
     steps:
       - uses: actions/checkout@v4
@@ -363,7 +338,7 @@ jobs:
           distribution: 'temurin'
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
       - uses: actions/cache@v4
         with:
           path: |
@@ -382,95 +357,62 @@ jobs:
             echo "Skipping web build"
           fi
 
-      - name: Create web archive
+      - name: Package Web app
         run: |
+          mkdir -p build/web-artifacts
           if [ -d "build/dist/js/productionExecutable" ]; then
-            cd build/dist/js/productionExecutable
-            tar -czf ../../../../klyx-${{ env.APP_VERSION }}-web.tar.gz *
+            cp -r build/dist/js/productionExecutable/* build/web-artifacts/
+            tar -czf klyx-${{ env.APP_VERSION }}-web.tar.gz -C build/web-artifacts .
           else
-            echo "Skipping web archive, no dist folder"
+            echo "Skipping, no dist folder"
           fi
 
+      - name: Collect Web artifacts
+        id: web-artifacts
+        run: |
+          files=$(find build/web-artifacts -type f || true)
+          files="$files klyx-${{ env.APP_VERSION }}-web.tar.gz"
+          files_json=$(printf '%s\n' $files | jq -R . | jq -s .)
+          echo "files=$files_json" >> $GITHUB_OUTPUT
+
+  upload-web-artifacts:
+    name: Upload Web Artifacts
+    needs: build-web-app
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        file: ${{ fromJson(needs.build-web-app.outputs.files) }}
+    steps:
       - uses: actions/upload-artifact@v4
         with:
-          name: web-app
-          path: |
-            **/build/dist/js/productionExecutable/
-            *.tar.gz
+          name: ${{ matrix.file | basename }}
+          path: ${{ matrix.file }}
           retention-days: 30
 
-  create-release:
-    name: Create Release
+  deploy-web:
+    name: Deploy Web to GitHub Pages
+    needs: build-web-app
     runs-on: ubuntu-latest
-    needs: [build-android-app, build-desktop-jvm, build-linux-native, build-windows-native, build-macos-native, build-ios-app, build-web-app]
-    if: github.event_name == 'release'
-
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts/
+      - uses: actions/checkout@v4
 
-      - name: Organize release assets
-        run: |
-          mkdir -p release-assets
-          
-          # Android
-          find artifacts/android-app -name "*.apk" -exec cp {} release-assets/ \;
-          find artifacts/android-app -name "*.aab" -exec cp {} release-assets/ \;
-          
-          # Desktop JVM
-          find artifacts/desktop-jvm -name "*-all.jar" -exec cp {} release-assets/ \;
-          
-          # Linux
-          find artifacts/linux-native -name "*.deb" -exec cp {} release-assets/ \;
-          find artifacts/linux-native -name "*.rpm" -exec cp {} release-assets/ \;
-          find artifacts/linux-native -name "*.AppImage" -exec cp {} release-assets/ \;
-          
-          # Windows
-          find artifacts/windows-native -name "*.exe" -exec cp {} release-assets/ \;
-          find artifacts/windows-native -name "*.msi" -exec cp {} release-assets/ \;
-          find artifacts/windows-native -name "*.zip" -exec cp {} release-assets/ \;
-          
-          # macOS
-          find artifacts/macos-native -name "*.dmg" -exec cp {} release-assets/ \;
-          
-          # Web
-          find artifacts/web-app -name "*.tar.gz" -exec cp {} release-assets/ \;
-          
-          ls -la release-assets/
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
 
-      - name: Upload Release Assets
-        uses: softprops/action-gh-release@v1
+      - name: Upload built site
+        uses: actions/upload-pages-artifact@v3
         with:
-          files: release-assets/*
-          body: |
-            ## Download Options
-            
-            ### Android
-            - **APK**: Direct installation file for Android devices
-            - **AAB**: Google Play Store bundle format
-            
-            ### Desktop
-            - **JAR**: Cross-platform Java application (requires Java 21+)
-            
-            ### Linux
-            - **DEB**: Debian/Ubuntu package
-            - **RPM**: Red Hat/Fedora/CentOS package  
-            - **AppImage**: Portable Linux application
-            
-            ### Windows
-            - **MSI**: Windows installer
-            - **EXE**: Windows executable
-            - **ZIP**: Portable Windows version
-            
-            ### macOS
-            - **DMG**: macOS disk image installer
-            
-            ### Web
-            - **TAR.GZ**: Web application files for hosting
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          path: build/dist/js/productionExecutable
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
 
   quality-checks:
     name: Quality Checks

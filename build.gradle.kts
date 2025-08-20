@@ -12,3 +12,19 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.kotlinAndroid) apply false
 }
+
+tasks.register("printTargets") {
+    doLast {
+        val targets = mutableListOf<String>()
+        subprojects {
+            plugins.withId("org.jetbrains.kotlin.multiplatform") {
+                extensions.findByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()?.let {
+                    it.targets.forEach { target ->
+                        targets.add(target.name)
+                    }
+                }
+            }
+        }
+        println(targets.joinToString(","))
+    }
+}
