@@ -25,9 +25,7 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
       - run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
-        if: ${{ secrets.KLYX_KEYSTORE != '' }}
       - run: echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
-        if: ${{ secrets.KEYSTORE_PROP != '' }}
       - uses: actions/cache@v4
         with:
           path: |
