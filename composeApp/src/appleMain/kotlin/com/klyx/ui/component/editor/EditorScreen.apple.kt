@@ -4,4 +4,5 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
-expect fun StatusBar(modifier: Modifier = Modifier)
+actual fun EditorScreen(modifier: Modifier) {
+}

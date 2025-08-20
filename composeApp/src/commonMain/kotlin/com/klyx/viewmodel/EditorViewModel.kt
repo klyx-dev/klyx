@@ -21,6 +21,7 @@ import com.klyx.tab.TabId
 import com.klyx.ui.component.WelcomeScreen
 import com.klyx.ui.component.extension.ExtensionScreen
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update

@@ -1,7 +1,8 @@
-package com.klyx.ui.component.editor
+package com.klyx.ui.component.menu
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
-expect fun StatusBar(modifier: Modifier = Modifier)
+actual fun MainMenuBar(modifier: Modifier) {
+}

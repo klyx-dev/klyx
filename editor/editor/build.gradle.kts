@@ -1,5 +1,4 @@
 import com.klyx.Configs
-import org.gradle.internal.os.OperatingSystem
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -19,22 +18,21 @@ kotlin {
 
     jvm()
 
-    if (OperatingSystem.current().isMacOsX) {
-        listOf(
-            iosX64(),
-            iosArm64(),
-            iosSimulatorArm64()
-        ).forEach {
-            it.binaries.framework {
-                baseName = "editor"
-            }
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach {
+        it.binaries.framework {
+            baseName = "editor"
         }
     }
+
+    applyDefaultHierarchyTemplate()
 
     sourceSets {
         commonMain {
             dependencies {
-                implementation(libs.ktreesitter)
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
 
@@ -72,6 +70,8 @@ kotlin {
                 api(projects.editor.sora.editorLsp)
                 implementation("io.github.rosemoe:language-treesitter")
                 implementation("com.itsaky.androidide.treesitter:tree-sitter-json:4.3.1")
+
+                implementation(libs.ktreesitter)
             }
         }
     }

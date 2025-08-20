@@ -30,6 +30,19 @@ kotlin {
 
     jvm("desktop")
 
+    listOf(
+        iosX64(),
+        iosArm64(),
+        iosSimulatorArm64()
+    ).forEach { iosTarget ->
+        iosTarget.binaries.framework {
+            baseName = Configs.KLYX_APP_NAME
+            isStatic = true
+        }
+    }
+
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
         val desktopMain by getting
 
@@ -65,6 +78,8 @@ kotlin {
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
+
+            implementation(libs.kotlinx.coroutines.core)
 
             implementation(libs.lsp4j)
             implementation(libs.lsp4j.jsonrpc)
