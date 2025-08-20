@@ -112,3 +112,25 @@ actual open class KxFile {
         TODO("Not yet implemented")
     }
 }
+
+actual fun KxFile(path: String): KxFile {
+    TODO("Not yet implemented")
+}
+
+actual fun KxFile(
+    parent: KxFile,
+    child: String
+): KxFile {
+    TODO("Not yet implemented")
+}
+
+actual fun KxFile(parent: String, child: String): KxFile {
+    TODO("Not yet implemented")
+}
+
+actual fun KxFile(
+    parent: KxFile,
+    child: KxFile
+): KxFile {
+    TODO("Not yet implemented")
+}

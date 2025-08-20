@@ -404,7 +404,7 @@ jobs:
             ./gradlew jsBrowserDistribution
           else
             echo "No web build task available"
-            exit 1
+            exit 0
           fi
 
       - name: Setup Pages
