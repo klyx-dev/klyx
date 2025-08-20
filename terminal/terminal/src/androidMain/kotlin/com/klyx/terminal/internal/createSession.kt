@@ -7,6 +7,7 @@ import com.klyx.core.generateId
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxCacheDir
 import com.klyx.terminal.klyxFilesDir
+import com.klyx.terminal.klyxLibDir
 import com.termux.terminal.TerminalEmulator
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient

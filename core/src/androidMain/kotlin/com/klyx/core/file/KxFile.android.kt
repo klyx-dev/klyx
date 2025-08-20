@@ -22,11 +22,9 @@ import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
-import java.nio.file.Path
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual open class KxFile(
     private val raw: DocumentFile,
 ) : KoinComponent {
@@ -162,3 +160,5 @@ fun KxFile.extractZip(outputDir: File) {
         }
     }
 }
+
+actual fun KxFile(path: String) = KxFile(File(path))

@@ -7,7 +7,6 @@ import java.io.File
 import java.nio.charset.Charset
 import java.nio.file.Path
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual open class KxFile(
     private val raw: File
 ) {
@@ -60,3 +59,5 @@ actual open class KxFile(
 
 fun KxFile.inputStream() = rawFile().inputStream()
 fun KxFile.outputStream() = rawFile().outputStream()
+
+actual fun KxFile(path: String) = KxFile(File(path))

@@ -6,7 +6,6 @@ import kotlinx.io.Source
 /**
  * Represents a file or directory in the file system.
  */
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect open class KxFile {
     val name: String
     val path: String
