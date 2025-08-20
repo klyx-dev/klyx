@@ -57,8 +57,6 @@ jobs:
   build-desktop-jvm:
     name: Build Desktop JVM App
     runs-on: ubuntu-latest
-    outputs:
-      files: ${{ steps.collect.outputs.files }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -82,50 +80,43 @@ jobs:
             echo "Skipping JVM build, task not available"
           fi
 
-      - name: Collect files
-        id: collect
+      - name: Upload JVM artifacts
         run: |
-          files_array=()
+          find . -path "*/build/compose/binaries/main/*/*" -type f 2>/dev/null | while read -r file; do
+            if [[ -f "$file" ]]; then
+              echo "Found distribution file: $file"
+              filename=$(basename "$file")
+              echo "Uploading $filename"
+            fi
+          done
           
-          # Find files and add to array
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find . \( -path "*/build/compose/binaries/main/*/*" -o -path "*/build/libs/*-all.jar" \) -type f -print0 2>/dev/null || true)
-          
-          # Convert to JSON array
-          if [ ${#files_array[@]} -eq 0 ]; then
-            echo "files=[]" >> $GITHUB_OUTPUT
-          else
-            printf -v files_json '%s\n' "${files_array[@]}" | jq -R . | jq -s -c .
-            echo "files=$files_json" >> $GITHUB_OUTPUT
-          fi
+          find . -path "*/build/libs/*-all.jar" -type f 2>/dev/null | while read -r file; do
+            if [[ -f "$file" ]]; then
+              echo "Found JAR file: $file"
+              filename=$(basename "$file")
+              echo "Uploading $filename"
+            fi
+          done
 
-  upload-desktop-binaries:
-    name: Upload Desktop Binaries
-    needs: build-desktop-jvm
-    if: ${{ needs.build-desktop-jvm.outputs.files != '[]' && needs.build-desktop-jvm.outputs.files != '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        file: ${{ fromJson(needs.build-desktop-jvm.outputs.files) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get basename
-        id: filename
-        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        if: hashFiles('**/build/compose/binaries/main/*/*') != ''
         with:
-          name: ${{ env.file_name }}
-          path: ${{ matrix.file }}
+          name: klyx-desktop-distribution
+          path: '**/build/compose/binaries/main/*/*'
+          retention-days: 30
+
+      - name: Upload JAR artifacts
+        uses: actions/upload-artifact@v4
+        if: hashFiles('**/build/libs/*-all.jar') != ''
+        with:
+          name: klyx-desktop-jar
+          path: '**/build/libs/*-all.jar'
           retention-days: 30
 
   build-linux-native:
     name: Build Linux Native
     runs-on: ubuntu-latest
-    outputs:
-      files: ${{ steps.linux-artifacts.outputs.files }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -156,55 +147,25 @@ jobs:
             echo "Skipping packageRpm, task not available"
           fi
 
-      - name: Collect Linux artifacts
-        id: linux-artifacts
-        run: |
-          files_array=()
-          
-          # Find .deb files
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find . -path "*/build/compose/binaries/main/deb/*.deb" -type f -print0 2>/dev/null || true)
-          
-          # Find .rpm files
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find . -path "*/build/compose/binaries/main/rpm/*.rpm" -type f -print0 2>/dev/null || true)
-          
-          # Convert to JSON array
-          if [ ${#files_array[@]} -eq 0 ]; then
-            echo "files=[]" >> $GITHUB_OUTPUT
-          else
-            printf -v files_json '%s\n' "${files_array[@]}" | jq -R . | jq -s -c .
-            echo "files=$files_json" >> $GITHUB_OUTPUT
-          fi
-
-  upload-linux-artifacts:
-    name: Upload Linux Artifacts
-    needs: build-linux-native
-    if: ${{ needs.build-linux-native.outputs.files != '[]' && needs.build-linux-native.outputs.files != '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        file: ${{ fromJson(needs.build-linux-native.outputs.files) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get basename
-        id: filename
-        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload DEB packages
+        uses: actions/upload-artifact@v4
+        if: hashFiles('**/build/compose/binaries/main/deb/*.deb') != ''
         with:
-          name: ${{ env.file_name }}
-          path: ${{ matrix.file }}
+          name: klyx-linux-deb
+          path: '**/build/compose/binaries/main/deb/*.deb'
+          retention-days: 30
+
+      - name: Upload RPM packages
+        uses: actions/upload-artifact@v4
+        if: hashFiles('**/build/compose/binaries/main/rpm/*.rpm') != ''
+        with:
+          name: klyx-linux-rpm
+          path: '**/build/compose/binaries/main/rpm/*.rpm'
           retention-days: 30
 
   build-windows-native:
     name: Build Windows Native App & Installer
     runs-on: windows-latest
-    outputs:
-      files: ${{ steps.windows-artifacts.outputs.files }}
 
     steps:
       - name: Checkout code
@@ -234,54 +195,17 @@ jobs:
             echo "Skipping Windows native build, task not available"
           }
 
-      - name: Collect Windows artifacts
-        id: windows-artifacts
-        shell: pwsh
-        run: |
-          $files = @()
-          
-          # Find MSI files
-          $msiFiles = Get-ChildItem -Path . -Filter *.msi -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*build/compose/binaries/main/msi*" }
-          if ($msiFiles) { 
-            $files += $msiFiles | ForEach-Object { $_.FullName }
-          }
-          
-          # Convert to JSON array
-          if ($files.Count -eq 0) {
-            "files=[]" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          } else {
-            $filesJson = $files | ConvertTo-Json -Compress
-            "files=$filesJson" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-          }
-
-  upload-windows-artifacts:
-    name: Upload Windows Artifacts
-    needs: build-windows-native
-    if: ${{ needs.build-windows-native.outputs.files != '[]' && needs.build-windows-native.outputs.files != '' }}
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        file: ${{ fromJson(needs.build-windows-native.outputs.files) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get basename
-        shell: pwsh
-        run: |
-          $fileName = Split-Path '${{ matrix.file }}' -Leaf
-          "file_name=$fileName" | Out-File -FilePath $env:GITHUB_ENV -Append
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload MSI installers
+        uses: actions/upload-artifact@v4
+        if: hashFiles('**/build/compose/binaries/main/msi/*.msi') != ''
         with:
-          name: ${{ env.file_name }}
-          path: ${{ matrix.file }}
+          name: klyx-windows-msi
+          path: '**/build/compose/binaries/main/msi/*.msi'
           retention-days: 30
 
   build-macos-native:
     name: Build macOS Native App & DMG
     runs-on: macos-latest
-    outputs:
-      files: ${{ steps.macos-artifacts.outputs.files }}
 
     steps:
       - uses: actions/checkout@v4
@@ -319,61 +243,41 @@ jobs:
             echo "Skipping universal binary (missing arch builds)"
           fi
 
-      - name: Collect macOS artifacts
-        id: macos-artifacts
-        run: |
-          files_array=()
-          
-          # Find files in different directories
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find build/bin/macosX64/releaseExecutable -type f -print0 2>/dev/null || true)
-          
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find build/bin/macosArm64/releaseExecutable -type f -print0 2>/dev/null || true)
-          
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find build/universal -type f -print0 2>/dev/null || true)
-          
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find build/compose/binaries/main/dmg -type f -print0 2>/dev/null || true)
-          
-          # Convert to JSON array
-          if [ ${#files_array[@]} -eq 0 ]; then
-            echo "files=[]" >> $GITHUB_OUTPUT
-          else
-            printf -v files_json '%s\n' "${files_array[@]}" | jq -R . | jq -s -c .
-            echo "files=$files_json" >> $GITHUB_OUTPUT
-          fi
-
-  upload-macos-artifacts:
-    name: Upload macOS Artifacts
-    needs: build-macos-native
-    if: ${{ needs.build-macos-native.outputs.files != '[]' && needs.build-macos-native.outputs.files != '' }}
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        file: ${{ fromJson(needs.build-macos-native.outputs.files) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get basename
-        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload DMG files
+        uses: actions/upload-artifact@v4
+        if: hashFiles('**/build/compose/binaries/main/dmg/*.dmg') != ''
         with:
-          name: ${{ env.file_name }}
-          path: ${{ matrix.file }}
+          name: klyx-macos-dmg
+          path: '**/build/compose/binaries/main/dmg/*.dmg'
+          retention-days: 30
+
+      - name: Upload x64 executables
+        uses: actions/upload-artifact@v4
+        if: hashFiles('build/bin/macosX64/releaseExecutable/*') != ''
+        with:
+          name: klyx-macos-x64
+          path: build/bin/macosX64/releaseExecutable/*
+          retention-days: 30
+
+      - name: Upload ARM64 executables
+        uses: actions/upload-artifact@v4
+        if: hashFiles('build/bin/macosArm64/releaseExecutable/*') != ''
+        with:
+          name: klyx-macos-arm64
+          path: build/bin/macosArm64/releaseExecutable/*
+          retention-days: 30
+
+      - name: Upload universal binary
+        uses: actions/upload-artifact@v4
+        if: hashFiles('build/universal/*') != ''
+        with:
+          name: klyx-macos-universal
+          path: build/universal/*
           retention-days: 30
 
   build-ios-app:
     name: Build iOS App
     runs-on: macos-latest
-    outputs:
-      files: ${{ steps.ios-artifacts.outputs.files }}
 
     steps:
       - uses: actions/checkout@v4
@@ -399,49 +303,17 @@ jobs:
             echo "Skipping iOS build"
           fi
 
-      - name: Collect iOS artifacts
-        id: ios-artifacts
-        run: |
-          files_array=()
-          
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-          done < <(find build/bin/iosSimulatorArm64/releaseExecutable -type f -print0 2>/dev/null || true)
-          
-          # Convert to JSON array
-          if [ ${#files_array[@]} -eq 0 ]; then
-            echo "files=[]" >> $GITHUB_OUTPUT
-          else
-            printf -v files_json '%s\n' "${files_array[@]}" | jq -R . | jq -s -c .
-            echo "files=$files_json" >> $GITHUB_OUTPUT
-          fi
-
-  upload-ios-artifacts:
-    name: Upload iOS Artifacts
-    needs: build-ios-app
-    if: ${{ needs.build-ios-app.outputs.files != '[]' && needs.build-ios-app.outputs.files != '' }}
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        file: ${{ fromJson(needs.build-ios-app.outputs.files) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get basename
-        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload iOS simulator artifacts
+        uses: actions/upload-artifact@v4
+        if: hashFiles('build/bin/iosSimulatorArm64/releaseExecutable/*') != ''
         with:
-          name: ${{ env.file_name }}
-          path: ${{ matrix.file }}
+          name: klyx-ios-simulator
+          path: build/bin/iosSimulatorArm64/releaseExecutable/*
           retention-days: 30
 
   build-web-app:
     name: Build Web App
     runs-on: ubuntu-latest
-    outputs:
-      files: ${{ steps.collect.outputs.files }}
-      has_web_build: ${{ steps.collect.outputs.has_web_build }}
 
     steps:
       - uses: actions/checkout@v4
@@ -472,66 +344,34 @@ jobs:
 
       - name: Package Web app
         run: |
-          mkdir -p build/web-artifacts
           if [ -d "build/dist/js/productionExecutable" ]; then
-            cp -r build/dist/js/productionExecutable/* build/web-artifacts/
-            tar -czf klyx-${{ env.APP_VERSION }}-web.tar.gz -C build/web-artifacts .
+            tar -czf klyx-${{ env.APP_VERSION }}-web.tar.gz -C build/dist/js/productionExecutable .
+            echo "Created web package: klyx-${{ env.APP_VERSION }}-web.tar.gz"
+            ls -la klyx-${{ env.APP_VERSION }}-web.tar.gz
           else
-            echo "Skipping, no dist folder"
+            echo "No web build output found"
           fi
 
-      - name: Collect files
-        id: collect
-        run: |
-          files_array=()
-          has_web_build="false"
-          
-          # Find files in web-artifacts directory
-          while IFS= read -r -d '' file; do
-            files_array+=("$file")
-            has_web_build="true"
-          done < <(find build/web-artifacts -type f -print0 2>/dev/null || true)
-          
-          # Add tar.gz file if it exists
-          if [ -f "klyx-${{ env.APP_VERSION }}-web.tar.gz" ]; then
-            files_array+=("klyx-${{ env.APP_VERSION }}-web.tar.gz")
-            has_web_build="true"
-          fi
-          
-          # Convert to JSON array
-          if [ ${#files_array[@]} -eq 0 ]; then
-            echo "files=[]" >> $GITHUB_OUTPUT
-          else
-            printf -v files_json '%s\n' "${files_array[@]}" | jq -R . | jq -s -c .
-            echo "files=$files_json" >> $GITHUB_OUTPUT
-          fi
-          
-          echo "has_web_build=$has_web_build" >> $GITHUB_OUTPUT
-
-  upload-web-artifacts:
-    name: Upload Web Artifacts
-    needs: build-web-app
-    if: ${{ needs.build-web-app.outputs.files != '[]' && needs.build-web-app.outputs.files != '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        file: ${{ fromJson(needs.build-web-app.outputs.files) }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Get basename
-        run: echo "file_name=$(basename '${{ matrix.file }}')" >> $GITHUB_ENV
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload web package
+        uses: actions/upload-artifact@v4
+        if: hashFiles('klyx-*-web.tar.gz') != ''
         with:
-          name: ${{ env.file_name }}
-          path: ${{ matrix.file }}
+          name: klyx-web-package
+          path: 'klyx-*-web.tar.gz'
+          retention-days: 30
+
+      - name: Upload web files
+        uses: actions/upload-artifact@v4
+        if: hashFiles('build/dist/js/productionExecutable/**/*') != ''
+        with:
+          name: klyx-web-files
+          path: build/dist/js/productionExecutable/**/*
           retention-days: 30
 
   deploy-web:
     name: Deploy Web to GitHub Pages
     needs: build-web-app
-    if: ${{ needs.build-web-app.outputs.has_web_build == 'true' }}
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -541,11 +381,31 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+      - run: chmod +x gradlew
 
-      - name: Rebuild web for deployment
+      - name: Build web for deployment
         run: |
-          chmod +x gradlew
-          ./gradlew jsBrowserDistribution
+          if ./gradlew tasks --all | grep -q "jsBrowserDistribution"; then
+            ./gradlew jsBrowserDistribution
+          else
+            echo "No web build task available"
+            exit 1
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

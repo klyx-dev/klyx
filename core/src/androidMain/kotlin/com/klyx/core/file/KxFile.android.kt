@@ -143,20 +143,8 @@ fun DocumentFile.toKxFile(): KxFile = KxFile(this)
 
 private fun emptyByteArray() = ByteArray(0)
 
-fun File.toKxFile(): KxFile = KxFile(absolutePath)
-
-fun KxFile.rawFile(): File = File(absolutePath)
-fun KxFile.toPath(): Path = rawFile().toPath()
-fun Path.toKxFile() = toFile().toKxFile()
-
 fun File.asDocumentFile(): DocumentFile = DocumentFile.fromFile(this)
 fun KxFile(file: File): KxFile = KxFile(file.asDocumentFile())
-
-actual fun KxFile(path: String): KxFile = KxFile(File(path))
-actual fun KxFile(parent: KxFile, child: String): KxFile = KxFile(File(parent.absolutePath, child))
-actual fun KxFile(parent: String, child: String): KxFile = KxFile(File(parent, child))
-actual fun KxFile(parent: KxFile, child: KxFile): KxFile =
-    KxFile(File(parent.absolutePath, parent.name))
 
 fun KxFile.extractZip(outputDir: File) {
     inputStream()?.use { inputStream ->

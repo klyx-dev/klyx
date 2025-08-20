@@ -38,16 +38,6 @@ fun keyShortcutOf(
     meta: Boolean = false
 ): KeyShortcut = KeyShortcut(ctrl, shift, alt, meta, key)
 
-@Deprecated(
-    message = "Use `keyShortcutOf(key, ctrl, shift, alt, meta)` instead.",
-    replaceWith = ReplaceWith("keyShortcutOf(key, ctrl, shift, alt, meta)")
-)
-fun keyShortcutOf(
-    shortcut: String,
-): KeyShortcut {
-    return parseShortcut(shortcut).shortcuts.first()
-}
-
 fun Iterable<KeyShortcut>.sequence(): KeyShortcutSequence {
     return KeyShortcutSequence(shortcuts = toList())
 }
@@ -66,46 +56,6 @@ data class KeyShortcutSequence(
         currentIndex++
         return isComplete()
     }
-}
-
-@Deprecated(
-    message = "Should not be used."
-)
-fun parseShortcut(shortcut: String): KeyShortcutSequence {
-    return KeyShortcutSequence(
-        shortcuts = shortcut.split(" ").map { token ->
-            val parts = token.split("-")
-            val key = when (val last = parts.last().lowercase()) {
-                "," -> Key.Comma
-                "." -> Key.Period
-                ";" -> Key.Semicolon
-                "esc" -> Key.Escape
-                "del" -> Key.Delete
-                "enter" -> Key.Enter
-                "space" -> Key.Spacebar
-                "up" -> Key.DirectionUp
-                "down" -> Key.DirectionDown
-                "left" -> Key.DirectionLeft
-                "right" -> Key.DirectionRight
-                "tab" -> Key.Tab
-                "backspace" -> Key.Backspace
-                "home" -> Key.MoveHome
-                "end" -> Key.MoveEnd
-                "insert" -> Key.Insert
-                else -> Key.Companion::class.members.firstOrNull {
-                    it.name.equals(last, true)
-                }?.call(Key.Companion) as? Key ?: Key(last.first().code.toLong())
-            }
-
-            KeyShortcut(
-                key = key,
-                ctrl = parts.any { it.equals("Ctrl", true) },
-                shift = parts.any { it.equals("Shift", true) },
-                alt = parts.any { it.equals("Alt", true) },
-                meta = parts.any { it.equals("Meta", true) }
-            )
-        }
-    )
 }
 
 fun KeyEvent.matches(shortcut: KeyShortcut): Boolean {

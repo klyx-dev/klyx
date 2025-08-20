@@ -58,16 +58,5 @@ actual open class KxFile(
     actual fun source(): Source = inputStream().asSource().buffered().peek()
 }
 
-fun File.toKxFile(): KxFile = KxFile(this)
-
-fun KxFile.rawFile(): File = File(absolutePath)
-fun KxFile.toPath(): Path = rawFile().toPath()
-fun Path.toKxFile() = toFile().toKxFile()
-
 fun KxFile.inputStream() = rawFile().inputStream()
 fun KxFile.outputStream() = rawFile().outputStream()
-
-actual fun KxFile(path: String): KxFile = KxFile(File(path))
-actual fun KxFile(parent: KxFile, child: String): KxFile = KxFile(File(parent.absolutePath, child))
-actual fun KxFile(parent: String, child: String): KxFile = KxFile(File(parent, child))
-actual fun KxFile(parent: KxFile, child: KxFile): KxFile = KxFile(File(parent.absolutePath, child.name))

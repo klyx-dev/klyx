@@ -19,11 +19,4 @@ expect object Environment {
     val LogsDir: String
 }
 
-fun printAllSystemProperties() {
-    val properties = System.getProperties()
-    properties.forEach { key, value ->
-        println("$key = $value")
-    }
-}
-
 expect fun string(resource: StringResource, vararg formatArgs: Any?): String

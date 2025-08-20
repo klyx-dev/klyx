@@ -1,4 +1,5 @@
 import com.klyx.Configs
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -6,6 +7,7 @@ plugins {
     alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlinxAtomicfu)
 }
 
 kotlin {
@@ -43,34 +45,43 @@ kotlin {
         androidMain.get().dependsOn(commonJvmAndroid)
         jvmMain.get().dependsOn(commonJvmAndroid)
 
-        commonMain.dependencies {
-            api(libs.koin.compose)
+        commonMain {
+            languageSettings {
+                @OptIn(ExperimentalKotlinGradlePluginApi::class)
+                compilerOptions {
+                    freeCompilerArgs.addAll("-Xexpect-actual-classes")
+                }
+            }
 
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
+            dependencies {
+                api(libs.koin.compose)
 
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.json5k)
-            implementation(libs.ktoml.core)
-            implementation(libs.ktor.client.core)
-            implementation(libs.ktor.client.cio)
-            implementation(libs.commons.compress)
-            api(libs.koin.core)
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
+                implementation(compose.ui)
+                implementation(compose.components.resources)
+                implementation(compose.components.uiToolingPreview)
+                implementation(libs.androidx.lifecycle.viewmodel)
+                implementation(libs.androidx.lifecycle.runtimeCompose)
 
-            implementation(kotlin("reflect"))
-            api(libs.kotlinx.io.core)
-            api(libs.okio)
-            implementation(libs.kotlinx.coroutines.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.json5k)
+                implementation(libs.ktoml.core)
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.cio)
+                implementation(libs.commons.compress)
+                api(libs.koin.core)
 
-            api(libs.kotlin.result)
-            implementation(projects.shared)
+                implementation(kotlin("reflect"))
+                api(libs.kotlinx.io.core)
+                api(libs.okio)
+                implementation(libs.kotlinx.coroutines.core)
+
+                api(libs.kotlin.result)
+                implementation(projects.shared)
+            }
         }
 
         commonJvmAndroid.dependencies {
@@ -90,4 +101,8 @@ kotlin {
             }
         }
     }
+}
+
+atomicfu {
+    transformJvm = false
 }

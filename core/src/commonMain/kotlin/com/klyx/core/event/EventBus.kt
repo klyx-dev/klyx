@@ -4,6 +4,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.klyx.core.atomic.atomicMapOf
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,7 +19,6 @@ import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 
 class EventBus private constructor() {
@@ -26,8 +26,8 @@ class EventBus private constructor() {
         val instance by lazy { EventBus() }
     }
 
-    private val eventChannels = ConcurrentHashMap<KClass<*>, Channel<Any>>()
-    private val eventFlows = ConcurrentHashMap<KClass<*>, SharedFlow<Any>>()
+    private val eventChannels = atomicMapOf<KClass<*>, Channel<Any>>()
+    private val eventFlows = atomicMapOf<KClass<*>, SharedFlow<Any>>()
 
     @PublishedApi
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

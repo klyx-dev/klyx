@@ -1,11 +1,16 @@
 package com.klyx.core.file
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
-
-// https://github.com/vishna/watchservice-ktx
+import kotlinx.coroutines.channels.ChannelIterator
+import kotlinx.coroutines.channels.ChannelResult
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.selects.SelectClause1
+import kotlinx.coroutines.selects.SelectClause2
 
 /**
  * Channel based wrapper for Java's WatchService
@@ -16,9 +21,8 @@ import kotlinx.coroutines.channels.Channel
  * watching a single directory or watching directory tree recursively
  * @param [tag] - any kind of data that should be associated with this channel, optional
  */
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 @OptIn(DelicateCoroutinesApi::class)
-expect class KWatchChannel(
+expect open class KWatchChannel(
     file: KxFile,
     scope: CoroutineScope = GlobalScope,
     mode: Mode,
@@ -29,6 +33,28 @@ expect class KWatchChannel(
     val scope: CoroutineScope
     val mode: Mode
     val tag: Any?
+
+    @DelicateCoroutinesApi
+    override val isClosedForSend: Boolean
+    override val onSend: SelectClause2<KWatchEvent, SendChannel<KWatchEvent>>
+    override suspend fun send(element: KWatchEvent)
+    override fun trySend(element: KWatchEvent): ChannelResult<Unit>
+    override fun close(cause: Throwable?): Boolean
+    override fun invokeOnClose(handler: (Throwable?) -> Unit)
+
+    @DelicateCoroutinesApi
+    override val isClosedForReceive: Boolean
+
+    @ExperimentalCoroutinesApi
+    override val isEmpty: Boolean
+    override val onReceive: SelectClause1<KWatchEvent>
+    override val onReceiveCatching: SelectClause1<ChannelResult<KWatchEvent>>
+    override suspend fun receive(): KWatchEvent
+    override suspend fun receiveCatching(): ChannelResult<KWatchEvent>
+    override fun tryReceive(): ChannelResult<KWatchEvent>
+    override fun iterator(): ChannelIterator<KWatchEvent>
+    override fun cancel(cause: CancellationException?)
+    override fun cancel(cause: Throwable?): Boolean
 }
 
 /**
@@ -73,3 +99,11 @@ fun KxFile.asWatchChannel(
     scope = scope,
     tag = tag
 )
+
+@OptIn(DelicateCoroutinesApi::class)
+expect fun KWatchChannel(
+    file: KxFile,
+    mode: Mode,
+    scope: CoroutineScope = GlobalScope,
+    tag: Any? = null
+): KWatchChannel

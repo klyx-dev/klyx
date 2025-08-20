@@ -3,6 +3,7 @@ package com.klyx.core.file
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import java.nio.file.FileSystems
@@ -17,6 +18,14 @@ import java.nio.file.WatchKey
 import java.nio.file.WatchService
 import java.nio.file.attribute.BasicFileAttributes
 
+@OptIn(markerClass = [DelicateCoroutinesApi::class])
+actual fun KWatchChannel(
+    file: KxFile,
+    mode: Mode,
+    scope: CoroutineScope,
+    tag: Any?
+) = KWatchChannel(file, scope, mode, tag)
+
 /**
  * Channel based wrapper for Java's WatchService
  *
@@ -27,8 +36,7 @@ import java.nio.file.attribute.BasicFileAttributes
  * @param [tag] - any kind of data that should be associated with this channel, optional
  */
 @OptIn(DelicateCoroutinesApi::class)
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-actual class KWatchChannel actual constructor(
+actual open class KWatchChannel actual constructor(
     actual val file: KxFile,
     actual val scope: CoroutineScope,
     actual val mode: Mode,
@@ -55,8 +63,16 @@ actual class KWatchChannel actual constructor(
         }
         if (mode == Mode.Recursive) {
             Files.walkFileTree(path, object : SimpleFileVisitor<Path>() {
-                override fun preVisitDirectory(subPath: Path, attrs: BasicFileAttributes): FileVisitResult {
-                    registeredKeys += subPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE)
+                override fun preVisitDirectory(
+                    subPath: Path,
+                    attrs: BasicFileAttributes
+                ): FileVisitResult {
+                    registeredKeys += subPath.register(
+                        watchService,
+                        ENTRY_CREATE,
+                        ENTRY_MODIFY,
+                        ENTRY_DELETE
+                    )
                     return FileVisitResult.CONTINUE
                 }
             })
@@ -129,7 +145,7 @@ actual class KWatchChannel actual constructor(
         }
     }
 
-    override fun close(cause: Throwable?): Boolean {
+    actual override fun close(cause: Throwable?): Boolean {
         registeredKeys.apply {
             forEach { it.cancel() }
             clear()

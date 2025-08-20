@@ -1,7 +1,6 @@
 package com.klyx.core.cmd
 
 import com.klyx.core.cmd.key.KeyShortcut
-import com.klyx.core.cmd.key.keyShortcutOf
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -40,17 +39,6 @@ class CommandBuilder {
 
     fun description(description: String?) = apply {
         this.description = description?.takeIf { it.isNotBlank() }
-    }
-
-    @Deprecated(
-        message = "Use `shortcut` instead.",
-        replaceWith = ReplaceWith("shortcut(keyShortcutOf(shortcutKey))")
-    )
-    fun shortcutKey(shortcutKey: String?) = apply {
-        shortcutKey?.takeIf { it.isNotBlank() }?.let {
-            @Suppress("DEPRECATION")
-            shortcut(keyShortcutOf(it))
-        }
     }
 
     fun shortcut(vararg shortcut: KeyShortcut) = apply {

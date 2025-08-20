@@ -30,8 +30,6 @@ import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
-import com.klyx.core.isDebug
-import com.klyx.core.printAllSystemProperties
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
 import com.klyx.viewmodel.EditorViewModel

@@ -1,7 +1,5 @@
 package com.klyx.core.file
 
-// https://github.com/vishna/watchservice-ktx
-
 /**
  * Wrapper around [WatchEvent] that comes with properly resolved absolute path
  */
