@@ -44,6 +44,18 @@ kotlin {
         jvmMain.get().dependsOn(commonJvmAndroid)
 
         commonMain.dependencies {
+            api(libs.koin.compose)
+
+            implementation(compose.runtime)
+            implementation(compose.foundation)
+            implementation(compose.material3)
+            implementation(compose.materialIconsExtended)
+            implementation(compose.ui)
+            implementation(compose.components.resources)
+            implementation(compose.components.uiToolingPreview)
+            implementation(libs.androidx.lifecycle.viewmodel)
+            implementation(libs.androidx.lifecycle.runtimeCompose)
+
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.json5k)
             implementation(libs.ktoml.core)
@@ -62,17 +74,7 @@ kotlin {
         }
 
         commonJvmAndroid.dependencies {
-            api(libs.koin.compose)
 
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
         }
 
         commonTest.dependencies {
