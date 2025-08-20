@@ -1,3 +1,5 @@
+@file:Suppress("SpreadOperator")
+
 package com.klyx.terminal
 
 import android.content.Context
@@ -20,17 +22,19 @@ fun ubuntuProcess(
     contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
 
     if (!ubuntuDir.exists() || ubuntuDir.list()?.isEmpty() == true) {
-        throw RuntimeException("Ubuntu rootfs is not initialized")
+        error("Ubuntu rootfs is not initialized")
     }
 
     return process(
-        linker,
-        "${klyxBinDir.absolutePath}/proot",
-        *buildProotArgs(
-            currentUser,
-            withInitScript = false,
-            loginUser = loginUser,
-            commands = commands
+        arrayOf(
+            linker,
+            "${klyxBinDir.absolutePath}/proot",
+            *buildProotArgs(
+                currentUser,
+                withInitScript = false,
+                loginUser = loginUser,
+                commands = commands
+            )
         )
     ) {
         env(

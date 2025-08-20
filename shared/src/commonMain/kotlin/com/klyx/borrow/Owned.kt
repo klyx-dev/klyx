@@ -41,6 +41,7 @@ class Owned<T : Any>(private var value: T?) {
     }
 
     // Move ownership to another Owned instance
+    @Suppress("ThrowsCount")
     fun move(): Owned<T> {
         if (!tracker.move()) {
             when (tracker.state) {

@@ -64,11 +64,15 @@ actual object CommandManager {
         showCommandPalette = false
     }
 
-    actual fun addCommand(vararg command: Command) {
-        commands.addAll(command)
+    actual fun addCommand(command: Command) {
+        commands.add(command)
     }
 
     actual fun addRecentlyUsedCommand(command: Command) {
         recentlyUsedCommands.add(command)
+    }
+
+    actual fun addCommand(commands: Array<Command>) {
+        this.commands.addAll(commands)
     }
 }

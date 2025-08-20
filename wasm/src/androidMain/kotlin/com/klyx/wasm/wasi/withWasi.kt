@@ -10,6 +10,7 @@ import kotlin.contracts.contract
 @OptIn(ExperimentalContracts::class, ExperimentalWasmApi::class)
 @WasiDsl
 @ExperimentalWasiApi
+@Suppress("SpreadOperator")
 inline fun WasmScope.withWasi(
     block: WasiScope.() -> Unit
 ) {

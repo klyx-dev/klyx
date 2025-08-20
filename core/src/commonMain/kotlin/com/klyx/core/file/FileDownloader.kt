@@ -52,6 +52,7 @@ class FileDownloader(
     private val fs = FileSystem.SYSTEM
     private var downloadJobs = mutableMapOf<String, Job>()
 
+    @Suppress("CyclomaticComplexMethod")
     fun downloadWithProgress(
         url: String,
         destinationPath: String,
@@ -114,6 +115,7 @@ class FileDownloader(
                     }
                 }
             } else {
+                @Suppress("TooGenericExceptionThrown")
                 throw Exception("Failed to download file: ${response.status}")
             }
         } catch (e: Exception) {
@@ -148,7 +150,7 @@ class FileDownloader(
 
             val path = destinationPath.toPath(true)
             DownloadResult.Success(path.toString(), fs.metadata(path).size ?: 0L)
-        } catch (e: CancellationException) {
+        } catch (_: CancellationException) {
             destinationPath.toPath(true).let { path ->
                 if (fs.exists(path)) fs.delete(path)
             }

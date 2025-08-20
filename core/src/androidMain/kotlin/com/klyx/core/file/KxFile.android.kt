@@ -78,7 +78,7 @@ actual open class KxFile(
     }
 
     actual fun listFiles(filter: (KxFile) -> Boolean): Array<KxFile>? = run {
-        file?.listFiles { it -> filter(KxFile(it)) }?.map { KxFile(it) }?.toTypedArray()
+        file?.listFiles { file -> filter(KxFile(file)) }?.map { KxFile(it) }?.toTypedArray()
             ?: raw.listFiles().map(::KxFile).filter(filter).toTypedArray()
     }
 
@@ -140,8 +140,6 @@ private fun DocumentFile.deleteRecursively(): Boolean {
 fun Uri.isFromTermux() = host == "com.termux.documents"
 
 fun DocumentFile.toKxFile(): KxFile = KxFile(this)
-
-private fun emptyByteArray() = ByteArray(0)
 
 fun File.asDocumentFile(): DocumentFile = DocumentFile.fromFile(this)
 fun KxFile(file: File): KxFile = KxFile(file.asDocumentFile())

@@ -299,7 +299,7 @@ actual fun MainMenuBar(modifier: Modifier) {
     LaunchedEffect(Unit) {
         menuItems.values.map { it }.fastForEach { items ->
             CommandManager.addCommand(
-                *items.fastFilter { !it.isDivider }.fastMap {
+                items.fastFilter { !it.isDivider }.fastMap {
                     command {
                         name(it.title)
                         shortcut(it.shortcuts)

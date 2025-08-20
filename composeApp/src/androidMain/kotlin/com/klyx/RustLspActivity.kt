@@ -41,7 +41,6 @@ import java.io.FileOutputStream
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.ref.WeakReference
-import java.net.ServerSocket
 import java.util.zip.ZipFile
 
 class RustLspActivity : BaseEditorActivity() {
@@ -99,7 +98,7 @@ class RustLspActivity : BaseEditorActivity() {
             editor.editable = false
         }
 
-        val projectPath = filesDir?.resolve("rustProject")?.absolutePath ?: ""
+        val projectPath = filesDir?.resolve("rustProject")?.absolutePath.orEmpty()
 
         val definition = object : LanguageServerDefinition() {
             init {
@@ -124,7 +123,7 @@ class RustLspActivity : BaseEditorActivity() {
                         }
 
                         process = lp.asJavaProcessBuilder().start()
-                        //process = lp.start().process
+                        // process = lp.start().process
                     }
 
                     override fun close() {
@@ -206,13 +205,6 @@ class RustLspActivity : BaseEditorActivity() {
             text,
             Toast.LENGTH_SHORT
         ).show()
-    }
-
-    private fun randomPort(): Int {
-        val serverSocket = ServerSocket(0)
-        val port = serverSocket.localPort
-        serverSocket.close()
-        return port
     }
 
     private fun createTextMateLanguage(): TextMateLanguage {

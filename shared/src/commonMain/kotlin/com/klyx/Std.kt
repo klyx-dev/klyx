@@ -24,7 +24,7 @@ fun <A, B, C> tripleOf(a: A, b: B, c: C) = Triple(a, b, c)
 fun <A, B, C> Pair<A, B>.toTriple(c: C) = Triple(first, second, c)
 
 fun <T> T?.asResult(): Result<T> = run {
-    if (this != null) Result.success(this) else Result.failure(NullPointerException())
+    if (this != null) Result.success(this) else Result.failure(NullPointerException("Value is null"))
 }
 
 fun Pair<Long, Long>.asIntPair() = first.toInt() to second.toInt()

@@ -36,7 +36,9 @@ class MenuItemBuilder {
     fun title(resource: StringResource) = title(string(resource))
 
     fun shortcut(vararg shortcut: KeyShortcut) = apply { shortcuts += shortcut }
-    fun shortcut(shortcuts: Collection<KeyShortcut>) = shortcut(*shortcuts.toTypedArray())
+    fun shortcut(shortcuts: Collection<KeyShortcut>) = apply {
+        this.shortcuts += shortcuts
+    }
 
     fun divider() = apply { isDivider = true }
     fun dismissRequestOnClicked(value: Boolean) = apply { dismissRequestOnClicked = value }

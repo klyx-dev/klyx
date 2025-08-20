@@ -9,4 +9,4 @@ package com.klyx.wasm.wasi
     AnnotationTarget.TYPEALIAS,
     AnnotationTarget.VALUE_PARAMETER
 )
-annotation class ExperimentalWasiApi()
+annotation class ExperimentalWasiApi

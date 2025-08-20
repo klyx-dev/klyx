@@ -55,7 +55,7 @@ actual class CodeEditorState actual constructor(
 
     @PublishedApi
     internal fun editorNotInitialized(): Nothing {
-        throw IllegalStateException("Editor not initialized")
+        error("Editor not initialized")
     }
 
     actual operator fun getValue(

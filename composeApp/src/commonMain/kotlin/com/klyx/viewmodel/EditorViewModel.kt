@@ -204,6 +204,7 @@ class EditorViewModel(
                 val text by editorState
                 newFile.writeText(text)
             } catch (e: Exception) {
+                notifier.error(e.message.orEmpty())
                 return false
             }
 
@@ -233,6 +234,7 @@ class EditorViewModel(
                         file.writeText(text)
                         true
                     } catch (e: Exception) {
+                        notifier.error(e.message.orEmpty())
                         false
                     }
 

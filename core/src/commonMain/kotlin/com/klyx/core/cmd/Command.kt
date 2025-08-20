@@ -45,7 +45,9 @@ class CommandBuilder {
         shortcuts += shortcut
     }
 
-    fun shortcut(shortcuts: Collection<KeyShortcut>) = shortcut(*shortcuts.toTypedArray())
+    fun shortcut(shortcuts: Collection<KeyShortcut>) = apply {
+        this.shortcuts += shortcuts
+    }
 
     @OptIn(ExperimentalTypeInference::class)
     fun execute(@BuilderInference block: Command.() -> Unit) = apply {

@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.klyx.wasm
 
 import kotlin.contracts.ExperimentalContracts

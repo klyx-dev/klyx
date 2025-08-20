@@ -14,7 +14,8 @@ expect object CommandManager {
 
     fun hidePalette()
 
-    fun addCommand(vararg command: Command)
+    fun addCommand(command: Command)
+    fun addCommand(commands: Array<Command>)
 
     fun addRecentlyUsedCommand(command: Command)
 }

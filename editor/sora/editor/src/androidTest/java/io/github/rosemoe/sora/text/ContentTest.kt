@@ -25,7 +25,8 @@
 package io.github.rosemoe.sora.text
 
 import android.util.Log
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 import kotlin.random.Random
 import kotlin.random.nextInt
@@ -51,9 +52,11 @@ class ContentTest {
 
     @Test
     fun testImmutableContentIndexerQueries() {
-        val content = Content("POM_SCM_URL=https://github.com/Rosemoe/sora-editor/tree/master\r\n" +
-                "POM_SCM_CONNECTION=scm:git:github.com/Rosemoe/sora-editor.git\r\n" +
-                "POM_SCM_DEV_CONNECTION=scm:git:ssh://github.com/Rosemoe/sora-editor.git")
+        val content = Content(
+            "POM_SCM_URL=https://github.com/Rosemoe/sora-editor/tree/master\r\n" +
+                    "POM_SCM_CONNECTION=scm:git:github.com/Rosemoe/sora-editor.git\r\n" +
+                    "POM_SCM_DEV_CONNECTION=scm:git:ssh://github.com/Rosemoe/sora-editor.git"
+        )
         val indexer = content.indexer as CachedIndexer
         val expected = CharPosition().also {
             it.index = 63
@@ -103,7 +106,7 @@ class ContentTest {
         val random = Random(seed)
         val charset = "asdfghjklqwertyuiopzxcvbnm0123456789\n\n\n"
 
-        fun generateRandomInsertionText() : CharSequence {
+        fun generateRandomInsertionText(): CharSequence {
             val sb = StringBuilder()
             for (i in 1..50) {
                 sb.append(charset.random(random))
@@ -111,7 +114,10 @@ class ContentTest {
             return sb
         }
 
-        Log.v(this.javaClass.simpleName, "testBasicRandomInsertions: Random object is initialized with seed $seed")
+        Log.v(
+            this.javaClass.simpleName,
+            "testBasicRandomInsertions: Random object is initialized with seed $seed"
+        )
 
         for (i in 0 until 1000) {
             val text = generateRandomInsertionText()

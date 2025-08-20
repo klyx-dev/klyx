@@ -14,7 +14,7 @@ class WasmHostCallable internal constructor(
     private val memory by lazy { instance.memory }
 
     operator fun invoke(vararg args: Any?) = run {
-        val result = function.call(*buildArgs(args))
+        val result = function.call(buildArgs(args))
         result?.get(0)?.asPointer() ?: Pointer.Invalid
     }
 
@@ -64,4 +64,5 @@ internal fun ExportFunction.toWasmHostCallable(instance: WasmInstance): WasmHost
     return WasmHostCallable(instance, this)
 }
 
-private fun ExportFunction.call(vararg args: Long) = apply(*args)
+@Suppress("SpreadOperator")
+private fun ExportFunction.call(args: LongArray) = apply(*args)

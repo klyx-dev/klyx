@@ -82,13 +82,13 @@ class WasmScope @PublishedApi internal constructor() : AutoCloseable {
         moduleName: ModuleName = "env",
         implementation: FunctionScope.(args: LongArray) -> LongArray?
     ) = apply {
-        val _params = params.flatMap { it.valTypes }
-        val _results = results.flatMap { it.valTypes }
+        val parameters = params.flatMap { it.valTypes }
+        val reslts = results.flatMap { it.valTypes }
 
         store.addFunction(
             HostFunction(
                 moduleName, name,
-                FunctionType.of(_params, _results)
+                FunctionType.of(parameters, reslts)
             ) { instance, args ->
                 FunctionScope(instance.asWasmInstance(), args).run { implementation(args) }
             }

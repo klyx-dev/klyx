@@ -397,8 +397,9 @@ inline fun process(
 }
 
 @OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
+@Suppress("SpreadOperator")
 inline fun process(
-    vararg commands: String,
+    commands: Array<String>,
     @BuilderInference
     block: ProcessBuilder.() -> Unit = {}
 ): ProcessBuilder {
@@ -412,11 +413,11 @@ fun String.executeBlocking() = process(this).executeBlocking()
 suspend fun String.start() = process(this).start()
 fun String.startBlocking() = process(this).startBlocking()
 
-suspend fun List<String>.execute() = process(*this.toTypedArray()).execute()
-fun Collection<String>.executeBlocking() = process(*this.toTypedArray()).executeBlocking()
+suspend fun List<String>.execute() = process(toTypedArray()).execute()
+fun Collection<String>.executeBlocking() = process(toTypedArray()).executeBlocking()
 
-suspend fun List<String>.start() = process(*this.toTypedArray()).start()
-fun Collection<String>.startBlocking() = process(*this.toTypedArray()).startBlocking()
+suspend fun List<String>.start() = process(toTypedArray()).start()
+fun Collection<String>.startBlocking() = process(toTypedArray()).startBlocking()
 
 infix fun ProcessBuilder.pipe(other: ProcessBuilder): PipeBuilder {
     return PipeBuilder(listOf(this, other))

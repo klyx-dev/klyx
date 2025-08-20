@@ -32,7 +32,6 @@ class RustLanguageServerService : Service() {
         private const val TAG = "RustLanguageServer"
     }
 
-    private var rustAnalyzerProcess: Process? = null
     private val serviceScope = CoroutineScope(Dispatchers.IO)
 
     override fun onBind(intent: Intent): IBinder? {
@@ -42,7 +41,7 @@ class RustLanguageServerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         thread {
             val port = intent?.getIntExtra("port", 0) ?: 0
-            val projectPath = intent?.getStringExtra("projectPath") ?: ""
+            val projectPath = intent?.getStringExtra("projectPath").orEmpty()
 
             val socket = ServerSocket(port)
             Log.d(TAG, "Starting Rust Language Server socket on port ${socket.localPort}")
@@ -57,7 +56,7 @@ class RustLanguageServerService : Service() {
                     }
                 }
 
-                val rustAnalyzerProcess = localProcess("rust-analyzer") {
+                val rustAnalyzerProcess = localProcess(arrayOf("rust-analyzer")) {
                     env("RUST_LOG", "rust_analyzer=info")
                     workingDirectory(projectPath)
                 }.startBlocking()
@@ -74,7 +73,7 @@ class RustLanguageServerService : Service() {
                     socketClient.outputStream
                 )
 
-                val server = launcher.remoteProxy
+                launcher.remoteProxy
 
                 // Start listening for LSP messages
                 val listening = launcher.startListening()
@@ -109,7 +108,6 @@ class RustLanguageServerService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        rustAnalyzerProcess?.destroy()
         Log.d(TAG, "Rust Language Server Service destroyed")
     }
 

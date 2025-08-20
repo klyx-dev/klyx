@@ -109,8 +109,8 @@ fun WasmMemory.readLoweredString(ptr: Pointer) = readLoweredString(ptr.raw.i32)
 @ExperimentalWasmApi
 fun WasmMemory.readStringList(addr: Int, len: Int? = null) = run {
     val ptr = uint32(addr)
-    val len = len?.toUInt() ?: uint32(addr + 4)
-    (0u until len).map { i -> readLoweredString(ptr + i * 8u) }
+    val ulen = len?.toUInt() ?: uint32(addr + 4)
+    (0u until ulen).map { i -> readLoweredString(ptr + i * 8u) }
 }
 
 /**

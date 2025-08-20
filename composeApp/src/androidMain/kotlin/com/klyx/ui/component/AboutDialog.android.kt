@@ -16,12 +16,12 @@ actual fun AboutDialog(onDismissRequest: () -> Unit) {
         text = {
             Text(
                 """
-            Klyx ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})
+                Klyx ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})
             
-            Platform: ${platform().name}
-            OS (kernel) name: ${platform().os}
-            OS architecture: ${platform().architecture}
-        """.trimIndent()
+                Platform: ${platform().name}
+                OS (kernel) name: ${platform().os}
+                OS architecture: ${platform().architecture}
+            """.trimIndent()
             )
         },
         shape = RoundedCornerShape(12.dp),

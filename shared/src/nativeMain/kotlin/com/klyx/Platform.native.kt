@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package com.klyx
 
 import kotlin.experimental.ExperimentalNativeApi

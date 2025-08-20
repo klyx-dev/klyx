@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import com.klyx.core.LocalAppSettings
-import com.klyx.core.LocalBuildVariant
 import com.klyx.core.LocalNotifier
 import com.klyx.core.LocalSharedPreferences
 import com.klyx.core.SharedLocalProvider
@@ -43,7 +42,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SharedLocalProvider {
-                val buildVariant = LocalBuildVariant.current
                 val notifier = LocalNotifier.current
                 val prefs = LocalSharedPreferences.current
 

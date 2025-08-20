@@ -22,14 +22,9 @@ suspend fun downloadRootFs(
     onComplete: suspend (outPath: String) -> Unit = {},
     onError: suspend (error: Throwable) -> Unit = {}
 ) {
-    fun throwError(error: Throwable): Nothing {
-        throw RuntimeException("Failed to download rootfs", error)
-    }
-
     val rootFsPath = "${context.cacheDir.absolutePath}/ubuntu.tar.gz"
     ubuntuFlow(rootFsPath).onCompletion { error ->
         if (error != null) {
-            //throwError(error)
             error.printStackTrace()
             onError(error)
         } else {
@@ -44,7 +39,7 @@ suspend fun downloadRootFs(
 context(context: Context)
 suspend fun setupRootFs(path: String) = run {
     fun failedToExtract(name: String): Nothing {
-        throw RuntimeException("Failed to extract $name")
+        error("Failed to extract $name")
     }
 
     if (!ubuntuDir.exists()) ubuntuDir.mkdirs()
@@ -84,6 +79,7 @@ suspend fun setupRootFs(path: String) = run {
 }
 
 context(context: Context)
+@Suppress("TooGenericExceptionThrown")
 suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {}) {
     val outFile = File(context.cacheDir, "$name.tar.gz")
     packageUrl(name).downloadToWithProgress(outFile.absolutePath)
@@ -95,7 +91,7 @@ suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {
 suspend fun extractTarGz(
     inputPath: String,
     outputPath: String
-) = process("tar", "-xzf", inputPath, "-C", outputPath) {
+) = process(arrayOf("tar", "-xzf", inputPath, "-C", outputPath)) {
     val logger = logger("ExtractTarGz")
 
     onError(logger::e)

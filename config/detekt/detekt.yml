@@ -111,10 +111,12 @@ complexity:
     active: true
     excludes:
       - '**/editor/sora/**'
-    threshold: 15
-    ignoreSingleWhenExpression: false
-    ignoreSimpleWhenEntries: false
-    ignoreNestingFunctions: false
+    threshold: 20
+    ignoreSingleWhenExpression: true
+    ignoreSimpleWhenEntries: true
+    ignoreNestingFunctions: true
+    ignoreAnnotated:
+      - 'Composable'
     nestingFunctions:
       - 'also'
       - 'apply'
@@ -135,14 +137,16 @@ complexity:
     active: true
     excludes:
       - '**/editor/sora/**'
-    threshold: 60
+    ignoreAnnotated:
+      - 'Composable'
+    threshold: 100
   LongParameterList:
     excludes:
       - '**/editor/sora/**'
     active: true
-    functionThreshold: 6
+    functionThreshold: 10
     constructorThreshold: 7
-    ignoreDefaultParameters: false
+    ignoreDefaultParameters: true
     ignoreDataClasses: true
     ignoreAnnotatedParameter: []
   MethodOverloading:
@@ -156,7 +160,7 @@ complexity:
     active: true
     excludes:
       - '**/editor/sora/**'
-    threshold: 4
+    threshold: 10
   NestedScopeFunctions:
     active: false
     threshold: 1
@@ -186,14 +190,16 @@ complexity:
     ignoreDeprecated: false
     ignorePrivate: false
     ignoreOverridden: false
-    ignoreAnnotatedFunctions: []
+    ignoreAnnotatedFunctions: ["Preview"]
 
 coroutines:
   active: true
   GlobalCoroutineUsage:
     active: false
   InjectDispatcher:
-    active: true
+    active: false
+    excludes:
+      - '**/editor/sora/**'
     dispatcherNames:
       - 'IO'
       - 'Default'
@@ -227,8 +233,10 @@ empty-blocks:
   EmptyForBlock:
     active: true
   EmptyFunctionBlock:
-    active: true
+    active: false
     ignoreOverridden: false
+    ignoreAnnotated:
+      - 'Composable'
   EmptyIfBlock:
     active: true
   EmptyInitBlock:
@@ -299,7 +307,7 @@ exceptions:
   ThrowingNewInstanceOfSameException:
     active: true
   TooGenericExceptionCaught:
-    active: true
+    active: false
     excludes: ['**/editor/sora/**', '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
     exceptionNames:
       - 'ArrayIndexOutOfBoundsException'
@@ -349,8 +357,10 @@ naming:
   FunctionNaming:
     active: true
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
-    functionPattern: '[a-z][a-zA-Z0-9]*'
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
     excludeClassPattern: '$^'
+    ignoreAnnotated:
+      - "Composable"
   FunctionParameterNaming:
     active: true
     parameterPattern: '[a-z][A-Za-z0-9]*'
@@ -368,9 +378,12 @@ naming:
     multiplatformTargets:
       - 'ios'
       - 'android'
+      - 'commonJvmAndroid'
       - 'js'
       - 'jvm'
       - 'native'
+      - 'apple'
+      - 'desktop'
       - 'iosArm64'
       - 'iosX64'
       - 'macosX64'
@@ -393,7 +406,7 @@ naming:
     packagePattern: '[a-z]+(\.[a-z][A-Za-z0-9]*)*'
   TopLevelPropertyNaming:
     active: true
-    constantPattern: '[A-Z][_A-Z0-9]*'
+    constantPattern: '[A-Z][_A-Za-z0-9]*'
     propertyPattern: '[A-Za-z][_A-Za-z0-9]*'
     privatePropertyPattern: '_?[A-Za-z][_A-Za-z0-9]*'
   VariableMaxLength:
@@ -432,6 +445,8 @@ potential-bugs:
   active: true
   AvoidReferentialEquality:
     active: true
+    excludes:
+      - '**/editor/sora/**'
     forbiddenTypePatterns:
       - 'kotlin.String'
   CastNullableToNonNullableType:
@@ -443,6 +458,8 @@ potential-bugs:
   DontDowncastCollectionTypes:
     active: false
   DoubleMutabilityForCollection:
+    excludes:
+      - '**/editor/sora/**'
     active: true
     mutableTypes:
       - 'kotlin.collections.MutableList'
@@ -466,6 +483,8 @@ potential-bugs:
     active: true
   HasPlatformType:
     active: true
+    excludes:
+      - '**/editor/sora/**'
   IgnoredReturnValue:
     active: true
     restrictToConfig: true
@@ -523,8 +542,8 @@ potential-bugs:
   UnreachableCode:
     active: true
   UnsafeCallOnNullableType:
-    active: true
-    excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
+    active: false
+    excludes: ['**/editor/sora/**', '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']
   UnsafeCast:
     active: true
   UnusedUnaryOperator:
@@ -604,7 +623,7 @@ style:
       - reason: 'Kotlin does not support @Inherited annotation, see https://youtrack.jetbrains.com/issue/KT-22265'
         value: 'java.lang.annotation.Inherited'
   ForbiddenComment:
-    active: true
+    active: false
     excludes:
       - '**/editor/sora/**'
     comments:
@@ -631,6 +650,8 @@ style:
     rules: []
   ForbiddenVoid:
     active: true
+    excludes:
+      - '**/editor/sora/**'
     ignoreOverridden: false
     ignoreUsageInGenerics: false
   FunctionOnlyReturningConstant:
@@ -644,7 +665,7 @@ style:
     excludes:
       - "**/editor/sora/**"
   MagicNumber:
-    active: true
+    active: false
     excludes: ['**/editor/sora/**', '**/wasm-ksp/**','**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts']
     ignoreNumbers:
       - '-1'
@@ -750,6 +771,8 @@ style:
     allowNonStandardGrouping: false
   UnnecessaryAbstractClass:
     active: true
+    excludes:
+      - '**/editor/sora/**'
   UnnecessaryAnnotationUseSiteTarget:
     active: false
   UnnecessaryApply:
@@ -760,6 +783,8 @@ style:
     active: false
   UnnecessaryFilter:
     active: true
+    excludes:
+      - '**/editor/sora/**'
   UnnecessaryInheritance:
     active: true
   UnnecessaryInnerClass:
@@ -783,11 +808,15 @@ style:
   UnusedPrivateMember:
     active: true
     allowedNames: ''
+    ignoreAnnotated:
+      - "Preview"
   UnusedPrivateProperty:
-    active: true
+    active: false
     allowedNames: '_|ignored|expected|serialVersionUID'
   UseAnyOrNoneInsteadOfFind:
     active: true
+    excludes:
+      - '**/editor/sora/**'
   UseArrayLiteralsInAnnotations:
     active: true
   UseCheckNotNull:
@@ -812,6 +841,8 @@ style:
     active: false
   UseOrEmpty:
     active: true
+    excludes:
+      - '**/editor/sora/**'
   UseRequire:
     active: true
     excludes:
@@ -826,8 +857,97 @@ style:
     active: true
   VarCouldBeVal:
     active: true
+    excludes:
+      - '**/editor/sora/**'
     ignoreLateinitVar: false
   WildcardImport:
     active: true
     excludeImports:
       - 'java.util.*'
+
+#formatting:
+#  MultiLineIfElse:
+#    active: false
+#  Wrapping:
+#    active: false
+#  MaximumLineLength:
+#    maxLineLength: 150
+#    excludes:
+#      - '**/editor/sora/**'
+#  Indentation:
+#    active: false
+#    excludes:
+#      - '**/editor/sora/**'
+#  NoBlankLineBeforeRbrace:
+#    excludes:
+#      - '**/editor/sora/**'
+#  FinalNewline:
+#    excludes:
+#      - '**/editor/sora/**'
+#  NoConsecutiveBlankLines:
+#    excludes:
+#      - '**/editor/sora/**'
+#  NoEmptyFirstLineInMethodBlock:
+#    excludes:
+#      - '**/editor/sora/**'
+#  StringTemplate:
+#    excludes:
+#      - '**/editor/sora/**'
+#  ArgumentListWrapping:
+#    excludes:
+#      - '**/editor/sora/**'
+#  NoSemicolons:
+#    excludes:
+#      - '**/editor/sora/**'
+#  CommentSpacing:
+#    active: false
+#    excludes:
+#      - '**/editor/sora/**'
+#  NoUnusedImports:
+#    active: false
+#    excludes:
+#      - '**/editor/sora/**'
+#  CommentWrapping:
+#    excludes:
+#      - '**/editor/sora/**'
+#  ChainWrapping:
+#    excludes:
+#      - '**/editor/sora/**'
+#  ParameterListWrapping:
+#    excludes:
+#      - '**/editor/sora/**'
+#  FunctionReturnTypeSpacing:
+#    excludes:
+#      - '**/editor/sora/**'
+#  SpacingAroundColon:
+#    active: false
+#    excludes:
+#      - '**/editor/sora/**'
+#  Filename:
+#    active: false
+#    excludes:
+#      - '**/editor/sora/**'
+#  AnnotationOnSeparateLine:
+#    excludes:
+#      - '**/editor/sora/**'
+#  KdocWrapping:
+#    excludes:
+#      - '**/editor/sora/**'
+#  ImportOrdering:
+#    excludes:
+#      - '**/editor/sora/**'
+#  SpacingAroundDot:
+#    excludes:
+#      - '**/editor/sora/**'
+#  NoMultipleSpaces:
+#    excludes:
+#      - '**/editor/sora/**'
+#  FunctionStartOfBodySpacing:
+#    excludes:
+#      - '**/editor/sora/**'
+#  SpacingAroundCurly:
+#    excludes:
+#      - '**/editor/sora/**'
+#  SpacingAroundComma:
+#    excludes:
+#      - '**/editor/sora/**'

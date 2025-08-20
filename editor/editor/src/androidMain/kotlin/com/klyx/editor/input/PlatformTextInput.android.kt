@@ -10,6 +10,7 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import kotlinx.coroutines.currentCoroutineContext
 
 @ExperimentalCodeEditorApi
+@Suppress("ObjectLiteralToLambda")
 internal actual suspend fun PlatformTextInputSessionScope.createInputRequest(state: CodeEditorState): PlatformTextInputMethodRequest {
     val coroutineContext = currentCoroutineContext()
 

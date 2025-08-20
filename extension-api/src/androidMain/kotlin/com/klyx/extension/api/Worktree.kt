@@ -36,7 +36,7 @@ class Worktree(
     }
 
     fun which(binaryName: String): Option<String> {
-        val paths = System.getenv("PATH")?.split(File.pathSeparatorChar) ?: emptyList()
+        val paths = System.getenv("PATH")?.split(File.pathSeparatorChar).orEmpty()
 
         for (pathDir in paths) {
             val binaryPath = pathDir.toPath().resolve(binaryName)

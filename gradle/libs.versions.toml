@@ -41,6 +41,7 @@ lsp4j = "0.24.0"
 espressoCore = "3.7.0"
 appcompat = "1.7.1"
 ksp = "2.2.0-2.0.2"
+detekt = "1.23.8"
 
 [libraries]
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
@@ -93,6 +94,7 @@ kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", versio
 androidx-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
 androidx-core-test = { group = "androidx.test", name = "core", version.ref = "coreVersion" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+detekt_formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
 chicory-runtime = { module = "com.dylibso.chicory:runtime", version.ref = "chicory" }
 chicory-wasi = { module = "com.dylibso.chicory:wasi", version.ref = "chicory" }
@@ -116,3 +118,4 @@ kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", versio
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinxAtomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version = "0.29.0" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

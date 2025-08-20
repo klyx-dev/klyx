@@ -40,7 +40,7 @@ fun dropPtr(ptr: Pointer): Boolean {
         val owned = PointerRegistry.getOwned<Any>(ptr)
         owned.drop()
         true
-    } catch (e: BorrowError) {
+    } catch (_: BorrowError) {
         false
     }
 }

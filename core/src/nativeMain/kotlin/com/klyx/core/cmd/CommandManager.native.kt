@@ -18,9 +18,12 @@ actual object CommandManager {
     actual fun hidePalette() {
     }
 
-    actual fun addCommand(vararg command: Command) {
+    actual fun addCommand(command: Command) {
     }
 
     actual fun addRecentlyUsedCommand(command: Command) {
+    }
+
+    actual fun addCommand(commands: Array<Command>) {
     }
 }

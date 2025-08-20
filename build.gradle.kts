@@ -14,11 +14,16 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.kotlinAndroid) apply false
-
-    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
+    alias(libs.plugins.detekt)
 }
 
+val detektFormatting = libs.detekt.formatting
+
 allprojects {
+    apply {
+        plugin("io.gitlab.arturbosch.detekt")
+    }
+
     plugins.withId("org.jetbrains.kotlin.multiplatform") {
         extensions.configure<KotlinMultiplatformExtension> {
             sourceSets.matching { it.name == "commonMain" }.all {
@@ -31,30 +36,27 @@ allprojects {
             }
         }
     }
-}
 
-subprojects {
-    apply(plugin = "io.gitlab.arturbosch.detekt")
-
-    tasks.withType<Detekt>().configureEach {
-        config = files("$rootDir/config/detekt/detekt.yml")
+    detekt {
+        config.from(rootProject.files("config/detekt/detekt.yml"))
         buildUponDefaultConfig = true
-
         ignoreFailures = false
-        jvmTarget = "21"
-
-        reports {
-            html.required.set(true)
-            xml.required.set(true)
-            txt.required.set(true)
-            sarif.required.set(true)
-            md.required.set(true)
-        }
     }
 
     tasks.matching { it.name.startsWith("compile") }.configureEach {
         dependsOn("detekt")
     }
+
+    tasks.withType<Detekt>().configureEach {
+        exclude("**/build/**")
+        exclude {
+            it.file.relativeTo(projectDir).startsWith("build")
+        }
+    }
+
+//    dependencies {
+//        detektPlugins(detektFormatting)
+//    }
 }
 
 tasks.register("printTargets") {
@@ -70,5 +72,11 @@ tasks.register("printTargets") {
             }
         }
         println(targets.joinToString(","))
+    }
+}
+
+tasks.register("detektAll") {
+    allprojects {
+        this@register.dependsOn(tasks.withType<Detekt>())
     }
 }

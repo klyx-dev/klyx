@@ -58,7 +58,11 @@ fun KxFile.find(name: String): KxFile? = listFiles()?.find { it.name == name }
 
 fun KxFile.resolve(relative: KxFile): KxFile {
     val baseName = this.toString()
-    return if (baseName.isEmpty() || baseName.endsWith(fileSeparatorChar)) KxFile(baseName + relative) else KxFile(baseName + fileSeparatorChar + relative)
+    return if (baseName.isEmpty() || baseName.endsWith(fileSeparatorChar)) {
+        KxFile(baseName + relative)
+    } else {
+        KxFile(baseName + fileSeparatorChar + relative)
+    }
 }
 
 fun KxFile.resolve(relative: String): KxFile = resolve(KxFile(relative))

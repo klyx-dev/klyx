@@ -196,7 +196,7 @@ actual fun EditorScreen(modifier: Modifier) {
                                 modifier = Modifier.fillMaxSize(),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("Unknown Tab: ${tab?.name ?: ""}")
+                                Text("Unknown Tab: ${tab?.name.orEmpty()}")
                             }
                         }
                     }

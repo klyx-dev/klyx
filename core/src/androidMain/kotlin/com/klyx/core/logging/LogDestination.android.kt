@@ -15,5 +15,5 @@ internal actual fun logToPlatformConsole(message: Message) {
 }
 
 private fun formatLogMessage(message: Message): String {
-    return message.message + (message.throwable?.let { "\n${it.stackTraceToString()}" } ?: "")
+    return message.message + (message.throwable?.let { "\n${it.stackTraceToString()}" }.orEmpty())
 }

@@ -6,8 +6,6 @@ on:
     paths-ignore: [ "**/*.md" ]
   pull_request:
     branches: [ main ]
-  release:
-    types: [published]
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
@@ -345,7 +343,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Run Detekt
-        run: ./gradlew detekt
+        run: ./gradlew detektAll
 
       - name: Upload code quality results
         uses: actions/upload-artifact@v4

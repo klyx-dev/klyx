@@ -33,7 +33,7 @@ class HostProcessor(
 
             val pkg = module.packageName.asString()
             val functions = module.getAllFunctions()
-                .map { it.checkVisibility(); it }
+                .onEach { it.checkVisibility() }
                 .filter { fn ->
                     fn.annotations.any { annotation ->
                         annotation.shortName.asString() == "HostFunction"
@@ -46,7 +46,7 @@ class HostProcessor(
         return emptyList()
     }
 
-    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "UnsafeCallOnNullableType")
     private fun generateHostModule(
         resolver: Resolver,
         module: KSClassDeclaration,
@@ -166,7 +166,9 @@ class HostProcessor(
 
                 val extraSpace = if (hasExtensionReceiver) SPACE.repeat(4) else ""
 
-                writer.appendLine(extraSpace + SPACE.repeat(16) + if (hasReturnType) "val $returnVarName = $fnCall" else fnCall)
+                writer.appendLine(
+                    extraSpace + SPACE.repeat(16) + if (hasReturnType) "val $returnVarName = $fnCall" else fnCall
+                )
 
                 writer.appendLine(
                     extraSpace + SPACE.repeat(16) + if (hasReturnType) {

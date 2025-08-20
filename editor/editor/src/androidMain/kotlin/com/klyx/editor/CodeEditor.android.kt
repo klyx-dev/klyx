@@ -1,3 +1,5 @@
+@file:Suppress("NoNameShadowing")
+
 package com.klyx.editor
 
 import android.content.Context
@@ -26,7 +28,7 @@ private fun setCodeEditorFactory(
     state: CodeEditorState
 ): CodeEditor {
     val editor = CodeEditor(context)
-    editor.apply { setText(state.content) }
+    editor.setText(state.content)
     state.editor = editor
     return editor
 }

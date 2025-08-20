@@ -135,6 +135,7 @@ fun TerminalScreen(
     }
 }
 
+@Suppress("MagicNumber")
 context(context: Context)
 private fun TerminalView(user: String) = TerminalView(context, null).apply {
     defaultFocusHighlightEnabled = true
@@ -157,13 +158,16 @@ private fun TerminalView(user: String) = TerminalView(context, null).apply {
 
 context(context: Context)
 private fun ExtraKeysView(
-    terminalView: TerminalView, heightPx: Float
+    terminalView: TerminalView,
+    heightPx: Float
 ) = ExtraKeysView(context, null).apply {
     extraKeysViewClient = ExtraKeysViewClient(terminalView.mTermSession)
 
     reload(
         ExtraKeysInfo(
-            ExtraKeys.toJson(), "", ExtraKeysConstants.CONTROL_CHARS_ALIASES
+            ExtraKeys.toJson(),
+            "",
+            ExtraKeysConstants.CONTROL_CHARS_ALIASES
         ),
         heightPx
     )

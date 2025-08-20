@@ -48,7 +48,7 @@ actual fun StatusBar(modifier: Modifier) {
                 else -> cursor.leftLine to cursor.leftColumn
             }
 
-            append("${(1 + line)}:${column}")
+            append("${(1 + line)}:$column")
             if (cursor.isSelected) {
                 append(" (")
                 val lines = (cursor.rightLine - cursor.leftLine).absoluteValue

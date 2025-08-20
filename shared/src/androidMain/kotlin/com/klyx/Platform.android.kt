@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName")
+
 package com.klyx
 
 import android.os.Build

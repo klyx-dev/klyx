@@ -69,7 +69,7 @@ fun nullInputStream() = object : InputStream() {
     }
 
     override fun readNBytes(len: Int): ByteArray {
-        if (len < 0) throw IllegalArgumentException("len < 0")
+        require(len >= 0) { "len < 0: $len" }
         ensureOpen()
         return ByteArray(0)
     }

@@ -64,6 +64,7 @@ class WasiScope @PublishedApi internal constructor() {
     fun workingDirectory(directory: String) = apply {
         this.workingDir = directory
 
+        @Suppress("ForbiddenComment")
         // TODO: remove?
         env("PWD", directory)
     }

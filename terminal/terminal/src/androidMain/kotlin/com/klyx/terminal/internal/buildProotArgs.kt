@@ -20,7 +20,7 @@ fun buildProotArgs(
     loginUser: Boolean = true,
     vararg commands: String = emptyArray()
 ) = run {
-    val home = File(ubuntuHome, user ?: "")
+    val home = File(ubuntuHome, user.orEmpty())
 
     val args = mutableListOf(
         "--kill-on-exit", "-w",

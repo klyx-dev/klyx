@@ -40,6 +40,7 @@ object Process {
         }
     }
 
+    @Suppress("unused")
     private fun WasmMemory.internal_runCommand(
         command: String,
         args: list<str>,

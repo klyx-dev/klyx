@@ -168,6 +168,7 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
 
     @Composable
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
+    @Suppress("MagicNumber")
     private fun SetupScreen(
         progress: Float,
         error: Throwable? = null

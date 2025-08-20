@@ -1,3 +1,5 @@
+@file:Suppress("SpreadOperator")
+
 package com.klyx.terminal
 
 import android.content.Context
@@ -17,7 +19,7 @@ internal fun isCmdAvailableInLocalPath(cmd: String) = run {
 @OptIn(ExperimentalContracts::class)
 context(context: Context)
 inline fun localProcess(
-    vararg commands: String,
+    commands: Array<String>,
     useProotIfCmdIsNotAvailableLocally: Boolean = true,
     useLinker: Boolean = true,
     block: ProcessBuilder.() -> Unit = {}
@@ -27,7 +29,7 @@ inline fun localProcess(
     val cmd = commands.first()
     return if (isCmdAvailableInLocalPath(cmd)) {
         process(
-            *listOfNotNull(
+            listOfNotNull(
                 if (useLinker) linker else null,
                 "${klyxBinDir.absolutePath}/$cmd",
                 *commands.drop(1).toTypedArray()
@@ -39,6 +41,6 @@ inline fun localProcess(
     } else if (useProotIfCmdIsNotAvailableLocally) {
         ubuntuProcess(*commands).apply(block)
     } else {
-        process(cmd, *commands.drop(1).toTypedArray()).apply(block)
+        process(arrayOf(cmd, *commands.drop(1).toTypedArray())).apply(block)
     }
 }

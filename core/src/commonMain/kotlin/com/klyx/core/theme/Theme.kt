@@ -301,6 +301,7 @@ data class Theme(
         val players: Array<Player>? = null,
         val syntax: Map<String, SyntaxStyle> = emptyMap()
     ) {
+        @Suppress("LongMethod", "CyclomaticComplexMethod")
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other != null && this::class != other::class) return false
@@ -449,6 +450,7 @@ data class Theme(
             return true
         }
 
+        @Suppress("LongMethod", "CyclomaticComplexMethod")
         override fun hashCode(): Int {
             var result = border?.hashCode() ?: 0
             result = 31 * result + (borderVariant?.hashCode() ?: 0)

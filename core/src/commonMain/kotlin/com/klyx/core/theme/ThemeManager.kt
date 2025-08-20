@@ -254,7 +254,7 @@ object ThemeManager {
 
             Result.success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
+            // e.printStackTrace()
             currentThemeFamily = null
             availableThemes = emptyList()
             Result.failure(e)
@@ -280,8 +280,7 @@ object ThemeManager {
                     style = parseThemeStyle(styleObj)
                 )
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
             emptyList()
         }
     }
