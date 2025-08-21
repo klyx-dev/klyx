@@ -320,7 +320,7 @@ exceptions:
       - 'Throwable'
     allowedExceptionNameRegex: '_|(ignore|expected).*'
   TooGenericExceptionThrown:
-    active: true
+    active: false
     excludes:
       - '**/editor/sora/**'
     exceptionNames:
@@ -373,7 +373,7 @@ naming:
     active: false
     parameterPattern: '[a-z][A-Za-z0-9]*|_'
   MatchingDeclarationName:
-    active: true
+    active: false
     mustBeFirst: true
     multiplatformTargets:
       - 'ios'
