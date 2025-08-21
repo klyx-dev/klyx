@@ -1,9 +1,7 @@
 package com.klyx
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
@@ -12,6 +10,7 @@ import androidx.compose.ui.window.rememberWindowState
 import com.klyx.core.SharedLocalProvider
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.EventBus
+import com.klyx.di.commonModule
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.res.Res
 import com.klyx.res.klyx_logo
@@ -19,12 +18,12 @@ import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalCodeEditorApi::class)
 fun main() {
-    initKoin()
+    initKoin(commonModule)
 
     application {
         SharedLocalProvider {
             val state = rememberWindowState(
-                placement = WindowPlacement.Floating
+                placement = WindowPlacement.Maximized
             )
 
             Window(
@@ -39,14 +38,7 @@ fun main() {
                     false
                 }
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        App()
-                    }
-                }
+                App()
             }
         }
     }

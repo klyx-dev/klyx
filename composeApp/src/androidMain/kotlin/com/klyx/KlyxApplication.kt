@@ -13,11 +13,9 @@ import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
-import com.klyx.viewmodel.EditorViewModel
+import com.klyx.di.commonModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
-import org.koin.core.module.dsl.viewModelOf
-import org.koin.dsl.module
 import java.io.File
 import java.util.Date
 import kotlin.time.Clock
@@ -35,9 +33,7 @@ class KlyxApplication : Application() {
         instance = this
         TreeSitter.loadLibrary()
 
-        initKoin(module {
-            viewModelOf(::EditorViewModel)
-        }) {
+        initKoin(commonModule) {
             androidLogger()
             androidContext(this@KlyxApplication)
         }

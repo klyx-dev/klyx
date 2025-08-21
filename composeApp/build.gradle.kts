@@ -82,6 +82,10 @@ kotlin {
             implementation(libs.lsp4j)
             implementation(libs.lsp4j.jsonrpc)
 
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.dialogs)
+            implementation(libs.filekit.dialogs.compose)
+
             implementation(projects.shared)
             implementation(projects.core)
             implementation(projects.editor.editor)
@@ -242,6 +246,8 @@ compose.desktop {
                 packageName = "klyx"
                 menuGroup = "Development"
                 appCategory = "Development"
+
+                modules("jdk.security.auth")
             }
 
             windows {

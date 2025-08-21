@@ -1,6 +1,7 @@
 package com.klyx
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -20,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
+import com.klyx.borrow.ref
+import com.klyx.core.ContextHolder
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.LocalSharedPreferences
@@ -31,14 +34,19 @@ import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
+import com.klyx.pointer.dropPtr
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.showWelcome
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.init
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ContextHolder.mainActivityContextRef = ref(this as Context).borrowMut()
+        FileKit.init(this)
 
         setContent {
             SharedLocalProvider {
@@ -123,6 +131,11 @@ class MainActivity : ComponentActivity() {
             EventBus.instance.post(event.asComposeKeyEvent())
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        dropPtr(ContextHolder.mainActivityContextRef.ptr())
     }
 
 //    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {

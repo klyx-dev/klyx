@@ -31,7 +31,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.core.ReportIssueUrl
+import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
 import java.util.Date
 
@@ -91,7 +91,7 @@ class CrashActivity : ComponentActivity() {
                                     state = rememberTooltipState(),
                                 ) {
                                     TextButton(onClick = {
-                                        uriHandler.openUri(ReportIssueUrl)
+                                        uriHandler.openUri(REPORT_ISSUE_URL)
                                     }) {
                                         Text("Report Crash")
                                     }

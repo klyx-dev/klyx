@@ -5,7 +5,6 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import java.io.File
 import java.nio.charset.Charset
-import java.nio.file.Path
 
 actual open class KxFile(
     private val raw: File

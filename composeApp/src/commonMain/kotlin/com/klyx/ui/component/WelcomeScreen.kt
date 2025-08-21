@@ -34,7 +34,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
-import com.klyx.core.DocsUrl
+import com.klyx.core.DOCS_URL
 import com.klyx.core.theme.ThemeManager
 import com.klyx.res.Res.drawable
 import com.klyx.res.klyx_transparent
@@ -138,7 +138,7 @@ fun WelcomeScreen(modifier: Modifier = Modifier) {
                     text = "View Documentation",
                     icon = Icons.Outlined.Code
                 ) {
-                    uriHandler.openUri(DocsUrl)
+                    uriHandler.openUri(DOCS_URL)
                 }
 
                 ClickableText(

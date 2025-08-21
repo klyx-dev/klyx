@@ -1,6 +1,8 @@
 package com.klyx.core.file
 
 import com.klyx.fileSeparatorChar
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.absolutePath
 import kotlinx.io.Source
 
 /**
@@ -66,3 +68,4 @@ fun KxFile.resolve(relative: KxFile): KxFile {
 
 fun KxFile.resolve(relative: String): KxFile = resolve(KxFile(relative))
 
+fun PlatformFile.toKxFile() = KxFile(absolutePath())

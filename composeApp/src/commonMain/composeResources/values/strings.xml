@@ -15,9 +15,7 @@
     <string name="menu_item_quit">Quit</string>
 
     <string name="menu_item_new_file">New File</string>
-    <string name="default_new_file_name">untitled</string>
     <string name="menu_item_open_file">Open File...</string>
-    <string name="file_picker_all_files_mimetype">*/*</string>
     <string name="menu_item_save">Save</string>
     <string name="menu_item_save_as">Save As...</string>
     <string name="menu_item_save_all">Save All</string>
@@ -32,7 +30,7 @@
     <string name="notification_all_files_saved">All files saved</string>
     <string name="notification_failed_to_save">Failed to save: %s</string>
 
-    <string name="label_fps_suffix"> FPS</string>
+    <string name="label_fps">%.2f FPS</string>
     <string name="no_internet_connection">No internet connection</string>
     <string name="action_uninstall">Uninstall</string>
     <string name="action_install">Install</string>

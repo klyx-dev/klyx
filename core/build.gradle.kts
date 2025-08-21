@@ -81,6 +81,9 @@ kotlin {
                 implementation(libs.kotlinx.coroutines.core)
 
                 api(libs.kotlin.result)
+                api(libs.filekit.dialogs)
+                api(libs.filekit.dialogs.compose)
+
                 implementation(projects.shared)
             }
         }
@@ -95,6 +98,8 @@ kotlin {
 
         androidMain {
             dependencies {
+                implementation(libs.androidx.activity.compose)
+
                 api(libs.utilcodex)
                 api(libs.androidx.documentfile)
                 implementation(libs.koin.android)

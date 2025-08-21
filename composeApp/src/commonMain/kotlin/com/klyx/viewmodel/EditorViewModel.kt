@@ -15,6 +15,7 @@ import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ifNull
 import com.klyx.res.Res.string
+import com.klyx.res.tab_title_default_settings
 import com.klyx.res.tab_title_extensions
 import com.klyx.tab.Tab
 import com.klyx.tab.TabId
@@ -249,6 +250,14 @@ class EditorViewModel(
 }
 
 fun EditorViewModel.openSettings() = openFile(KxFile(Environment.SettingsFilePath))
+
+fun EditorViewModel.openDefaultSettings() {
+    openFile(
+        KxFile(Environment.InternalSettingsFilePath),
+        tabTitle = string(string.tab_title_default_settings),
+        isInternal = true
+    )
+}
 
 fun EditorViewModel.openExtensionScreen() {
     val id = "extension"

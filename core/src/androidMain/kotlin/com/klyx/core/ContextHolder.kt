@@ -1,6 +1,7 @@
 package com.klyx.core
 
 import android.content.Context
+import com.klyx.borrow.BorrowMutRef
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -11,4 +12,6 @@ import org.koin.core.component.inject
  */
 object ContextHolder : KoinComponent {
     val context: Context by inject()
+
+    lateinit var mainActivityContextRef: BorrowMutRef<Context>
 }

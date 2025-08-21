@@ -4,7 +4,10 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.core.net.toFile
+import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.blankj.utilcode.util.UriUtils
+import com.klyx.core.ContextHolder
 import com.klyx.ifNull
 import com.klyx.nothing
 import com.klyx.unsupported
@@ -44,7 +47,7 @@ actual open class KxFile(
     actual val canExecute: Boolean get() = file?.canExecute() ?: nothing()
     actual val length: Long get() = file?.length() ?: raw.length()
     actual val lastModified: Long get() = file?.lastModified() ?: raw.lastModified()
-    actual val extension: String get() = file?.extension ?: name.substringAfterLast(".")
+    actual val extension: String get() = file?.extension ?: name.substringAfterLast(".", "")
     actual val isHidden: Boolean get() = file?.isHidden ?: nothing()
     actual val isFile: Boolean get() = file?.isFile ?: raw.isFile
     actual val isDirectory: Boolean get() = file?.isDirectory ?: raw.isDirectory
@@ -161,4 +164,16 @@ fun KxFile.extractZip(outputDir: File) {
     }
 }
 
-actual fun KxFile(path: String) = KxFile(File(path))
+actual fun KxFile(path: String): KxFile {
+    return if (path.startsWith("content://")) {
+        val file = runCatching {
+            UriUtils.uri2FileNoCacheCopy(path.toUri()).asDocumentFile()
+        }.getOrElse {
+            DocumentFile.fromSingleUri(ContextHolder.context, path.toUri())!!
+        }
+
+        KxFile(file)
+    } else {
+        KxFile(File(path))
+    }
+}
