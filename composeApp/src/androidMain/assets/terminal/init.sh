@@ -22,8 +22,7 @@ fi
 if ! id -u "$USER" >/dev/null 2>&1; then
     echo -e "\e[35;1mAdding user '$USER'...\e[0m"
     adduser "$USER"
-    #echo "$USER:$USER" | chpasswd
-    #echo "$USER ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+    echo "$USER ALL=(ALL:ALL) ALL" >> /etc/sudoers
 fi
 
 fix_group() {
@@ -37,7 +36,7 @@ fix_group() {
 
 fix_group
 
-echo -e "\e[33mUse \e[36msu $USER\e[33m to login.\e[0m\n"
+#echo -e "\e[33mUse \e[36msu $USER\e[33m to login.\e[0m\n"
 
-#exec su "$USER"
-exec bash
+exec su "$USER"
+#exec bash

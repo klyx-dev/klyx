@@ -69,3 +69,4 @@ fun KxFile.resolve(relative: KxFile): KxFile {
 fun KxFile.resolve(relative: String): KxFile = resolve(KxFile(relative))
 
 fun PlatformFile.toKxFile() = KxFile(absolutePath())
+fun KxFile.toPlatformFile() = PlatformFile(absolutePath)

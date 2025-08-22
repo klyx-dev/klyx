@@ -5,7 +5,6 @@ import kotlinx.io.RawSink
 import kotlinx.io.asSink
 import java.io.OutputStream
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class StdioSinkProvider(
     private val streamProvider: () -> OutputStream,
 ) {

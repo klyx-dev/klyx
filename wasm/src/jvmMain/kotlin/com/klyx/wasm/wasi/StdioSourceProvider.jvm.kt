@@ -13,7 +13,6 @@ import kotlinx.io.asSource
 import java.io.IOException
 import java.io.InputStream
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class StdioSourceProvider(
     private val streamProvider: () -> InputStream,
 ) {

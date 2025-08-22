@@ -24,8 +24,7 @@ fun buildProotArgs(
 
     val args = mutableListOf(
         "--kill-on-exit", "-w",
-        //if (home.exists()) home.relativeToOrSelf(ubuntuDir).absolutePath else "/",
-        "/"
+        if (home.exists()) home.relativeToOrSelf(ubuntuDir).absolutePath else "/"
     )
 
     val bind = { source: String, target: String? ->
@@ -47,14 +46,12 @@ fun buildProotArgs(
                 Os.access(file.absolutePath, OsConstants.R_OK)
             } catch (error: ErrnoException) {
                 if (error.errno == OsConstants.EACCES) {
-                    Log.e("Terminal", "Cannot access $path (Permission denied)")
+                    Log.w("Terminal", "Cannot access $path (Permission denied)")
                 }
                 false
             }
 
-            if (canAccess) {
-                bind(file.canonicalPath, null)
-            }
+            bind(file.canonicalPath, null)
         }
     }
 
