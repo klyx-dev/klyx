@@ -149,12 +149,6 @@ jobs:
             CHANGELOG="${CHANGELOG}### Other Changes\n${OTHER}\n\n"
           fi
           
-          # Add contributors section
-          CONTRIBUTORS=$(git log --pretty=format:"%an" "${PREVIOUS_TAG}..HEAD" | sort -u | sed 's/^/* @/')
-          if [ ! -z "$CONTRIBUTORS" ]; then
-            CHANGELOG="${CHANGELOG}### Contributors\n${CONTRIBUTORS}\n\n"
-          fi
-          
           # Add full changelog link
           CHANGELOG="${CHANGELOG}**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
           
