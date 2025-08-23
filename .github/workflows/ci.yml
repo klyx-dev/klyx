@@ -3,7 +3,7 @@ name: Kotlin Multiplatform App CI/CD
 on:
   push:
     branches: [ main ]
-    paths-ignore: [ "**/*.md" ]
+    paths-ignore: [ "**/*.md", "**/*.yml" ]
   pull_request:
     branches: [ main ]
 
