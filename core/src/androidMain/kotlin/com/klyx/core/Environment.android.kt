@@ -47,10 +47,3 @@ actual object Environment {
         ).forEach(FileUtils::createOrExistsDir)
     }
 }
-
-actual fun string(
-    resource: StringResource,
-    vararg formatArgs: Any?
-): String {
-    return runBlocking { String.format(getString(resource), *formatArgs) }
-}

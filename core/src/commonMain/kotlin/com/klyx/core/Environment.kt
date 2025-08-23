@@ -19,4 +19,4 @@ expect object Environment {
     val LogsDir: String
 }
 
-expect fun string(resource: StringResource, vararg formatArgs: Any?): String
+fun string(resource: StringResource, vararg formatArgs: Any?) = runBlocking { getString(resource, formatArgs) }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -204,7 +205,10 @@ actual fun EditorScreen(modifier: Modifier) {
             }
         } else {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No tabs open")
+                Text(
+                    "Open a file or project to get started.",
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }

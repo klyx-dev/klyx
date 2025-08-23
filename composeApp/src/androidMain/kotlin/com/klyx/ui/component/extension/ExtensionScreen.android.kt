@@ -95,6 +95,7 @@ import com.klyx.spacedName
 import com.klyx.ui.theme.DefaultKlyxShape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -365,7 +366,7 @@ private fun ExtensionItem(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = string(
+                text = stringResource(
                     if (extension.authors.size > 1) {
                         string.extension_author_label_plural
                     } else {
@@ -389,10 +390,7 @@ private fun ExtensionItem(
                 )
             } else {
                 Text(
-                    text = string(
-                        string.extension_downloads,
-                        "N/A"
-                    ),
+                    text = stringResource(string.extension_downloads, Float.NaN),
                     style = MaterialTheme.typography.labelMedium
                 )
             }

@@ -10,6 +10,7 @@ import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
+import com.klyx.core.file.isValidUtf8
 import com.klyx.core.string
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
@@ -75,8 +76,12 @@ class EditorViewModel(
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
-        println("[EditorViewModel] Open file path: ${file.path}")
         viewModelScope.launch(Dispatchers.IO) {
+            if (!file.isValidUtf8()) {
+                notifier.error("(${file.name}) stream did not contain valid UTF-8")
+                return@launch
+            }
+
             val fileTab = Tab.FileTab(
                 id = file.id,
                 name = tabTitle,

@@ -2,9 +2,11 @@ package com.klyx.menu
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import com.klyx.LocalDrawerState
 import com.klyx.core.DOCS_URL
 import com.klyx.core.Environment
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
@@ -22,6 +24,8 @@ import com.klyx.res.file_menu_title
 import com.klyx.res.help_menu_title
 import com.klyx.res.klyx_menu_title
 import com.klyx.res.menu_item_about_klyx
+import com.klyx.res.menu_item_add_folder_to_project
+import com.klyx.res.menu_item_close_project
 import com.klyx.res.menu_item_command_palette
 import com.klyx.res.menu_item_documentation
 import com.klyx.res.menu_item_extensions
@@ -29,6 +33,7 @@ import com.klyx.res.menu_item_keyboard_shortcuts
 import com.klyx.res.menu_item_new_file
 import com.klyx.res.menu_item_open_default_settings
 import com.klyx.res.menu_item_open_file
+import com.klyx.res.menu_item_open_folder
 import com.klyx.res.menu_item_open_settings
 import com.klyx.res.menu_item_quit
 import com.klyx.res.menu_item_report_issue
@@ -47,9 +52,11 @@ import com.klyx.viewmodel.openDefaultSettings
 import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openSettings
 import com.klyx.viewmodel.showWelcome
+import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -68,6 +75,14 @@ fun rememberMenuItems(
 ): Map<String, List<MenuItem>> {
     val notifier = LocalNotifier.current
     val uriHandler = LocalUriHandler.current
+    val drawerState = LocalDrawerState.current
+    val scope = rememberCoroutineScope()
+
+    val openDrawerIfClosed = {
+        if (drawerState.isClosed) {
+            scope.launch { drawerState.open() }
+        }
+    }
 
     val filePicker = rememberFilePickerLauncher { file ->
         if (file != null) {
@@ -82,6 +97,20 @@ fun rememberMenuItems(
         }
     }
 
+    val directoryPicker = rememberDirectoryPickerLauncher { file ->
+        if (file != null) {
+            klyxViewModel.openProject(file.toKxFile())
+            openDrawerIfClosed()
+        }
+    }
+
+    val addFolderPicker = rememberDirectoryPickerLauncher {
+        if (it != null) {
+            klyxViewModel.addFolderToProject(it.toKxFile())
+            openDrawerIfClosed()
+        }
+    }
+
     return remember(viewModel, klyxViewModel) {
         menu {
             klyxMenuGroup(viewModel, klyxViewModel, notifier)
@@ -89,6 +118,8 @@ fun rememberMenuItems(
             fileMenuGroup(
                 onNewFileClick = { viewModel.openFile(KxFile("untitled")) },
                 onOpenFileClick = { filePicker.launch() },
+                onOpenFolderClick = { directoryPicker.launch() },
+                onAddFolderClick = { addFolderPicker.launch() },
                 onSaveClick = {
                     val file = viewModel.getActiveFile()
                     if (file == null) {
@@ -128,7 +159,8 @@ fun rememberMenuItems(
                             )
                         }
                     }
-                }
+                },
+                onCloseProjectClick = { klyxViewModel.closeProject() }
             )
 
             helpMenuGroup(viewModel, uriHandler)
@@ -201,20 +233,35 @@ private fun MenuBuilder.klyxMenuGroup(
 }
 
 private fun MenuBuilder.fileMenuGroup(
-    onNewFileClick: suspend () -> Unit,
-    onOpenFileClick: suspend () -> Unit,
-    onSaveClick: suspend () -> Unit,
-    onSaveAsClick: suspend () -> Unit,
-    onSaveAllClick: suspend () -> Unit
+    onNewFileClick: suspend () -> Unit = {},
+    onOpenFileClick: suspend () -> Unit = {},
+    onOpenFolderClick: suspend () -> Unit = {},
+    onAddFolderClick: suspend () -> Unit = {},
+    onSaveClick: suspend () -> Unit = {},
+    onSaveAsClick: suspend () -> Unit = {},
+    onSaveAllClick: suspend () -> Unit = {},
+    onCloseProjectClick: suspend () -> Unit = {}
 ) = group(string.file_menu_title) {
     item(string.menu_item_new_file) {
         shortcut(keyShortcutOf(ctrl = true, key = Key.N))
         onClick { withContext(Dispatchers.Default) { onNewFileClick() } }
     }
 
+    divider()
+
     item(string.menu_item_open_file) {
-        shortcut(keyShortcutOf(ctrl = true, key = Key.O))
         onClick { withContext(Dispatchers.Default) { onOpenFileClick() } }
+    }
+
+    item(string.menu_item_open_folder) {
+        shortcut(keyShortcutOf(ctrl = true, key = Key.O))
+        onClick { withContext(Dispatchers.Default) { onOpenFolderClick() } }
+    }
+
+    divider()
+
+    item(string.menu_item_add_folder_to_project) {
+        onClick { withContext(Dispatchers.Default) { onAddFolderClick() } }
     }
 
     divider()
@@ -232,6 +279,12 @@ private fun MenuBuilder.fileMenuGroup(
     item(string.menu_item_save_all) {
         shortcut(keyShortcutOf(ctrl = true, alt = true, key = Key.S))
         onClick { withContext(Dispatchers.Default) { onSaveAllClick() } }
+    }
+
+    divider()
+
+    item(string.menu_item_close_project) {
+        onClick { withContext(Dispatchers.Default) { onCloseProjectClick() } }
     }
 }
 

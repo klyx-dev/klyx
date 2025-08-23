@@ -6,13 +6,12 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Menu
@@ -31,26 +30,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.LocalDrawerState
 import com.klyx.core.FpsTracker
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
+import com.klyx.core.toFixed
 import com.klyx.menu.rememberMenuItems
-import com.klyx.res.Res.string
+import com.klyx.platform.PlatformInfo
+import com.klyx.res.Res
 import com.klyx.res.label_fps
 import com.klyx.ui.component.AboutDialog
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -68,7 +69,6 @@ fun MainMenuBar(
     val fps by fpsTracker.fps
 
     val scope = rememberCoroutineScope()
-    var showMenuBar by remember { mutableStateOf(false) }
 
     val menuItems = rememberMenuItems(editorViewModel, klyxViewModel)
 
@@ -88,18 +88,18 @@ fun MainMenuBar(
         }
     }
 
-    var iconPosition by remember { mutableStateOf(IntOffset.Zero) }
     var menuItemPositions by remember { mutableStateOf(mapOf<String, IntOffset>()) }
 
     val menuItem: (() -> Unit) -> Map<String, @Composable () -> Unit> = remember {
         { onDismissRequest ->
             menuItems.mapValues { (rowTitle, items) ->
+                val position = menuItemPositions[rowTitle] ?: IntOffset.Zero
+
                 @Composable {
                     PopupMenu(
                         items = items,
-                        position = menuItemPositions[rowTitle] ?: IntOffset.Zero,
-                        onDismissRequest = onDismissRequest,
-                        modifier = Modifier.statusBarsPadding()
+                        position = position + IntOffset(0, if (PlatformInfo.isDesktop) 30 else 0),
+                        onDismissRequest = onDismissRequest
                     )
                 }
             }
@@ -108,72 +108,46 @@ fun MainMenuBar(
 
     var activeMenu: String? by remember { mutableStateOf(null) }
 
-    LaunchedEffect(activeMenu) {
-        if (activeMenu == null) {
-            delay(1000)
-            showMenuBar = false
-        }
-    }
-
     LaunchedEffect(Unit) {
         fpsTracker.start()
     }
+
+    val drawerState = LocalDrawerState.current
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(48.dp),
-        contentAlignment = Alignment.CenterStart
+        contentAlignment = Alignment.CenterEnd
     ) {
-        AnimatedVisibility(
-            visible = activeMenu == null && !showMenuBar,
-            enter = fadeIn(),
-            exit = fadeOut()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            IconButton(
+                onClick = {
+                    scope.launch {
+                        drawerState.open()
+                    }
+                }
             ) {
-                val interactionSource = remember { MutableInteractionSource() }
-                val isHovered by interactionSource.collectIsHoveredAsState()
+                Icon(
+                    imageVector = Icons.Outlined.Menu,
+                    contentDescription = null
+                )
+            }
 
-                LaunchedEffect(isHovered) {
-                    if (isHovered) {
-                        activeMenu = menuItems.keys.first()
-                        showMenuBar = true
-                    }
-                }
-
-                IconButton(
-                    onClick = {
-                        activeMenu = menuItems.keys.first()
-                        showMenuBar = true
-                    },
-                    interactionSource = interactionSource,
-                    modifier = Modifier.onGloballyPositioned { layoutCoordinates ->
-                        val position = layoutCoordinates.localToWindow(Offset.Zero)
-                        iconPosition = IntOffset(position.x.toInt() + 20, position.y.toInt() + 15)
-                    }
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Menu,
-                        contentDescription = null
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                if (settings.showFps) {
-                    Text(
-                        text = stringResource(string.label_fps, fps),
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                }
+            if (settings.showFps) {
+                Text(
+                    text = stringResource(Res.string.label_fps, fps.toFixed(1)),
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
 
         AnimatedVisibility(
-            visible = showMenuBar || activeMenu != null,
+            visible = true,
             enter = fadeIn(),
             exit = fadeOut()
         ) {
@@ -242,13 +216,15 @@ internal fun MenuRow(
                     .clickable(
                         interactionSource = interactionSource,
                         indication = ripple()
-                    ) { onMenuItemSelected(index, title) }
+                    ) {
+                        onMenuItemSelected(index, title)
+                    }
                     .padding(horizontal = 8.dp, vertical = 4.dp)
                     .onGloballyPositioned { layoutCoordinates ->
-                        val position = layoutCoordinates.localToWindow(Offset.Zero)
+                        val position = layoutCoordinates.positionInWindow()
                         onMenuItemPositioned(
                             title,
-                            IntOffset(position.x.toInt() - 10, position.y.toInt() - 10)
+                            IntOffset(position.x.toInt(), position.y.toInt())
                         )
                     }
             )

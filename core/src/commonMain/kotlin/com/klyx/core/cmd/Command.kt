@@ -29,7 +29,7 @@ class CommandBuilder {
     private var description: String? = null
     private var shortcuts = mutableListOf<KeyShortcut>()
     private var execute: Command.() -> Unit = {
-        error("No execution logic provided for command '${this.name}'")
+        //error("No execution logic provided for command '${this.name}'")
     }
 
     fun name(name: String) = apply {

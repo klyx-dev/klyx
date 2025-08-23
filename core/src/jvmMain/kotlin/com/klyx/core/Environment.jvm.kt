@@ -1,8 +1,5 @@
 package com.klyx.core
 
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.getString
 import java.nio.file.Paths
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
@@ -22,11 +19,4 @@ actual object Environment {
     }
 
     actual val LogsDir by lazy { Paths.get(HomeDir, "logs").toString() }
-}
-
-actual fun string(
-    resource: StringResource,
-    vararg formatArgs: Any?
-): String {
-    return runBlocking { String.format(getString(resource), *formatArgs) }
 }

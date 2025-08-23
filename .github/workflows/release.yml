@@ -1,0 +1,206 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+      - 'v*.*.*-*'
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
+  APP_NAME: "Klyx"
+
+jobs:
+  build-android-release:
+    name: Build Android Release
+    runs-on: ubuntu-latest
+    outputs:
+      apk-path: ${{ steps.apk-info.outputs.path }}
+      apk-name: ${{ steps.apk-info.outputs.name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
+
+      - name: Decode keystore properties
+        run: echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Android Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Find and prepare APK
+        id: apk-info
+        run: |
+          APK_PATH=$(find . -path "*/build/outputs/apk/release/*.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No release APK found!"
+            exit 1
+          fi
+          
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          APK_NAME="${{ env.APP_NAME }}-${VERSION}.apk"
+          
+          cp "$APK_PATH" "./$APK_NAME"
+          
+          echo "path=./$APK_NAME" >> $GITHUB_OUTPUT
+          echo "name=$APK_NAME" >> $GITHUB_OUTPUT
+          
+          echo "APK prepared: $APK_NAME"
+          ls -la "./$APK_NAME"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: ${{ steps.apk-info.outputs.path }}
+          retention-days: 90
+
+  generate-changelog:
+    name: Generate Changelog
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+      previous-tag: ${{ steps.changelog.outputs.previous-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog from commits
+        id: changelog
+        run: |
+          CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -A1 "^${CURRENT_TAG}$" | tail -1)
+          
+          if [ "$PREVIOUS_TAG" = "$CURRENT_TAG" ]; then
+            PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
+            echo "First release, using initial commit as base"
+          fi
+          
+          echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
+          echo "previous-tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          
+          CHANGELOG="## What's Changed\n\n"
+          
+          FEATURES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^feat" --grep="^feature" | sed 's/^feat[(:]/**Feature**: /' | sed 's/^feature[(:]/**Feature**: /')
+          if [ ! -z "$FEATURES" ]; then
+            CHANGELOG="${CHANGELOG}### Features\n${FEATURES}\n\n"
+          fi
+          
+          # Bug fixes
+          FIXES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^fix" | sed 's/^fix[(:]/**Fix**: /')
+          if [ ! -z "$FIXES" ]; then
+            CHANGELOG="${CHANGELOG}### Bug Fixes\n${FIXES}\n\n"
+          fi
+          
+          # Documentation
+          DOCS=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^docs" | sed 's/^docs[(:]/**Documentation**: /')
+          if [ ! -z "$DOCS" ]; then
+            CHANGELOG="${CHANGELOG}### Documentation\n${DOCS}\n\n"
+          fi
+          
+          # Performance improvements
+          PERF=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^perf" | sed 's/^perf[(:]/**Performance**: /')
+          if [ ! -z "$PERF" ]; then
+            CHANGELOG="${CHANGELOG}### Performance\n${PERF}\n\n"
+          fi
+          
+          # Refactoring
+          REFACTOR=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^refactor" | sed 's/^refactor[(:]/**Refactor**: /')
+          if [ ! -z "$REFACTOR" ]; then
+            CHANGELOG="${CHANGELOG}### Refactoring\n${REFACTOR}\n\n"
+          fi
+          
+          # Chores and maintenance
+          CHORES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^chore" --grep="^build" --grep="^ci" | sed 's/^chore[(:]/**Maintenance**: /' | sed 's/^build[(:]/**Build**: /' | sed 's/^ci[(:]/**CI**: /')
+          if [ ! -z "$CHORES" ]; then
+            CHANGELOG="${CHANGELOG}### Maintenance\n${CHORES}\n\n"
+          fi
+          
+          # Other commits that don't follow conventional commits
+          OTHER=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --invert-grep --grep="^feat" --grep="^fix" --grep="^docs" --grep="^perf" --grep="^refactor" --grep="^chore" --grep="^build" --grep="^ci" --grep="^feature")
+          if [ ! -z "$OTHER" ]; then
+            CHANGELOG="${CHANGELOG}### Other Changes\n${OTHER}\n\n"
+          fi
+          
+          # Add contributors section
+          CONTRIBUTORS=$(git log --pretty=format:"%an" "${PREVIOUS_TAG}..HEAD" | sort -u | sed 's/^/* @/')
+          if [ ! -z "$CONTRIBUTORS" ]; then
+            CHANGELOG="${CHANGELOG}### Contributors\n${CONTRIBUTORS}\n\n"
+          fi
+          
+          # Add full changelog link
+          CHANGELOG="${CHANGELOG}**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
+          
+          # Save changelog to output (handle multiline)
+          {
+            echo 'changelog<<EOF'
+            echo -e "$CHANGELOG"
+            echo EOF
+          } >> $GITHUB_OUTPUT
+          
+          echo "Generated changelog:"
+          echo -e "$CHANGELOG"
+
+  create-release:
+    name: Create Release
+    needs: [build-android-release, generate-changelog]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download APK artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-apk
+          path: ./artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ github.ref_name }}"
+          body: ${{ needs.generate-changelog.outputs.changelog }}
+          files: |
+            ./artifacts/${{ needs.build-android-release.outputs.apk-name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**APK:** ${{ needs.build-android-release.outputs.apk-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changelog Preview:" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.generate-changelog.outputs.changelog }}" >> $GITHUB_STEP_SUMMARY

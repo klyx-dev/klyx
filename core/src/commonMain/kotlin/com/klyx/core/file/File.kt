@@ -1,5 +1,11 @@
 package com.klyx.core.file
 
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.readBytes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+
 typealias FileId = String
 
 val KxFile.id: FileId
@@ -55,3 +61,8 @@ fun KxFile.isMetaEqualTo(other: KxFile): Boolean {
  * Launch system file opener
  */
 expect fun openFile(file: KxFile)
+
+expect fun ByteArray.isValidUtf8(): Boolean
+
+suspend fun KxFile.isValidUtf8() = withContext(Dispatchers.IO) { readBytes().isValidUtf8() }
+suspend fun PlatformFile.isValidUtf8() = readBytes().isValidUtf8()
