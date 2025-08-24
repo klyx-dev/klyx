@@ -50,9 +50,9 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
             "App Crashed. ${if (file != null) "A crash report was saved." else "Failed to save crash report."}",
             Toast.LENGTH_LONG
         ).show()
-
-        Log.e("Klyx", file?.readText() ?: "App crashed. No crash logs.")
     }
+
+    Log.e("Klyx", file?.readText() ?: "App crashed. No crash logs.")
 
     startActivity(Intent(this, CrashActivity::class.java).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
