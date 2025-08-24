@@ -1,7 +1,6 @@
 package com.klyx.activities
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -34,8 +33,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
 import com.klyx.core.SharedLocalProvider
-import com.klyx.core.file.DownloadProgress
 import com.klyx.core.logging.logger
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
@@ -50,6 +49,7 @@ import com.klyx.ui.theme.KlyxTheme
 import com.klyx.ui.theme.rememberFontFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import java.io.File
 
 class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
@@ -81,7 +81,9 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
 
                             if (!isTerminalSetupDone && networkState.isConnected) {
                                 setupTerminal(
-                                    onProgress = { progress = it.percentage },
+                                    onProgress = { downloaded, total ->
+                                        progress = if (total == null) 0f else downloaded.toFloat() / total
+                                    },
                                     onComplete = { isCompleted = true },
                                     onError = { downloadError = it }
                                 )
@@ -181,8 +183,8 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
 
         val (message, progressValue) = when {
             networkState.isNotConnected -> "No internet connection" to null
-            progress > 0 && progress < 100f -> "Almost there... ${progress.toInt()}% done!" to (progress / 100f)
-            progress >= 100f -> "Extracting files, please wait a moment..." to null
+            progress > 0 && progress < 1f -> "Almost there... ${(progress * 100).toInt()}% done!" to progress
+            progress >= 1f -> "Extracting files, please wait a moment..." to null
             else -> "Downloading Ubuntu Root FileSystem, please wait a moment..." to null
         }
 
@@ -217,23 +219,25 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
     }
 
     private suspend fun setupTerminal(
-        onProgress: suspend (DownloadProgress) -> Unit = {},
-        onComplete: suspend () -> Unit = {},
-        onError: suspend (error: Throwable) -> Unit = {}
+        onProgress: (downloaded: Long, total: Long?) -> Unit = { _, _ -> },
+        onComplete: () -> Unit = {},
+        onError: (error: Throwable) -> Unit = {}
     ) {
         if (!isTerminalSetupDone) {
             downloadRootFs(
                 onProgress = onProgress,
                 onComplete = { path ->
-                    isTerminalSetupDone = try {
-                        setupRootFs(path)
-                        true
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        logger.error("Failed to setup terminal", e)
-                        throw e
+                    lifecycleScope.launch {
+                        isTerminalSetupDone = try {
+                            setupRootFs(path)
+                            true
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            logger.error("Failed to setup terminal", e)
+                            throw e
+                        }
+                        onComplete()
                     }
-                    onComplete()
                 },
                 onError = onError
             )

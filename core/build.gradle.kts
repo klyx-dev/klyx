@@ -1,6 +1,5 @@
 import com.klyx.Configs
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -70,7 +69,7 @@ kotlin {
                 implementation(libs.kotlinx.serialization.json)
                 implementation(libs.json5k)
                 implementation(libs.ktoml.core)
-                implementation(libs.ktor.client.core)
+                api(libs.ktor.client.core)
                 implementation(libs.ktor.client.cio)
                 implementation(libs.commons.compress)
                 api(libs.koin.core)

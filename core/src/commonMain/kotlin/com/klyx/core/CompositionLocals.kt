@@ -11,7 +11,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.file.KWatchEvent
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.LocalFileDownloader
 import com.klyx.core.file.asWatchChannel
 import com.klyx.core.file.isTextEqualTo
 import com.klyx.core.notification.LocalNotificationManager
@@ -73,7 +72,6 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
     CompositionLocalProvider(
         LocalNotifier provides koinInject(),
         LocalNotificationManager provides koinInject(),
-        LocalFileDownloader provides koinInject(),
         LocalAppSettings provides settings,
         LocalIsDarkMode provides darkMode
     ) {

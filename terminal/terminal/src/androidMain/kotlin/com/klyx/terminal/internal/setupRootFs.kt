@@ -1,15 +1,13 @@
 package com.klyx.terminal.internal
 
 import android.content.Context
-import com.klyx.core.file.DownloadProgress
-import com.klyx.core.file.downloadToWithProgress
+import com.klyx.core.file.downloadFile
+import com.klyx.core.httpClient
 import com.klyx.core.logging.logger
 import com.klyx.core.process
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
 import com.klyx.terminal.ubuntuDir
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import java.io.File
@@ -18,22 +16,24 @@ private val logger = logger("TerminalSetup")
 
 context(context: Context)
 suspend fun downloadRootFs(
-    onProgress: suspend (DownloadProgress) -> Unit = {},
-    onComplete: suspend (outPath: String) -> Unit = {},
-    onError: suspend (error: Throwable) -> Unit = {}
+    onProgress: (downloaded: Long, total: Long?) -> Unit = { _, _ -> },
+    onComplete: (outPath: String) -> Unit = {},
+    onError: (error: Throwable) -> Unit = {}
 ) {
     val rootFsPath = "${context.cacheDir.absolutePath}/ubuntu.tar.gz"
-    ubuntuFlow(rootFsPath).onCompletion { error ->
-        if (error != null) {
-            error.printStackTrace()
-            onError(error)
-        } else {
-            onComplete(rootFsPath)
-        }
-    }.catch { error ->
-        logger.e("Failed to download rootfs", error)
-        onError(error)
-    }.collect { onProgress(it) }
+    try {
+        httpClient.downloadFile(
+            url = ubuntuRootFsUrl,
+            outputPath = rootFsPath,
+            onProgress = { downloaded, total ->
+                onProgress(downloaded, total)
+            }
+        )
+        onComplete(rootFsPath)
+    } catch (e: Exception) {
+        logger.e("Failed to download rootfs", e)
+        onError(e)
+    }
 }
 
 context(context: Context)
@@ -82,10 +82,8 @@ context(context: Context)
 @Suppress("TooGenericExceptionThrown")
 suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {}) {
     val outFile = File(context.cacheDir, "$name.tar.gz")
-    packageUrl(name).downloadToWithProgress(outFile.absolutePath)
-        .onCompletion { onComplete(outFile) }
-        .catch { throw RuntimeException("Failed to download $name", it) }
-        .collect { println(it) }
+    httpClient.downloadFile(packageUrl(name), outFile.absolutePath)
+    onComplete(outFile)
 }
 
 suspend fun extractTarGz(

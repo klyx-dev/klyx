@@ -1,7 +1,6 @@
 package com.klyx.core.di
 
 import com.klyx.core.Notifier
-import com.klyx.core.file.FileDownloader
 import com.klyx.core.httpClient
 import com.klyx.core.notification.NotificationManager
 import org.koin.core.module.Module
@@ -14,5 +13,4 @@ val sharedModule = module {
     single { httpClient }
     singleOf(::NotificationManager)
     singleOf(::Notifier)
-    singleOf(::FileDownloader)
 }
