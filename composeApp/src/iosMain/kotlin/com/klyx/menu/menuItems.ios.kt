@@ -9,3 +9,7 @@ internal actual fun restartApp(isKillProcess: Boolean) {
 internal actual fun openNewWindow() {
     unsupported("New window not supported on iOS")
 }
+
+internal actual fun closeCurrentWindow() {
+    unsupported("Close window not supported on iOS")
+}

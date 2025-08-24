@@ -24,12 +24,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
+import arrow.core.Option
+import arrow.core.none
+import arrow.core.some
 import com.klyx.borrow.ref
 import com.klyx.core.ContextHolder
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.LocalSharedPreferences
 import com.klyx.core.SharedLocalProvider
+import com.klyx.core.WindowManager
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
@@ -47,10 +51,18 @@ import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        var ref: Option<MainActivity> = none()
+            private set
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ContextHolder.mainActivityContextRef = ref(this as Context).borrowMut()
         FileKit.init(this)
+        ref = some()
+        WindowManager.currentTaskId = taskId
+        WindowManager.addWindow(taskId)
 
         setContent {
             SharedLocalProvider {
@@ -165,6 +177,12 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         dropPtr(ContextHolder.mainActivityContextRef.ptr())
+        ref = none()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        WindowManager.currentTaskId = taskId
     }
 
 //    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {

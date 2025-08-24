@@ -7,6 +7,7 @@ import com.blankj.utilcode.util.AppUtils
 import com.klyx.activities.TerminalActivity
 import com.klyx.activities.utils.launchNewWindow
 import com.klyx.core.ContextHolder
+import com.klyx.core.WindowManager
 import com.klyx.core.openActivity
 
 internal actual fun openSystemTerminal() {
@@ -28,4 +29,9 @@ internal actual fun openNewWindow() {
     with(ContextHolder.mainActivityContextRef.get()) {
         launchNewWindow()
     }
+}
+
+internal actual fun closeCurrentWindow() {
+    //MainActivity.ref.onSome { it.finishAndRemoveTask() }
+    WindowManager.closeCurrentWindow()
 }

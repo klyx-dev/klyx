@@ -20,6 +20,8 @@
     <string name="menu_item_open_file">Open File...</string>
     <string name="menu_item_open_folder">Open Folder...</string>
     <string name="menu_item_close_project">Close Project</string>
+    <string name="menu_item_close_editor">Close Editor</string>
+    <string name="menu_item_close_window">Close Window</string>
     <string name="menu_item_add_folder_to_project">Add Folder to Project...</string>
     <string name="menu_item_save">Save</string>
     <string name="menu_item_save_as">Save As...</string>

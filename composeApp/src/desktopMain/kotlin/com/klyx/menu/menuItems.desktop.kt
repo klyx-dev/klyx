@@ -15,3 +15,7 @@ internal actual fun quitApp(): Nothing = exitProcess(0)
 internal actual fun openNewWindow() {
     unsupported("New window not supported on desktop")
 }
+
+internal actual fun closeCurrentWindow() {
+    unsupported("Close window not supported on desktop")
+}

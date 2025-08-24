@@ -25,7 +25,9 @@ import com.klyx.res.help_menu_title
 import com.klyx.res.klyx_menu_title
 import com.klyx.res.menu_item_about_klyx
 import com.klyx.res.menu_item_add_folder_to_project
+import com.klyx.res.menu_item_close_editor
 import com.klyx.res.menu_item_close_project
+import com.klyx.res.menu_item_close_window
 import com.klyx.res.menu_item_command_palette
 import com.klyx.res.menu_item_documentation
 import com.klyx.res.menu_item_extensions
@@ -67,6 +69,7 @@ internal expect fun restartApp(isKillProcess: Boolean = true)
 internal expect fun quitApp(): Nothing
 
 internal expect fun openNewWindow()
+internal expect fun closeCurrentWindow()
 
 private val fs = SystemFileSystem
 private val logger = logger("Klyx")
@@ -163,7 +166,8 @@ fun rememberMenuItems(
                         }
                     }
                 },
-                onCloseProjectClick = { klyxViewModel.closeProject() }
+                onCloseProjectClick = { klyxViewModel.closeProject() },
+                onCloseEditorClick = { viewModel.closeAllTabs() }
             )
 
             helpMenuGroup(viewModel, uriHandler)
@@ -243,16 +247,19 @@ private fun MenuBuilder.fileMenuGroup(
     onSaveClick: suspend () -> Unit = {},
     onSaveAsClick: suspend () -> Unit = {},
     onSaveAllClick: suspend () -> Unit = {},
-    onCloseProjectClick: suspend () -> Unit = {}
+    onCloseProjectClick: suspend () -> Unit = {},
+    onCloseEditorClick: suspend () -> Unit = {},
 ) = group(string.file_menu_title) {
     item(string.menu_item_new) {
         shortcut(keyShortcutOf(ctrl = true, key = Key.N))
         onClick { withContext(Dispatchers.Default) { onNewFileClick() } }
     }
 
-    item(string.menu_item_new_window) {
-        shortcut(keyShortcutOf(ctrl = true, shift = true, key = Key.N))
-        onClick { openNewWindow() }
+    if (PlatformInfo.isAndroid) {
+        item(string.menu_item_new_window) {
+            shortcut(keyShortcutOf(ctrl = true, shift = true, key = Key.N))
+            onClick { openNewWindow() }
+        }
     }
 
     divider()
@@ -293,6 +300,17 @@ private fun MenuBuilder.fileMenuGroup(
 
     item(string.menu_item_close_project) {
         onClick { withContext(Dispatchers.Default) { onCloseProjectClick() } }
+    }
+
+    item(string.menu_item_close_editor) {
+        onClick { withContext(Dispatchers.Default) { onCloseEditorClick() } }
+    }
+
+    if (PlatformInfo.isAndroid) {
+        item(string.menu_item_close_window) {
+            shortcut(keyShortcutOf(ctrl = true, shift = true, key = Key.W))
+            onClick { closeCurrentWindow() }
+        }
     }
 }
 
