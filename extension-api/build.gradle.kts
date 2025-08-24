@@ -33,7 +33,16 @@ kotlin {
         }
     }
 
+    applyDefaultHierarchyTemplate()
+
     sourceSets {
+        val commonJvmAndroid by creating {
+            dependsOn(commonMain.get())
+        }
+
+        androidMain.get().dependsOn(commonJvmAndroid)
+        jvmMain.get().dependsOn(commonJvmAndroid)
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -41,6 +50,9 @@ kotlin {
             implementation(compose.ui)
 
             implementation(libs.kotlinx.datetime)
+
+            implementation(libs.chasm)
+            implementation(libs.bindings.chasm.wasip1)
 
             implementation(projects.core)
             implementation(projects.shared)

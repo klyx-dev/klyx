@@ -2,6 +2,7 @@ package com.klyx.core.file
 
 import android.content.Context
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.util.Log
 import androidx.core.net.toFile
 import androidx.core.net.toUri
@@ -165,11 +166,16 @@ fun KxFile.extractZip(outputDir: File) {
 }
 
 actual fun KxFile(path: String): KxFile {
-    return if (path.startsWith("content://")) {
+    val uri = path.toUri()
+    return if (uri.scheme == "content") {
         val file = runCatching {
-            UriUtils.uri2FileNoCacheCopy(path.toUri()).asDocumentFile()
+            UriUtils.uri2FileNoCacheCopy(uri).asDocumentFile()
         }.getOrElse {
-            DocumentFile.fromSingleUri(ContextHolder.context, path.toUri())!!
+            if (DocumentsContract.isTreeUri(uri)) {
+                DocumentFile.fromTreeUri(ContextHolder.context, uri)!!
+            } else {
+                DocumentFile.fromSingleUri(ContextHolder.context, uri)!!
+            }
         }
 
         KxFile(file)

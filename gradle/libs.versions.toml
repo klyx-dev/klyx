@@ -4,6 +4,7 @@ androidx-activity = "1.10.1"
 androidx-core = "1.16.0"
 androidx-lifecycle = "2.9.1"
 annotation = "1.9.1"
+chasm = "1.0.0"
 kotlinResult = "2.1.0"
 wasip1Bindings = "0.6.0"
 collection = "1.5.0"
@@ -43,13 +44,16 @@ appcompat = "1.7.1"
 ksp = "2.2.0-2.0.2"
 detekt = "1.23.8"
 filekit = "0.10.0"
+arrow = "2.1.2"
 
 [libraries]
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
 androidx-core = { module = "androidx.core:core", version.ref = "core" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
+bindings-chasm-wasip1 = { module = "at.released.weh:bindings-chasm-wasip1", version.ref = "wasip1Bindings" }
+chasm = { module = "io.github.charlietap.chasm:chasm", version.ref = "chasm" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
-wasip1-bindings-chicory = { module = "at.released.weh:bindings-chicory-wasip1", version.ref = "wasip1Bindings" }
+bindings-chicory-wasip1 = { module = "at.released.weh:bindings-chicory-wasip1", version.ref = "wasip1Bindings" }
 wasip1-host = { module = "at.released.weh:host", version.ref = "wasip1Bindings" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
@@ -107,6 +111,9 @@ androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version
 filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
 filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
+
+arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

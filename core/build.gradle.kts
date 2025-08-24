@@ -83,6 +83,9 @@ kotlin {
                 api(libs.filekit.dialogs)
                 api(libs.filekit.dialogs.compose)
 
+                api(libs.arrow.core)
+                api(libs.arrow.fx.coroutines)
+
                 implementation(projects.shared)
             }
         }

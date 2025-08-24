@@ -41,7 +41,7 @@ kotlin {
                 implementation(libs.chicory.wasi)
                 implementation(libs.chicory.annotations)
 
-                implementation(libs.wasip1.bindings.chicory)
+                implementation(libs.bindings.chicory.wasip1)
             }
         }
 
@@ -49,16 +49,11 @@ kotlin {
         jvmMain.get().dependsOn(commonAndroidJvm)
 
         commonMain {
-            languageSettings {
-                @OptIn(ExperimentalKotlinGradlePluginApi::class)
-                compilerOptions {
-                    freeCompilerArgs.addAll("-Xexpect-actual-classes")
-                }
-            }
-
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
 
+                implementation(libs.chasm)
+                implementation(libs.bindings.chasm.wasip1)
                 implementation(libs.wasip1.host)
 
                 implementation(libs.kotlinx.datetime)
