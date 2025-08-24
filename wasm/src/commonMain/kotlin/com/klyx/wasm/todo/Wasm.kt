@@ -1,3 +1,5 @@
+@file:Suppress("UnusedParameter")
+
 package com.klyx.wasm.todo
 
 import com.github.michaelbull.result.Result

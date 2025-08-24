@@ -1,3 +1,5 @@
+@file:Suppress("EmptyInitBlock")
+
 package com.klyx.wasm.todo
 
 import io.github.charlietap.chasm.embedding.shapes.Instance
