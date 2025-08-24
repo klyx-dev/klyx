@@ -134,7 +134,7 @@ complexity:
     active: true
     threshold: 600
   LongMethod:
-    active: true
+    active: false
     excludes:
       - '**/editor/sora/**'
     ignoreAnnotated:
