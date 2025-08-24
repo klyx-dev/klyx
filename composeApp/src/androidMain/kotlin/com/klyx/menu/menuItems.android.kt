@@ -5,6 +5,7 @@ import android.os.Process.myPid
 import android.os.Process.sendSignal
 import com.blankj.utilcode.util.AppUtils
 import com.klyx.activities.TerminalActivity
+import com.klyx.activities.utils.launchNewWindow
 import com.klyx.core.ContextHolder
 import com.klyx.core.openActivity
 
@@ -21,4 +22,10 @@ internal actual fun restartApp(isKillProcess: Boolean) {
 internal actual fun quitApp(): Nothing {
     sendSignal(myPid(), SIGNAL_KILL)
     throw RuntimeException("sendSignal(SIGNAL_KILL) returned normally, while it was supposed to halt the process.")
+}
+
+internal actual fun openNewWindow() {
+    with(ContextHolder.mainActivityContextRef.get()) {
+        launchNewWindow()
+    }
 }

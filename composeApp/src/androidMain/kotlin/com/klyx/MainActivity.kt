@@ -1,7 +1,9 @@
 package com.klyx
 
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
@@ -14,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +37,7 @@ import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
+import com.klyx.filetree.FileTreeViewModel
 import com.klyx.pointer.dropPtr
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.showWelcome
@@ -54,6 +58,20 @@ class MainActivity : ComponentActivity() {
                 val prefs = LocalSharedPreferences.current
 
                 val viewModel: EditorViewModel = koinViewModel()
+                val fileTreeViewModel = koinViewModel<FileTreeViewModel>()
+                val projects by fileTreeViewModel.rootNodes.collectAsState()
+
+                LaunchedEffect(projects) {
+                    setTaskDescription(
+                        createTaskDescription(
+                            if (projects.isEmpty()) {
+                                "empty project"
+                            } else {
+                                projects.joinToString(", ") { it.name }
+                            }
+                        )
+                    )
+                }
 
                 var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
                 LaunchedEffect(Unit) {
@@ -131,6 +149,17 @@ class MainActivity : ComponentActivity() {
             EventBus.instance.post(event.asComposeKeyEvent())
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun createTaskDescription(label: String): ActivityManager.TaskDescription {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ActivityManager.TaskDescription.Builder()
+                .setLabel(label)
+                .build()
+        } else {
+            @Suppress("DEPRECATION")
+            ActivityManager.TaskDescription(label)
+        }
     }
 
     override fun onDestroy() {

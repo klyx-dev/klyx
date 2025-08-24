@@ -14,7 +14,9 @@
     <string name="menu_item_restart_app">Restart App</string>
     <string name="menu_item_quit">Quit</string>
 
+    <string name="menu_item_new">New</string>
     <string name="menu_item_new_file">New File</string>
+    <string name="menu_item_new_window">New Window</string>
     <string name="menu_item_open_file">Open File...</string>
     <string name="menu_item_open_folder">Open Folder...</string>
     <string name="menu_item_close_project">Close Project</string>

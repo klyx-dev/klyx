@@ -30,7 +30,8 @@ import com.klyx.res.menu_item_command_palette
 import com.klyx.res.menu_item_documentation
 import com.klyx.res.menu_item_extensions
 import com.klyx.res.menu_item_keyboard_shortcuts
-import com.klyx.res.menu_item_new_file
+import com.klyx.res.menu_item_new
+import com.klyx.res.menu_item_new_window
 import com.klyx.res.menu_item_open_default_settings
 import com.klyx.res.menu_item_open_file
 import com.klyx.res.menu_item_open_folder
@@ -64,6 +65,8 @@ import kotlinx.io.files.SystemFileSystem
 internal expect fun openSystemTerminal()
 internal expect fun restartApp(isKillProcess: Boolean = true)
 internal expect fun quitApp(): Nothing
+
+internal expect fun openNewWindow()
 
 private val fs = SystemFileSystem
 private val logger = logger("Klyx")
@@ -242,9 +245,14 @@ private fun MenuBuilder.fileMenuGroup(
     onSaveAllClick: suspend () -> Unit = {},
     onCloseProjectClick: suspend () -> Unit = {}
 ) = group(string.file_menu_title) {
-    item(string.menu_item_new_file) {
+    item(string.menu_item_new) {
         shortcut(keyShortcutOf(ctrl = true, key = Key.N))
         onClick { withContext(Dispatchers.Default) { onNewFileClick() } }
+    }
+
+    item(string.menu_item_new_window) {
+        shortcut(keyShortcutOf(ctrl = true, shift = true, key = Key.N))
+        onClick { openNewWindow() }
     }
 
     divider()
