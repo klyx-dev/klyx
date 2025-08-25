@@ -2,7 +2,6 @@ package com.klyx.wasm.type
 
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
-import com.klyx.wasm.type.collections.toWasmList
 import com.klyx.wasm.utils.toBytesLE
 import com.klyx.wasm.utils.toUBytesLE
 

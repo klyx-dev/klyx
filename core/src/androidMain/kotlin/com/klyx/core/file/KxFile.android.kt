@@ -183,3 +183,7 @@ actual fun KxFile(path: String): KxFile {
         KxFile(File(path))
     }
 }
+
+actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
+    return requiresPermission(ContextHolder.context, permissionFlags)
+}

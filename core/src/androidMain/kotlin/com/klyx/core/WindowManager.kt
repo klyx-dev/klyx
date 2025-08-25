@@ -1,6 +1,5 @@
 package com.klyx.core
 
-import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
@@ -31,7 +30,7 @@ object WindowManager : KoinComponent {
                 }
             }
         } else {
-            (ContextHolder.mainActivityContextRef.get() as Activity).finishAndRemoveTask()
+            ContextHolder.currentActivityOrNull()?.finishAndRemoveTask()
         }
         openedWindows -= taskId
         currentTaskId = openedWindows.lastOrNull() ?: -1

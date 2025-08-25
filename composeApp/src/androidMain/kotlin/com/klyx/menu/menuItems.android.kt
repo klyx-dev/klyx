@@ -11,7 +11,7 @@ import com.klyx.core.WindowManager
 import com.klyx.core.openActivity
 
 internal actual fun openSystemTerminal() {
-    with(ContextHolder.mainActivityContextRef.get()) {
+    with(ContextHolder.currentActivity()) {
         openActivity(TerminalActivity::class)
     }
 }
@@ -26,12 +26,11 @@ internal actual fun quitApp(): Nothing {
 }
 
 internal actual fun openNewWindow() {
-    with(ContextHolder.mainActivityContextRef.get()) {
+    with(ContextHolder.currentActivity()) {
         launchNewWindow()
     }
 }
 
 internal actual fun closeCurrentWindow() {
-    //MainActivity.ref.onSome { it.finishAndRemoveTask() }
     WindowManager.closeCurrentWindow()
 }

@@ -35,18 +35,17 @@ fun Context.hasStoragePermission(): Boolean {
     }
 }
 
-fun Context.requestStoragePermission() {
-    val activity = this as? Activity ?: return
+fun Activity.requestStoragePermission() {
     if (hasStoragePermission()) return
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
             data = "package:$packageName".toUri()
         }
-        activity.startActivity(intent)
+        startActivity(intent)
     } else {
         ActivityCompat.requestPermissions(
-            activity,
+            this,
             arrayOf(
                 Manifest.permission.READ_EXTERNAL_STORAGE,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE

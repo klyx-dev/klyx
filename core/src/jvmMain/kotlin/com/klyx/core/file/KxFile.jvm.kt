@@ -1,5 +1,9 @@
 package com.klyx.core.file
 
+import com.klyx.core.io.MANAGE_ALL_FILES
+import com.klyx.core.io.R_OK
+import com.klyx.core.io.W_OK
+import com.klyx.core.io.X_OK
 import kotlinx.io.Source
 import kotlinx.io.asSource
 import kotlinx.io.buffered
@@ -34,7 +38,8 @@ actual open class KxFile(
 
     actual fun setReadable(readable: Boolean, ownerOnly: Boolean): Boolean = raw.setReadable(readable, ownerOnly)
     actual fun setWritable(writable: Boolean, ownerOnly: Boolean): Boolean = raw.setWritable(writable, ownerOnly)
-    actual fun setExecutable(executable: Boolean, ownerOnly: Boolean): Boolean = raw.setExecutable(executable, ownerOnly)
+    actual fun setExecutable(executable: Boolean, ownerOnly: Boolean): Boolean =
+        raw.setExecutable(executable, ownerOnly)
 
     actual fun list(): Array<String>? = raw.list()
     actual fun listFiles(): Array<KxFile>? = raw.listFiles()?.map(::KxFile)?.toTypedArray()
@@ -60,3 +65,25 @@ fun KxFile.inputStream() = rawFile().inputStream()
 fun KxFile.outputStream() = rawFile().outputStream()
 
 actual fun KxFile(path: String) = KxFile(File(path))
+
+actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
+    if (permissionFlags and R_OK != 0 && !canRead) {
+        return true
+    }
+
+    if (permissionFlags and W_OK != 0 && !canWrite) {
+        return true
+    }
+
+    if (permissionFlags and X_OK != 0 && !canExecute) {
+        return true
+    }
+
+    if (permissionFlags and MANAGE_ALL_FILES != 0) {
+        if (!(canRead && canWrite && canExecute)) {
+            return true
+        }
+    }
+
+    return false
+}

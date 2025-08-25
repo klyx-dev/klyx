@@ -2,6 +2,7 @@ package com.klyx.viewmodel
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,7 +11,10 @@ import com.klyx.core.Notifier
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
+import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.isValidUtf8
+import com.klyx.core.io.R_OK
+import com.klyx.core.io.W_OK
 import com.klyx.core.string
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
@@ -42,6 +46,8 @@ class EditorViewModel(
     private val _state = MutableStateFlow(TabState())
     val state = _state.asStateFlow()
 
+    private val pendingFiles = mutableStateListOf<KxFile>()
+
     fun openTab(tab: Tab) {
         _state.update { current ->
             if (current.openTabs.any { it.id == tab.id }) {
@@ -71,13 +77,25 @@ class EditorViewModel(
         openTab(tab)
     }
 
+    fun openPendingFiles() {
+        pendingFiles.forEach { file ->
+            openFile(file)
+        }
+        pendingFiles.clear()
+    }
+
+    fun isPendingFile(file: KxFile) = file in pendingFiles
+
     fun openFile(
         file: KxFile,
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (file.absolutePath != "/untitled" && !file.isValidUtf8()) {
+            val permissionRequired = file.isPermissionRequired(R_OK or W_OK)
+            if (permissionRequired) pendingFiles += file
+
+            if (file.absolutePath != "/untitled" && !permissionRequired && !file.isValidUtf8()) {
                 notifier.error("(${file.name}) stream did not contain valid UTF-8")
                 return@launch
             }
@@ -199,9 +217,13 @@ class EditorViewModel(
         } else false
     }
 
-    fun saveAs(newFile: KxFile): Boolean {
-        val current = _state.value
-        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
+    fun saveCurrentAs(newFile: KxFile): Boolean {
+        val currentTabId = _state.value.activeTabId ?: return false
+        return saveAs(currentTabId, newFile)
+    }
+
+    fun saveAs(tabId: TabId, newFile: KxFile): Boolean {
+        val tab = _state.value.openTabs.find { it.id == tabId } ?: return false
 
         return if (tab is Tab.FileTab) {
             val editorState = tab.editorState

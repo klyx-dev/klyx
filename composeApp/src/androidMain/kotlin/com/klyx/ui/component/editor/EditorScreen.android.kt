@@ -38,16 +38,17 @@ import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
-import com.klyx.core.io.READ_OK
-import com.klyx.core.io.WRITE_OK
+import com.klyx.core.io.R_OK
+import com.klyx.core.io.W_OK
 import com.klyx.core.language
-import com.klyx.core.requestStoragePermission
 import com.klyx.editor.CodeEditor
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.tab.Tab
 import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel
+import com.klyx.viewmodel.KlyxViewModel
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinActivityViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalCodeEditorApi::class)
@@ -59,6 +60,7 @@ actual fun EditorScreen(modifier: Modifier) {
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val viewModel = koinViewModel<EditorViewModel>()
+    val klyxViewModel = koinViewModel<KlyxViewModel>()
 
     val state by viewModel.state.collectAsState()
     val openTabs by remember { derivedStateOf { state.openTabs } }
@@ -68,8 +70,6 @@ actual fun EditorScreen(modifier: Modifier) {
     val scope = rememberCoroutineScope()
     val fontFamily = rememberFontFamily(editorSettings.fontFamily)
 
-    var showPermissionDialog by rememberSaveable { mutableStateOf(false) }
-    var pendingFile: KxFile? by remember { mutableStateOf(null) }
     var permissionGranted by rememberSaveable { mutableStateOf(context.hasStoragePermission()) }
 
     DisposableEffect(Unit) {
@@ -87,10 +87,7 @@ actual fun EditorScreen(modifier: Modifier) {
 
     LaunchedEffect(permissionGranted) {
         if (permissionGranted) {
-            pendingFile?.let {
-                viewModel.openFile(it)
-                pendingFile = null
-            }
+            viewModel.openPendingFiles()
         }
     }
 
@@ -161,10 +158,9 @@ actual fun EditorScreen(modifier: Modifier) {
 
                         if (file.path != "/untitled") {
                             LaunchedEffect(Unit) {
-                                if (file.requiresPermission(context, WRITE_OK or READ_OK)) {
+                                if (viewModel.isPendingFile(file) && !permissionGranted) {
                                     viewModel.closeTab(tab.id)
-                                    pendingFile = file
-                                    showPermissionDialog = true
+                                    klyxViewModel.showPermissionDialog()
                                     return@LaunchedEffect
                                 }
                             }
@@ -211,12 +207,5 @@ actual fun EditorScreen(modifier: Modifier) {
                 )
             }
         }
-    }
-
-    if (showPermissionDialog && !permissionGranted) {
-        PermissionDialog(
-            onDismissRequest = { showPermissionDialog = false },
-            onRequestPermission = context::requestStoragePermission
-        )
     }
 }

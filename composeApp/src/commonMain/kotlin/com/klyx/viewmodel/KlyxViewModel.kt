@@ -11,11 +11,18 @@ data class KlyxMenuState(
     val showAboutDialog: Boolean = false
 )
 
+data class KlyxAppState(
+    val showPermissionDialog: Boolean = false
+)
+
 class KlyxViewModel(
     private val notifier: Notifier
 ) : ViewModel() {
     private val _klyxMenuState = MutableStateFlow(KlyxMenuState())
     val klyxMenuState = _klyxMenuState.asStateFlow()
+
+    private val _appState = MutableStateFlow(KlyxAppState())
+    val appState = _appState.asStateFlow()
 
     private val _openProjects = MutableStateFlow(emptyList<KxFile>())
     val openProjects = _openProjects.asStateFlow()
@@ -26,6 +33,14 @@ class KlyxViewModel(
 
     fun dismissAboutDialog() {
         _klyxMenuState.update { it.copy(showAboutDialog = false) }
+    }
+
+    fun showPermissionDialog() {
+        _appState.update { it.copy(showPermissionDialog = true) }
+    }
+
+    fun dismissPermissionDialog() {
+        _appState.update { it.copy(showPermissionDialog = false) }
     }
 
     fun openProject(file: KxFile) {

@@ -16,7 +16,11 @@ import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
+import com.klyx.core.io.ALL_PERMISSIONS
+import com.klyx.core.io.R_OK
+import com.klyx.core.io.W_OK
 import com.klyx.core.logging.logger
 import com.klyx.platform.PlatformInfo
 import com.klyx.res.Res.string
@@ -98,22 +102,34 @@ fun rememberMenuItems(
 
     val fileSaver = rememberFileSaverLauncher { file ->
         if (file != null) {
-            val saved = viewModel.saveAs(file.toKxFile())
+            val saved = viewModel.saveCurrentAs(file.toKxFile())
             if (saved) notifier.success(com.klyx.core.string(string.notification_saved))
         }
     }
 
     val directoryPicker = rememberDirectoryPickerLauncher { file ->
         if (file != null) {
-            klyxViewModel.openProject(file.toKxFile())
-            openDrawerIfClosed()
+            val kx = file.toKxFile()
+
+            if (kx.isPermissionRequired(R_OK or W_OK)) {
+                klyxViewModel.showPermissionDialog()
+            } else {
+                klyxViewModel.openProject(kx)
+                openDrawerIfClosed()
+            }
         }
     }
 
-    val addFolderPicker = rememberDirectoryPickerLauncher {
-        if (it != null) {
-            klyxViewModel.addFolderToProject(it.toKxFile())
-            openDrawerIfClosed()
+    val addFolderPicker = rememberDirectoryPickerLauncher { file ->
+        if (file != null) {
+            val kx = file.toKxFile()
+
+            if (kx.isPermissionRequired(R_OK or W_OK)) {
+                klyxViewModel.showPermissionDialog()
+            } else {
+                klyxViewModel.addFolderToProject(kx)
+                openDrawerIfClosed()
+            }
         }
     }
 

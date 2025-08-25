@@ -2,11 +2,9 @@ package com.klyx
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
-import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,16 +22,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
-import arrow.core.Option
-import arrow.core.none
-import arrow.core.some
-import com.klyx.borrow.ref
-import com.klyx.core.ContextHolder
+import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.LocalSharedPreferences
 import com.klyx.core.SharedLocalProvider
-import com.klyx.core.WindowManager
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
@@ -42,27 +35,14 @@ import com.klyx.core.file.openFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
 import com.klyx.filetree.FileTreeViewModel
-import com.klyx.pointer.dropPtr
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.showWelcome
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.init
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
-class MainActivity : ComponentActivity() {
-    companion object {
-        var ref: Option<MainActivity> = none()
-            private set
-    }
-
+class MainActivity : KlyxActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        ContextHolder.mainActivityContextRef = ref(this as Context).borrowMut()
-        FileKit.init(this)
-        ref = some()
-        WindowManager.currentTaskId = taskId
-        WindowManager.addWindow(taskId)
 
         setContent {
             SharedLocalProvider {
@@ -172,17 +152,6 @@ class MainActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             ActivityManager.TaskDescription(label)
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        dropPtr(ContextHolder.mainActivityContextRef.ptr())
-        ref = none()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        WindowManager.currentTaskId = taskId
     }
 
 //    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {

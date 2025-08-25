@@ -35,12 +35,16 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.LocalNotifier
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.components.TextButtonWithShortcut
 import com.klyx.core.event.subscribeToEvent
+import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
+import com.klyx.core.io.R_OK
+import com.klyx.core.io.W_OK
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.theme.ThemeManager
@@ -50,6 +54,7 @@ import com.klyx.platform.PlatformInfo
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
+import com.klyx.ui.component.editor.PermissionDialog
 import com.klyx.ui.component.menu.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.viewmodel.EditorViewModel
@@ -68,7 +73,7 @@ val DrawerWidth: Dp
     get() {
         val density = LocalDensity.current
         val windowInfo = LocalWindowInfo.current
-        val width = windowInfo.containerSize.width * if (PlatformInfo.isDesktop) 0.3f else 0.75f
+        val width = windowInfo.containerSize.width * if (PlatformInfo.isMobile) 0.75f else 0.3f
         return with(density) { width.toDp() }
     }
 
@@ -88,14 +93,21 @@ fun App(
     val editorViewModel = koinViewModel<EditorViewModel>()
     val klyxViewModel = koinViewModel<KlyxViewModel>()
 
+    val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
+
     val projects by klyxViewModel.openProjects.collectAsState()
 
     val directoryPicker = rememberDirectoryPickerLauncher { file ->
         if (file != null) {
-            klyxViewModel.openProject(file.toKxFile())
+            val kx = file.toKxFile()
 
-            if (drawerState.isClosed) {
-                scope.launch { drawerState.open() }
+            if (kx.isPermissionRequired(R_OK or W_OK)) {
+                klyxViewModel.showPermissionDialog()
+            } else {
+                klyxViewModel.openProject(kx)
+                if (drawerState.isClosed) {
+                    scope.launch { drawerState.open() }
+                }
             }
         }
     }
@@ -197,6 +209,15 @@ fun App(
             }
 
             NotificationOverlay()
+
+            if (appState.showPermissionDialog) {
+                PermissionDialog(
+                    onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
+                    onRequestPermission = { requestFileAccessPermission() }
+                )
+            }
         }
     }
 }
+
+expect fun requestFileAccessPermission()

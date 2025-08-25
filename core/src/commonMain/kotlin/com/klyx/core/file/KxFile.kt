@@ -1,6 +1,7 @@
 package com.klyx.core.file
 
 import com.klyx.core.Environment
+import com.klyx.core.io.R_OK
 import com.klyx.fileSeparatorChar
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.absolutePath
@@ -86,3 +87,5 @@ fun String.toKxFile() = KxFile(this)
 
 val KxFile.isHomeDirectory get() = this.absolutePath == Environment.DeviceHomeDir
 fun KxFile.resolveName() = if (isHomeDirectory) "Home" else name
+
+expect fun KxFile.isPermissionRequired(permissionFlags: Int = R_OK): Boolean

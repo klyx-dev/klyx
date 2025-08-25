@@ -1,6 +1,15 @@
 package com.klyx.core.file
 
+import com.klyx.core.io.MANAGE_ALL_FILES
+import com.klyx.core.io.R_OK
+import com.klyx.core.io.W_OK
+import com.klyx.core.io.X_OK
 import kotlinx.io.Source
+import platform.posix.F_OK
+import platform.posix.access
+import platform.posix.R_OK as POSIX_R_OK
+import platform.posix.W_OK as POSIX_W_OK
+import platform.posix.X_OK as POSIX_X_OK
 
 @Suppress(names = ["EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING"])
 actual open class KxFile {
@@ -133,4 +142,26 @@ actual fun KxFile(
     child: KxFile
 ): KxFile {
     TODO("Not yet implemented")
+}
+
+actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
+    var mode = F_OK
+
+    if (permissionFlags and R_OK != 0) {
+        mode = mode or POSIX_R_OK
+    }
+
+    if (permissionFlags and W_OK != 0) {
+        mode = mode or POSIX_W_OK
+    }
+
+    if (permissionFlags and X_OK != 0) {
+        mode = mode or POSIX_X_OK
+    }
+
+    if (permissionFlags and MANAGE_ALL_FILES != 0) {
+        mode = mode or (POSIX_R_OK or POSIX_W_OK or POSIX_X_OK)
+    }
+
+    return access(absolutePath, mode) != 0
 }

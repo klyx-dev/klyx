@@ -1,7 +1,6 @@
 package com.klyx.activities
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
@@ -50,7 +49,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import java.io.File
 
-class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
+class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
     private val logger = logger()
 
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -183,8 +182,6 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
             progress >= 1f -> "Extracting files, please wait a moment..." to null
             else -> "Downloading Ubuntu Root FileSystem, please wait a moment..." to null
         }
-
-        println(progress)
 
         ProvideTextStyle(textStyle) {
             Box(

@@ -2,7 +2,6 @@ package com.klyx.activities
 
 import android.os.Bundle
 import android.os.Process
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
@@ -35,7 +34,7 @@ import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
 import java.util.Date
 
-class CrashActivity : ComponentActivity() {
+class CrashActivity : KlyxActivity() {
     companion object {
         const val EXTRA_CRASH_LOG = "extra_crash_log"
     }

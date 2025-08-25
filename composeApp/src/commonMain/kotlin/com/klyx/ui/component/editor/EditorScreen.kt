@@ -1,10 +1,10 @@
 package com.klyx.ui.component.editor
 
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.klyx.ui.component.KlyxDialog
 
 @Composable
 expect fun EditorScreen(modifier: Modifier = Modifier)
@@ -15,12 +15,16 @@ fun PermissionDialog(
     onRequestPermission: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    KlyxDialog(
-        onDismissRequest = onDismissRequest,
+    AlertDialog(
         modifier = modifier,
-        title = "Storage Permission Required",
-        message = "To open this file, Klyx needs access to your device's storage. Please grant permission to continue.",
-        positiveButton = {
+        onDismissRequest = onDismissRequest,
+        title = {
+            Text("Storage Permission Required")
+        },
+        text = {
+            Text("Klyx needs access to your device's storage to function properly. Please grant permission to continue.")
+        },
+        confirmButton = {
             TextButton(
                 onClick = {
                     onRequestPermission()
@@ -30,7 +34,7 @@ fun PermissionDialog(
                 Text("Grant Permission")
             }
         },
-        negativeButton = {
+        dismissButton = {
             TextButton(onClick = onDismissRequest) {
                 Text("Cancel")
             }
