@@ -77,7 +77,7 @@ class EditorViewModel(
         isInternal: Boolean = false
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            if (!file.isValidUtf8()) {
+            if (file.absolutePath != "/untitled" && !file.isValidUtf8()) {
                 notifier.error("(${file.name}) stream did not contain valid UTF-8")
                 return@launch
             }
