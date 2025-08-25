@@ -2,7 +2,6 @@ package com.klyx.activities
 
 import android.os.Bundle
 import android.os.Process
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -44,7 +43,7 @@ class CrashActivity : KlyxActivity() {
         super.onCreate(savedInstanceState)
         val crashLog = intent.getStringExtra(EXTRA_CRASH_LOG) ?: "No crash log"
 
-        setContent {
+        setContent(provideLocals = false) {
             KlyxTheme {
                 val uriHandler = LocalUriHandler.current
                 val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()

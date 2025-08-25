@@ -6,7 +6,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +25,6 @@ import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.LocalSharedPreferences
-import com.klyx.core.SharedLocalProvider
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
@@ -45,91 +43,89 @@ class MainActivity : KlyxActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            SharedLocalProvider {
-                val notifier = LocalNotifier.current
-                val prefs = LocalSharedPreferences.current
+            val notifier = LocalNotifier.current
+            val prefs = LocalSharedPreferences.current
 
-                val viewModel: EditorViewModel = koinViewModel()
-                val fileTreeViewModel = koinViewModel<FileTreeViewModel>()
-                val projects by fileTreeViewModel.rootNodes.collectAsState()
+            val viewModel: EditorViewModel = koinViewModel()
+            val fileTreeViewModel = koinViewModel<FileTreeViewModel>()
+            val projects by fileTreeViewModel.rootNodes.collectAsState()
 
-                LaunchedEffect(projects) {
-                    setTaskDescription(
-                        createTaskDescription(
-                            if (projects.isEmpty()) {
-                                "empty project"
-                            } else {
-                                projects.joinToString(", ") { it.name }
-                            }
-                        )
-                    )
-                }
-
-                var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
-                LaunchedEffect(Unit) {
-                    ExtensionManager.loadExtensions().onFailure {
-                        it.printStackTrace()
-                        extensionLoadFailure = it
-                    }
-
-                    if (prefs.getBoolean("show_welcome", true)) {
-                        viewModel.showWelcome()
-                        prefs.edit { putBoolean("show_welcome", false) }
-                    }
-
-                    subscribeToEvent<CrashEvent> { event ->
-                        val isLogFileSaved = event.logFile != null
-
-                        notifier.error(
-                            title = "Unexpected error",
-                            message = if (isLogFileSaved) "A crash report was saved.\nTap to open." else "Failed to save crash report.",
-                            durationMillis = 6000L
-                        ) {
-                            if (isLogFileSaved) openFile(event.logFile!!)
+            LaunchedEffect(projects) {
+                setTaskDescription(
+                    createTaskDescription(
+                        if (projects.isEmpty()) {
+                            "empty project"
+                        } else {
+                            projects.joinToString(", ") { it.name }
                         }
-                    }
-
-                    //openActivity(RustLspActivity::class)
-                }
-
-                val settings = LocalAppSettings.current
-                val darkMode = LocalIsDarkMode.current
-
-                val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
-
-                enableEdgeToEdge(
-                    statusBarStyle = SystemBarStyle.auto(
-                        darkScrim = scrimColor.toArgb(),
-                        lightScrim = scrimColor.toArgb(),
-                        detectDarkMode = { darkMode }
-                    ),
-                    navigationBarStyle = SystemBarStyle.auto(
-                        darkScrim = scrimColor.toArgb(),
-                        lightScrim = scrimColor.toArgb(),
-                        detectDarkMode = { darkMode }
                     )
                 )
+            }
 
-                App(
-                    darkTheme = darkMode,
-                    dynamicColor = settings.dynamicColor,
-                    themeName = settings.theme
-                ) {
-                    extensionLoadFailure?.let {
-                        AlertDialog(
-                            onDismissRequest = { extensionLoadFailure = null },
-                            text = {
-                                Text(
-                                    text = "Failed to load extensions:\n${it.message}"
-                                )
-                            },
-                            confirmButton = {
-                                TextButton(onClick = { extensionLoadFailure = null }) {
-                                    Text("OK")
-                                }
-                            }
-                        )
+            var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
+            LaunchedEffect(Unit) {
+                ExtensionManager.loadExtensions().onFailure {
+                    it.printStackTrace()
+                    extensionLoadFailure = it
+                }
+
+                if (prefs.getBoolean("show_welcome", true)) {
+                    viewModel.showWelcome()
+                    prefs.edit { putBoolean("show_welcome", false) }
+                }
+
+                subscribeToEvent<CrashEvent> { event ->
+                    val isLogFileSaved = event.logFile != null
+
+                    notifier.error(
+                        title = "Unexpected error",
+                        message = if (isLogFileSaved) "A crash report was saved.\nTap to open." else "Failed to save crash report.",
+                        durationMillis = 6000L
+                    ) {
+                        if (isLogFileSaved) openFile(event.logFile!!)
                     }
+                }
+
+                //openActivity(RustLspActivity::class)
+            }
+
+            val settings = LocalAppSettings.current
+            val darkMode = LocalIsDarkMode.current
+
+            val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
+
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.auto(
+                    darkScrim = scrimColor.toArgb(),
+                    lightScrim = scrimColor.toArgb(),
+                    detectDarkMode = { darkMode }
+                ),
+                navigationBarStyle = SystemBarStyle.auto(
+                    darkScrim = scrimColor.toArgb(),
+                    lightScrim = scrimColor.toArgb(),
+                    detectDarkMode = { darkMode }
+                )
+            )
+
+            App(
+                darkTheme = darkMode,
+                dynamicColor = settings.dynamicColor,
+                themeName = settings.theme
+            ) {
+                extensionLoadFailure?.let {
+                    AlertDialog(
+                        onDismissRequest = { extensionLoadFailure = null },
+                        text = {
+                            Text(
+                                text = "Failed to load extensions:\n${it.message}"
+                            )
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { extensionLoadFailure = null }) {
+                                Text("OK")
+                            }
+                        }
+                    )
                 }
             }
         }

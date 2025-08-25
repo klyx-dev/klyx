@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import kotlin.system.exitProcess
 
 object WindowManager : KoinComponent {
     private val context by inject<Context>()
@@ -23,10 +24,15 @@ object WindowManager : KoinComponent {
     fun closeWindow(taskId: Int) {
         val am = context.getSystemService(ActivityManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            for (appTask in am.appTasks) {
-                if (appTask.taskInfo.taskId == taskId) {
-                    appTask.finishAndRemoveTask()
-                    break
+            try {
+                am.appTasks.single().finishAndRemoveTask()
+                exitProcess(0)
+            } catch (_: Exception) {
+                for (appTask in am.appTasks) {
+                    if (appTask.taskInfo.taskId == taskId) {
+                        appTask.finishAndRemoveTask()
+                        break
+                    }
                 }
             }
         } else {

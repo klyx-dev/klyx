@@ -1,7 +1,6 @@
 package com.klyx.activities
 
 import android.os.Bundle
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.klyx.core.SharedLocalProvider
 import com.klyx.core.logging.logger
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
@@ -64,99 +62,97 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
         }
 
         setContent {
-            SharedLocalProvider {
-                KlyxTheme {
-                    Surface(modifier = Modifier.fillMaxSize()) {
-                        val networkState by rememberNetworkState()
-                        var progress by remember { mutableFloatStateOf(0f) }
-                        var downloadError: Throwable? by remember { mutableStateOf(null) }
-                        var isCompleted by remember { mutableStateOf(isTerminalSetupDone) }
-                        var user by remember { mutableStateOf(currentUser) }
+            KlyxTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    val networkState by rememberNetworkState()
+                    var progress by remember { mutableFloatStateOf(0f) }
+                    var downloadError: Throwable? by remember { mutableStateOf(null) }
+                    var isCompleted by remember { mutableStateOf(isTerminalSetupDone) }
+                    var user by remember { mutableStateOf(currentUser) }
 
-                        LaunchedEffect(networkState) {
-                            downloadError = null
+                    LaunchedEffect(networkState) {
+                        downloadError = null
 
-                            if (!isTerminalSetupDone && networkState.isConnected) {
-                                setupTerminal(
-                                    onProgress = { progress = it },
-                                    onComplete = { isCompleted = true },
-                                    onError = { downloadError = it }
+                        if (!isTerminalSetupDone && networkState.isConnected) {
+                            setupTerminal(
+                                onProgress = { progress = it },
+                                onComplete = { isCompleted = true },
+                                onError = { downloadError = it }
+                            )
+                        }
+                    }
+
+                    if (isCompleted) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .imePadding(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (user == null) {
+                                val fontFamily = rememberFontFamily("JetBrains Mono")
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    var userName by remember { mutableStateOf("") }
+                                    val isValid by remember {
+                                        derivedStateOf {
+                                            userName.matches("^[a-z][-a-z0-9_]*$".toRegex())
+                                        }
+                                    }
+
+                                    val errorMessage by remember {
+                                        derivedStateOf {
+                                            if (!isValid) "Invalid username" else null
+                                        }
+                                    }
+
+                                    OutlinedTextField(
+                                        value = userName,
+                                        onValueChange = {
+                                            userName = it.lowercase().trim()
+                                        },
+                                        placeholder = {
+                                            Text("Enter your username")
+                                        },
+                                        supportingText = {
+                                            Text(
+                                                text = errorMessage
+                                                    ?: ("This will create a new user" +
+                                                            " in the terminal and" +
+                                                            " will be saved for future sessions."),
+                                                fontFamily = fontFamily
+                                            )
+                                        },
+                                        isError = !isValid,
+                                        shape = RoundedCornerShape(12.dp),
+                                    )
+
+                                    //Spacer(modifier = Modifier.height(4.dp))
+
+                                    Button(
+                                        onClick = {
+                                            currentUser = userName
+                                            user = userName
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        enabled = isValid
+                                    ) {
+                                        Text("Create Session", fontFamily = fontFamily)
+                                    }
+                                }
+                            } else {
+                                TerminalScreen(
+                                    modifier = Modifier.fillMaxSize(),
+                                    user = user!!
                                 )
                             }
                         }
-
-                        if (isCompleted) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .imePadding(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (user == null) {
-                                    val fontFamily = rememberFontFamily("JetBrains Mono")
-
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        var userName by remember { mutableStateOf("") }
-                                        val isValid by remember {
-                                            derivedStateOf {
-                                                userName.matches("^[a-z][-a-z0-9_]*$".toRegex())
-                                            }
-                                        }
-
-                                        val errorMessage by remember {
-                                            derivedStateOf {
-                                                if (!isValid) "Invalid username" else null
-                                            }
-                                        }
-
-                                        OutlinedTextField(
-                                            value = userName,
-                                            onValueChange = {
-                                                userName = it.lowercase().trim()
-                                            },
-                                            placeholder = {
-                                                Text("Enter your username")
-                                            },
-                                            supportingText = {
-                                                Text(
-                                                    text = errorMessage
-                                                        ?: ("This will create a new user" +
-                                                                " in the terminal and" +
-                                                                " will be saved for future sessions."),
-                                                    fontFamily = fontFamily
-                                                )
-                                            },
-                                            isError = !isValid,
-                                            shape = RoundedCornerShape(12.dp),
-                                        )
-
-                                        //Spacer(modifier = Modifier.height(4.dp))
-
-                                        Button(
-                                            onClick = {
-                                                currentUser = userName
-                                                user = userName
-                                            },
-                                            shape = RoundedCornerShape(12.dp),
-                                            enabled = isValid
-                                        ) {
-                                            Text("Create Session", fontFamily = fontFamily)
-                                        }
-                                    }
-                                } else {
-                                    TerminalScreen(
-                                        modifier = Modifier.fillMaxSize(),
-                                        user = user!!
-                                    )
-                                }
-                            }
-                        } else {
-                            SetupScreen(progress, downloadError)
-                        }
+                    } else {
+                        SetupScreen(progress, downloadError)
                     }
                 }
             }
