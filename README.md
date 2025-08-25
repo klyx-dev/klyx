@@ -5,12 +5,6 @@
 
 ![badge][badge-android]
 ![badge][badge-jvm]
-![badge][badge-linux]
-![badge][badge-windows]
-![badge][badge-ios]
-![badge][badge-mac]
-![badge][badge-android-native]
-![badge][badge-apple-silicon]
 
 Klyx is a lightweight, high-performance code editor built for Android. It provides a seamless coding experience on mobile devices.
 
