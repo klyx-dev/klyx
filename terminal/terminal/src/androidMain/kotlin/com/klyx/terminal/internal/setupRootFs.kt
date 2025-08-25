@@ -2,7 +2,6 @@ package com.klyx.terminal.internal
 
 import android.content.Context
 import com.klyx.core.file.downloadFile
-import com.klyx.core.httpClient
 import com.klyx.core.logging.logger
 import com.klyx.core.process
 import com.klyx.terminal.klyxBinDir
@@ -12,24 +11,29 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import java.io.File
 
+val ubuntuRootFsUrl = when (PREFERRED_ABI) {
+    "arm64-v8a" -> "https://cdimage.ubuntu.com/ubuntu-base/jammy/daily/current/jammy-base-arm64.tar.gz"
+    "armeabi-v7a" -> "https://cdimage.ubuntu.com/ubuntu-base/jammy/daily/current/jammy-base-armhf.tar.gz"
+    "x86_64" -> "https://cdimage.ubuntu.com/ubuntu-base/jammy/daily/current/jammy-base-amd64.tar.gz"
+    else -> error("Unsupported ABI: $PREFERRED_ABI")
+}
+
 private val logger = logger("TerminalSetup")
 
 context(context: Context)
 suspend fun downloadRootFs(
-    onProgress: (downloaded: Long, total: Long?) -> Unit = { _, _ -> },
-    onComplete: (outPath: String) -> Unit = {},
-    onError: (error: Throwable) -> Unit = {}
+    onProgress: suspend (Float) -> Unit = {},
+    onComplete: suspend (outPath: String) -> Unit = {},
+    onError: suspend (error: Throwable) -> Unit = {}
 ) {
     val rootFsPath = "${context.cacheDir.absolutePath}/ubuntu.tar.gz"
     try {
-        httpClient.downloadFile(
+        downloadFile(
             url = ubuntuRootFsUrl,
             outputPath = rootFsPath,
-            onProgress = { downloaded, total ->
-                onProgress(downloaded, total)
-            }
+            onProgress = onProgress,
+            onComplete = { onComplete(rootFsPath) }
         )
-        onComplete(rootFsPath)
     } catch (e: Exception) {
         logger.e("Failed to download rootfs", e)
         onError(e)
@@ -82,8 +86,7 @@ context(context: Context)
 @Suppress("TooGenericExceptionThrown")
 suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {}) {
     val outFile = File(context.cacheDir, "$name.tar.gz")
-    httpClient.downloadFile(packageUrl(name), outFile.absolutePath)
-    onComplete(outFile)
+    downloadFile(packageUrl(name), outFile.absolutePath, onComplete = { onComplete(outFile) })
 }
 
 suspend fun extractTarGz(

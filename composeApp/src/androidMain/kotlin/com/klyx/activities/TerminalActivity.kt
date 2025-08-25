@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.lifecycleScope
 import com.klyx.core.SharedLocalProvider
 import com.klyx.core.logging.logger
 import com.klyx.core.net.isConnected
@@ -49,7 +48,6 @@ import com.klyx.ui.theme.KlyxTheme
 import com.klyx.ui.theme.rememberFontFamily
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 import java.io.File
 
 class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
@@ -81,9 +79,7 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
 
                             if (!isTerminalSetupDone && networkState.isConnected) {
                                 setupTerminal(
-                                    onProgress = { downloaded, total ->
-                                        progress = if (total == null) 0f else downloaded.toFloat() / total
-                                    },
+                                    onProgress = { progress = it },
                                     onComplete = { isCompleted = true },
                                     onError = { downloadError = it }
                                 )
@@ -188,6 +184,8 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
             else -> "Downloading Ubuntu Root FileSystem, please wait a moment..." to null
         }
 
+        println(progress)
+
         ProvideTextStyle(textStyle) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -219,7 +217,7 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
     }
 
     private suspend fun setupTerminal(
-        onProgress: (downloaded: Long, total: Long?) -> Unit = { _, _ -> },
+        onProgress: (Float) -> Unit = {},
         onComplete: () -> Unit = {},
         onError: (error: Throwable) -> Unit = {}
     ) {
@@ -227,17 +225,15 @@ class TerminalActivity : ComponentActivity(), CoroutineScope by MainScope() {
             downloadRootFs(
                 onProgress = onProgress,
                 onComplete = { path ->
-                    lifecycleScope.launch {
-                        isTerminalSetupDone = try {
-                            setupRootFs(path)
-                            true
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            logger.error("Failed to setup terminal", e)
-                            throw e
-                        }
-                        onComplete()
+                    isTerminalSetupDone = try {
+                        setupRootFs(path)
+                        true
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        logger.error("Failed to setup terminal", e)
+                        throw e
                     }
+                    onComplete()
                 },
                 onError = onError
             )
