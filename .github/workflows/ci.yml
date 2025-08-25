@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ main ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
   APP_NAME: "Klyx"
@@ -78,39 +82,39 @@ jobs:
             echo "Skipping JVM build, task not available"
           fi
 
-      - name: Upload JVM artifacts
-        run: |
-          find . -path "*/build/compose/binaries/main/*/*" -type f 2>/dev/null | while read -r file; do
-            if [[ -f "$file" ]]; then
-              echo "Found distribution file: $file"
-              filename=$(basename "$file")
-              echo "Uploading $filename"
-            fi
-          done
-          
-          find . -path "*/build/libs/*-all.jar" -type f 2>/dev/null | while read -r file; do
-            if [[ -f "$file" ]]; then
-              echo "Found JAR file: $file"
-              filename=$(basename "$file")
-              echo "Uploading $filename"
-            fi
-          done
+#      - name: Upload JVM artifacts
+#        run: |
+#          find . -path "*/build/compose/binaries/main/*/*" -type f 2>/dev/null | while read -r file; do
+#            if [[ -f "$file" ]]; then
+#              echo "Found distribution file: $file"
+#              filename=$(basename "$file")
+#              echo "Uploading $filename"
+#            fi
+#          done
+#
+#          find . -path "*/build/libs/*-all.jar" -type f 2>/dev/null | while read -r file; do
+#            if [[ -f "$file" ]]; then
+#              echo "Found JAR file: $file"
+#              filename=$(basename "$file")
+#              echo "Uploading $filename"
+#            fi
+#          done
 
-      - name: Upload distribution artifacts
-        uses: actions/upload-artifact@v4
-        if: hashFiles('**/build/compose/binaries/main/*/*') != ''
-        with:
-          name: klyx-desktop-distribution
-          path: '**/build/compose/binaries/main/*/*'
-          retention-days: 30
-
-      - name: Upload JAR artifacts
-        uses: actions/upload-artifact@v4
-        if: hashFiles('**/build/libs/*-all.jar') != ''
-        with:
-          name: klyx-desktop-jar
-          path: '**/build/libs/*-all.jar'
-          retention-days: 30
+#      - name: Upload distribution artifacts
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('**/build/compose/binaries/main/*/*') != ''
+#        with:
+#          name: klyx-desktop-distribution
+#          path: '**/build/compose/binaries/main/*/*'
+#          retention-days: 30
+#
+#      - name: Upload JAR artifacts
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('**/build/libs/*-all.jar') != ''
+#        with:
+#          name: klyx-desktop-jar
+#          path: '**/build/libs/*-all.jar'
+#          retention-days: 30
 
   build-linux-native:
     name: Build Linux Native
@@ -145,21 +149,21 @@ jobs:
             echo "Skipping packageRpm, task not available"
           fi
 
-      - name: Upload DEB packages
-        uses: actions/upload-artifact@v4
-        if: hashFiles('**/build/compose/binaries/main/deb/*.deb') != ''
-        with:
-          name: klyx-linux-deb
-          path: '**/build/compose/binaries/main/deb/*.deb'
-          retention-days: 30
-
-      - name: Upload RPM packages
-        uses: actions/upload-artifact@v4
-        if: hashFiles('**/build/compose/binaries/main/rpm/*.rpm') != ''
-        with:
-          name: klyx-linux-rpm
-          path: '**/build/compose/binaries/main/rpm/*.rpm'
-          retention-days: 30
+#      - name: Upload DEB packages
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('**/build/compose/binaries/main/deb/*.deb') != ''
+#        with:
+#          name: klyx-linux-deb
+#          path: '**/build/compose/binaries/main/deb/*.deb'
+#          retention-days: 30
+#
+#      - name: Upload RPM packages
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('**/build/compose/binaries/main/rpm/*.rpm') != ''
+#        with:
+#          name: klyx-linux-rpm
+#          path: '**/build/compose/binaries/main/rpm/*.rpm'
+#          retention-days: 30
 
   build-windows-native:
     name: Build Windows Native App & Installer
@@ -193,13 +197,13 @@ jobs:
             echo "Skipping Windows native build, task not available"
           }
 
-      - name: Upload MSI installers
-        uses: actions/upload-artifact@v4
-        if: hashFiles('**/build/compose/binaries/main/msi/*.msi') != ''
-        with:
-          name: klyx-windows-msi
-          path: '**/build/compose/binaries/main/msi/*.msi'
-          retention-days: 30
+#      - name: Upload MSI installers
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('**/build/compose/binaries/main/msi/*.msi') != ''
+#        with:
+#          name: klyx-windows-msi
+#          path: '**/build/compose/binaries/main/msi/*.msi'
+#          retention-days: 30
 
   build-macos-native:
     name: Build macOS Native App & DMG
@@ -229,85 +233,85 @@ jobs:
             echo "Skipping packageDmg"
           fi
 
-      - name: Create universal binary
-        run: |
-          mkdir -p build/universal
-          if [ -f "build/bin/macosX64/releaseExecutable/klyx.kexe" ] && [ -f "build/bin/macosArm64/releaseExecutable/klyx.kexe" ]; then
-            lipo -create \
-              "build/bin/macosX64/releaseExecutable/klyx.kexe" \
-              "build/bin/macosArm64/releaseExecutable/klyx.kexe" \
-              -output "build/universal/klyx"
-          else
-            echo "Skipping universal binary (missing arch builds)"
-          fi
+#      - name: Create universal binary
+#        run: |
+#          mkdir -p build/universal
+#          if [ -f "build/bin/macosX64/releaseExecutable/klyx.kexe" ] && [ -f "build/bin/macosArm64/releaseExecutable/klyx.kexe" ]; then
+#            lipo -create \
+#              "build/bin/macosX64/releaseExecutable/klyx.kexe" \
+#              "build/bin/macosArm64/releaseExecutable/klyx.kexe" \
+#              -output "build/universal/klyx"
+#          else
+#            echo "Skipping universal binary (missing arch builds)"
+#          fi
+#
+#      - name: Upload DMG files
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('**/build/compose/binaries/main/dmg/*.dmg') != ''
+#        with:
+#          name: klyx-macos-dmg
+#          path: '**/build/compose/binaries/main/dmg/*.dmg'
+#          retention-days: 30
+#
+#      - name: Upload x64 executables
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('build/bin/macosX64/releaseExecutable/*') != ''
+#        with:
+#          name: klyx-macos-x64
+#          path: build/bin/macosX64/releaseExecutable/*
+#          retention-days: 30
+#
+#      - name: Upload ARM64 executables
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('build/bin/macosArm64/releaseExecutable/*') != ''
+#        with:
+#          name: klyx-macos-arm64
+#          path: build/bin/macosArm64/releaseExecutable/*
+#          retention-days: 30
+#
+#      - name: Upload universal binary
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('build/universal/*') != ''
+#        with:
+#          name: klyx-macos-universal
+#          path: build/universal/*
+#          retention-days: 30
 
-      - name: Upload DMG files
-        uses: actions/upload-artifact@v4
-        if: hashFiles('**/build/compose/binaries/main/dmg/*.dmg') != ''
-        with:
-          name: klyx-macos-dmg
-          path: '**/build/compose/binaries/main/dmg/*.dmg'
-          retention-days: 30
+#  build-ios-app:
+#    name: Build iOS App
+#    runs-on: macos-latest
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-java@v4
+#        with:
+#          java-version: '21'
+#          distribution: 'temurin'
+#      - uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+#          restore-keys: |
+#            ${{ runner.os }}-gradle-
+#      - run: chmod +x gradlew
+#
+#      - name: Build iOS app
+#        run: |
+#          if ./gradlew tasks --all | grep -q "iosSimulatorArm64MainBinaries"; then
+#            ./gradlew iosSimulatorArm64MainBinaries
+#          else
+#            echo "Skipping iOS build"
+#          fi
 
-      - name: Upload x64 executables
-        uses: actions/upload-artifact@v4
-        if: hashFiles('build/bin/macosX64/releaseExecutable/*') != ''
-        with:
-          name: klyx-macos-x64
-          path: build/bin/macosX64/releaseExecutable/*
-          retention-days: 30
-
-      - name: Upload ARM64 executables
-        uses: actions/upload-artifact@v4
-        if: hashFiles('build/bin/macosArm64/releaseExecutable/*') != ''
-        with:
-          name: klyx-macos-arm64
-          path: build/bin/macosArm64/releaseExecutable/*
-          retention-days: 30
-
-      - name: Upload universal binary
-        uses: actions/upload-artifact@v4
-        if: hashFiles('build/universal/*') != ''
-        with:
-          name: klyx-macos-universal
-          path: build/universal/*
-          retention-days: 30
-
-  build-ios-app:
-    name: Build iOS App
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      - run: chmod +x gradlew
-
-      - name: Build iOS app
-        run: |
-          if ./gradlew tasks --all | grep -q "iosSimulatorArm64MainBinaries"; then
-            ./gradlew iosSimulatorArm64MainBinaries
-          else
-            echo "Skipping iOS build"
-          fi
-
-      - name: Upload iOS simulator artifacts
-        uses: actions/upload-artifact@v4
-        if: hashFiles('build/bin/iosSimulatorArm64/releaseExecutable/*') != ''
-        with:
-          name: klyx-ios-simulator
-          path: build/bin/iosSimulatorArm64/releaseExecutable/*
-          retention-days: 30
+#      - name: Upload iOS simulator artifacts
+#        uses: actions/upload-artifact@v4
+#        if: hashFiles('build/bin/iosSimulatorArm64/releaseExecutable/*') != ''
+#        with:
+#          name: klyx-ios-simulator
+#          path: build/bin/iosSimulatorArm64/releaseExecutable/*
+#          retention-days: 30
 
   quality-checks:
     name: Quality Checks
