@@ -32,6 +32,7 @@
             android:name=".MainActivity"
             android:resizeableActivity="true"
             android:documentLaunchMode="always"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

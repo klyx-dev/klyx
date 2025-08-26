@@ -35,11 +35,7 @@ import com.klyx.core.LocalAppSettings
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
 import com.klyx.core.cmd.key.keyShortcutOf
-import com.klyx.core.file.KxFile
-import com.klyx.core.file.requiresPermission
 import com.klyx.core.hasStoragePermission
-import com.klyx.core.io.R_OK
-import com.klyx.core.io.W_OK
 import com.klyx.core.language
 import com.klyx.editor.CodeEditor
 import com.klyx.editor.ExperimentalCodeEditorApi
@@ -48,7 +44,6 @@ import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import kotlinx.coroutines.launch
-import org.koin.compose.viewmodel.koinActivityViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalCodeEditorApi::class)
@@ -116,7 +111,11 @@ actual fun EditorScreen(modifier: Modifier) {
         })
     }
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+            .imePadding()
+            .systemBarsPadding()
+    ) {
         if (openTabs.isNotEmpty()) {
             EditorTabBar(
                 tabs = openTabs,
@@ -145,10 +144,7 @@ actual fun EditorScreen(modifier: Modifier) {
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = false,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .systemBarsPadding(),
+                modifier = Modifier.fillMaxSize(),
             ) { page ->
                 val tab = openTabs.getOrNull(page)
 
