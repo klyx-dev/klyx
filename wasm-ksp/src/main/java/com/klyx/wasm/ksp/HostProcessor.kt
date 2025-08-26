@@ -73,9 +73,46 @@ class HostProcessor(
             writer.appendLine()
             writer.appendLine("package $packageName")
             writer.appendLine()
-            writer.appendLine("import com.klyx.wasm.*")
-            writer.appendLine("import com.klyx.wasm.type.*")
-            writer.appendLine("import com.klyx.wasm.type.collections.*")
+
+            val imports = mutableSetOf<String>()
+
+            imports += "com.klyx.wasm.ExperimentalWasmApi"
+            imports += "com.klyx.wasm.HostModule"
+            imports += "com.klyx.wasm.HostModuleScope"
+            imports += "com.klyx.wasm.signature"
+
+            for (fn in functions) {
+                if (fn.parameters.any {
+                        it.type.resolve()
+                            .declaration
+                            .qualifiedName
+                            ?.asString() == "com.klyx.wasm.type.WasmString"
+                    }
+                ) {
+                    imports += "com.klyx.wasm.type.WasmString"
+                }
+
+                if (fn.parameters.any {
+                        it.type.resolve()
+                            .declaration
+                            .qualifiedName
+                            ?.asString()
+                            ?.startsWith("com.klyx.wasm.type.") == true
+                    }
+                ) {
+                    imports += "com.klyx.wasm.type.toWasm"
+                }
+
+                if (fn.returnType?.resolve()?.declaration?.qualifiedName?.asString() == "kotlin.String") {
+                    imports += "com.klyx.wasm.internal.toUtf8ByteArray"
+                }
+
+                if (fn.returnType != null) {
+                    imports += "com.klyx.wasm.toWasmValue"
+                }
+            }
+
+            writer.appendLine(imports.sorted().joinToString("\n") { "import $it" })
             writer.appendLine()
 
             val primaryConstructor = module.primaryConstructor
@@ -178,7 +215,7 @@ class HostProcessor(
                             returnVarName = returnVarName
                         )
                     } else {
-                        "null"
+                        "emptyList()"
                     }
                 )
 
@@ -238,7 +275,7 @@ class HostProcessor(
         moduleVar: String
     ): String {
         val wasmValueType = resolver.getClassDeclarationByName(
-            resolver.getKSNameFromString("com.klyx.wasm.type.WasmValue")
+            resolver.getKSNameFromString("com.klyx.wasm.type.WasmType")
         )?.asStarProjectedType()
 
         val argsList = mutableListOf<String>()
@@ -255,22 +292,22 @@ class HostProcessor(
 
                     wasmValueType != null && wasmValueType.isAssignableFrom(type) -> {
                         if (qualifiedName == "com.klyx.wasm.type.WasmString") {
-                            "WasmString(take(), take())"
-                        } else "take().toWasm()"
+                            "WasmString(takeInt(), takeInt())"
+                        } else "takeInt().toWasm()"
                     }
 
                     else -> when (qualifiedName?.removePrefix("kotlin.")) {
-                        "UByte" -> "take().toUByte()"
-                        "Byte" -> "take().toByte()"
-                        "UShort" -> "take().toUShort()"
-                        "Short" -> "take().toShort()"
-                        "UInt" -> "take().toUInt()"
-                        "Int" -> "take()"
+                        "UByte" -> "takeByte().toUByte()"
+                        "Byte" -> "takeByte()"
+                        "UShort" -> "takeShort().toUShort()"
+                        "Short" -> "takeShort()"
+                        "UInt" -> "takeUInt()"
+                        "Int" -> "takeInt()"
                         "Long" -> "takeLong()"
-                        "ULong" -> "takeLong().toULong()"
-                        "Float" -> "float32(take())"
-                        "Double" -> "float64(take())"
-                        "String" -> "string(take(), take())"
+                        "ULong" -> "takeULong()"
+                        "Float" -> "takeFloat()"
+                        "Double" -> "takeDouble()"
+                        "String" -> "readUtf8String(takeInt(), takeInt())"
                         else -> "take()"
                     }
                 }
@@ -285,37 +322,38 @@ class HostProcessor(
     private fun generateReturnValue(
         resolver: Resolver,
         fn: KSFunctionDeclaration,
-        returnVarName: String
+        returnVarName: String = "value"
     ): String {
         val wasmValueType = resolver.getClassDeclarationByName(
-            resolver.getKSNameFromString("com.klyx.wasm.type.WasmValue")
+            resolver.getKSNameFromString("com.klyx.wasm.type.WasmType")
         )?.asStarProjectedType()
 
-        val margin = "|                "
-
         var value: String
-        val type = fn.returnType?.resolve()?.unwrapTypeAlias() ?: return "longArrayOf()"
+        val type = fn.returnType?.resolve()?.unwrapTypeAlias() ?: return "emptyListOf()"
 
         if (wasmValueType != null && wasmValueType.isAssignableFrom(type)) {
-            value = "$returnVarName.value.toLong()"
-            return "longArrayOf($value)"
+            if (type.declaration.qualifiedName?.asString() == "com.klyx.wasm.type.WasmString") {
+                return "listOf($returnVarName.pointer.toWasmValue(), $returnVarName.length.toWasmValue())"
+            }
+            value = "$returnVarName.value.toWasmValue()"
+            return "listOf($value)"
         }
 
         val qualifiedName = type.declaration.qualifiedName?.asString()
 
         if (qualifiedName == "kotlin.String") {
             return """
-                val (ptr, len) = memory.write($returnVarName.toByteArray())
-                ${margin}longArrayOf(ptr.toLong(), len.toLong())
+                val (ptr, len) = memory.allocateAndWrite($returnVarName.toUtf8ByteArray())
+                ${SPACE.repeat(16)}listOf(ptr.toWasmValue(), len.toWasmValue())
             """.trimIndent()
         }
 
         value = when (qualifiedName?.removePrefix("kotlin.")) {
-            "UByte", "Byte", "UShort", "Short", "UInt", "Int", "ULong" -> "$returnVarName.toLong()"
+            "UByte", "Byte", "UShort", "Short", "UInt", "Int", "Long", "ULong" -> "$returnVarName.toWasmValue()"
             else -> returnVarName
         }
 
-        return "longArrayOf($value)"
+        return "listOf($value)"
     }
 
     fun KSType.unwrapTypeAlias(): KSType {

@@ -2,6 +2,7 @@ package com.klyx.extension
 
 import android.os.Environment
 import com.klyx.core.extension.Extension
+import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
 import com.klyx.extension.modules.ProcessModule
@@ -12,11 +13,14 @@ import com.klyx.wasm.HostModule
 import com.klyx.wasm.registerHostModule
 import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.StdioSinkProvider
-import com.klyx.wasm.wasi.withWasi
+import com.klyx.wasm.wasi.withWasiPreview1
 import com.klyx.wasm.wasm
 import kotlinx.io.asSource
+import java.io.ByteArrayOutputStream
 
 object ExtensionLoader {
+    val logger = logger()
+
     val EXTERNAL_STORAGE: String = Environment.getExternalStorageDirectory().absolutePath
 
     @OptIn(ExperimentalWasmApi::class, ExperimentalWasiApi::class)
@@ -34,25 +38,34 @@ object ExtensionLoader {
         }
 
         extension.wasmFiles.firstOrNull()?.let { wasm ->
-            wasm {
+            val stdoutBuffer = ByteArrayOutputStream()
+            val stderrBuffer = ByteArrayOutputStream()
+
+            val instance = wasm {
                 module { bytes(wasm.readBytes()) }
 
-                withWasi {
-                    inheritSystem()
+                withWasiPreview1 {
                     directory(EXTERNAL_STORAGE, EXTERNAL_STORAGE)
                     workingDirectory(EXTERNAL_STORAGE)
 
-                    stdout(StdioSinkProvider { System.out })
-                    stderr(StdioSinkProvider { System.err })
+                    stdout(StdioSinkProvider { stdoutBuffer })
+                    stderr(StdioSinkProvider { stderrBuffer })
                 }
 
                 registerHostModule(RootModule, SystemModule, ProcessModule)
                 registerHostModule(*hostModule)
+            }
 
-                callInit(
-                    enabled = shouldCallInit,
-                    functionName = "init-extension"
-                )
+            if (shouldCallInit) {
+                instance.call("init-extension")
+            }
+
+            stdoutBuffer.use { stdout ->
+                logger.info("${stdout.toString("UTF-8")}")
+            }
+
+            stderrBuffer.use { stderr ->
+                logger.error("${stderr.toString("UTF-8")}")
             }
         }
     }

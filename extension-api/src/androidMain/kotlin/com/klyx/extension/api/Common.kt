@@ -1,7 +1,7 @@
 package com.klyx.extension.api
 
 import com.klyx.wasm.ExperimentalWasmApi
-import com.klyx.wasm.WasmAny
+import com.klyx.wasm.type.WasmAny
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.type.i32
 import com.klyx.wasm.type.list

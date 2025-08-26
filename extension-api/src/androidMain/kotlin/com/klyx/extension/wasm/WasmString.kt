@@ -1,7 +1,7 @@
 package com.klyx.extension.wasm
 
-import com.klyx.wasm.utils.readInt32LE
-import com.klyx.wasm.utils.writeInt32LE
+import com.klyx.wasm.internal.readInt32LittleEndian
+import com.klyx.wasm.internal.writeInt32LittleEndian
 
 data class WasmString(
     val ptr: Int,
@@ -13,8 +13,8 @@ data class WasmString(
         /** Read WasmString from a byte buffer at given offset */
         fun fromBuffer(buffer: ByteArray, offset: Int = 0): WasmString {
             require(offset + SIZE <= buffer.size) { "Buffer too small for WasmString" }
-            val ptr = buffer.readInt32LE(offset)
-            val len = buffer.readInt32LE(offset + 4)
+            val ptr = buffer.readInt32LittleEndian(offset)
+            val len = buffer.readInt32LittleEndian(offset + 4)
             return WasmString(ptr, len)
         }
     }
@@ -22,8 +22,8 @@ data class WasmString(
     /** Write this WasmString to a byte buffer at given offset */
     fun writeToBuffer(buffer: ByteArray, offset: Int = 0) {
         require(offset + SIZE <= buffer.size) { "Buffer too small for WasmString" }
-        buffer.writeInt32LE(ptr, offset)
-        buffer.writeInt32LE(len, offset + 4)
+        buffer.writeInt32LittleEndian(ptr, offset)
+        buffer.writeInt32LittleEndian(len, offset + 4)
     }
 
     /** Convert to a fresh byte buffer */

@@ -7,11 +7,11 @@ import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction
 import com.klyx.wasm.annotations.HostModule
-import com.klyx.wasm.toBuffer
 import com.klyx.wasm.type.Err
 import com.klyx.wasm.type.Result
 import com.klyx.wasm.type.list
 import com.klyx.wasm.type.str
+import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
 import com.klyx.wasm.type.tuple2
 

@@ -2,18 +2,16 @@
 
 package com.klyx.extension.api
 
-import com.klyx.pointer.Pointer
 import com.klyx.wasm.ExperimentalWasmApi
-import com.klyx.wasm.WasmAny
 import com.klyx.wasm.WasmMemory
-import com.klyx.wasm.readLoweredString
 import com.klyx.wasm.type.HasWasmReader
 import com.klyx.wasm.type.Option
 import com.klyx.wasm.type.Vec
+import com.klyx.wasm.type.WasmAny
 import com.klyx.wasm.type.WasmInt
 import com.klyx.wasm.type.WasmMemoryReader
+import com.klyx.wasm.type.WasmType
 import com.klyx.wasm.type.WasmUByte
-import com.klyx.wasm.type.WasmValue
 import com.klyx.wasm.type.collections.WasmList
 import com.klyx.wasm.type.int32
 import com.klyx.wasm.type.list
@@ -84,17 +82,17 @@ data class Command(
 }
 
 @OptIn(ExperimentalWasmApi::class)
-fun WasmMemory.readCommandResult(pointer: Pointer) = readResult(
+fun WasmMemory.readCommandResult(pointer: Int) = readResult(
     pointer = pointer,
     readOk = Command.reader::read,
-    readErr = WasmMemory::readLoweredString
+    readErr = WasmMemory::readCString
 )
 
 data class Output(
     val status: Option<int32>,
     val stdout: Vec<u8>,
     val stderr: Vec<u8>
-) : WasmValue {
+) : WasmType {
     override fun writeToBuffer(buffer: ByteArray, offset: Int) {
         var currentOffset = offset
         status.writeToBuffer(buffer, currentOffset)

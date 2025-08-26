@@ -51,9 +51,6 @@ kotlin {
 
             implementation(libs.kotlinx.datetime)
 
-            implementation(libs.chasm)
-            implementation(libs.bindings.chasm.wasip1)
-
             implementation(projects.core)
             implementation(projects.shared)
             implementation(projects.wasm)
@@ -70,6 +67,10 @@ kotlin {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", project(":wasm-ksp"))
-    add("kspAndroid", project(":wasm-ksp"))
+    add("kspCommonMainMetadata", projects.wasmKsp)
+    add("kspAndroid", projects.wasmKsp)
+    add("kspJvm", projects.wasmKsp)
+    add("kspIosX64", projects.wasmKsp)
+    add("kspIosArm64", projects.wasmKsp)
+    add("kspIosSimulatorArm64", projects.wasmKsp)
 }

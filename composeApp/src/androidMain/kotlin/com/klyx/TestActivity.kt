@@ -11,7 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.ui.theme.KlyxTheme
-import com.klyx.wasm.todo.ExperimentalWasmApi
+import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.wasi.ExperimentalWasiApi
 
 class TestActivity : ComponentActivity() {

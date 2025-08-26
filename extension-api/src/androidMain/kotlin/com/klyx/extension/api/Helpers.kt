@@ -2,42 +2,43 @@
 
 package com.klyx.extension.api
 
-import com.klyx.pointer.Pointer
+import arrow.core.None
+import arrow.core.Option
+import arrow.core.Some
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.Result
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
-import com.klyx.wasm.readLoweredString
-import com.klyx.wasm.utils.i32
+import com.klyx.wasm.memory.uint32
 
 inline fun <T> WasmMemory.readOption(
-    pointer: Pointer,
+    pointer: Int,
     readSome: WasmMemory.(offset: Int) -> T
 ): Option<T> {
-    val offset = pointer.raw.i32
-    val tag = uint32(offset)
+    val tag = uint32(pointer)
     return if (tag == 0u) {
-        Option.None
+        None
     } else {
-        Option.Some(readSome(offset + 4))
+        Some(readSome(pointer + 4))
     }
 }
 
 inline fun <T, E> WasmMemory.readResult(
-    pointer: Pointer,
+    pointer: Int,
     readOk: WasmMemory.(offset: Int) -> T,
     readErr: WasmMemory.(offset: Int) -> E
 ): Result<T, E> {
-    val offset = pointer.raw.i32
-    val tag = uint32(offset)
+    val tag = uint32(pointer)
     return if (tag == 0u) {
-        Result.Ok(readOk(offset + 4))
+        Ok(readOk(pointer + 4))
     } else {
-        Result.Err(readErr(offset + 4))
+        Err(readErr(pointer + 4))
     }
 }
 
-fun WasmMemory.readStringOption(pointer: Pointer) =
-    readOption(pointer, WasmMemory::readLoweredString)
+fun WasmMemory.readStringOption(pointer: Int) = readOption(pointer, WasmMemory::readCString)
 
-fun WasmMemory.readStringResult(pointer: Pointer) = run {
-    readResult(pointer, WasmMemory::readLoweredString, WasmMemory::readLoweredString)
+fun WasmMemory.readStringResult(pointer: Int) = run {
+    readResult(pointer, WasmMemory::readCString, WasmMemory::readCString)
 }
