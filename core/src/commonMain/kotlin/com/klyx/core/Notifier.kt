@@ -86,7 +86,7 @@ class Notifier(
 
     fun toast(
         message: String,
-        durationMillis: Long = 3000L,
+        durationMillis: Long = Toast.LENGTH_SHORT,
         onDismiss: () -> Unit = {}
     ) {
         manager.showToast(

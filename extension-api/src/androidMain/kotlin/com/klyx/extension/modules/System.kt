@@ -1,6 +1,7 @@
 package com.klyx.extension.modules
 
 import com.klyx.core.Notifier
+import com.klyx.core.notification.Toast
 import com.klyx.wasm.annotations.HostFunction
 import com.klyx.wasm.annotations.HostModule
 import kotlinx.coroutines.CoroutineScope
@@ -14,6 +15,11 @@ object System : KoinComponent, CoroutineScope by MainScope() {
 
     @HostFunction
     fun showToast(message: String, duration: Int) {
-        notifier.toast(message)
+        val durationMillis = when (duration) {
+            0 -> Toast.LENGTH_SHORT
+            1 -> Toast.LENGTH_LONG
+            else -> Toast.LENGTH_SHORT
+        }
+        notifier.toast(message, durationMillis)
     }
 }
