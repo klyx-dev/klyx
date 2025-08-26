@@ -61,6 +61,24 @@ class Worktree(val id: ULong, val rootPath: String) {
     fun shellEnv(): List<Pair<String, String>> {
         return getenv().map { (key, value) -> key to value }
     }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + rootPath.hashCode()
+        return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as Worktree
+
+        if (id != other.id) return false
+        if (rootPath != other.rootPath) return false
+
+        return true
+    }
 }
 
 fun Worktree(path: String) = WorktreeRegistry.register(path)

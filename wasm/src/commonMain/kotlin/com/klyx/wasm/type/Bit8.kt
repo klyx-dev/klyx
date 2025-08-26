@@ -76,8 +76,8 @@ fun String.toWasmByte() = WasmByte(toByte())
 
 @OptIn(ExperimentalWasmApi::class, ExperimentalUnsignedTypes::class)
 context(memory: WasmMemory)
-fun String.toWasmU8List() = toUtf8UByteArray().toWasm()
+fun String.asWasmU8Array() = toUtf8UByteArray().wasm
 
 @OptIn(ExperimentalWasmApi::class)
 context(memory: WasmMemory)
-fun String.toWasmS8List() = toUtf8ByteArray().toWasm()
+fun String.asWasmS8Array() = toUtf8ByteArray().wasm

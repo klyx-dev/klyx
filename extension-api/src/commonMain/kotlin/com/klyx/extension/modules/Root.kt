@@ -2,8 +2,10 @@
 
 package com.klyx.extension.modules
 
+import com.klyx.core.Notifier
 import com.klyx.core.logging.logger
 import com.klyx.extension.api.Worktree
+import com.klyx.extension.api.lsp.parseLanguageServerInstallationStatus
 import com.klyx.extension.internal.toWasmOption
 import com.klyx.extension.internal.toWasmResult
 import com.klyx.pointer.asPointer
@@ -13,13 +15,21 @@ import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction
 import com.klyx.wasm.annotations.HostModule
+import com.klyx.wasm.type.Err
+import com.klyx.wasm.type.Ok
+import com.klyx.wasm.type.WasmUnit
 import com.klyx.wasm.type.collections.toWasmList
 import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
+import com.klyx.wasm.type.wstr
+import kotlinx.coroutines.runBlocking
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 @HostModule("\$root")
-object Root {
+object Root : KoinComponent {
     private val logger = logger("RootModule")
+    private val notifier: Notifier by inject()
 
     @HostFunction("[resource-drop]worktree")
     fun dropWorktree(worktreePtr: Int) {
@@ -59,5 +69,28 @@ object Root {
         val worktree = ptr.asPointer().value<Worktree>()
         val envVars = worktree.shellEnv().toWasmList()
         write(retPtr, envVars.toBuffer())
+    }
+
+    @HostFunction
+    fun WasmMemory.makeFileExecutable(path: String, resultPtr: Int) {
+        val res = com.klyx.extension.internal.makeFileExecutable(path).toWasmResult()
+        write(resultPtr, res.toBuffer())
+    }
+
+    @HostFunction
+    fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) = runBlocking {
+        val result = try {
+            com.klyx.core.file.downloadFile(url, path)
+            Ok(WasmUnit)
+        } catch (e: Exception) {
+            Err("$e".wstr)
+        }
+        write(resultPtr, result.toBuffer())
+    }
+
+    @HostFunction
+    fun setLanguageServerInstallationStatus(languageServerName: String, tag: Int, failedReason: String) {
+        val status = parseLanguageServerInstallationStatus(tag, failedReason)
+        TODO("Set language server installation status, not yet implemented: $status")
     }
 }

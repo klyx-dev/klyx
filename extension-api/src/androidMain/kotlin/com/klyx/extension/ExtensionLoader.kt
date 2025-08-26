@@ -1,10 +1,13 @@
 package com.klyx.extension
 
 import android.os.Environment
+import com.github.michaelbull.result.onSuccess
 import com.klyx.core.extension.Extension
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
 import com.klyx.expect
+import com.klyx.extension.api.SystemWorktree
+import com.klyx.extension.api.readCommandResult
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
@@ -15,6 +18,8 @@ import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.StdioSinkProvider
 import com.klyx.wasm.wasi.withWasiPreview1
 import com.klyx.wasm.wasm
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.io.asSource
 import java.io.ByteArrayOutputStream
 
@@ -56,16 +61,29 @@ object ExtensionLoader {
                 registerHostModule(*hostModule)
             }
 
-            if (shouldCallInit) {
-                instance.call("init-extension")
-            }
+            withContext(Dispatchers.Default) {
+                if (shouldCallInit) {
+                    instance.call("init-extension")
+                }
 
-            stdoutBuffer.use { stdout ->
-                logger.info("${stdout.toString("UTF-8")}")
-            }
+                stdoutBuffer.use { stdout ->
+                    logger.info("${stdout.toString("UTF-8")}")
+                }
 
-            stderrBuffer.use { stderr ->
-                logger.error("${stderr.toString("UTF-8")}")
+                stderrBuffer.use { stderr ->
+                    logger.error("${stderr.toString("UTF-8")}")
+                }
+
+                val memory = instance.memory
+                val fn = instance.function("language-server-command")
+                val res = fn("rust-analyzer", SystemWorktree).first().asInt()
+
+                with(memory) {
+                    val result = memory.readCommandResult(res)
+                        .onSuccess {
+                            println(it.toString(memory))
+                        }
+                }
             }
         }
     }

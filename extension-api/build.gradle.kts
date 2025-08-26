@@ -39,6 +39,10 @@ kotlin {
     sourceSets {
         val commonJvmAndroid by creating {
             dependsOn(commonMain.get())
+
+            dependencies {
+                implementation(libs.commons.compress)
+            }
         }
 
         androidMain.get().dependsOn(commonJvmAndroid)
@@ -55,6 +59,7 @@ kotlin {
             implementation(projects.core)
             implementation(projects.shared)
             implementation(projects.wasm)
+            implementation(projects.terminal.terminal)
         }
 
         commonTest.dependencies {

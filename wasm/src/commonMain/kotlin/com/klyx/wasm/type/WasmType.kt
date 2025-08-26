@@ -31,21 +31,23 @@ fun <T> WasmType(value: T): WasmType = when (value) {
     is Double -> WasmDouble(value)
     is Char -> WasmChar(value)
     is String -> WasmString(value)
+    is Unit -> WasmUnit
     else -> throw IllegalArgumentException("Unsupported value type: ${value!!::class}")
 }
 
-fun Boolean.toWasm() = WasmBool(this)
-fun UByte.toWasm() = WasmUByte(this)
-fun Byte.toWasm() = WasmByte(this)
-fun UShort.toWasm() = WasmUShort(this)
-fun Short.toWasm() = WasmShort(this)
-fun UInt.toWasm() = WasmUInt(this)
-fun Int.toWasm() = WasmInt(this)
-fun ULong.toWasm() = WasmULong(this)
-fun Long.toWasm() = WasmLong(this)
-fun Float.toWasm() = WasmFloat(this)
-fun Double.toWasm() = WasmDouble(this)
-fun Char.toWasm() = WasmChar(this)
+val Unit.wasm get() = WasmUnit
+val Boolean.wasm get() = WasmBool(this)
+val UByte.wasm get() = WasmUByte(this)
+val Byte.wasm get() = WasmByte(this)
+val UShort.wasm get() = WasmUShort(this)
+val Short.wasm get() = WasmShort(this)
+val UInt.wasm get() = WasmUInt(this)
+val Int.wasm get() = WasmInt(this)
+val ULong.wasm get() = WasmULong(this)
+val Long.wasm get() = WasmLong(this)
+val Float.wasm get() = WasmFloat(this)
+val Double.wasm get() = WasmDouble(this)
+val Char.wasm get() = WasmChar(this)
 
 typealias bool = WasmBool
 typealias uint8 = WasmUByte
@@ -87,8 +89,12 @@ fun String.toWasm() = WasmString(this)
 
 @OptIn(ExperimentalWasmApi::class)
 context(memory: WasmMemory)
-fun ByteArray.toWasm() = map { it.toWasm() }.toWasmList()
+val String.wstr get() = this.toWasm()
+
+@OptIn(ExperimentalWasmApi::class)
+context(memory: WasmMemory)
+val ByteArray.wasm get() = map { it.wasm }.toWasmList()
 
 @OptIn(ExperimentalWasmApi::class, ExperimentalUnsignedTypes::class)
 context(memory: WasmMemory)
-fun UByteArray.toWasm() = map { it.toWasm() }.toWasmList()
+val UByteArray.wasm get() = map { it.wasm }.toWasmList()
