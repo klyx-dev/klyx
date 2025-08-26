@@ -140,7 +140,7 @@ fun MainMenuBar(
 
             if (settings.showFps) {
                 Text(
-                    text = stringResource(Res.string.label_fps, fps.toFixed(1)),
+                    text = stringResource(Res.string.label_fps, fps.toFixed(2)),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
