@@ -1,5 +1,4 @@
 import com.klyx.Configs
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -35,14 +34,6 @@ kotlin {
     sourceSets {
         val commonAndroidJvm by creating {
             dependsOn(commonMain.get())
-
-            dependencies {
-                implementation(libs.chicory.runtime)
-                implementation(libs.chicory.wasi)
-                implementation(libs.chicory.annotations)
-
-                implementation(libs.bindings.chicory.wasip1)
-            }
         }
 
         androidMain.get().dependsOn(commonAndroidJvm)
@@ -78,7 +69,7 @@ kotlin {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", project(":wasm-ksp"))
-    add("kspAndroid", project(":wasm-ksp"))
-    add("kspJvm", project(":wasm-ksp"))
+    add("kspCommonMainMetadata", projects.wasmKsp)
+    add("kspAndroid", projects.wasmKsp)
+    add("kspJvm", projects.wasmKsp)
 }
