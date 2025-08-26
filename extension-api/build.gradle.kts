@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlinxAtomicfu)
 }
 
 kotlin {
@@ -73,4 +74,8 @@ dependencies {
     add("kspIosX64", projects.wasmKsp)
     add("kspIosArm64", projects.wasmKsp)
     add("kspIosSimulatorArm64", projects.wasmKsp)
+}
+
+atomicfu {
+    transformJvm = false
 }

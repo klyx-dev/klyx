@@ -44,6 +44,7 @@ import com.klyx.core.LocalAppSettings
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
 import com.klyx.core.toFixed
+import com.klyx.filetree.FileTreeViewModel
 import com.klyx.menu.rememberMenuItems
 import com.klyx.platform.PlatformInfo
 import com.klyx.res.Res
@@ -64,13 +65,14 @@ fun MainMenuBar(
 
     val editorViewModel = koinViewModel<EditorViewModel>()
     val klyxViewModel = koinViewModel<KlyxViewModel>()
+    val fileTreeViewModel = koinViewModel<FileTreeViewModel>()
 
     val fpsTracker = remember { FpsTracker() }
     val fps by fpsTracker.fps
 
     val scope = rememberCoroutineScope()
 
-    val menuItems = rememberMenuItems(editorViewModel, klyxViewModel)
+    val menuItems = rememberMenuItems(editorViewModel, klyxViewModel, fileTreeViewModel)
 
     LaunchedEffect(Unit) {
         menuItems.values.map { it }.fastForEach { items ->

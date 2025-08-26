@@ -32,6 +32,7 @@
             android:name=".MainActivity"
             android:resizeableActivity="true"
             android:documentLaunchMode="always"
+            android:launchMode="singleInstancePerTask"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>

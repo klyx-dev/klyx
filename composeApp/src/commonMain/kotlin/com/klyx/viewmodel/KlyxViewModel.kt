@@ -2,7 +2,8 @@ package com.klyx.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.klyx.core.Notifier
-import com.klyx.core.file.KxFile
+import com.klyx.extension.api.Project
+import com.klyx.extension.api.Worktree
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -24,8 +25,8 @@ class KlyxViewModel(
     private val _appState = MutableStateFlow(KlyxAppState())
     val appState = _appState.asStateFlow()
 
-    private val _openProjects = MutableStateFlow(emptyList<KxFile>())
-    val openProjects = _openProjects.asStateFlow()
+    private val _openedProject = MutableStateFlow(Project(emptyList()))
+    val openedProject = _openedProject.asStateFlow()
 
     fun showAboutDialog() {
         _klyxMenuState.update { it.copy(showAboutDialog = true) }
@@ -43,16 +44,15 @@ class KlyxViewModel(
         _appState.update { it.copy(showPermissionDialog = false) }
     }
 
-    fun openProject(file: KxFile) {
-        _openProjects.update { emptyList() }
-        _openProjects.update { it + file }
+    fun openProject(worktree: Worktree) {
+        _openedProject.update { Project(listOf(worktree.id)) }
     }
 
     fun closeProject() {
-        _openProjects.update { emptyList() }
+        _openedProject.update { Project(emptyList()) }
     }
 
-    fun addFolderToProject(folder: KxFile) {
-        _openProjects.update { it + folder }
+    fun addWorktreeToProject(worktree: Worktree) {
+        _openedProject.update { it.copy(worktreeIds = it.worktreeIds + worktree.id) }
     }
 }

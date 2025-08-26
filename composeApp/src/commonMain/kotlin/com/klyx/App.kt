@@ -48,6 +48,7 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.theme.ThemeManager
+import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
 import com.klyx.platform.PlatformInfo
@@ -95,7 +96,7 @@ fun App(
 
     val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
 
-    val projects by klyxViewModel.openProjects.collectAsState()
+    val project by klyxViewModel.openedProject.collectAsState()
 
     val directoryPicker = rememberDirectoryPickerLauncher { file ->
         if (file != null) {
@@ -104,7 +105,7 @@ fun App(
             if (kx.isPermissionRequired(R_OK or W_OK)) {
                 klyxViewModel.showPermissionDialog()
             } else {
-                klyxViewModel.openProject(kx)
+                klyxViewModel.openProject(Worktree(kx))
                 if (drawerState.isClosed) {
                     scope.launch { drawerState.open() }
                 }
@@ -141,7 +142,7 @@ fun App(
                             .width(DrawerWidth)
                             .fillMaxHeight()
                     ) {
-                        if (projects.isEmpty()) {
+                        if (project.isEmpty()) {
                             Column(
                                 modifier = Modifier.fillMaxSize(),
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -156,7 +157,7 @@ fun App(
                             }
                         } else {
                             FileTree(
-                                rootNodes = projects.toFileTreeNodes(),
+                                rootNodes = project.toFileTreeNodes(),
                                 modifier = Modifier.fillMaxSize(),
                                 onFileLongClick = {
 

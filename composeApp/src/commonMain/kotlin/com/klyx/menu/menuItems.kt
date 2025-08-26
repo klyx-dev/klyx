@@ -22,6 +22,9 @@ import com.klyx.core.io.ALL_PERMISSIONS
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.logging.logger
+import com.klyx.extension.api.Worktree
+import com.klyx.filetree.FileTreeViewModel
+import com.klyx.filetree.asFileTreeNode
 import com.klyx.platform.PlatformInfo
 import com.klyx.res.Res.string
 import com.klyx.res.file_menu_title
@@ -81,7 +84,8 @@ private val logger = logger("Klyx")
 @Composable
 fun rememberMenuItems(
     viewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel
+    klyxViewModel: KlyxViewModel,
+    fileTreeViewModel: FileTreeViewModel
 ): Map<String, List<MenuItem>> {
     val notifier = LocalNotifier.current
     val uriHandler = LocalUriHandler.current
@@ -114,7 +118,7 @@ fun rememberMenuItems(
             if (kx.isPermissionRequired(R_OK or W_OK)) {
                 klyxViewModel.showPermissionDialog()
             } else {
-                klyxViewModel.openProject(kx)
+                klyxViewModel.openProject(Worktree(kx))
                 openDrawerIfClosed()
             }
         }
@@ -127,7 +131,9 @@ fun rememberMenuItems(
             if (kx.isPermissionRequired(R_OK or W_OK)) {
                 klyxViewModel.showPermissionDialog()
             } else {
-                klyxViewModel.addFolderToProject(kx)
+                val worktree = Worktree(kx)
+                klyxViewModel.addWorktreeToProject(worktree)
+                fileTreeViewModel.selectNode(worktree.asFileTreeNode())
                 openDrawerIfClosed()
             }
         }

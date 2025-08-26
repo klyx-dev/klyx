@@ -7,17 +7,27 @@ import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.klyx.core.Environment
+import com.klyx.core.file.KxFile
 import com.klyx.extension.internal.getenv
-import kotlinx.datetime.Clock
+import kotlinx.atomicfu.atomic
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
 
-class Worktree(val id: Long, val rootPath: String) {
+/**
+ * A Klyx worktree.
+ *
+ * @property id the ID of the worktree.
+ * @property rootPath the root path of the worktree.
+ */
+class Worktree(val id: ULong, val rootPath: String) {
     private val fs = SystemFileSystem
     private val worktreePath = Path(rootPath)
 
+    /**
+     * Returns the textual contents of the specified file in the worktree.
+     */
     fun readTextFile(path: String): Result<String, String> {
         return try {
             val source = fs.source(Path(worktreePath, path)).buffered()
@@ -27,6 +37,9 @@ class Worktree(val id: Long, val rootPath: String) {
         }
     }
 
+    /**
+     * Returns the path to the given binary name, if one is present on the `$PATH`.
+     */
     fun which(binaryName: String): Option<String> {
         val paths = getenv("PATH")?.split(":").orEmpty()
 
@@ -42,14 +55,45 @@ class Worktree(val id: Long, val rootPath: String) {
         return None
     }
 
+    /**
+     * Returns the current shell environment.
+     */
     fun shellEnv(): List<Pair<String, String>> {
         return getenv().map { (key, value) -> key to value }
     }
 }
 
-fun Worktree(path: String) = run {
-    val id = Clock.System.now().toEpochMilliseconds()
-    Worktree(id, path)
-}
+fun Worktree(path: String) = WorktreeRegistry.register(path)
+fun Worktree(file: KxFile) = Worktree(file.absolutePath)
 
 val SystemWorktree = Worktree(Environment.DeviceHomeDir)
+
+private object WorktreeRegistry {
+    private val map = mutableMapOf<ULong, Worktree>()
+    private val counter = atomic(0L)
+
+    fun register(path: String): Worktree {
+        val id = counter.getAndIncrement().toULong()
+        val worktree = Worktree(id, path)
+        map[id] = worktree
+        return worktree
+    }
+
+    operator fun get(id: ULong) = map[id]
+
+    fun unregister(id: ULong) = map.remove(id)
+}
+
+/**
+ * A Klyx project.
+ *
+ * @property worktreeIds the IDs of all of the worktrees in this project.
+ */
+data class Project(val worktreeIds: List<ULong>) {
+    fun hasWorktree(id: ULong) = worktreeIds.contains(id)
+    fun isNotEmpty() = worktreeIds.isNotEmpty()
+    fun isEmpty() = worktreeIds.isEmpty()
+
+    val worktrees: List<Worktree>
+        get() = worktreeIds.mapNotNull { WorktreeRegistry[it] }
+}
