@@ -88,6 +88,7 @@ object Root : KoinComponent {
         write(resultPtr, result.toBuffer())
     }
 
+    @Suppress("unused")
     @HostFunction
     fun setLanguageServerInstallationStatus(languageServerName: String, tag: Int, failedReason: String) {
         val status = parseLanguageServerInstallationStatus(tag, failedReason)

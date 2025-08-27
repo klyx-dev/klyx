@@ -48,7 +48,7 @@ fun buildProotArgs(
                 Os.access(file.absolutePath, OsConstants.R_OK)
             } catch (error: ErrnoException) {
                 if (error.errno == OsConstants.EACCES) {
-                    logger.warn { "Cannot access $path (Permission denied)" }
+                    logger.debug { "Cannot access $path (Permission denied)" }
                 }
                 false
             }

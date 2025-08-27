@@ -54,7 +54,7 @@ fun LogViewer(
 
     Surface(
         modifier = modifier.horizontalScroll(rememberScrollState()),
-        color = MaterialTheme.colorScheme.surfaceContainer
+        color = MaterialTheme.colorScheme.surface
     ) {
         SelectionContainer {
             LazyColumn(

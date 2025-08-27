@@ -84,6 +84,10 @@ val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
     noLocalProvidedFor<DrawerState>()
 }
 
+val LocalLogBuffer = staticCompositionLocalOf<LogBuffer> {
+    noLocalProvidedFor<LogBuffer>()
+}
+
 val DrawerWidth: Dp
     @ReadOnlyComposable
     @Composable
@@ -158,7 +162,8 @@ fun App(
         }
 
         CompositionLocalProvider(
-            LocalDrawerState provides drawerState
+            LocalDrawerState provides drawerState,
+            LocalLogBuffer provides logBuffer
         ) {
             ModalNavigationDrawer(
                 drawerState = drawerState,
@@ -258,7 +263,7 @@ fun App(
                             LogViewerSheet(
                                 buffer = logBuffer,
                                 onOpenAsTabClick = {
-                                    editorViewModel.openLogViewer(logBuffer)
+                                    editorViewModel.openLogViewer()
                                 },
                                 onDismissRequest = klyxViewModel::dismissLogViewer
                             )
@@ -268,15 +273,15 @@ fun App(
                     extraContent()
                 }
             }
+        }
 
-            NotificationOverlay()
+        NotificationOverlay()
 
-            if (appState.showPermissionDialog) {
-                PermissionDialog(
-                    onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
-                    onRequestPermission = { requestFileAccessPermission() }
-                )
-            }
+        if (appState.showPermissionDialog) {
+            PermissionDialog(
+                onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
+                onRequestPermission = { requestFileAccessPermission() }
+            )
         }
     }
 }

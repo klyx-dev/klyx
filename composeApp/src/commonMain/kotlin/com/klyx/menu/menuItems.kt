@@ -10,17 +10,14 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.core.DOCS_URL
-import com.klyx.core.Environment
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
 import com.klyx.core.LocalNotifier
-import com.klyx.core.Notifier
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
-import com.klyx.core.io.ALL_PERMISSIONS
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.logging.logger
@@ -62,6 +59,7 @@ import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openDefaultSettings
 import com.klyx.viewmodel.openExtensionScreen
+import com.klyx.viewmodel.openLogViewer
 import com.klyx.viewmodel.openSettings
 import com.klyx.viewmodel.showWelcome
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
@@ -70,7 +68,6 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
 internal expect fun openSystemTerminal()
@@ -145,7 +142,7 @@ fun rememberMenuItems(
 
     return remember(viewModel, klyxViewModel, activeFile) {
         menu {
-            klyxMenuGroup(viewModel, klyxViewModel, notifier)
+            klyxMenuGroup(viewModel, klyxViewModel)
 
             fileMenuGroup(
                 onNewFileClick = { viewModel.openFile(KxFile("untitled")) },
@@ -203,8 +200,7 @@ fun rememberMenuItems(
 
 private fun MenuBuilder.klyxMenuGroup(
     editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
-    notifier: Notifier
+    klyxViewModel: KlyxViewModel
 ) = group(string.klyx_menu_title) {
     item(string.menu_item_about_klyx) {
         onClick { klyxViewModel.showAboutDialog() }
@@ -237,18 +233,10 @@ private fun MenuBuilder.klyxMenuGroup(
         onClick { editorViewModel.openExtensionScreen() }
     }
 
-    if (PlatformInfo.isDebugBuild) {
-        divider()
+    divider()
 
-        "Clear Old Logs" {
-            try {
-                fs.delete(Path(Environment.LogsDir))
-                notifier.success("All logs cleared.")
-            } catch (e: Exception) {
-                logger.error(e.message.orEmpty(), e)
-                notifier.error("Failed to clear logs.")
-            }
-        }
+    "Logs" {
+        editorViewModel.openLogViewer()
     }
 
     divider()

@@ -29,7 +29,7 @@ object ExtensionLoader {
         extension: Extension,
         shouldCallInit: Boolean = false,
         vararg hostModule: HostModule
-    ) = withContext(newFixedThreadPoolContext(10, extension.toml.name)) {
+    ) = withContext(newFixedThreadPoolContext(10, extension.toml.id)) {
         val logger = logger(extension.toml.name)
 
         extension.themeFiles.forEach { file ->

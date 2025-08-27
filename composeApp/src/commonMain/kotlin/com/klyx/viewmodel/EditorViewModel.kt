@@ -25,7 +25,6 @@ import com.klyx.tab.Tab
 import com.klyx.tab.TabId
 import com.klyx.ui.component.WelcomeScreen
 import com.klyx.ui.component.extension.ExtensionScreen
-import com.klyx.ui.component.log.LogBuffer
 import com.klyx.ui.component.log.LogViewerScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -311,8 +310,8 @@ fun EditorViewModel.showWelcome() {
     }
 }
 
-fun EditorViewModel.openLogViewer(logBuffer: LogBuffer) {
+fun EditorViewModel.openLogViewer() {
     openTab("LogViewer") {
-        LogViewerScreen(logBuffer, modifier = Modifier.fillMaxSize())
+        LogViewerScreen(modifier = Modifier.fillMaxSize())
     }
 }

@@ -36,8 +36,13 @@ open class KlyxActivity : ComponentActivity() {
         WindowManager.currentTaskId = taskId
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        ContextHolder.setCurrentActivity(null)
+    override fun onStart() {
+        super.onStart()
+        ContextHolder.setCurrentActivity(this)
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        ContextHolder.setCurrentActivity(this)
     }
 }
