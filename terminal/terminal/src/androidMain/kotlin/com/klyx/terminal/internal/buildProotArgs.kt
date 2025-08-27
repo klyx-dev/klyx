@@ -5,7 +5,6 @@ import android.content.Context
 import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
-import android.util.Log
 import com.klyx.core.logging.logger
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
@@ -49,7 +48,7 @@ fun buildProotArgs(
                 Os.access(file.absolutePath, OsConstants.R_OK)
             } catch (error: ErrnoException) {
                 if (error.errno == OsConstants.EACCES) {
-                    logger.w("Terminal", "Cannot access $path (Permission denied)")
+                    logger.warn { "Cannot access $path (Permission denied)" }
                 }
                 false
             }
@@ -67,7 +66,7 @@ fun buildProotArgs(
         val src = "/proc/self/fd/$fd"
         with(File(src)) {
             if (exists() && canRead() && canWrite()) {
-                logger.i("Terminal", "$src -> /dev/$name")
+                logger.info { "$src -> /dev/$name" }
                 bind(canonicalPath, "/dev/$name")
             }
         }

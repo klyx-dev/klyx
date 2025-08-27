@@ -1,11 +1,13 @@
 package com.klyx.menu
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.core.DOCS_URL
 import com.klyx.core.Environment
@@ -139,7 +141,9 @@ fun rememberMenuItems(
         }
     }
 
-    return remember(viewModel, klyxViewModel) {
+    val activeFile by viewModel.activeFile.collectAsStateWithLifecycle()
+
+    return remember(viewModel, klyxViewModel, activeFile) {
         menu {
             klyxMenuGroup(viewModel, klyxViewModel, notifier)
 
@@ -149,7 +153,7 @@ fun rememberMenuItems(
                 onOpenFolderClick = { directoryPicker.launch() },
                 onAddFolderClick = { addFolderPicker.launch() },
                 onSaveClick = {
-                    val file = viewModel.getActiveFile()
+                    val file = activeFile
                     if (file == null) {
                         notifier.notify(com.klyx.core.string(string.notification_no_active_file))
                         return@fileMenuGroup
@@ -163,7 +167,7 @@ fun rememberMenuItems(
                     }
                 },
                 onSaveAsClick = {
-                    val file = viewModel.getActiveFile()
+                    val file = activeFile
                     if (file == null) {
                         notifier.notify(com.klyx.core.string(string.notification_no_active_file))
                         return@fileMenuGroup

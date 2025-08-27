@@ -91,6 +91,7 @@ object Root : KoinComponent {
     @HostFunction
     fun setLanguageServerInstallationStatus(languageServerName: String, tag: Int, failedReason: String) {
         val status = parseLanguageServerInstallationStatus(tag, failedReason)
-        TODO("Set language server installation status, not yet implemented: $status")
+        //TODO("Set language server installation status, not yet implemented: $status")
+        logger.info { "Set language server installation status: $status" }
     }
 }

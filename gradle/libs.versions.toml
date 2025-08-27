@@ -5,7 +5,9 @@ androidx-core = "1.16.0"
 androidx-lifecycle = "2.9.1"
 annotation = "1.9.1"
 chasm = "1.0.0"
+iconsLucide = "1.1.0"
 kotlinResult = "2.1.0"
+log4k = "1.5.0"
 wasip1Bindings = "0.6.0"
 collection = "1.5.0"
 composeHotReload = "1.0.0-beta03"
@@ -50,7 +52,9 @@ androidx-core = { module = "androidx.core:core", version.ref = "core" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 bindings-chasm-wasip1 = { module = "at.released.weh:bindings-chasm-wasip1", version.ref = "wasip1Bindings" }
 chasm = { module = "io.github.charlietap.chasm:chasm", version.ref = "chasm" }
+icons-lucide = { module = "com.composables:icons-lucide", version.ref = "iconsLucide" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
+log4k = { module = "de.peilicke.sascha:log4k", version.ref = "log4k" }
 wasip1-host = { module = "at.released.weh:host", version.ref = "wasip1Bindings" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }

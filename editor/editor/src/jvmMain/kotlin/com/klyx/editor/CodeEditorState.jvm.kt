@@ -2,6 +2,7 @@ package com.klyx.editor
 
 import androidx.compose.runtime.Stable
 import com.klyx.editor.event.Event
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KProperty
 
 @Stable
@@ -26,6 +27,9 @@ actual class CodeEditorState actual constructor(
 
     actual inline fun <reified E : Event> subscribeEvent(crossinline onEvent: (E) -> Unit) {
     }
+
+    actual val cursor: StateFlow<CursorState>
+        get() = TODO("Not yet implemented")
 }
 
 @ExperimentalCodeEditorApi

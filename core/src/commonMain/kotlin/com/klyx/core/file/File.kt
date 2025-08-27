@@ -1,5 +1,6 @@
 package com.klyx.core.file
 
+import com.klyx.core.format
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.Dispatchers
@@ -66,3 +67,16 @@ expect fun ByteArray.isValidUtf8(): Boolean
 
 suspend fun KxFile.isValidUtf8() = withContext(Dispatchers.IO) { readBytes().isValidUtf8() }
 suspend fun PlatformFile.isValidUtf8() = readBytes().isValidUtf8()
+
+fun Long.humanBytes(): String {
+    if (this < 1024) return "$this B"
+    val units = arrayOf("KB", "MB", "GB", "TB")
+    var v = this.toDouble()
+    var u = 0
+    while (v >= 1024 && u < units.lastIndex) {
+        v /= 1024.0
+        u++
+    }
+    val rounded = if (v >= 100) "%.0f" else if (v >= 10) "%.1f" else "%.2f"
+    return rounded.format(v) + " " + units[u]
+}

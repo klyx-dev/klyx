@@ -55,6 +55,7 @@ object ExtensionManager {
             installedExtensions.add(ext)
             try {
                 ExtensionLoader.loadExtension(ext, shouldCallInit = true)
+                Unit
             } catch (err: Exception) {
                 err.printStackTrace()
                 installedExtensions.removeIf { it.toml.id == ext.toml.id }

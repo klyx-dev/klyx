@@ -9,11 +9,15 @@ import androidx.compose.runtime.setValue
 import com.klyx.editor.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.Event
 import io.github.rosemoe.sora.event.EventManager.NoUnsubscribeReceiver
+import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.event.SubscriptionReceipt
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.subscribeAlways
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlin.reflect.KProperty
 import com.klyx.editor.event.Event as KlyxEvent
 
@@ -56,6 +60,27 @@ actual class CodeEditorState actual constructor(
     @PublishedApi
     internal fun editorNotInitialized(): Nothing {
         error("Editor not initialized")
+    }
+
+    private val _cursor = MutableStateFlow(CursorState())
+    actual val cursor = _cursor.asStateFlow()
+
+    init {
+        subscribeAlways<SelectionChangeEvent> { event ->
+            val cursor = event.editor.cursor
+            cursor.isSelected
+            _cursor.update {
+                CursorState(
+                    left = cursor.left,
+                    right = cursor.right,
+                    rightLine = cursor.rightLine,
+                    leftLine = cursor.leftLine,
+                    rightColumn = cursor.rightColumn,
+                    leftColumn = cursor.leftColumn,
+                    isSelected = cursor.isSelected
+                )
+            }
+        }
     }
 
     actual operator fun getValue(

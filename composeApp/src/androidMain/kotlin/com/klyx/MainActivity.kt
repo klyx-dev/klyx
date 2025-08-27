@@ -35,10 +35,17 @@ import com.klyx.extension.ExtensionManager
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.showWelcome
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
+import java.util.concurrent.Executors
 
 class MainActivity : KlyxActivity() {
+
+    private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -64,9 +71,11 @@ class MainActivity : KlyxActivity() {
 
             var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
             LaunchedEffect(Unit) {
-                ExtensionManager.loadExtensions().onFailure {
-                    it.printStackTrace()
-                    extensionLoadFailure = it
+                withContext(dispatcher + SupervisorJob()) {
+                    ExtensionManager.loadExtensions().onFailure {
+                        it.printStackTrace()
+                        extensionLoadFailure = it
+                    }
                 }
 
                 if (prefs.getBoolean("show_welcome", true)) {

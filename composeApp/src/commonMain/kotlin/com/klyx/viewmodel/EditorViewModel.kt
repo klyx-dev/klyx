@@ -2,7 +2,6 @@ package com.klyx.viewmodel
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -26,16 +25,23 @@ import com.klyx.tab.Tab
 import com.klyx.tab.TabId
 import com.klyx.ui.component.WelcomeScreen
 import com.klyx.ui.component.extension.ExtensionScreen
+import com.klyx.ui.component.log.LogBuffer
+import com.klyx.ui.component.log.LogViewerScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
-    val activeTabId: TabId? = null
+    val activeTabId: TabId? = null,
+    val pendingFiles: List<KxFile> = emptyList()
 )
 
 @OptIn(ExperimentalCodeEditorApi::class)
@@ -46,7 +52,17 @@ class EditorViewModel(
     private val _state = MutableStateFlow(TabState())
     val state = _state.asStateFlow()
 
-    private val pendingFiles = mutableStateListOf<KxFile>()
+    val activeFile = _state.map { tabState ->
+        (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.file
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    val activeTab = _state.map { tabState ->
+        tabState.openTabs.find { it.id == tabState.activeTabId }
+    }
+
+    val currentEditorState = _state.map { tabState ->
+        (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.editorState
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     fun openTab(tab: Tab) {
         _state.update { current ->
@@ -78,13 +94,11 @@ class EditorViewModel(
     }
 
     fun openPendingFiles() {
-        pendingFiles.forEach { file ->
-            openFile(file)
-        }
-        pendingFiles.clear()
+        _state.value.pendingFiles.forEach(::openFile)
+        _state.update { it.copy(pendingFiles = emptyList()) }
     }
 
-    fun isPendingFile(file: KxFile) = file in pendingFiles
+    fun isPendingFile(file: KxFile) = file in _state.value.pendingFiles
 
     fun openFile(
         file: KxFile,
@@ -93,7 +107,9 @@ class EditorViewModel(
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val permissionRequired = file.isPermissionRequired(R_OK or W_OK)
-            if (permissionRequired) pendingFiles += file
+            if (permissionRequired) {
+                _state.update { it.copy(pendingFiles = it.pendingFiles + file) }
+            }
 
             if (file.absolutePath != "/untitled" && !permissionRequired && !file.isValidUtf8()) {
                 notifier.error("(${file.name}) stream did not contain valid UTF-8")
@@ -108,7 +124,9 @@ class EditorViewModel(
                 editorState = CodeEditorState(initialText = runCatching { file.readText() }.getOrElse { "" })
             )
 
-            openTab(fileTab)
+            withContext(Dispatchers.Main) {
+                openTab(fileTab)
+            }
         }
     }
 
@@ -141,16 +159,6 @@ class EditorViewModel(
 
     fun getTab(tabId: TabId): Tab? {
         return _state.value.openTabs.find { it.id == tabId }
-    }
-
-    fun getActiveTab(): Tab? {
-        val current = _state.value
-        return current.openTabs.find { it.id == current.activeTabId }
-    }
-
-    fun getActiveFile(): KxFile? {
-        val current = _state.value
-        return (current.openTabs.find { it is Tab.FileTab && it.id == current.activeTabId } as? Tab.FileTab)?.file
     }
 
     fun replaceTab(tabId: TabId, newTab: Tab) {
@@ -300,5 +308,11 @@ fun EditorViewModel.openExtensionScreen() {
 fun EditorViewModel.showWelcome() {
     openTab("Welcome") {
         WelcomeScreen(modifier = Modifier.fillMaxSize())
+    }
+}
+
+fun EditorViewModel.openLogViewer(logBuffer: LogBuffer) {
+    openTab("LogViewer") {
+        LogViewerScreen(logBuffer, modifier = Modifier.fillMaxSize())
     }
 }

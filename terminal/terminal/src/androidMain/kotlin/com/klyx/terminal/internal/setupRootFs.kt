@@ -35,7 +35,7 @@ suspend fun downloadRootFs(
             onComplete = { onComplete(rootFsPath) }
         )
     } catch (e: Exception) {
-        logger.e("Failed to download rootfs", e)
+        logger.error(e) { "Failed to download rootfs" }
         onError(e)
     }
 }
@@ -48,7 +48,7 @@ suspend fun setupRootFs(path: String) = run {
 
     if (!ubuntuDir.exists()) ubuntuDir.mkdirs()
     if (!extractTarGz(path, ubuntuDir.absolutePath)) {
-        logger.w("Ubuntu rootfs is not extracted properly.")
+        logger.warn { "Ubuntu rootfs is not extracted properly." }
     }
     SystemFileSystem.delete(Path(path))
 
@@ -95,6 +95,6 @@ suspend fun extractTarGz(
 ) = process(arrayOf("tar", "-xzf", inputPath, "-C", outputPath)) {
     val logger = logger("ExtractTarGz")
 
-    onError(logger::e)
-    onOutput(logger::i)
+    onError(logger::error)
+    onOutput(logger::info)
 }.execute().success

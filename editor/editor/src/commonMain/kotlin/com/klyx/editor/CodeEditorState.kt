@@ -2,6 +2,7 @@ package com.klyx.editor
 
 import androidx.compose.runtime.Stable
 import com.klyx.editor.event.Event
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KProperty
 
 @Stable
@@ -9,6 +10,8 @@ import kotlin.reflect.KProperty
 expect class CodeEditorState(
     initialText: String = ""
 ) {
+    val cursor: StateFlow<CursorState>
+
     inline fun <reified E : Event> subscribeEvent(crossinline onEvent: (E) -> Unit)
 
     operator fun getValue(thisRef: Any?, property: KProperty<*>): String

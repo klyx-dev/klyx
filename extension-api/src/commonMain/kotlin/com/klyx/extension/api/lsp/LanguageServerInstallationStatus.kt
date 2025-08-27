@@ -1,9 +1,9 @@
 package com.klyx.extension.api.lsp
 
 sealed class LanguageServerInstallationStatus {
-    object None : LanguageServerInstallationStatus()
-    object Downloading : LanguageServerInstallationStatus()
-    object CheckingForUpdate : LanguageServerInstallationStatus()
+    data object None : LanguageServerInstallationStatus()
+    data object Downloading : LanguageServerInstallationStatus()
+    data object CheckingForUpdate : LanguageServerInstallationStatus()
     data class Failed(val reason: String) : LanguageServerInstallationStatus()
 
     override fun toString(): String = when (this) {

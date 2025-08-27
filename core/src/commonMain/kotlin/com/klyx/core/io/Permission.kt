@@ -1,5 +1,8 @@
 package com.klyx.core.io
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+
 /** Read permission. */
 const val R_OK = 1 shl 0
 
@@ -16,3 +19,6 @@ const val MANAGE_ALL_FILES = 1 shl 2 // for MANAGE_EXTERNAL_STORAGE (Android 11+
 const val X_OK = 1 shl 3
 
 const val ALL_PERMISSIONS = R_OK or W_OK or MANAGE_ALL_FILES or X_OK
+
+@Composable
+expect fun rememberStoragePermissionState(): State<Boolean>

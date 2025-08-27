@@ -13,6 +13,8 @@ import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
+import com.klyx.core.logging.Level
+import com.klyx.core.logging.LoggerConfig
 import com.klyx.di.commonModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -32,6 +34,12 @@ class KlyxApplication : Application() {
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
         instance = this
         TreeSitter.loadLibrary()
+
+        if (!BuildConfig.DEBUG) {
+            LoggerConfig.Default = LoggerConfig(
+                minimumLevel = Level.Info
+            )
+        }
 
         initKoin(commonModule) {
             androidLogger()

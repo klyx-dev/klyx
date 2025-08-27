@@ -13,3 +13,5 @@ inline fun <reified T> T.toJson() = run {
     val json = Json { prettyPrint = true }
     json.encodeToString(this)
 }
+
+expect val currentThreadName: String

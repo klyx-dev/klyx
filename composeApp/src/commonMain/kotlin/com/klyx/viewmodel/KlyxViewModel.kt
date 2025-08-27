@@ -13,7 +13,8 @@ data class KlyxMenuState(
 )
 
 data class KlyxAppState(
-    val showPermissionDialog: Boolean = false
+    val showPermissionDialog: Boolean = false,
+    val showLogViewer: Boolean = false,
 )
 
 class KlyxViewModel(
@@ -54,5 +55,13 @@ class KlyxViewModel(
 
     fun addWorktreeToProject(worktree: Worktree) {
         _openedProject.update { it.copy(worktreeIds = it.worktreeIds + worktree.id) }
+    }
+
+    fun showLogViewer() {
+        _appState.update { it.copy(showLogViewer = true) }
+    }
+
+    fun dismissLogViewer() {
+        _appState.update { it.copy(showLogViewer = false) }
     }
 }

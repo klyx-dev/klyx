@@ -1,8 +1,12 @@
+@file:OptIn(ExperimentalCodeEditorApi::class)
+
 package com.klyx
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -45,9 +49,12 @@ import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
+import com.klyx.core.language
+import com.klyx.core.logging.KxLog
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.theme.ThemeManager
+import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
@@ -56,12 +63,21 @@ import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.editor.PermissionDialog
+import com.klyx.ui.component.editor.StatusBar
+import com.klyx.ui.component.editor.StatusBarState
+import com.klyx.ui.component.log.LogBuffer
+import com.klyx.ui.component.log.LogViewerSheet
 import com.klyx.ui.component.menu.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
+import com.klyx.viewmodel.openLogViewer
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 
 val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
@@ -78,6 +94,7 @@ val DrawerWidth: Dp
         return with(density) { width.toDp() }
     }
 
+@OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
 @Composable
 fun App(
     dynamicColor: Boolean = true,
@@ -109,6 +126,16 @@ fun App(
                 if (drawerState.isClosed) {
                     scope.launch { drawerState.open() }
                 }
+            }
+        }
+    }
+
+    val logBuffer = remember { LogBuffer(maxSize = 2000) }
+
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default.limitedParallelism(4)) {
+            KxLog.logFlow.collect { log ->
+                logBuffer.add(log)
             }
         }
     }
@@ -200,8 +227,41 @@ fun App(
                             )
                         }
 
-                        Surface(color = background) {
-                            EditorScreen()
+                        Surface(
+                            color = background,
+                            modifier = Modifier
+                                .imePadding()
+                                .systemBarsPadding()
+                        ) {
+                            Column {
+                                val activeFile by editorViewModel.activeFile.collectAsState()
+                                val editorState by editorViewModel.currentEditorState.collectAsState()
+
+                                EditorScreen(
+                                    modifier = Modifier.weight(1f),
+                                    editorViewModel = editorViewModel,
+                                    klyxViewModel = klyxViewModel
+                                )
+
+                                StatusBar(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    state = StatusBarState(
+                                        editorState = editorState,
+                                        language = activeFile?.language()
+                                    ),
+                                    onLogClick = { klyxViewModel.showLogViewer() }
+                                )
+                            }
+                        }
+
+                        if (appState.showLogViewer) {
+                            LogViewerSheet(
+                                buffer = logBuffer,
+                                onOpenAsTabClick = {
+                                    editorViewModel.openLogViewer(logBuffer)
+                                },
+                                onDismissRequest = klyxViewModel::dismissLogViewer
+                            )
                         }
                     }
 
