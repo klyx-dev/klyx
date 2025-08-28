@@ -186,6 +186,7 @@ android {
 
         getByName("debug") {
             versionNameSuffix = "+" + AppVersioning.DEBUG_SUFFIX
+            applicationIdSuffix = "." + AppVersioning.DEBUG_SUFFIX
 
             // signingConfig = signingConfigs.getByName("debug")
             signingConfig = signingConfigs.getByName("release")

@@ -23,16 +23,15 @@ fun createSession(
     user: String,
     client: TerminalSessionClient,
     cwd: File = klyxFilesDir,
+    includeLdLibraryPath: Boolean = false,
     sessionId: TerminalSessionId = generateId()
 ) = run {
-    val env = mutableMapOf<String, String>()
-
     val tmpDir = File(klyxCacheDir, "terminal/$sessionId").apply {
         if (exists()) deleteRecursively()
         mkdirs()
     }
 
-    env += mapOf(
+    val env = mutableMapOf(
         "PROOT_TMP_DIR" to tmpDir.absolutePath,
         "COLORTERM" to "truecolor",
         "TERM" to "xterm-256color",
@@ -40,6 +39,10 @@ fun createSession(
         "CACHE_GID" to (10000 + Os.getgid()).toString(),
         "EXT_GID" to (40000 + Os.getgid()).toString()
     )
+
+    if (includeLdLibraryPath) {
+        env["LD_LIBRARY_PATH"] = "$linker:$klyxLibDir:\$LD_LIBRARY_PATH"
+    }
 
     TerminalSession(
         klyxBinDir.absolutePath + "/proot",

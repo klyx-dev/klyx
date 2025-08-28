@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.klyx.BuildConfig
 import com.klyx.core.terminal.ExtraKeys
 import com.klyx.core.toJson
 import com.klyx.terminal.TerminalSessionClient
@@ -151,7 +152,7 @@ private fun TerminalView(user: String) = TerminalView(context, null).apply {
 
     val sessionClient = TerminalSessionClient(this, context as? Activity)
 
-    val session = createSession(user, sessionClient)
+    val session = createSession(user, sessionClient, includeLdLibraryPath = BuildConfig.DEBUG)
     session.updateTerminalSessionClient(sessionClient)
     attachSession(session)
 }
