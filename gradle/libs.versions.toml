@@ -6,6 +6,7 @@ androidx-lifecycle = "2.9.1"
 annotation = "1.9.1"
 chasm = "1.0.0"
 iconsLucide = "1.1.0"
+kfswatch = "1.3.1"
 kotlinResult = "2.1.0"
 log4k = "1.5.0"
 wasip1Bindings = "0.6.0"
@@ -53,6 +54,7 @@ androidx-documentfile = { module = "androidx.documentfile:documentfile", version
 bindings-chasm-wasip1 = { module = "at.released.weh:bindings-chasm-wasip1", version.ref = "wasip1Bindings" }
 chasm = { module = "io.github.charlietap.chasm:chasm", version.ref = "chasm" }
 icons-lucide = { module = "com.composables:icons-lucide", version.ref = "iconsLucide" }
+kfswatch = { module = "io.github.irgaly.kfswatch:kfswatch", version.ref = "kfswatch" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 log4k = { module = "de.peilicke.sascha:log4k", version.ref = "log4k" }
 wasip1-host = { module = "at.released.weh:host", version.ref = "wasip1Bindings" }

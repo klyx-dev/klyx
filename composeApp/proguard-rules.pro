@@ -20,6 +20,15 @@
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
 
--dontobfuscate
-
 -dontwarn com.sun.nio.file.ExtendedOpenOption
+-dontwarn org.joni.**
+
+-keep class com.itsaky.androidide.treesitter.** { *; }
+
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+-keep class androidx.documentfile.** { *; }
+-keep class androidx.activity.result.** { *; }
+-keep class androidx.activity.result.contract.** { *; }

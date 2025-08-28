@@ -86,6 +86,8 @@ kotlin {
                 api(libs.arrow.core)
                 api(libs.arrow.fx.coroutines)
 
+                api(libs.kfswatch)
+
                 implementation(projects.shared)
             }
         }

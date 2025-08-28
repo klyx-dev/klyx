@@ -29,13 +29,14 @@ class KlyxApplication : Application() {
         val application: KlyxApplication get() = instance
     }
 
+    @Suppress("KotlinConstantConditions")
     override fun onCreate() {
         super.onCreate()
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
         instance = this
         TreeSitter.loadLibrary()
 
-        if (!BuildConfig.DEBUG) {
+        if (BuildConfig.BUILD_TYPE == "release") {
             LoggerConfig.Default = LoggerConfig(
                 minimumLevel = Level.Info
             )
