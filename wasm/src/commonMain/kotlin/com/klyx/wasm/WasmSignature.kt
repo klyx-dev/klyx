@@ -5,7 +5,6 @@ package com.klyx.wasm
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.experimental.ExperimentalTypeInference
 
 @ExperimentalWasmApi
 data class WasmSignature(
@@ -15,9 +14,6 @@ data class WasmSignature(
 
 @ExperimentalWasmApi
 class WasmSignatureBuilder {
-    val params = mutableListOf<WasmType>()
-    val results = mutableListOf<WasmType>()
-
     val nothing = Unit
 
     infix fun WasmType.returns(result: WasmType): WasmSignature {
@@ -59,14 +55,11 @@ class WasmSignatureBuilder {
 
     val none: WasmSignature
         get() = WasmSignature(params = emptyList(), results = emptyList())
-
-    fun build() = WasmSignature(params, results)
 }
 
-@OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
+@OptIn(ExperimentalContracts::class)
 @ExperimentalWasmApi
 inline fun signature(
-    @BuilderInference
     block: WasmSignatureBuilder.() -> WasmSignature
 ): WasmSignature {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
