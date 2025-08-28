@@ -2,9 +2,16 @@ package com.klyx.core.file
 
 import com.klyx.core.Environment
 import com.klyx.core.io.R_OK
+import com.klyx.core.logging.logger
 import com.klyx.fileSeparatorChar
+import io.github.irgaly.kfswatch.KfsDirectoryWatcher
+import io.github.irgaly.kfswatch.KfsEvent
+import io.github.irgaly.kfswatch.KfsLogger
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.absolutePath
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.io.Source
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -89,3 +96,83 @@ val KxFile.isHomeDirectory get() = this.absolutePath == Environment.DeviceHomeDi
 fun KxFile.resolveName() = if (isHomeDirectory) "Home" else name
 
 expect fun KxFile.isPermissionRequired(permissionFlags: Int = R_OK): Boolean
+
+private fun KxFile.watcher(dispatcher: CoroutineDispatcher) = run {
+    val logger = logger("$name-watcher")
+
+    KfsDirectoryWatcher(
+        scope = CoroutineScope(dispatcher),
+        logger = object : KfsLogger {
+            override fun debug(message: String) {
+                logger.debug { message }
+            }
+
+            override fun error(message: String) {
+                logger.error { message }
+            }
+        }
+    )
+}
+
+context(scope: CoroutineScope)
+fun KxFile.watchAndReload(
+    coroutineDispatcher: CoroutineDispatcher,
+    onReload: suspend () -> Unit
+) {
+    var oldContent = readText()
+    val watcher = watcher(coroutineDispatcher)
+
+    scope.launch {
+        launch {
+            watcher.onEventFlow.collect { (_, _, event) ->
+                if (event == KfsEvent.Modify) {
+                    val newContent = readText()
+                    if (!isTextEqualTo(oldContent)) {
+                        onReload()
+                        oldContent = newContent
+                    }
+                }
+            }
+        }
+
+        watcher.add(parentFile?.absolutePath ?: absolutePath)
+    }
+}
+
+context(scope: CoroutineScope)
+fun KxFile.watchExistence(
+    coroutineDispatcher: CoroutineDispatcher,
+    onChange: suspend () -> Unit
+) {
+    val watcher = watcher(coroutineDispatcher)
+
+    scope.launch {
+        launch {
+            watcher.onEventFlow.collect { (_, _, event) ->
+                if (event == KfsEvent.Delete || event == KfsEvent.Create) {
+                    onChange()
+                }
+            }
+        }
+
+        watcher.add(parentFile?.absolutePath ?: absolutePath)
+    }
+}
+
+context(scope: CoroutineScope)
+fun KxFile.watchEvents(
+    coroutineDispatcher: CoroutineDispatcher,
+    onEvent: suspend (targetDirectory: String, path: String, event: KfsEvent) -> Unit
+) {
+    val watcher = watcher(coroutineDispatcher)
+
+    scope.launch {
+        launch {
+            watcher.onEventFlow.collect { (targetDirectory, path, event) ->
+                onEvent(targetDirectory, path, event)
+            }
+        }
+
+        watcher.add(parentFile?.absolutePath ?: absolutePath)
+    }
+}

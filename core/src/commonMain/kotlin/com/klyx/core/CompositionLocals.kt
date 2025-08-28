@@ -3,16 +3,15 @@ package com.klyx.core
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.klyx.core.file.KWatchEvent
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.asWatchChannel
-import com.klyx.core.file.isTextEqualTo
+import com.klyx.core.file.watchAndReload
 import com.klyx.core.notification.LocalNotificationManager
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.settings.SettingsManager
@@ -20,7 +19,9 @@ import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.isDark
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.newSingleThreadContext
 import org.koin.compose.koinInject
 
 fun noLocalProvidedFor(name: String?): Nothing {
@@ -36,21 +37,18 @@ expect fun PlatformLocalProvider(content: @Composable () -> Unit)
 fun SharedLocalProvider(content: @Composable () -> Unit) {
     val settings by SettingsManager.settings
     val settingsFile = remember { KxFile(Environment.SettingsFilePath) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+    DisposableEffect(Unit) {
         SettingsManager.load()
-        println(settingsFile.absolutePath)
+        val dispatcher = newSingleThreadContext("Settings")
 
-        var oldContent = settingsFile.readText()
-
-        settingsFile.asWatchChannel().consumeEach { event ->
-            if (event.kind == KWatchEvent.Kind.Modified) {
-                if (!event.file.isTextEqualTo(oldContent)) {
-                    SettingsManager.load()
-                    oldContent = event.file.readText()
-                }
-            }
+        with(scope) {
+            settingsFile.watchAndReload(dispatcher) { SettingsManager.load() }
         }
+
+        onDispose { dispatcher.close() }
     }
 
     val isSystemInDarkTheme = isSystemInDarkTheme()

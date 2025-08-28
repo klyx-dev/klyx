@@ -62,7 +62,7 @@ fun LogViewer(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 3.dp)
             ) {
-                items(logs, key = { it.timestamp.hashCode() }) { log ->
+                items(logs, key = { it.timestamp.hashCode() + it.message.hashCode() }) { log ->
                     Text(
                         text = buildAnnotatedString {
                             withStyle(
