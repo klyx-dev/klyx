@@ -8,6 +8,7 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.klyx.core.Environment
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.toKxFile
 import com.klyx.extension.internal.getenv
 import kotlinx.atomicfu.atomic
 import kotlinx.io.buffered
@@ -19,11 +20,11 @@ import kotlinx.io.readString
  * A Klyx worktree.
  *
  * @property id the ID of the worktree.
- * @property rootPath the root path of the worktree.
+ * @property rootFile the root file of the worktree.
  */
-class Worktree(val id: ULong, val rootPath: String) {
+class Worktree(val id: ULong, val rootFile: KxFile) {
     private val fs = SystemFileSystem
-    private val worktreePath = Path(rootPath)
+    private val worktreePath = Path(rootFile.absolutePath)
 
     /**
      * Returns the textual contents of the specified file in the worktree.
@@ -64,7 +65,7 @@ class Worktree(val id: ULong, val rootPath: String) {
 
     override fun hashCode(): Int {
         var result = id.hashCode()
-        result = 31 * result + rootPath.hashCode()
+        result = 31 * result + rootFile.absolutePath.hashCode()
         return result
     }
 
@@ -75,31 +76,31 @@ class Worktree(val id: ULong, val rootPath: String) {
         other as Worktree
 
         if (id != other.id) return false
-        if (rootPath != other.rootPath) return false
+        if (rootFile.absolutePath != other.rootFile.absolutePath) return false
 
         return true
     }
 }
 
-fun Worktree(path: String) = WorktreeRegistry.register(path)
-fun Worktree(file: KxFile) = Worktree(file.absolutePath)
+fun Worktree(path: String) = Worktree(path.toKxFile())
+fun Worktree(file: KxFile) = WorktreeRegistry.register(file)
 
 val SystemWorktree = Worktree(Environment.DeviceHomeDir)
 
 private object WorktreeRegistry {
-    private val map = mutableMapOf<ULong, Worktree>()
+    private val map = mutableMapOf<ULong, KxFile>()
     private val counter = atomic(0L)
 
-    fun register(path: String): Worktree {
+    fun register(worktreeRoot: KxFile): Worktree {
         val id = counter.getAndIncrement().toULong()
-        val worktree = Worktree(id, path)
-        map[id] = worktree
+        val worktree = Worktree(id, worktreeRoot)
+        map[id] = worktreeRoot
         return worktree
     }
 
-    operator fun get(id: ULong) = map[id]
+    operator fun get(id: ULong) = map[id]?.let(::Worktree)
 
-    fun unregister(id: ULong) = map.remove(id)
+    fun unregister(id: ULong) = map.remove(id)?.let(::Worktree)
 }
 
 /**

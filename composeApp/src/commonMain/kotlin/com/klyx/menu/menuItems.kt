@@ -62,6 +62,7 @@ import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openLogViewer
 import com.klyx.viewmodel.openSettings
 import com.klyx.viewmodel.showWelcome
+import io.github.vinceglb.filekit.absolutePath
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher

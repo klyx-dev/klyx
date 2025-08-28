@@ -29,7 +29,6 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,22 +48,16 @@ import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.Message
 import com.klyx.core.logging.SimpleLogFormatter
 import com.klyx.core.logging.color
-import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.viewmodel.StatusBarViewModel
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.absoluteValue
-
-@Stable
-data class StatusBarState(
-    val readOnly: Boolean = false,
-    val language: String? = null,
-    val editorState: CodeEditorState? = null
-)
 
 @Composable
 fun StatusBar(
     modifier: Modifier = Modifier,
-    state: StatusBarState = StatusBarState(),
+    viewModel: StatusBarViewModel = koinViewModel(),
     height: Dp = 28.dp,
     onLogClick: (() -> Unit)? = null,
     onLanguageClick: (() -> Unit)? = null,
@@ -74,6 +67,8 @@ fun StatusBar(
     val bg = colorScheme.surfaceContainer.copy(alpha = 0.85f)
     val stroke = colorScheme.outline.copy(alpha = 0.4f)
     val subtle = LocalContentColor.current.copy(alpha = 0.85f)
+
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     Row(
         modifier = modifier
@@ -105,10 +100,8 @@ fun StatusBar(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            state.editorState?.let { editorState ->
-                val cursorState by editorState.cursor.collectAsStateWithLifecycle()
-
-                val positionText by remember(cursorState) {
+            state.cursorState?.let { cursorState ->
+                val positionText by remember(state) {
                     derivedStateOf {
                         with(cursorState) {
                             val (line, column) = leftLine to leftColumn

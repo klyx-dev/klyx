@@ -214,17 +214,17 @@ fun EditorTab(
         )
 
         if (tab is Tab.FileTab && tab.file.path != "/untitled" && !tab.isInternal) {
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = tab.file.path
-                    .replaceFirst(Environment.HomeDir, "~")
-                    .substringBeforeLast("/")
-                    .let { if (it.length > 30) it.take(30) + "…" else it },
-                color = textColor.copy(alpha = 0.6f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall
-            )
+//            Spacer(modifier = Modifier.width(6.dp))
+//            Text(
+//                text = tab.file.path
+//                    .replaceFirst(Environment.HomeDir, "~")
+//                    .substringBeforeLast("/")
+//                    .let { if (it.length > 30) it.take(30) + "…" else it },
+//                color = textColor.copy(alpha = 0.6f),
+//                maxLines = 1,
+//                overflow = TextOverflow.Ellipsis,
+//                style = MaterialTheme.typography.bodySmall
+//            )
         }
 
         Spacer(modifier = Modifier.weight(1f))

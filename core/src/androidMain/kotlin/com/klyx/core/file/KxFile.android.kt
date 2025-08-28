@@ -1,6 +1,9 @@
 package com.klyx.core.file
 
+import android.content.ContentResolver
 import android.content.Context
+import android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+import android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
@@ -166,15 +169,23 @@ fun KxFile.extractZip(outputDir: File) {
 }
 
 actual fun KxFile(path: String): KxFile {
+    val context = ContextHolder.context
     val uri = path.toUri()
-    return if (uri.scheme == "content") {
+
+    return if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
         val file = runCatching {
             UriUtils.uri2FileNoCacheCopy(uri).asDocumentFile()
         }.getOrElse {
             if (DocumentsContract.isTreeUri(uri)) {
-                DocumentFile.fromTreeUri(ContextHolder.context, uri)!!
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                }
+                DocumentFile.fromTreeUri(context, uri)!!
             } else {
-                DocumentFile.fromSingleUri(ContextHolder.context, uri)!!
+                DocumentFile.fromSingleUri(context, uri)!!
             }
         }
 

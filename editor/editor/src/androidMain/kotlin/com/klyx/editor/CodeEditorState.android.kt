@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.klyx.editor.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.Event
-import io.github.rosemoe.sora.event.EventManager.NoUnsubscribeReceiver
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.event.SubscriptionReceipt
 import io.github.rosemoe.sora.lang.Language
@@ -27,30 +26,52 @@ import com.klyx.editor.event.Event as KlyxEvent
 actual class CodeEditorState actual constructor(
     initialText: String,
 ) {
-    @PublishedApi
-    internal val pendingSubscriptions = mutableListOf<() -> Unit>()
+    private val subscriptions = mutableListOf<(CodeEditor) -> Unit>()
 
     var editor: CodeEditor? = null
         set(value) {
             field = value
             if (value != null) {
-                pendingSubscriptions.forEach { it() }
-                pendingSubscriptions.clear()
+                subscriptions.forEach { attach -> attach(value) }
             }
         }
 
     var content by mutableStateOf(Content(initialText))
 
-    inline fun <reified T : Event> subscribeAlways(
-        receiver: NoUnsubscribeReceiver<T>
-    ): SubscriptionReceipt<T>? {
-        val currentEditor = editor
-        return if (currentEditor != null) {
-            currentEditor.subscribeAlways(receiver)
-        } else {
-            pendingSubscriptions.add { editor?.subscribeAlways(receiver) }
-            null
+    private val _cursor = MutableStateFlow(CursorState())
+    actual val cursor = _cursor.asStateFlow()
+
+    init {
+        addSubscription { editor ->
+            editor.subscribeAlways<SelectionChangeEvent> { event ->
+                val cursor = event.editor.cursor
+                _cursor.update {
+                    CursorState(
+                        left = cursor.left,
+                        right = cursor.right,
+                        rightLine = cursor.rightLine,
+                        leftLine = cursor.leftLine,
+                        rightColumn = cursor.rightColumn,
+                        leftColumn = cursor.leftColumn,
+                        isSelected = cursor.isSelected
+                    )
+                }
+            }
         }
+    }
+
+    @PublishedApi
+    internal fun addSubscription(attach: (CodeEditor) -> Unit) {
+        subscriptions += attach
+        editor?.let { attach(it) }
+    }
+
+    inline fun <reified T : Event> subscribeAlways(
+        noinline onEvent: (T) -> Unit
+    ): SubscriptionReceipt<T>? {
+        var receipt: SubscriptionReceipt<T>? = null
+        addSubscription { ed -> receipt = ed.subscribeAlways(onEvent) }
+        return receipt
     }
 
     fun setLanguage(language: Language) {
@@ -60,27 +81,6 @@ actual class CodeEditorState actual constructor(
     @PublishedApi
     internal fun editorNotInitialized(): Nothing {
         error("Editor not initialized")
-    }
-
-    private val _cursor = MutableStateFlow(CursorState())
-    actual val cursor = _cursor.asStateFlow()
-
-    init {
-        subscribeAlways<SelectionChangeEvent> { event ->
-            val cursor = event.editor.cursor
-            cursor.isSelected
-            _cursor.update {
-                CursorState(
-                    left = cursor.left,
-                    right = cursor.right,
-                    rightLine = cursor.rightLine,
-                    leftLine = cursor.leftLine,
-                    rightColumn = cursor.rightColumn,
-                    leftColumn = cursor.leftColumn,
-                    isSelected = cursor.isSelected
-                )
-            }
-        }
     }
 
     actual operator fun getValue(

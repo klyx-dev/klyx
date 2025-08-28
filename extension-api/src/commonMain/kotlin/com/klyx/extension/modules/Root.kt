@@ -53,7 +53,7 @@ object Root : KoinComponent {
     @HostFunction("[method]worktree.root-path")
     fun WasmMemory.worktreeRootPath(ptr: Int, retPtr: Int) {
         val worktree = ptr.asPointer().value<Worktree>()
-        val rootPath = worktree.rootPath.toWasm()
+        val rootPath = worktree.rootFile.absolutePath.toWasm()
         write(retPtr, rootPath.toBuffer())
     }
 

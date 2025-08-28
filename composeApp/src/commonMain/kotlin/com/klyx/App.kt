@@ -59,23 +59,25 @@ import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
 import com.klyx.platform.PlatformInfo
+import com.klyx.tab.Tab
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.editor.PermissionDialog
 import com.klyx.ui.component.editor.StatusBar
-import com.klyx.ui.component.editor.StatusBarState
 import com.klyx.ui.component.log.LogBuffer
 import com.klyx.ui.component.log.LogViewerSheet
 import com.klyx.ui.component.menu.MainMenuBar
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
+import com.klyx.viewmodel.StatusBarViewModel
 import com.klyx.viewmodel.openLogViewer
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
@@ -114,6 +116,7 @@ fun App(
 
     val editorViewModel = koinViewModel<EditorViewModel>()
     val klyxViewModel = koinViewModel<KlyxViewModel>()
+    val statusBarViewModel = koinViewModel<StatusBarViewModel>()
 
     val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
 
@@ -239,8 +242,29 @@ fun App(
                                 .systemBarsPadding()
                         ) {
                             Column {
-                                val activeFile by editorViewModel.activeFile.collectAsState()
-                                val editorState by editorViewModel.currentEditorState.collectAsState()
+                                LaunchedEffect(Unit) {
+                                    launch {
+                                        editorViewModel.activeFile.collect { file ->
+                                            statusBarViewModel.setLanguage(file?.language())
+                                        }
+                                    }
+                                }
+
+                                val activeTab by editorViewModel.activeTab.collectAsState(null)
+
+                                LaunchedEffect(activeTab?.id) {
+                                    when (val tab = activeTab) {
+                                        is Tab.FileTab -> {
+                                            tab.editorState.cursor.collectLatest { cursorState ->
+                                                statusBarViewModel.setCursorState(cursorState)
+                                            }
+                                        }
+
+                                        else -> {
+                                            statusBarViewModel.setCursorState(null)
+                                        }
+                                    }
+                                }
 
                                 EditorScreen(
                                     modifier = Modifier.weight(1f),
@@ -250,10 +274,6 @@ fun App(
 
                                 StatusBar(
                                     modifier = Modifier.fillMaxWidth(),
-                                    state = StatusBarState(
-                                        editorState = editorState,
-                                        language = activeFile?.language()
-                                    ),
                                     onLogClick = { klyxViewModel.showLogViewer() }
                                 )
                             }

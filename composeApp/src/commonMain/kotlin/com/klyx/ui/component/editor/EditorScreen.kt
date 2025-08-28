@@ -15,6 +15,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -27,6 +28,7 @@ import com.klyx.core.LocalAppSettings
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
 import com.klyx.core.cmd.key.keyShortcutOf
+import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
 import com.klyx.core.language
 import com.klyx.editor.CodeEditor
@@ -43,7 +45,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun EditorScreen(
     modifier: Modifier = Modifier,
     editorViewModel: EditorViewModel = koinViewModel(),
-    klyxViewModel: KlyxViewModel = koinViewModel()
+    klyxViewModel: KlyxViewModel = koinViewModel(),
 ) {
     val editorSettings = LocalAppSettings.current.editor
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -118,6 +120,7 @@ fun EditorScreen(
             HorizontalPager(
                 state = pagerState,
                 userScrollEnabled = false,
+                key = { openTabs.getOrNull(it)?.id ?: generateId() },
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 val tab = openTabs.getOrNull(page)
@@ -136,13 +139,9 @@ fun EditorScreen(
                             }
                         }
 
-                        Column(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
+                        key(tab.file.absolutePath) {
                             CodeEditor(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
+                                modifier = Modifier.fillMaxSize(),
                                 state = tab.editorState,
                                 fontFamily = fontFamily,
                                 fontSize = editorSettings.fontSize.sp,
