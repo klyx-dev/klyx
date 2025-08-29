@@ -7,7 +7,6 @@ import com.klyx.core.generateId
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxCacheDir
 import com.klyx.terminal.klyxFilesDir
-import com.klyx.terminal.klyxLibDir
 import com.termux.terminal.TerminalEmulator
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
@@ -23,7 +22,6 @@ fun createSession(
     user: String,
     client: TerminalSessionClient,
     cwd: File = klyxFilesDir,
-    includeLdLibraryPath: Boolean = false,
     sessionId: TerminalSessionId = generateId()
 ) = run {
     val tmpDir = File(klyxCacheDir, "terminal/$sessionId").apply {
@@ -39,10 +37,6 @@ fun createSession(
         "CACHE_GID" to (10000 + Os.getgid()).toString(),
         "EXT_GID" to (40000 + Os.getgid()).toString()
     )
-
-    if (includeLdLibraryPath) {
-        env["LD_LIBRARY_PATH"] = "$linker:$klyxLibDir:\$LD_LIBRARY_PATH"
-    }
 
     TerminalSession(
         klyxBinDir.absolutePath + "/proot",

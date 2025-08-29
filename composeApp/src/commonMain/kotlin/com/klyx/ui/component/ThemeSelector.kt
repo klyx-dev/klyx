@@ -49,7 +49,7 @@ fun ThemeSelector(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val allThemes by rememberUpdatedState(ThemeManager.getAllAvailableThemes())
+    val allThemes = ThemeManager.availableThemes
     val settings = LocalAppSettings.current
 
     val focusRequester = remember { FocusRequester() }

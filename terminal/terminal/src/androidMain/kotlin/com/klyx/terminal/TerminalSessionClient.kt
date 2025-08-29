@@ -21,7 +21,7 @@ class TerminalSessionClient(
     }
 
     override fun onSessionFinished(finishedSession: TerminalSession) {
-        activity?.finish()
+        //activity?.finish()
     }
 
     override fun onCopyTextToClipboard(

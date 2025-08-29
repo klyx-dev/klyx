@@ -19,4 +19,7 @@ context(context: Context)
 val klyxLibDir: File get() = File(klyxFilesDir, "usr/lib")
 
 context(context: Context)
+val klyxLibExecDir: File get() = File(klyxFilesDir, "usr/libexec")
+
+context(context: Context)
 val klyxBinDir: File get() = File(klyxFilesDir, "usr/bin")

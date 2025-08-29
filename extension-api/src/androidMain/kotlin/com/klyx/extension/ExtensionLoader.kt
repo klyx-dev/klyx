@@ -1,10 +1,10 @@
 package com.klyx.extension
 
 import android.os.Environment
+import com.github.michaelbull.result.expect
 import com.klyx.core.extension.Extension
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
-import com.klyx.expect
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
@@ -37,7 +37,7 @@ object ExtensionLoader {
 
             ThemeManager
                 .loadThemeFamily(file.inputStream()!!.asSource())
-                .expect("Unable to load the theme")
+                .expect { "Unable to load the theme" }
         }
 
         extension.wasmFiles.firstOrNull()?.let { wasm ->

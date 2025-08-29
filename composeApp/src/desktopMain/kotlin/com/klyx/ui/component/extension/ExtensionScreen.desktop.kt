@@ -7,7 +7,3 @@ import com.klyx.core.extension.ExtensionFilter
 @Composable
 actual fun ExtensionScreen(modifier: Modifier) {
 }
-
-@Composable
-internal actual fun ExtensionFilterBar(onFilterChange: (ExtensionFilter) -> Unit) {
-}

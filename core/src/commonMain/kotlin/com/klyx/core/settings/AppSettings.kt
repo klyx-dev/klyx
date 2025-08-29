@@ -1,17 +1,20 @@
 package com.klyx.core.settings
 
 import com.klyx.core.theme.Appearance
+import com.klyx.core.theme.Contrast
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class AppSettings(
-    @SerialComment("""
+    @SerialComment(
+        """
         Whether to use dynamic colors or not.
-
-        **This is only available on Android**.
-    """)
+        
+        (This is only available on Android 12+)
+    """
+    )
     @SerialName("dynamic_color")
     val dynamicColor: Boolean = true,
 
@@ -23,14 +26,34 @@ data class AppSettings(
         - light
         - dark
         - system
-        
-        Note: This will be overridden by the `theme` appearance if set.
     """
     )
     val appearance: Appearance = Appearance.System,
 
-    @SerialComment("The name of the Klyx theme to use for the UI")
-    val theme: String? = null,
+    @SerialComment(
+        """
+        The contrast of the UI.
+        
+        Available options:
+        - normal
+        - medium
+        - high
+    """
+    )
+    val contrast: Contrast = Contrast.Normal,
+
+    @SerialComment("""
+        The name of the Klyx theme to use for the UI (it will not work if dynamic colors are enabled).
+        
+        Available themes:
+        - Autumn Ember
+        - Emerald Waves
+        - Ocean Breeze
+        - Golden Glow
+        
+        Note: More themes can be added using theme extensions.
+    """)
+    val theme: String = "Ocean Breeze",
 
     @SerialComment("The editor settings")
     val editor: EditorSettings = EditorSettings(),

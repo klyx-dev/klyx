@@ -484,7 +484,7 @@ private suspend fun install(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-internal actual fun ExtensionFilterBar(onFilterChange: (ExtensionFilter) -> Unit) {
+internal fun ExtensionFilterBar(onFilterChange: (ExtensionFilter) -> Unit) {
     var selectedIndex by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(selectedIndex) {
@@ -515,10 +515,6 @@ internal actual fun ExtensionFilterBar(onFilterChange: (ExtensionFilter) -> Unit
             }
         }
     }
-}
-
-private enum class InstallationType {
-    Directory, Zip
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

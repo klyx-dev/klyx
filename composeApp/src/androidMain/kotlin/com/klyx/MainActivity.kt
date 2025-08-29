@@ -116,11 +116,7 @@ class MainActivity : KlyxActivity() {
                 )
             )
 
-            App(
-                darkTheme = darkMode,
-                dynamicColor = settings.dynamicColor,
-                themeName = settings.theme
-            ) {
+            App(themeName = settings.theme) {
                 extensionLoadFailure?.let {
                     AlertDialog(
                         onDismissRequest = { extensionLoadFailure = null },

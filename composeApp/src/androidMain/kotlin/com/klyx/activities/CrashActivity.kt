@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.klyx.core.LocalAppSettings
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
 import java.util.Date
@@ -43,8 +44,8 @@ class CrashActivity : KlyxActivity() {
         super.onCreate(savedInstanceState)
         val crashLog = intent.getStringExtra(EXTRA_CRASH_LOG) ?: "No crash log"
 
-        setContent(provideLocals = false) {
-            KlyxTheme {
+        setContent {
+            KlyxTheme(LocalAppSettings.current.theme) {
                 val uriHandler = LocalUriHandler.current
                 val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 

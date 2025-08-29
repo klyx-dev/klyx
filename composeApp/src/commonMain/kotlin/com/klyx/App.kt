@@ -103,9 +103,6 @@ val DrawerWidth: Dp
 @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
 @Composable
 fun App(
-    dynamicColor: Boolean = true,
-    darkTheme: Boolean = false,
-    useThemeExtension: Boolean = true,
     themeName: String? = null,
     extraContent: @Composable () -> Unit = {}
 ) {
@@ -147,12 +144,7 @@ fun App(
         }
     }
 
-    KlyxTheme(
-        dynamicColor = dynamicColor,
-        darkTheme = darkTheme,
-        useThemeExtension = useThemeExtension,
-        themeName = themeName
-    ) {
+    KlyxTheme(themeName) {
         val colorScheme = MaterialTheme.colorScheme
         val background = remember(colorScheme) { colorScheme.background }
 

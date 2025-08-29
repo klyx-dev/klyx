@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.klyx.core.LocalAppSettings
 import com.klyx.core.logging.logger
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
@@ -62,7 +63,7 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
         }
 
         setContent {
-            KlyxTheme {
+            KlyxTheme(LocalAppSettings.current.theme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val networkState by rememberNetworkState()
                     var progress by remember { mutableFloatStateOf(0f) }

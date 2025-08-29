@@ -186,12 +186,12 @@ android {
 
         getByName("debug") {
             versionNameSuffix = "+" + AppVersioning.DEBUG_SUFFIX
-            applicationIdSuffix = "." + AppVersioning.DEBUG_SUFFIX
+            //applicationIdSuffix = "." + AppVersioning.DEBUG_SUFFIX
 
             // signingConfig = signingConfigs.getByName("debug")
             signingConfig = signingConfigs.getByName("release")
 
-            resValue("string", "app_name", "klyx - ${AppVersioning.DEBUG_SUFFIX}")
+            resValue("string", "app_name", "klyx-${AppVersioning.DEBUG_SUFFIX}")
         }
     }
 

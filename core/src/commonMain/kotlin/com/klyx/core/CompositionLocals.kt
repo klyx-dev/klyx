@@ -16,9 +16,8 @@ import com.klyx.core.notification.LocalNotificationManager
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.settings.SettingsManager
 import com.klyx.core.theme.Appearance
+import com.klyx.core.theme.LocalContrast
 import com.klyx.core.theme.LocalIsDarkMode
-import com.klyx.core.theme.ThemeManager
-import com.klyx.core.theme.isDark
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
@@ -55,14 +54,10 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
 
     val darkMode by remember {
         derivedStateOf {
-            if (settings.dynamicColor) {
-                when (settings.appearance) {
-                    Appearance.Dark -> true
-                    Appearance.Light -> false
-                    Appearance.System -> isSystemInDarkTheme
-                }
-            } else {
-                ThemeManager.getThemeByName(settings.theme)?.isDark() ?: isSystemInDarkTheme
+            when (settings.appearance) {
+                Appearance.Dark -> true
+                Appearance.Light -> false
+                Appearance.System -> isSystemInDarkTheme
             }
         }
     }
@@ -71,7 +66,8 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
         LocalNotifier provides koinInject(),
         LocalNotificationManager provides koinInject(),
         LocalAppSettings provides settings,
-        LocalIsDarkMode provides darkMode
+        LocalIsDarkMode provides darkMode,
+        LocalContrast provides settings.contrast
     ) {
         PlatformLocalProvider(content)
     }

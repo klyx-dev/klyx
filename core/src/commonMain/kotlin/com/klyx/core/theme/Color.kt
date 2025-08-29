@@ -74,3 +74,7 @@ fun Color.harmonizeWithPrimary(
     ) fraction: Float = 0.2f
 ): Color = blend(MaterialTheme.colorScheme.primary, fraction)
 
+fun Color.isLightColor(): Boolean {
+    val luminance = (0.299 * red + 0.587 * green + 0.114 * blue)
+    return luminance > 0.5
+}
