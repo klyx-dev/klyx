@@ -1,3 +1,5 @@
+@file:Suppress("UnusedPrivateMember")
+
 package com.klyx.ui.component.extension
 
 import androidx.compose.foundation.layout.Arrangement

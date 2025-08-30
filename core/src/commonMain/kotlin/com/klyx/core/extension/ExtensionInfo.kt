@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  *
  * Extension IDs and names should not contain `klyx` or `Klyx`, since they are all `Klyx` extensions.
  *
- * ```info
+ * ```toml
  * id = "my-extension"
  * name = "My extension"
  * version = "0.0.1"

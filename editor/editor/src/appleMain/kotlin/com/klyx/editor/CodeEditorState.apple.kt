@@ -1,13 +1,17 @@
 package com.klyx.editor
 
 import androidx.compose.runtime.Stable
+import com.klyx.core.file.KxFile
 import com.klyx.editor.event.Event
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KProperty
 
 @Stable
 @ExperimentalCodeEditorApi
-actual class CodeEditorState actual constructor(initialText: String) {
+actual class CodeEditorState actual constructor(
+    actual val file: KxFile,
+    actual val project: KxFile?
+) {
     actual inline fun <reified E : Event> subscribeEvent(crossinline onEvent: (E) -> Unit) {
     }
 

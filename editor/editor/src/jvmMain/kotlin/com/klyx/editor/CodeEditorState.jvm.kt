@@ -1,15 +1,16 @@
 package com.klyx.editor
 
 import androidx.compose.runtime.Stable
+import com.klyx.core.file.KxFile
 import com.klyx.editor.event.Event
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.reflect.KProperty
 
 @Stable
 @ExperimentalCodeEditorApi
-@Suppress(names = ["EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING"])
 actual class CodeEditorState actual constructor(
-    initialText: String
+    actual val file: KxFile,
+    actual val project: KxFile?
 ) {
     actual operator fun getValue(
         thisRef: Any?,

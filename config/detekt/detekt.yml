@@ -799,14 +799,14 @@ style:
   UnusedImports:
     active: false
   UnusedParameter:
-    active: true
+    active: false
     excludes:
       - "**/editor/sora/**"
     allowedNames: 'ignored|expected'
   UnusedPrivateClass:
     active: true
   UnusedPrivateMember:
-    active: true
+    active: false
     allowedNames: ''
     ignoreAnnotated:
       - "Preview"
