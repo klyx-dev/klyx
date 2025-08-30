@@ -1,9 +1,10 @@
 name: Kotlin Multiplatform App CI/CD
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
-    paths-ignore: [ "**/*.md", "**/*.yml" ]
+    paths-ignore: [ "**/*.md" ]
   pull_request:
     branches: [ main ]
 
