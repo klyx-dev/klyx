@@ -12,9 +12,13 @@ import io.github.vinceglb.filekit.absolutePath
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.io.Source
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.okio.asOkioSink
+import kotlinx.io.okio.asOkioSource
+import okio.Path.Companion.toPath
 
 /**
  * Represents a file or directory in the file system.
@@ -56,10 +60,20 @@ expect open class KxFile {
     fun writeText(text: String, charset: String = "UTF-8")
     fun readLines(charset: String = "UTF-8"): List<String>
 
-    fun source(): Source
+    fun source(): RawSource
 
     override fun toString(): String
 }
+
+expect fun KxFile.sink(): RawSink
+
+fun KxFile.toKotlinxIoPath() = Path(absolutePath)
+fun KxFile.toOkioPath() = absolutePath.toPath(true)
+
+fun KxFile.okioSource() = source().asOkioSource()
+fun KxFile.okioSink() = sink().asOkioSink()
+
+fun okio.Path.toKxFile() = KxFile(toString())
 
 val KxFile.size get() = SystemFileSystem.metadataOrNull(Path(absolutePath))?.size
 

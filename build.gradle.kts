@@ -43,10 +43,6 @@ allprojects {
         ignoreFailures = false
     }
 
-    tasks.matching { it.name.startsWith("compile") }.configureEach {
-        dependsOn("detekt")
-    }
-
     tasks.withType<Detekt>().configureEach {
         exclude("**/build/**")
         exclude {

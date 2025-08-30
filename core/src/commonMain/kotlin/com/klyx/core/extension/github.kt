@@ -47,8 +47,8 @@ suspend fun fetchExtensionEntries(): ExtensionsIndex {
     return Toml.decodeFromString(raw)
 }
 
-suspend fun fetchExtensions(): Result<List<ExtensionToml>> = withContext(Dispatchers.IO) {
-    val extensions = mutableListOf<ExtensionToml>()
+suspend fun fetchExtensions(): Result<List<ExtensionInfo>> = withContext(Dispatchers.IO) {
+    val extensions = mutableListOf<ExtensionInfo>()
     val entries = try {
         fetchExtensionEntries()
     } catch (e: Exception) {
@@ -81,7 +81,7 @@ suspend fun fetchExtensions(): Result<List<ExtensionToml>> = withContext(Dispatc
     Result.success(extensions)
 }
 
-suspend fun installExtension(toml: ExtensionToml): Result<KxFile> = withContext(Dispatchers.IO) {
+suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(Dispatchers.IO) {
     if (toml.repository.isBlank()) {
         return@withContext Result.failure(ExtensionInstallException("Extension repository is blank"))
     }

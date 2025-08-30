@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
+import com.github.michaelbull.result.onFailure
 import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
@@ -69,11 +70,10 @@ class MainActivity : KlyxActivity() {
                 )
             }
 
-            var extensionLoadFailure: Throwable? by remember { mutableStateOf(null) }
+            var extensionLoadFailure: String? by remember { mutableStateOf(null) }
             LaunchedEffect(Unit) {
                 withContext(dispatcher + SupervisorJob()) {
                     ExtensionManager.loadExtensions().onFailure {
-                        it.printStackTrace()
                         extensionLoadFailure = it
                     }
                 }
@@ -122,7 +122,7 @@ class MainActivity : KlyxActivity() {
                         onDismissRequest = { extensionLoadFailure = null },
                         text = {
                             Text(
-                                text = "Failed to load extensions:\n${it.message}"
+                                text = "Failed to load extensions:\n$it"
                             )
                         },
                         confirmButton = {

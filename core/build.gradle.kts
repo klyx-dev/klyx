@@ -78,6 +78,7 @@ kotlin {
 
                 implementation(kotlin("reflect"))
                 api(libs.kotlinx.io.core)
+                api(libs.kotlinx.io.okio)
                 api(libs.okio)
                 implementation(libs.kotlinx.coroutines.core)
 
@@ -91,6 +92,7 @@ kotlin {
                 api(libs.kfswatch)
 
                 implementation(projects.shared)
+                implementation(projects.wasm)
             }
         }
 

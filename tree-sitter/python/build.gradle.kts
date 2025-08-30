@@ -11,7 +11,7 @@ inline val File.unixPath: String
 
 val os: OperatingSystem = OperatingSystem.current()
 val libsDir = layout.buildDirectory.get().dir("libs")
-val grammarDir = projectDir.resolve("tree-sitter-json")
+val grammarDir = projectDir.resolve("tree-sitter-python")
 
 version = grammarDir.resolve("Makefile").readLines()
     .first { it.startsWith("VERSION := ") }.removePrefix("VERSION := ")
@@ -25,10 +25,10 @@ plugins {
 grammar {
     baseDir = grammarDir
     grammarName = project.name
-    className = "TreeSitterJson"
-    packageName = "com.klyx.treesitter.json"
+    className = "TreeSitterPython"
+    packageName = "com.klyx.treesitter.python"
     files = arrayOf(
-        // grammarDir.resolve("src/scanner.c"),
+        grammarDir.resolve("src/scanner.c"),
         grammarDir.resolve("src/parser.c")
     )
 }
@@ -120,6 +120,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    sourceSets {
+        getByName("main") {
+            assets.srcDirs("tree-sitter-python/queries")
+        }
     }
 }
 

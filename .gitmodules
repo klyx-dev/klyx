@@ -1,3 +1,6 @@
 [submodule "tree-sitter/json/tree-sitter-json"]
 	path = tree-sitter/json/tree-sitter-json
 	url = https://github.com/tree-sitter/tree-sitter-json
+[submodule "tree-sitter/python/tree-sitter-python"]
+	path = tree-sitter/python/tree-sitter-python
+	url = https://github.com/tree-sitter/tree-sitter-python

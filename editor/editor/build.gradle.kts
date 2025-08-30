@@ -55,10 +55,11 @@ kotlin {
                 implementation(projects.core)
                 implementation(projects.shared)
                 implementation(projects.terminal.terminal)
+                implementation(projects.extensionApi)
 
-//                rootProject.project("tree-sitter").subprojects.forEach {
-//                    implementation(project(":tree-sitter:${it.name}"))
-//                }
+                rootProject.project("tree-sitter").subprojects.forEach {
+                    implementation(project(":tree-sitter:${it.name}"))
+                }
             }
         }
 
@@ -71,12 +72,13 @@ kotlin {
         androidMain {
             dependencies {
                 api(project.dependencies.platform(libs.sora.editor.bom))
-                api(projects.editor.sora.editor)
+                api(libs.sora.editor)
                 api(projects.editor.sora.editorLsp)
+                api(projects.editor.lsp)
 
                 implementation(libs.sora.language.textmate)
-                implementation("io.github.rosemoe:language-treesitter")
-                implementation("com.itsaky.androidide.treesitter:tree-sitter-json:4.3.1")
+                implementation(libs.sora.language.treesitter)
+                implementation(libs.sora.language.java)
 
                 implementation(libs.lsp4j)
                 implementation(libs.lsp4j.jsonrpc)

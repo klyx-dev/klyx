@@ -11,7 +11,7 @@ fun KxFile.language() = when (extension.lowercase()) {
 
     "js", "mjs", "cjs" -> "JavaScript"
     "ts", "tsx" -> "TypeScript"
-    "jsx" -> "JavaScript (JSX)"
+    "jsx" -> "JavaScript React"
     "html", "htm", "xhtml" -> "HTML"
     "css" -> "CSS"
     "scss", "sass" -> "Sass/SCSS"
@@ -47,7 +47,7 @@ fun KxFile.language() = when (extension.lowercase()) {
     "xml" -> "XML"
     "properties" -> "Properties File"
     "yaml", "yml" -> "YAML"
-    "toml" -> "TOML"
+    "info" -> "TOML"
     "ini" -> "INI"
 
     "json" -> "JSON"

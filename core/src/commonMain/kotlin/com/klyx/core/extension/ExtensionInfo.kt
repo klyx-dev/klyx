@@ -1,16 +1,14 @@
 package com.klyx.core.extension
 
-import com.akuleshov7.ktoml.Toml
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 
 /**
- * This is inspired by [zed](zed.dev) extension toml.
+ * This is inspired by [zed](zed.dev) extension info.
  *
  * Extension IDs and names should not contain `klyx` or `Klyx`, since they are all `Klyx` extensions.
  *
- * ```toml
+ * ```info
  * id = "my-extension"
  * name = "My extension"
  * version = "0.0.1"
@@ -21,7 +19,7 @@ import kotlinx.serialization.decodeFromString
  * ```
  */
 @Serializable
-data class ExtensionToml(
+data class ExtensionInfo(
     val id: String,
     val name: String,
     val version: String = "0.0.1",
@@ -29,19 +27,19 @@ data class ExtensionToml(
     val schemaVersion: Int = 1,
     val authors: Array<String> = arrayOf(),
     val description: String = "",
-    val repository: String = ""
+    val repository: String = "",
+    @SerialName("language_servers")
+    val singleLanguageServer: Map<String, LanguageServerConfig> = emptyMap(),
+    @SerialName("language-servers")
+    val multiLanguageServers: Map<String, LanguageServerConfig> = emptyMap(),
 ) {
-    companion object {
-        fun from(toml: String): ExtensionToml {
-            return Toml.decodeFromString(toml)
-        }
-    }
+    val languageServers get() = singleLanguageServer + multiLanguageServers
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other == null || this::class != other::class) return false
 
-        other as ExtensionToml
+        other as ExtensionInfo
 
         if (schemaVersion != other.schemaVersion) return false
         if (id != other.id) return false
@@ -50,6 +48,9 @@ data class ExtensionToml(
         if (!authors.contentEquals(other.authors)) return false
         if (description != other.description) return false
         if (repository != other.repository) return false
+        if (singleLanguageServer != other.singleLanguageServer) return false
+        if (multiLanguageServers != other.multiLanguageServers) return false
+        if (languageServers != other.languageServers) return false
 
         return true
     }
@@ -62,6 +63,18 @@ data class ExtensionToml(
         result = 31 * result + authors.contentHashCode()
         result = 31 * result + description.hashCode()
         result = 31 * result + repository.hashCode()
+        result = 31 * result + singleLanguageServer.hashCode()
+        result = 31 * result + multiLanguageServers.hashCode()
+        result = 31 * result + languageServers.hashCode()
         return result
     }
 }
+
+@Serializable
+data class LanguageServerConfig(
+    val name: String,
+    val languages: List<String> = emptyList(),
+
+    @SerialName("language_ids")
+    val languageIds: Map<String, String>? = null
+)

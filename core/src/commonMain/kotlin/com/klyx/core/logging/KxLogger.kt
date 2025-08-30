@@ -47,51 +47,51 @@ class KxLogger private constructor(
         }
     }
 
-    fun verbose(message: String, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Verbose, tag, message, metadata = metadata))
+    fun verbose(message: String?, metadata: Map<String, Any> = emptyMap()) {
+        log(Message(Level.Verbose, tag, message.toString(), metadata = metadata))
     }
 
-    fun debug(message: String, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Debug, tag, message, metadata = metadata))
+    fun debug(message: String?, metadata: Map<String, Any> = emptyMap()) {
+        log(Message(Level.Debug, tag, message.toString(), metadata = metadata))
     }
 
-    fun info(message: String, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Info, tag, message, metadata = metadata))
+    fun info(message: String?, metadata: Map<String, Any> = emptyMap()) {
+        log(Message(Level.Info, tag, message.toString(), metadata = metadata))
     }
 
-    fun warn(message: String, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Warning, tag, message, throwable, metadata = metadata))
+    fun warn(message: String?, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
+        log(Message(Level.Warning, tag, message.toString(), throwable, metadata = metadata))
     }
 
-    fun error(message: String, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Error, tag, message, throwable, metadata = metadata))
+    fun error(message: String?, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
+        log(Message(Level.Error, tag, message.toString(), throwable, metadata = metadata))
     }
 
-    fun assert(message: String, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Assert, tag, message, throwable, metadata = metadata))
+    fun assert(message: String?, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
+        log(Message(Level.Assert, tag, message.toString(), throwable, metadata = metadata))
     }
 
-    inline fun verbose(crossinline message: () -> String) {
+    inline fun verbose(crossinline message: () -> String?) {
         if (shouldLog(Level.Verbose)) verbose(message())
     }
 
-    inline fun debug(crossinline message: () -> String) {
+    inline fun debug(crossinline message: () -> String?) {
         if (shouldLog(Level.Debug)) debug(message())
     }
 
-    inline fun info(crossinline message: () -> String) {
+    inline fun info(crossinline message: () -> String?) {
         if (shouldLog(Level.Info)) info(message())
     }
 
-    inline fun warn(throwable: Throwable? = null, crossinline message: () -> String) {
+    inline fun warn(throwable: Throwable? = null, crossinline message: () -> String?) {
         if (shouldLog(Level.Warning)) warn(message(), throwable)
     }
 
-    inline fun error(throwable: Throwable? = null, crossinline message: () -> String) {
+    inline fun error(throwable: Throwable? = null, crossinline message: () -> String?) {
         if (shouldLog(Level.Error)) error(message(), throwable)
     }
 
-    inline fun assert(throwable: Throwable? = null, crossinline message: () -> String) {
+    inline fun assert(throwable: Throwable? = null, crossinline message: () -> String?) {
         if (shouldLog(Level.Assert)) assert(message(), throwable)
     }
 

@@ -4,9 +4,10 @@ import com.klyx.core.io.MANAGE_ALL_FILES
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.io.X_OK
-import kotlinx.io.Source
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
+import kotlinx.io.asSink
 import kotlinx.io.asSource
-import kotlinx.io.buffered
 import java.io.File
 import java.nio.charset.Charset
 
@@ -58,7 +59,7 @@ actual open class KxFile(
 
     actual override fun toString(): String = absolutePath
 
-    actual fun source(): Source = inputStream().asSource().buffered().peek()
+    actual fun source(): RawSource = inputStream().asSource()
 }
 
 fun KxFile.inputStream() = rawFile().inputStream()
@@ -86,4 +87,8 @@ actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
     }
 
     return false
+}
+
+actual fun KxFile.sink(): RawSink {
+    return outputStream().asSink()
 }

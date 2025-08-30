@@ -15,8 +15,10 @@ import com.klyx.core.ContextHolder
 import com.klyx.ifNull
 import com.klyx.nothing
 import com.klyx.unsupported
-import kotlinx.io.Source
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
 import kotlinx.io.asInputStream
+import kotlinx.io.asSink
 import kotlinx.io.asSource
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
@@ -87,9 +89,9 @@ actual open class KxFile(
             ?: raw.listFiles().map(::KxFile).filter(filter).toTypedArray()
     }
 
-    actual fun readBytes(): ByteArray = source().readByteArray()
+    actual fun readBytes(): ByteArray = source().buffered().readByteArray()
 
-    actual fun readText(charset: String): String = source().readString(Charset.forName(charset))
+    actual fun readText(charset: String): String = source().buffered().readString(Charset.forName(charset))
 
     actual fun writeBytes(bytes: ByteArray) {
         file?.writeBytes(bytes) ?: outputStream()?.use { it.write(bytes) }
@@ -101,7 +103,7 @@ actual open class KxFile(
     }
 
     actual fun readLines(charset: String): List<String> {
-        return source().asInputStream().bufferedReader(Charset.forName(charset))
+        return source().buffered().asInputStream().bufferedReader(Charset.forName(charset))
             .use(BufferedReader::readLines)
     }
 
@@ -116,9 +118,9 @@ actual open class KxFile(
     fun isFromTermux() = raw.uri.isFromTermux()
     fun canWatchFileEvents() = file != null && !isFromTermux()
 
-    actual fun source(): Source {
+    actual fun source(): RawSource {
         val input = inputStream() ?: nothing("Failed to open input stream for $absolutePath")
-        return input.asSource().buffered().peek()
+        return input.asSource()
     }
 }
 
@@ -197,4 +199,9 @@ actual fun KxFile(path: String): KxFile {
 
 actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
     return requiresPermission(ContextHolder.context, permissionFlags)
+}
+
+actual fun KxFile.sink(): RawSink {
+    val output = outputStream() ?: nothing("Failed to open output stream for $absolutePath")
+    return output.asSink()
 }

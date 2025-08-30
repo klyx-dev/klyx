@@ -5,6 +5,12 @@
       "name": "rust",
       "scopeName": "source.rust",
       "languageConfiguration": "textmate/rust/language-configuration.json"
+    },
+    {
+      "grammar": "textmate/python/syntaxes/python.tmLanguage.json",
+      "name": "python",
+      "scopeName": "source.python",
+      "languageConfiguration": "textmate/python/language-configuration.json"
     }
   ]
 }

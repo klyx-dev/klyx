@@ -1,6 +1,7 @@
 package com.klyx.editor.language
 
-import com.itsaky.androidide.treesitter.json.TSLanguageJson
+import com.klyx.core.ContextHolder
+import com.klyx.treesitter.json.TreeSitterJson
 import io.github.rosemoe.sora.editor.ts.TsLanguage
 import io.github.rosemoe.sora.editor.ts.TsLanguageSpec
 import io.github.rosemoe.sora.lang.styling.textStyle
@@ -26,25 +27,8 @@ class JsonLanguage : TsLanguage(JsonLanguageSpec(), tab = false, themeDescriptio
 })
 
 private class JsonLanguageSpec : TsLanguageSpec(
-    language = TSLanguageJson.getInstance(),
-    highlightScmSource = """
-        (pair
-          key: (_) @string.special.key)
-
-        (string) @string
-
-        (number) @number
-
-        [
-          (null)
-          (true)
-          (false)
-        ] @constant.builtin
-
-        (escape_sequence) @escape
-
-        (comment) @comment
-    """.trimIndent(),
+    language = createTsLanguage("json", TreeSitterJson.language()),
+    highlightScmSource = ContextHolder.context.assets.open("ts/json/queries/highlights.scm").bufferedReader().readText(),
     codeBlocksScmSource = """
         (object) @scope.marked
 

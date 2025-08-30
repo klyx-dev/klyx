@@ -17,7 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.klyx.core.extension.ExtensionFilter
-import com.klyx.core.extension.ExtensionToml
+import com.klyx.core.extension.ExtensionInfo
 
 enum class InstallationType {
     Directory, Zip
@@ -47,7 +47,7 @@ private fun ExtensionFilterBar(
 }
 
 @Composable
-fun ExtensionCard(extension: ExtensionToml) {
+fun ExtensionCard(extension: ExtensionInfo) {
 
 }
 

@@ -14,9 +14,9 @@ private val toml = Toml(
     )
 )
 
-fun createToml(extensionToml: ExtensionToml) = toml.encodeToString(extensionToml)
+fun createToml(extensionInfo: ExtensionInfo) = toml.encodeToString(extensionInfo)
 
-fun parseToml(source: RawSource): ExtensionToml {
+fun parseToml(source: RawSource): ExtensionInfo {
     val buffered = source.buffered().peek()
     return toml.decodeFromString(buffered.readString())
 }

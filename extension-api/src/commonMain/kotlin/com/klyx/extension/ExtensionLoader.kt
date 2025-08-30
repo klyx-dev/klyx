@@ -39,8 +39,8 @@ object ExtensionLoader {
         shouldCallInit: Boolean = false,
         vararg extraHostModules: HostModule
     ) = run {
-        val logger = logger(extension.toml.id)
-        val dispatcher = newFixedThreadPoolContext(10, extension.toml.id)
+        val logger = logger(extension.info.id)
+        val dispatcher = newFixedThreadPoolContext(10, extension.info.id)
 
         withContext(dispatcher) {
             extension.themeFiles.forEach { file ->
@@ -67,7 +67,6 @@ object ExtensionLoader {
                     registerHostModule(RootModule, SystemModule, ProcessModule)
                     registerHostModule(*extraHostModules)
                 }
-
 
                 val localExtension = LocalExtension(extension, instance, dispatcher)
 

@@ -63,10 +63,13 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.compose.ui.util.fastMap
 import androidx.documentfile.provider.DocumentFile
+import com.github.michaelbull.result.fold
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.klyx.core.LocalNotifier
 import com.klyx.core.Notifier
 import com.klyx.core.extension.ExtensionFilter
-import com.klyx.core.extension.ExtensionToml
+import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.extension.fetchExtensions
 import com.klyx.core.extension.installExtension
 import com.klyx.core.file.toKxFile
@@ -95,7 +98,6 @@ import com.klyx.spacedName
 import com.klyx.ui.theme.DefaultKlyxShape
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -107,7 +109,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
     val scope = rememberCoroutineScope()
     val networkState by rememberNetworkState()
 
-    val extensions = remember { mutableStateListOf<ExtensionToml>() }
+    val extensions = remember { mutableStateListOf<ExtensionInfo>() }
 
     var isLoading by remember { mutableStateOf(true) }
     var filter by remember { mutableStateOf(ExtensionFilter.All) }
@@ -134,15 +136,10 @@ actual fun ExtensionScreen(modifier: Modifier) {
 
                     scope.launch {
                         ExtensionManager.installExtension(
-                            dir = dir,
+                            directory = dir,
                             isDevExtension = true
                         ).onFailure {
-                            notifier.error(
-                                string(
-                                    string.extension_install_failed,
-                                    it.message.toString()
-                                )
-                            )
+                            notifier.error(string(string.extension_install_failed, it))
                         }.onSuccess {
                             notifier.success(string(string.extension_install_success))
                         }
@@ -161,13 +158,9 @@ actual fun ExtensionScreen(modifier: Modifier) {
                         zipFile = DocumentFile.fromSingleUri(context, uri)!!.toKxFile(),
                         isDevExtension = true
                     ).onFailure {
-                        it.printStackTrace()
-                        notifier.error(
-                            string(
-                                string.extension_install_failed,
-                                it.message
-                            )
-                        )
+                        notifier.error(string(string.extension_install_failed, it))
+                    }.onSuccess {
+                        notifier.success(string(string.extension_install_success))
                     }
                 }
             }
@@ -224,7 +217,7 @@ actual fun ExtensionScreen(modifier: Modifier) {
                 LinearWavyProgressIndicator()
             }
         } else {
-            val installedExtensions = ExtensionManager.installedExtensions.fastMap { it.toml }
+            val installedExtensions = ExtensionManager.installedExtensions.fastMap { it.info }
 
             val filteredExtensions = when (filter) {
                 ExtensionFilter.All -> installedExtensions + extensions.fastFilter { it !in installedExtensions }
@@ -282,9 +275,9 @@ actual fun ExtensionScreen(modifier: Modifier) {
 @Composable
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 private fun ExtensionItem(
-    extension: ExtensionToml,
+    extension: ExtensionInfo,
     searchQuery: String,
-    installedExtensions: List<ExtensionToml>,
+    installedExtensions: List<ExtensionInfo>,
     scope: CoroutineScope
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -356,7 +349,7 @@ private fun ExtensionItem(
                         }
                     }
                     .padding(horizontal = 4.dp),
-                color = if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
+                color = if (ExtensionManager.findInstalledExtension(extension.id)?.isDevExtension == true) {
                     MaterialTheme.colorScheme.primary
                 } else {
                     MaterialTheme.colorScheme.onSurface
@@ -380,7 +373,7 @@ private fun ExtensionItem(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            if (ExtensionManager.findExtension(extension.id)?.isDevExtension == true) {
+            if (ExtensionManager.findInstalledExtension(extension.id)?.isDevExtension == true) {
                 Icon(
                     Icons.Outlined.Code,
                     contentDescription = null,
@@ -407,7 +400,7 @@ private fun ExtensionItem(
             Spacer(modifier = Modifier.weight(1f))
 
             val isDevExtension = remember(extension) {
-                ExtensionManager.findExtension(extension.id)?.isDevExtension == true
+                ExtensionManager.findInstalledExtension(extension.id)?.isDevExtension == true
             }
 
             if (!isDevExtension) {
@@ -452,23 +445,18 @@ private fun ExtensionItem(
 }
 
 private suspend fun install(
-    extension: ExtensionToml,
+    extension: ExtensionInfo,
     notifier: Notifier
 ) {
     installExtension(extension).onSuccess { file ->
         ExtensionManager.installExtension(
-            dir = file,
+            directory = file,
             isDevExtension = false
         ).fold(
-            onFailure = {
-                notifier.error(
-                    string(
-                        string.extension_install_failed,
-                        it.message ?: it.stackTrace.first().toString()
-                    )
-                )
+            failure = {
+                notifier.error(string(string.extension_install_failed, it))
             },
-            onSuccess = {
+            success = {
                 notifier.success(string(string.extension_install_success))
             }
         )

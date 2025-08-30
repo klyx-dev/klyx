@@ -4,7 +4,7 @@
     "If you want to provide a fix or improvement, please create a pull request against the original repository.",
     "Once accepted there, we are happy to receive an update request."
   ],
-  "version": "https://github.com/dustypomerleau/rust-syntax/commit/20730dff3c367cb40a7edd278fdaf0239ea50833",
+  "version": "https://github.com/dustypomerleau/rust-syntax/commit/7b924664814131ae4509a537bb07960fe65dcaac",
   "name": "Rust",
   "scopeName": "source.rust",
   "patterns": [
@@ -120,6 +120,54 @@
       }
     },
     {
+      "comment": "attributes",
+      "name": "meta.attribute.rust",
+      "begin": "(#)(\\!?)(\\[)",
+      "beginCaptures": {
+        "1": {
+          "name": "punctuation.definition.attribute.rust"
+        },
+        "2": {
+          "name": "keyword.operator.attribute.inner.rust"
+        },
+        "3": {
+          "name": "punctuation.brackets.attribute.rust"
+        }
+      },
+      "end": "\\]",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.brackets.attribute.rust"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#block-comments"
+        },
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#keywords"
+        },
+        {
+          "include": "#lifetimes"
+        },
+        {
+          "include": "#punctuation"
+        },
+        {
+          "include": "#strings"
+        },
+        {
+          "include": "#gtypes"
+        },
+        {
+          "include": "#types"
+        }
+      ]
+    },
+    {
       "comment": "modules",
       "match": "(mod)\\s+((?:r#(?!crate|[Ss]elf|super))?[a-z][A-Za-z0-9_]*)",
       "captures": {
@@ -208,9 +256,6 @@
     },
     {
       "include": "#comments"
-    },
-    {
-      "include": "#attributes"
     },
     {
       "include": "#lvariables"
@@ -317,7 +362,7 @@
         {
           "comment": "decimal integers and floats",
           "name": "constant.numeric.decimal.rust",
-          "match": "\\b\\d[\\d_]*(\\.?)[\\d_]*(?:(E|e)([+-]?)([\\d_]+))?(f32|f64|i128|i16|i32|i64|i8|isize|u128|u16|u32|u64|u8|usize)?\\b",
+          "match": "\\b\\d[\\d_]*(\\.?)[\\d_]*(?:(E)([+-])([\\d_]+))?(f32|f64|i128|i16|i32|i64|i8|isize|u128|u16|u32|u64|u8|usize)?\\b",
           "captures": {
             "1": {
               "name": "punctuation.separator.dot.decimal.rust"
@@ -376,7 +421,7 @@
     "escapes": {
       "comment": "escapes: ASCII, byte, Unicode, quote, regex",
       "name": "constant.character.escape.rust",
-      "match": "(\\\\)(?:(?:(x[0-7][\\da-fA-F])|(u(\\{)[\\da-fA-F]{4,6}(\\}))|.))",
+      "match": "(\\\\)(?:(?:(x[0-7][0-7a-fA-F])|(u(\\{)[\\da-fA-F]{4,6}(\\}))|.))",
       "captures": {
         "1": {
           "name": "constant.character.escape.backslash.rust"
@@ -394,51 +439,6 @@
           "name": "constant.character.escape.unicode.punctuation.rust"
         }
       }
-    },
-    "attributes": {
-      "comment": "attributes",
-      "name": "meta.attribute.rust",
-      "begin": "(#)(\\!?)(\\[)",
-      "beginCaptures": {
-        "1": {
-          "name": "punctuation.definition.attribute.rust"
-        },
-        "3": {
-          "name": "punctuation.brackets.attribute.rust"
-        }
-      },
-      "end": "\\]",
-      "endCaptures": {
-        "0": {
-          "name": "punctuation.brackets.attribute.rust"
-        }
-      },
-      "patterns": [
-        {
-          "include": "#block-comments"
-        },
-        {
-          "include": "#comments"
-        },
-        {
-          "include": "#keywords"
-        },
-        {
-          "include": "#lifetimes"
-        },
-        {
-          "include": "#punctuation"
-        },
-        {
-          "include": "#strings"
-        },
-        {
-          "include": "#gtypes"
-        },
-        {
-          "include": "#types"
-        }
-      ]
     },
     "functions": {
       "patterns": [
@@ -549,9 +549,6 @@
               "include": "#comments"
             },
             {
-              "include": "#attributes"
-            },
-            {
               "include": "#keywords"
             },
             {
@@ -612,9 +609,6 @@
               "include": "#comments"
             },
             {
-              "include": "#attributes"
-            },
-            {
               "include": "#keywords"
             },
             {
@@ -663,33 +657,8 @@
         },
         {
           "comment": "storage keywords",
-          "name": "keyword.other.rust storage.type.rust",
-          "match": "\\b(extern|let|macro|mod)\\b"
-        },
-        {
-          "comment": "const keyword",
-          "name": "storage.modifier.rust",
-          "match": "\\b(const)\\b"
-        },
-        {
-          "comment": "type keyword",
-          "name": "keyword.declaration.type.rust storage.type.rust",
-          "match": "\\b(type)\\b"
-        },
-        {
-          "comment": "enum keyword",
-          "name": "keyword.declaration.enum.rust storage.type.rust",
-          "match": "\\b(enum)\\b"
-        },
-        {
-          "comment": "trait keyword",
-          "name": "keyword.declaration.trait.rust storage.type.rust",
-          "match": "\\b(trait)\\b"
-        },
-        {
-          "comment": "struct keyword",
-          "name": "keyword.declaration.struct.rust storage.type.rust",
-          "match": "\\b(struct)\\b"
+          "name": "storage.type.rust",
+          "match": "\\b(const|enum|extern|let|macro|mod|struct|trait|type)\\b"
         },
         {
           "comment": "storage modifiers",
@@ -894,7 +863,7 @@
       "patterns": [
         {
           "comment": "namespace (non-type, non-function path segment)",
-          "match": "(?<![A-Za-z0-9_])([A-Za-z0-9_]+)((?<!super|self)::)",
+          "match": "(?<![A-Za-z0-9_])([a-z0-9_]+)((?<!super|self)::)",
           "captures": {
             "1": {
               "name": "entity.name.namespace.rust"
@@ -919,7 +888,7 @@
         },
         {
           "comment": "parameterized types",
-          "begin": "\\b(_?[A-Z][A-Za-z0-9_]*)(<)",
+          "begin": "\\b([A-Z][A-Za-z0-9]*)(<)",
           "beginCaptures": {
             "1": {
               "name": "entity.name.type.rust"
@@ -968,10 +937,10 @@
         },
         {
           "comment": "trait declarations",
-          "match": "\\b(trait)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "match": "\\b(trait)\\s+([A-Z][A-Za-z0-9]*)\\b",
           "captures": {
             "1": {
-              "name": "keyword.declaration.trait.rust storage.type.rust"
+              "name": "storage.type.rust"
             },
             "2": {
               "name": "entity.name.type.trait.rust"
@@ -980,10 +949,10 @@
         },
         {
           "comment": "struct declarations",
-          "match": "\\b(struct)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "match": "\\b(struct)\\s+([A-Z][A-Za-z0-9]*)\\b",
           "captures": {
             "1": {
-              "name": "keyword.declaration.struct.rust storage.type.rust"
+              "name": "storage.type.rust"
             },
             "2": {
               "name": "entity.name.type.struct.rust"
@@ -992,10 +961,10 @@
         },
         {
           "comment": "enum declarations",
-          "match": "\\b(enum)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "match": "\\b(enum)\\s+([A-Z][A-Za-z0-9_]*)\\b",
           "captures": {
             "1": {
-              "name": "keyword.declaration.enum.rust storage.type.rust"
+              "name": "storage.type.rust"
             },
             "2": {
               "name": "entity.name.type.enum.rust"
@@ -1004,10 +973,10 @@
         },
         {
           "comment": "type declarations",
-          "match": "\\b(type)\\s+(_?[A-Z][A-Za-z0-9_]*)\\b",
+          "match": "\\b(type)\\s+([A-Z][A-Za-z0-9_]*)\\b",
           "captures": {
             "1": {
-              "name": "keyword.declaration.type.rust storage.type.rust"
+              "name": "storage.type.rust"
             },
             "2": {
               "name": "entity.name.type.declaration.rust"
@@ -1017,7 +986,7 @@
         {
           "comment": "types",
           "name": "entity.name.type.rust",
-          "match": "\\b_?[A-Z][A-Za-z0-9_]*\\b(?!!)"
+          "match": "\\b[A-Z][A-Za-z0-9]*\\b(?!!)"
         }
       ]
     },

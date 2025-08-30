@@ -18,7 +18,7 @@ junit = "4.13.2"
 kotlin = "2.2.10"
 kotlinx-coroutines = "1.10.2"
 kotlinx-datetime = "0.6.0"
-kotlinx-io-core = "0.8.0"
+kotlinx-io = "0.8.0"
 ktor = "3.2.3"
 commonsCompress = "1.28.0"
 documentfile = "1.1.0"
@@ -65,7 +65,8 @@ json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
-kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io-core" }
+kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
+kotlinx-io-okio = { module = "org.jetbrains.kotlinx:kotlinx-io-okio", version.ref = "kotlinx-io" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerialization" }
 ktoml-core = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
@@ -98,6 +99,8 @@ sora-editor-bom = { module = "io.github.rosemoe:editor-bom", version.ref = "sora
 sora-editor = { module = "io.github.rosemoe:editor" }
 sora-editor-lsp = { module = "io.github.rosemoe:editor-lsp" }
 sora-language-textmate = { module = "io.github.rosemoe:language-textmate" }
+sora-language-treesitter = { module = "io.github.rosemoe:language-treesitter" }
+sora-language-java = { module = "io.github.rosemoe:language-java" }
 lsp4j = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j", version.ref = "lsp4j" }
 lsp4j-jsonrpc = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc", version.ref = "lsp4j" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }

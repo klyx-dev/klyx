@@ -4,7 +4,8 @@ import com.klyx.core.io.MANAGE_ALL_FILES
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.io.X_OK
-import kotlinx.io.Source
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
 import platform.posix.F_OK
 import platform.posix.access
 import platform.posix.R_OK as POSIX_R_OK
@@ -113,7 +114,7 @@ actual open class KxFile {
         TODO("Not yet implemented")
     }
 
-    actual fun source(): Source {
+    actual fun source(): RawSource {
         TODO("Not yet implemented")
     }
 
@@ -164,4 +165,8 @@ actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
     }
 
     return access(absolutePath, mode) != 0
+}
+
+actual fun KxFile.sink(): RawSink {
+    TODO("Not yet implemented")
 }
