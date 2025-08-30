@@ -15,3 +15,9 @@ fun <T> Option<T>.toWasmOption(): com.klyx.wasm.type.Option<WasmType> {
         is Some -> com.klyx.wasm.type.Some(WasmType(value))
     }
 }
+
+fun <T> T.asOption(discriminant: Int) = when (discriminant) {
+    0 -> None
+    1 -> Some(this)
+    else -> error("Unknown discriminant: $discriminant")
+}

@@ -8,6 +8,10 @@ plugins {
 }
 
 kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll("-Xcontext-parameters", "-Xcontext-sensitive-resolution")
+    }
+
     jvmToolchain(21)
 
     androidLibrary {
@@ -50,6 +54,7 @@ kotlin {
 
                 implementation(projects.core)
                 implementation(projects.shared)
+                implementation(projects.terminal.terminal)
 
 //                rootProject.project("tree-sitter").subprojects.forEach {
 //                    implementation(project(":tree-sitter:${it.name}"))
@@ -68,8 +73,13 @@ kotlin {
                 api(project.dependencies.platform(libs.sora.editor.bom))
                 api(projects.editor.sora.editor)
                 api(projects.editor.sora.editorLsp)
+
+                implementation(libs.sora.language.textmate)
                 implementation("io.github.rosemoe:language-treesitter")
                 implementation("com.itsaky.androidide.treesitter:tree-sitter-json:4.3.1")
+
+                implementation(libs.lsp4j)
+                implementation(libs.lsp4j.jsonrpc)
 
                 implementation(libs.ktreesitter)
             }

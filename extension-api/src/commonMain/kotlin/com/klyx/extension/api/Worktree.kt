@@ -1,14 +1,14 @@
 package com.klyx.extension.api
 
-import arrow.core.None
 import arrow.core.Option
-import arrow.core.Some
+import arrow.core.toOption
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.klyx.core.Environment
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
+import com.klyx.extension.internal.findBinary
 import com.klyx.extension.internal.getenv
 import kotlinx.atomicfu.atomic
 import kotlinx.io.buffered
@@ -42,18 +42,8 @@ class Worktree(val id: ULong, val rootFile: KxFile) {
      * Returns the path to the given binary name, if one is present on the `$PATH`.
      */
     fun which(binaryName: String): Option<String> {
-        val paths = getenv("PATH")?.split(":").orEmpty()
-
-        for (pathDir in paths) {
-            val binaryPath = Path(pathDir, binaryName)
-            val metadata = fs.metadataOrNull(binaryPath)
-
-            if (metadata != null && !metadata.isDirectory) {
-                return Some(binaryPath.toString())
-            }
-        }
-
-        return None
+        val path = findBinary(binaryName)
+        return path.toOption()
     }
 
     /**

@@ -9,12 +9,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import com.klyx.activities.KlyxActivity
 import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.terminal.ubuntuProcess
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.wasi.ExperimentalWasiApi
 
-class TestActivity : ComponentActivity() {
+class TestActivity : KlyxActivity() {
     @OptIn(ExperimentalCodeEditorApi::class, ExperimentalWasmApi::class, ExperimentalWasiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,7 +29,10 @@ class TestActivity : ComponentActivity() {
                             .fillMaxSize()
                     ) {
                         LaunchedEffect(Unit) {
-
+                            ubuntuProcess("which", "pylsp"){
+                                onOutput { println(it) }
+                                onError { println(it) }
+                            }.start()
                         }
                     }
                 }

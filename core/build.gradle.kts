@@ -68,7 +68,7 @@ kotlin {
 
                 api(libs.composablesCore)
 
-                implementation(libs.kotlinx.serialization.json)
+                api(libs.kotlinx.serialization.json)
                 implementation(libs.json5k)
                 implementation(libs.ktoml.core)
                 api(libs.ktor.client.core)

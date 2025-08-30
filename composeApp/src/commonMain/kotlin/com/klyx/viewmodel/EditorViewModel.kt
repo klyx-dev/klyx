@@ -120,7 +120,7 @@ class EditorViewModel(
                 name = tabTitle,
                 isInternal = isInternal,
                 file = file,
-                editorState = CodeEditorState(initialText = runCatching { file.readText() }.getOrElse { "" })
+                editorState = CodeEditorState(file)
             )
 
             withContext(Dispatchers.Main) {

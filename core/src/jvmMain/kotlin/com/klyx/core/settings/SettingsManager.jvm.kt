@@ -55,4 +55,7 @@ actual object SettingsManager {
         this.settings.value = settings
         save()
     }
+
+    actual val defaultSettings: AppSettings
+        get() = settings.value
 }

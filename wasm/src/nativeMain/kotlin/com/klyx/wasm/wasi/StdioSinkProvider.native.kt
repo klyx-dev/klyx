@@ -1,8 +1,7 @@
 package com.klyx.wasm.wasi
 
-@Suppress(names = ["EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING"])
-actual class StdioSinkProvider {
-    actual fun open(): at.released.weh.filesystem.stdio.StdioSink {
-        TODO("Not yet implemented")
-    }
+import kotlinx.io.RawSink
+
+actual fun StdioSinkProvider(sinkProvider: () -> RawSink): StdioSinkProvider {
+    TODO("Not yet implemented")
 }

@@ -85,7 +85,7 @@ data class Command(
 fun WasmMemory.readCommandResult(pointer: Int) = readResult(
     pointer = pointer,
     readOk = Command.reader::read,
-    readErr = WasmMemory::readCString
+    readErr = WasmMemory::readLengthPrefixedUtf8String
 )
 
 data class Output(

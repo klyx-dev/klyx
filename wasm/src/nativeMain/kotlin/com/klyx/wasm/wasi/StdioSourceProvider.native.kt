@@ -1,9 +1,7 @@
 package com.klyx.wasm.wasi
 
-import at.released.weh.filesystem.stdio.StdioSource
+import kotlinx.io.RawSource
 
-actual class StdioSourceProvider {
-    actual fun open(): StdioSource {
-        TODO("Not yet implemented")
-    }
+actual fun StdioSourceProvider(sourceProvider: () -> RawSource): StdioSourceProvider {
+    TODO("Not yet implemented")
 }

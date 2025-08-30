@@ -16,9 +16,9 @@ object System : KoinComponent, CoroutineScope by MainScope() {
     @HostFunction
     fun showToast(message: String, duration: Int) {
         val durationMillis = when (duration) {
-            0 -> Toast.LENGTH_SHORT
-            1 -> Toast.LENGTH_LONG
-            else -> Toast.LENGTH_SHORT
+            0 -> Toast.Companion.LENGTH_SHORT
+            1 -> Toast.Companion.LENGTH_LONG
+            else -> Toast.Companion.LENGTH_SHORT
         }
         notifier.toast(message, durationMillis)
     }

@@ -15,4 +15,7 @@ actual object SettingsManager {
 
     actual fun updateSettings(settings: AppSettings) {
     }
+
+    actual val defaultSettings: AppSettings
+        get() = TODO("Not yet implemented")
 }

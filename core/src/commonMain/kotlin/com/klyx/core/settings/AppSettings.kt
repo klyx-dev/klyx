@@ -3,8 +3,9 @@ package com.klyx.core.settings
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.Contrast
 import io.github.xn32.json5k.SerialComment
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
 
 @Serializable
 data class AppSettings(
@@ -15,7 +16,6 @@ data class AppSettings(
         (This is only available on Android 12+)
     """
     )
-    @SerialName("dynamic_color")
     val dynamicColor: Boolean = true,
 
     @SerialComment(
@@ -42,7 +42,8 @@ data class AppSettings(
     )
     val contrast: Contrast = Contrast.Normal,
 
-    @SerialComment("""
+    @SerialComment(
+        """
         The name of the Klyx theme to use for the UI (it will not work if dynamic colors are enabled).
         
         Available themes:
@@ -52,13 +53,36 @@ data class AppSettings(
         - Golden Glow
         
         Note: More themes can be added using theme extensions.
-    """)
+    """
+    )
     val theme: String = "Ocean Breeze",
 
     @SerialComment("The editor settings")
     val editor: EditorSettings = EditorSettings(),
 
     @SerialComment("Whether to show the FPS counter in the UI")
-    @SerialName("show_fps")
-    val showFps: Boolean = false
+    val showFps: Boolean = false,
+
+    @SerialComment("Different settings for specific languages.")
+    val languages: Map<String, LanguageSettings> = mapOf("Python" to LanguageSettings(4u)),
+
+    @SerialComment("LSP Specific settings.")
+    val lsp: Map<String, LspSettings> = mapOf("pylsp" to LspSettings(
+        binary = CommandSettings(
+            path = "pylsp",
+            arguments = listOf("-v"),
+            env = emptyMap()
+        ),
+        initializationOptions = buildJsonObject {
+            put("capabilities", buildJsonObject {
+                put("textDocumentSync", buildJsonObject {
+                    put("openClose", JsonPrimitive(true))
+                    put("change", JsonPrimitive(2))
+                })
+            })
+        },
+        settings = buildJsonObject {
+            put("enabled", JsonPrimitive(true))
+        }
+    ))
 )

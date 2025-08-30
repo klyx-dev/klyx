@@ -2,7 +2,7 @@ package com.klyx.wasm
 
 import com.github.michaelbull.result.getOrThrow
 import com.klyx.wasm.internal.InternalExperimentalWasmApi
-import com.klyx.wasm.internal.toNullTerminatedUtf8ByteArray
+import com.klyx.wasm.internal.toLengthPrefixedUtf8ByteArray
 import io.github.charlietap.chasm.embedding.error.ChasmError
 import io.github.charlietap.chasm.embedding.memory.readByte
 import io.github.charlietap.chasm.embedding.memory.readBytes
@@ -50,7 +50,7 @@ class WasmMemory internal constructor(
         ptr to bytes.size
     }
 
-    fun allocateAndWriteUtf8String(string: String) = allocateAndWrite(string.toNullTerminatedUtf8ByteArray())
+    fun allocateAndWriteUtf8String(string: String) = allocateAndWrite(string.toLengthPrefixedUtf8ByteArray())
 
     fun readBytes(pointer: Int, bytesToRead: Int): ByteArray {
         return readBytes(store, memory, ByteArray(bytesToRead), pointer, bytesToRead).value()
@@ -62,7 +62,13 @@ class WasmMemory internal constructor(
     fun readDouble(pointer: Int) = readDouble(store, memory, pointer).value()
     fun readLong(pointer: Int) = readLong(store, memory, pointer).value()
 
-    fun readCString(pointer: Int) = readNullTerminatedUtf8String(store, memory, pointer).value()
+    fun readNullTerminatedUtf8String(pointer: Int) = readNullTerminatedUtf8String(store, memory, pointer).value()
+
+    fun readLengthPrefixedUtf8String(pointer: Int) = run {
+        val ptr = readInt(pointer)
+        val length = readInt(pointer + 4)
+        readUtf8String(ptr, length)
+    }
 
     fun readUtf8String(pointer: Int, stringLengthInBytes: Int): String {
         return readUtf8String(store, memory, pointer, stringLengthInBytes).value()

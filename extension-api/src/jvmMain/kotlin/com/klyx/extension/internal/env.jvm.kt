@@ -18,3 +18,19 @@ actual fun makeFileExecutable(path: String): Result<Unit, String> {
         Err("Failed to make file executable: $path - ${e.message}")
     }
 }
+
+actual fun findBinary(binaryName: String): String? {
+    return null
+}
+
+actual fun getenv(name: String): String? = System.getenv(name)
+
+actual fun getenv(): Map<String, String> = System.getenv()
+
+actual fun executeCommand(
+    command: String,
+    args: Array<String>,
+    env: Map<String, String>
+): Output {
+    TODO("Not yet implemented")
+}

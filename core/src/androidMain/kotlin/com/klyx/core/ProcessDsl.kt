@@ -373,11 +373,9 @@ class ProcessBuilder @PublishedApi internal constructor(
         lineCallback: ((String) -> Unit)?
     ): String = withContext(Dispatchers.IO) {
         val output = StringBuilder()
-        inputStream.bufferedReader().use { reader ->
-            reader.lineSequence().forEach { line ->
-                output.appendLine(line)
-                lineCallback?.invoke(line)
-            }
+        inputStream.bufferedReader().lineSequence().forEach { line ->
+            output.appendLine(line)
+            lineCallback?.invoke(line)
         }
         output.toString().trimEnd()
     }

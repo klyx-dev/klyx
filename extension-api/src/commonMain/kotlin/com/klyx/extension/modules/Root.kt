@@ -2,10 +2,19 @@
 
 package com.klyx.extension.modules
 
+import arrow.core.getOrElse
+import arrow.core.toOption
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
 import com.klyx.core.Notifier
 import com.klyx.core.logging.logger
+import com.klyx.core.settings.LspSettings
+import com.klyx.core.settings.SettingsManager
 import com.klyx.extension.api.Worktree
+import com.klyx.extension.api.lsp.CommandSettings
 import com.klyx.extension.api.lsp.parseLanguageServerInstallationStatus
+import com.klyx.extension.api.parseSettingsLocation
+import com.klyx.extension.internal.asOption
 import com.klyx.extension.internal.toWasmOption
 import com.klyx.extension.internal.toWasmResult
 import com.klyx.pointer.asPointer
@@ -15,21 +24,33 @@ import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction
 import com.klyx.wasm.annotations.HostModule
-import com.klyx.wasm.type.Err
-import com.klyx.wasm.type.Ok
 import com.klyx.wasm.type.WasmUnit
 import com.klyx.wasm.type.collections.toWasmList
 import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
 import com.klyx.wasm.type.wstr
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNamingStrategy
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.encodeToJsonElement
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import com.klyx.wasm.type.Err as WasmErr
+import com.klyx.wasm.type.Ok as WasmOk
 
 @HostModule("\$root")
 object Root : KoinComponent {
     private val logger = logger("RootModule")
     private val notifier: Notifier by inject()
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private val json = Json {
+        namingStrategy = JsonNamingStrategy.SnakeCase
+        isLenient = true
+    }
 
     @HostFunction("[resource-drop]worktree")
     fun dropWorktree(worktreePtr: Int) {
@@ -81,9 +102,9 @@ object Root : KoinComponent {
     fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) = runBlocking {
         val result = try {
             com.klyx.core.file.downloadFile(url, path)
-            Ok(WasmUnit)
+            WasmOk(WasmUnit)
         } catch (e: Exception) {
-            Err("$e".wstr)
+            WasmErr("$e".wstr)
         }
         write(resultPtr, result.toBuffer())
     }
@@ -95,4 +116,68 @@ object Root : KoinComponent {
         //TODO("Set language server installation status, not yet implemented: $status")
         logger.info { "Set language server installation status: $status" }
     }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    @HostFunction
+    fun WasmMemory.getSettings(
+        op1: Int,
+        worktreeId: Long,
+        path: String,
+        category: String,
+        op2: Int,
+        key: String,
+        retPtr: Int
+    ) {
+        val allSettings = SettingsManager.settings.value
+        val defaultSettings = SettingsManager.defaultSettings
+
+        @Suppress("UnusedVariable")
+        val location = parseSettingsLocation(op1, worktreeId, path)
+        val key = key.asOption(op2)
+
+        val result = when (category) {
+            "language" -> {
+                val languageSettings = key.map {
+                    allSettings.languages[it] //?: error("Language setting not found: $it")
+                }
+
+                val s = languageSettings.map {
+                    buildJsonObject {
+                        if (it != null) {
+                            put("tab_size", JsonPrimitive(it.tabSize))
+                        }
+                    }.toJson()
+                }
+
+                s.fold({ Err("Language setting not found: $key") }, ::Ok)
+            }
+
+            "lsp" -> {
+                val lspSettings = key.flatMap {
+                    (allSettings.lsp[it] ?: defaultSettings.lsp[it]).toOption()
+                }.getOrElse { LspSettings() }
+
+                Ok(lspSettings.let { s ->
+                    com.klyx.extension.api.lsp.LspSettings(
+                        binary = s.binary?.let {
+                            CommandSettings(
+                                path = it.path,
+                                arguments = it.arguments,
+                                env = it.env
+                            )
+                        },
+                        initializationOptions = s.initializationOptions,
+                        settings = s.settings
+                    )
+                }.toJson())
+            }
+
+            else -> Err("Unknown settings category: $category")
+        }.toWasmResult()
+
+        write(retPtr, result.toBuffer())
+    }
+
+    private inline fun <reified T> T?.toJson() = json.encodeToString(this)
+    private inline fun <reified T> T?.toJsonElement() = json.encodeToJsonElement(this)
 }

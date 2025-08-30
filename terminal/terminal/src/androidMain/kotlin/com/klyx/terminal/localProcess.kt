@@ -19,7 +19,7 @@ internal fun isCmdAvailableInLocalPath(cmd: String) = run {
 @OptIn(ExperimentalContracts::class)
 context(context: Context)
 inline fun localProcess(
-    commands: Array<String>,
+    vararg commands: String,
     useProotIfCmdIsNotAvailableLocally: Boolean = true,
     useLinker: Boolean = true,
     block: ProcessBuilder.() -> Unit = {}

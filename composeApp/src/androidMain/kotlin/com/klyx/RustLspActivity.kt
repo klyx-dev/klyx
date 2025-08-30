@@ -22,18 +22,14 @@ import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.Languag
 import io.github.rosemoe.sora.lsp.client.languageserver.wrapper.EventHandler
 import io.github.rosemoe.sora.lsp.editor.LspEditor
 import io.github.rosemoe.sora.lsp.editor.LspProject
+import io.github.rosemoe.sora.lsp.events.EventContext
 import io.github.rosemoe.sora.text.ContentIO
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
-import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.TextDocumentItem
-import org.eclipse.lsp4j.WorkspaceFolder
-import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
 import org.eclipse.lsp4j.services.LanguageServer
 import org.eclipse.tm4e.core.registry.IThemeSource
 import java.io.File
@@ -56,9 +52,9 @@ class RustLspActivity : BaseEditorActivity() {
         ensureTextmateTheme()
 
         lifecycleScope.launch {
-            unAssets()
+//            unAssets()
             connectToLanguageServer()
-            setEditorText()
+//            setEditorText()
         }
     }
 
@@ -94,16 +90,25 @@ class RustLspActivity : BaseEditorActivity() {
     @OptIn(DelicateCoroutinesApi::class)
     private suspend fun connectToLanguageServer() = withContext(Dispatchers.IO) {
         withContext(Dispatchers.Main) {
-            toast("(Rust Activity) Starting Rust Analyzer...")
+            toast("Starting pylsp...")
             editor.editable = false
         }
 
-        val projectPath = filesDir?.resolve("rustProject")?.absolutePath.orEmpty()
+        val projectPath = filesDir?.resolve("pythonProject")?.absolutePath.orEmpty()
+        val mainFile = File("$projectPath/main.py").apply {
+            parentFile?.mkdirs()
+            writeText("print('hello from pylsp')")
+        }
+
+        val text = withContext(Dispatchers.IO) { ContentIO.createFrom(mainFile.inputStream()) }
+        withContext(Dispatchers.Main) {
+            editor.setText(text, null)
+        }
 
         val definition = object : LanguageServerDefinition() {
             init {
-                this.ext = "rs"
-                this.languageIds = mapOf("rs" to "rust")
+                this.ext = "py"
+                this.languageIds = mapOf("py" to "python")
             }
 
             override fun createConnectionProvider(workingDir: String): StreamConnectionProvider {
@@ -117,13 +122,10 @@ class RustLspActivity : BaseEditorActivity() {
                         get() = process.outputStream
 
                     override fun start() {
-                        val lp = ubuntuProcess("rust-analyzer") {
+                        val lp = ubuntuProcess("pylsp") {
                             workingDirectory(workingDir)
-                            env("RA_LOG", "info")
                         }
-
                         process = lp.asJavaProcessBuilder().start()
-                        // process = lp.start().process
                     }
 
                     override fun close() {
@@ -133,67 +135,40 @@ class RustLspActivity : BaseEditorActivity() {
                     }
                 }
             }
-
-            private val _eventListener = EventListener(this@RustLspActivity)
-            override val eventListener: EventHandler.EventListener get() = _eventListener
         }
 
         lspProject = LspProject(projectPath)
         lspProject.addServerDefinition(definition)
 
         withContext(Dispatchers.Main) {
-            lspEditor = lspProject.createEditor("$projectPath/src/main.rs")
-            val wrapperLanguage = createTextMateLanguage()
-            lspEditor.wrapperLanguage = wrapperLanguage
+            lspEditor = lspProject.createEditor("$projectPath/main.py")
             lspEditor.editor = editor
         }
 
         var connected: Boolean
-
         try {
-            //Timeout[Timeouts.INIT] = 30000
             lspEditor.connectWithTimeout()
 
-            val fileUri = "file://$projectPath/src/main.rs"
-            val fileContent = File("$projectPath/src/main.rs").readText()
+            val fileUri = "file://$projectPath/main.py"
+            val fileContent = mainFile.readText()
 
-            Log.d("RustLsp", "Sending didOpen with content length: ${fileContent.length}")
-
-            val didOpenParams = DidOpenTextDocumentParams(
-                TextDocumentItem(
-                    fileUri,
-                    definition.languageIdFor("rs"), // languageId
-                    1,
-                    fileContent
-                ).also { println(it) }
-            )
-
-            lspEditor.requestManager?.didOpen(didOpenParams)
+//            val didOpenParams = DidOpenTextDocumentParams(
+//                TextDocumentItem(fileUri, definition.languageIdFor("py"), 1, fileContent)
+//            )
+//            lspEditor.requestManager?.didOpen(didOpenParams)
             lspEditor.openDocument()
-
-            // Set up workspace folders for Rust project
-            lspEditor.requestManager?.didChangeWorkspaceFolders(
-                DidChangeWorkspaceFoldersParams().apply {
-                    this.event = WorkspaceFoldersChangeEvent().apply {
-                        added = listOf(
-                            WorkspaceFolder("file://$projectPath", "rustProject")
-                        )
-                    }
-                }
-            )
 
             connected = true
         } catch (e: Exception) {
             connected = false
-            //e.printStackTrace()
-            Log.e("RustLsp", "Unable to connect to Rust Analyzer", e)
+            Log.e("PythonLsp", "Unable to connect to pylsp", e)
         }
 
         lifecycleScope.launch(Dispatchers.Main) {
             if (connected) {
-                toast("Rust Analyzer initialized successfully")
+                toast("pylsp initialized successfully ✅")
             } else {
-                toast("Unable to connect to Rust Analyzer")
+                toast("Unable to connect to pylsp ❌")
             }
             editor.editable = true
         }
@@ -276,6 +251,15 @@ class RustLspActivity : BaseEditorActivity() {
             lspProject.dispose()
         }
         stopService(Intent(this@RustLspActivity, RustLanguageServerService::class.java))
+    }
+
+    class El() : io.github.rosemoe.sora.lsp.events.EventListener {
+        override val eventName: String
+            get() = "textDocument/didChange"
+
+        override fun handle(context: EventContext) {
+            TODO("Not yet implemented")
+        }
     }
 
     class EventListener(

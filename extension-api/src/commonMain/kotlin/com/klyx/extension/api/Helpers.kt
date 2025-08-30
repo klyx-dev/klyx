@@ -37,8 +37,10 @@ inline fun <T, E> WasmMemory.readResult(
     }
 }
 
-fun WasmMemory.readStringOption(pointer: Int) = readOption(pointer, WasmMemory::readCString)
+fun WasmMemory.readStringOption(pointer: Int): Option<String> {
+    return readOption(pointer, WasmMemory::readLengthPrefixedUtf8String)
+}
 
-fun WasmMemory.readStringResult(pointer: Int) = run {
-    readResult(pointer, WasmMemory::readCString, WasmMemory::readCString)
+fun WasmMemory.readStringResult(pointer: Int): Result<String, String> {
+    return readResult(pointer, WasmMemory::readLengthPrefixedUtf8String, WasmMemory::readLengthPrefixedUtf8String)
 }

@@ -16,6 +16,12 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.di.commonModule
+import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
+import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import java.io.File
@@ -42,6 +48,23 @@ class KlyxApplication : Application() {
             )
         }
 
+        FileProviderRegistry.getInstance().addFileProvider(
+            AssetsFileResolver(assets)
+        )
+
+        val themeRegistry = ThemeRegistry.getInstance()
+        val path = "textmate/quietlight.json"
+
+        themeRegistry.loadTheme(
+            ThemeModel(
+                IThemeSource.fromInputStream(
+                    FileProviderRegistry.getInstance().tryGetInputStream(path), path, null
+                ), "quietlight"
+            )
+        )
+
+        themeRegistry.setTheme("quietlight")
+
         initKoin(commonModule) {
             androidLogger()
             androidContext(this@KlyxApplication)
@@ -50,6 +73,13 @@ class KlyxApplication : Application() {
 }
 
 private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: Throwable) {
+    if (throwable is ResponseErrorException &&
+        (throwable.message?.contains("content modified") == true ||
+                throwable.message?.contains("server cancelled") == true)
+    ) {
+        return
+    }
+
     val file = saveLogs(thread, throwable)
     EventBus.instance.postSync(CrashEvent(thread, throwable, file))
 

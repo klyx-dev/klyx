@@ -56,7 +56,7 @@ class RustLanguageServerService : Service() {
                     }
                 }
 
-                val rustAnalyzerProcess = localProcess(arrayOf("rust-analyzer")) {
+                val rustAnalyzerProcess = localProcess("rust-analyzer") {
                     env("RUST_LOG", "rust_analyzer=info")
                     workingDirectory(projectPath)
                 }.startBlocking()

@@ -1,4 +1,5 @@
 import com.klyx.Configs
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -7,6 +8,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlinxAtomicfu)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -74,13 +76,18 @@ kotlin {
 
 dependencies {
     add("kspCommonMainMetadata", projects.wasmKsp)
-    add("kspAndroid", projects.wasmKsp)
-    add("kspJvm", projects.wasmKsp)
-    add("kspIosX64", projects.wasmKsp)
-    add("kspIosArm64", projects.wasmKsp)
-    add("kspIosSimulatorArm64", projects.wasmKsp)
 }
 
 atomicfu {
     transformJvm = false
+}
+
+kotlin.sourceSets.commonMain {
+    kotlin.srcDir("build/generated/ksp/metadata/commonMain/kotlin")
+}
+
+tasks.withType<KotlinCompilationTask<*>>().configureEach {
+    if (name != "kspCommonMainKotlinMetadata") {
+        dependsOn("kspCommonMainKotlinMetadata")
+    }
 }

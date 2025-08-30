@@ -26,3 +26,15 @@ actual fun makeFileExecutable(path: String): Result<Unit, String> {
         Err("Failed to make file executable: $path")
     }
 }
+
+actual fun findBinary(binaryName: String): String? {
+    return null
+}
+
+actual fun executeCommand(
+    command: String,
+    args: Array<String>,
+    env: Map<String, String>
+): Output {
+    TODO("Not yet implemented")
+}

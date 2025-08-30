@@ -1,30 +1,38 @@
 package com.klyx.editor
 
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.klyx.core.file.KxFile
 import com.klyx.editor.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.Event
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.event.SubscriptionReceipt
 import io.github.rosemoe.sora.lang.Language
+import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.dsl.languages
+import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.LanguageServerDefinition
+import io.github.rosemoe.sora.lsp.editor.LspEditor
+import io.github.rosemoe.sora.lsp.editor.LspProject
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.subscribeAlways
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.eclipse.lsp4j.DidChangeTextDocumentParams
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import kotlin.reflect.KProperty
 import com.klyx.editor.event.Event as KlyxEvent
 
 @Stable
 @ExperimentalCodeEditorApi
-@Suppress(names = ["EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING"])
 actual class CodeEditorState actual constructor(
-    initialText: String,
+    actual val file: KxFile,
+    actual val project: KxFile?
 ) {
     private val subscriptions = mutableListOf<(CodeEditor) -> Unit>()
 
@@ -36,10 +44,15 @@ actual class CodeEditorState actual constructor(
             }
         }
 
-    var content by mutableStateOf(Content(initialText))
+    var content by mutableStateOf(Content(file.readText()))
 
     private val _cursor = MutableStateFlow(CursorState())
     actual val cursor = _cursor.asStateFlow()
+
+    var lspProject: LspProject? = null
+        internal set
+    var lspEditor: LspEditor? = null
+        internal set
 
     init {
         addSubscription { editor ->
@@ -106,17 +119,45 @@ actual class CodeEditorState actual constructor(
 }
 
 @ExperimentalCodeEditorApi
-@Composable
-fun rememberCodeEditorState(
-    initialContent: Content = Content()
-) = remember {
-    CodeEditorState(initialContent.toString())
-}
-
-@ExperimentalCodeEditorApi
 actual fun CodeEditorState(other: CodeEditorState): CodeEditorState {
-    return CodeEditorState(initialText = other.content.toString()).apply {
+    return CodeEditorState(
+        file = other.file,
+        project = other.project
+    ).apply {
         editor = other.editor
         content = other.content
     }
+}
+
+@OptIn(ExperimentalCodeEditorApi::class)
+suspend fun CodeEditorState.connectToLsp(definition: LanguageServerDefinition) {
+    val project = LspProject(project?.parentFile?.absolutePath ?: file.absolutePath).apply {
+        addServerDefinition(definition)
+    }
+    lspProject = project
+
+    val lsp = project.createEditor(file.absolutePath).also { lsp ->
+        lsp.editor = editor ?: error("Editor not initialized")
+        lsp.wrapperLanguage = createTextMateLanguage()
+        lsp.connectWithTimeout()
+        lsp.openDocument()
+    }
+    lspEditor = lsp
+}
+
+@OptIn(ExperimentalCodeEditorApi::class)
+val CodeEditorState.languageServer get() = lspEditor?.languageServerWrapper?.getServer()
+
+fun createTextMateLanguage(): TextMateLanguage {
+    GrammarRegistry.getInstance().loadGrammars(
+        languages {
+            language("rust") {
+                grammar = "textmate/rust/syntaxes/rust.tmLanguage.json"
+                scopeName = "source.rust"
+                languageConfiguration = "textmate/rust/language-configuration.json"
+            }
+        }
+    )
+
+    return TextMateLanguage.create("source.rust", false)
 }
