@@ -18,6 +18,8 @@ fun parseExtension(dir: KxFile, info: ExtensionInfo): Extension {
 
     val wasmFiles = dir.resolve("src").listFiles { file ->
         file.extension == "wasm"
+    }?.toList() ?: dir.resolve("lib").listFiles { file ->
+        file.extension == "wasm"
     }?.toList() ?: emptyList()
 
     return Extension(info, dir.absolutePath, wasmFiles, themes)

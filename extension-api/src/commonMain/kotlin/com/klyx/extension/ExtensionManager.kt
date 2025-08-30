@@ -104,8 +104,6 @@ object ExtensionManager {
     fun findLoadedExtension(id: String) = loadedExtensions.find { it.extension.info.id == id }
 
     fun isExtensionAvailableForLanguage(languageName: String): Boolean {
-        println(languageName)
-        println(loadedExtensions.map { it.extension.info }.joinToString())
         return loadedExtensions.any { extension ->
             extension.extension.info.languageServers.values.any { serverConfig ->
                 languageName in serverConfig.languages
