@@ -76,3 +76,11 @@ tasks.register("detektAll") {
         this@register.dependsOn(tasks.withType<Detekt>())
     }
 }
+
+tasks.register("generateTsGrammar") {
+    val tsks = subprojects.flatMap { sub ->
+        sub.tasks.matching { it.name == "generateGrammarFiles" }
+    }
+
+    dependsOn(tsks)
+}

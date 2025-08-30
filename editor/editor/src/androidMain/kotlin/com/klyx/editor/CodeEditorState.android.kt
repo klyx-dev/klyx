@@ -52,7 +52,7 @@ actual class CodeEditorState actual constructor(
             }
         }
 
-    var content by mutableStateOf(Content(file.readText()))
+    var content by mutableStateOf(Content(runCatching { file.readText() }.getOrElse { "" }))
 
     private val _cursor = MutableStateFlow(CursorState())
     actual val cursor = _cursor.asStateFlow()

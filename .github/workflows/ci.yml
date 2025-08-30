@@ -41,6 +41,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: chmod +x gradlew
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
       - name: Build Android APK
         run: |
           if ./gradlew tasks --all | grep -q "assembleRelease"; then
@@ -81,6 +83,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: chmod +x gradlew
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
       - name: Build JVM App
         run: |
           if ./gradlew tasks --all | grep -q "packageDistributionForCurrentOS"; then
@@ -145,6 +149,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: chmod +x gradlew
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
       - name: Build Linux binaries
         run: |
           if ./gradlew tasks --all | grep -q "packageDeb"; then
@@ -201,6 +207,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
       - name: Build Windows native binary
         run: |
           if (./gradlew tasks --all | Select-String "packageMsi") {
@@ -239,6 +247,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
       - run: chmod +x gradlew
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
 
       - name: Package macOS app bundles
         run: |
@@ -354,8 +364,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+      - run: chmod +x gradlew
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
 
       - name: Run Detekt
         run: ./gradlew detektAll

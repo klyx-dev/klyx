@@ -177,8 +177,3 @@ tasks.withType<CInteropProcess>().configureEach {
     inputs.files(*grammarFiles)
     outputs.file(libFile)
 }
-
-tasks.matching { it.name.startsWith("assemble") || it.name == "build" }.configureEach {
-    dependsOn(generateTask)
-}
-
