@@ -32,3 +32,12 @@
 -keep class androidx.documentfile.** { *; }
 -keep class androidx.activity.result.** { *; }
 -keep class androidx.activity.result.contract.** { *; }
+
+-dontobfuscate
+
+-keep class org.joni.** { *; }
+-keep class org.eclipse.tm4e.** { *; }
+-keep class io.github.rosemoe.sora.langs.textmate.** { *; }
+
+-keepclassmembers enum * { *; }
+-keepattributes *Annotation*
