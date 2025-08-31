@@ -19,4 +19,11 @@ expect object Environment {
     val LogsDir: String
 }
 
-fun string(resource: StringResource, vararg formatArgs: Any?) = runBlocking { getString(resource, formatArgs) }
+private val SimpleStringFormatRegex = Regex("""%(\d+)\$[ds]""")
+internal fun String.replaceWithArgs(args: List<String>) = SimpleStringFormatRegex.replace(this) { matchResult ->
+    args[matchResult.groupValues[1].toInt() - 1]
+}
+
+fun string(resource: StringResource, vararg formatArgs: Any?) = runBlocking {
+    getString(resource).replaceWithArgs(formatArgs.map { it.toString() })
+}
