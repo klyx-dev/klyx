@@ -62,7 +62,6 @@ import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openLogViewer
 import com.klyx.viewmodel.openSettings
 import com.klyx.viewmodel.showWelcome
-import io.github.vinceglb.filekit.absolutePath
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
@@ -158,7 +157,7 @@ fun rememberMenuItems(
                     }
 
                     if (file.path == "/untitled") {
-                        fileSaver.launch(file.name, extension = file.extension.ifEmpty { "txt" })
+                        fileSaver.launch(file.name)
                     } else {
                         val saved = viewModel.saveCurrent()
                         if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
