@@ -36,6 +36,7 @@ data class LocalExtension(
      */
     fun dispose() {
         instance.call("uninstall")
+        close()
     }
 
     /**

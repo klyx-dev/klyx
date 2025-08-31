@@ -1,6 +1,7 @@
 package com.klyx.editor.lsp
 
 import android.content.Context
+import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.onSuccess
 import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.logger
@@ -12,8 +13,11 @@ import com.klyx.terminal.ubuntuProcess
 import io.github.rosemoe.sora.lsp.client.connection.StreamConnectionProvider
 import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.LanguageServerDefinition
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.URI
 
 @OptIn(ExperimentalCodeEditorApi::class)
 internal fun CodeEditorState.createLanguageServerDefinition(
@@ -32,6 +36,18 @@ internal fun CodeEditorState.createLanguageServerDefinition(
 
         override fun createConnectionProvider(workingDir: String): StreamConnectionProvider {
             return ProcessStreamConnectionProvider(context, languageServerId, extension, workingDir)
+        }
+
+        override fun getInitializationOptions(uri: URI?): Any? = runBlocking {
+            val options = extension.languageServerInitializationOptions(
+                languageServerId, SystemWorktree
+            ).fold(
+                success = { it.getOrNull() },
+                failure = { null }
+            ) ?: return@runBlocking null
+
+            val jsonElement = Json.parseToJsonElement(options)
+            if (jsonElement is JsonObject) jsonElement.toMap() else null
         }
     }
 }
