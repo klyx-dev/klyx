@@ -42,7 +42,8 @@ include(":shared")
 include(":core")
 include(
     ":editor:editor",
-    ":editor:lsp"
+    ":editor:lsp",
+    ":editor:tree-sitter"
 )
 include(
     ":editor:sora:editor",

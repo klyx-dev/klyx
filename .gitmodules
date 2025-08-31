@@ -4,3 +4,6 @@
 [submodule "tree-sitter/python/tree-sitter-python"]
 	path = tree-sitter/python/tree-sitter-python
 	url = https://github.com/tree-sitter/tree-sitter-python
+[submodule "editor/tree-sitter/src/main/cpp/external/tree-sitter"]
+	path = editor/tree-sitter/src/main/cpp/external/tree-sitter
+	url = https://github.com/tree-sitter/tree-sitter.git

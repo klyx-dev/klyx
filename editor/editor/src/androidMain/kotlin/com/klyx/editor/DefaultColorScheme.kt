@@ -1,11 +1,22 @@
 package com.klyx.editor
 
 import androidx.core.graphics.toColorInt
+import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
+import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 
-object DefaultColorScheme : EditorColorScheme(true) {
+object DefaultColorScheme : EditorColorScheme(false) {
+    private val scheme get() = TextMateColorScheme.create(ThemeRegistry.getInstance())
+
     override fun applyDefault() {
         super.applyDefault()
+
+//        for (colorId in START_COLOR_ID..END_COLOR_ID) {
+//            val color = scheme.getColor(colorId)
+//            if (color != 0 && color != -1) {
+//                setColor(colorId, scheme.getColor(colorId))
+//            }
+//        }
 
         setColor(WHOLE_BACKGROUND, "#282c34".toColorInt())
         setColor(TEXT_NORMAL, "#abb2bf".toColorInt())

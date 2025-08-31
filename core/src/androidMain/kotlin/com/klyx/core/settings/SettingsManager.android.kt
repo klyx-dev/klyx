@@ -23,6 +23,7 @@ actual object SettingsManager {
         encodeDefaults = true
         explicitNulls = false
         isLenient = true
+        allowComments = true
     }
 
     actual var settings = mutableStateOf(AppSettings())

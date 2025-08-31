@@ -72,7 +72,7 @@ class LspEditor(
 
     private lateinit var editorSelectionChangeEventReceiver: LspEditorSelectionChangeEventReceiver
 
-    private var currentLanguage: LspLanguage? = null
+     var currentLanguage: LspLanguage? = null
 
     private var isClosed = false
 

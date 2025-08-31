@@ -11,6 +11,8 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.editor.event.ContentChangeEvent
+import com.klyx.editor.language.pythonLang
+import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.createLanguageServerDefinition
 import com.klyx.extension.ExtensionManager
 import io.github.rosemoe.sora.event.Event
@@ -152,13 +154,14 @@ suspend fun CodeEditorState.connectToLsp(
 
     val lsp = project.createEditor(file.absolutePath).also { lsp ->
         lsp.editor = editor ?: error("Editor not initialized")
-        lsp.wrapperLanguage = createTextMateLanguage()
+        lsp.wrapperLanguage = textMateLanguageOrEmptyLanguage
         lsp.connectWithTimeout()
         lsp.openDocument()
     }
 
     lspEditor = lsp
     lspEditor!!.editor = editor
+    //editor!!.setEditorLanguage(textMateLanguageOrEmptyLanguage)
 
     val uri = "file://${file.absolutePath}"
     val content = content.toString()
@@ -197,11 +200,6 @@ suspend fun CodeEditorState.connectToLsp(
 
 @OptIn(ExperimentalCodeEditorApi::class)
 val CodeEditorState.languageServer get() = lspEditor?.languageServerWrapper?.getServer()
-
-fun createTextMateLanguage(): TextMateLanguage {
-    GrammarRegistry.getInstance().loadGrammars("textmate/languages.json")
-    return TextMateLanguage.create("source.python", true)
-}
 
 @OptIn(ExperimentalCodeEditorApi::class)
 suspend fun CodeEditorState.tryConnectLspIfAvailable(): Result<Unit, String> {

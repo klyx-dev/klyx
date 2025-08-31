@@ -17,9 +17,15 @@ import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.di.commonModule
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
+import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
@@ -29,11 +35,14 @@ import java.util.Date
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
-class KlyxApplication : Application() {
+@OptIn(DelicateCoroutinesApi::class)
+class KlyxApplication : Application(), CoroutineScope by GlobalScope {
     companion object {
         private lateinit var instance: KlyxApplication
         val application: KlyxApplication get() = instance
     }
+
+    private val themeRegistry = ThemeRegistry.getInstance()
 
     @Suppress("KotlinConstantConditions")
     override fun onCreate() {
@@ -52,18 +61,23 @@ class KlyxApplication : Application() {
             AssetsFileResolver(assets)
         )
 
-        val themeRegistry = ThemeRegistry.getInstance()
-        val path = "textmate/quietlight.json"
+        launch(Dispatchers.IO) {
+            GrammarRegistry.getInstance().loadGrammars("textmate/languages.json")
 
-        themeRegistry.loadTheme(
-            ThemeModel(
-                IThemeSource.fromInputStream(
-                    FileProviderRegistry.getInstance().tryGetInputStream(path), path, null
-                ), "quietlight"
-            )
-        )
+            val themes = listOf("darcula", "quietlight")
+            for (theme in themes) {
+                val path = "textmate/$theme.json"
 
-        themeRegistry.setTheme("quietlight")
+                themeRegistry.loadTheme(
+                    ThemeModel(
+                        IThemeSource.fromInputStream(
+                            FileProviderRegistry.getInstance().tryGetInputStream(path), path, null
+                        ),
+                        theme
+                    )
+                )
+            }
+        }
 
         initKoin(commonModule) {
             androidLogger()

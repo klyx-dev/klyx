@@ -75,6 +75,7 @@ kotlin {
                 api(libs.sora.editor)
                 api(projects.editor.sora.editorLsp)
                 api(projects.editor.lsp)
+                api(projects.editor.treeSitter)
 
                 implementation(libs.sora.language.textmate)
                 implementation(libs.sora.language.treesitter)

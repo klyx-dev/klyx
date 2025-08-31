@@ -46,6 +46,8 @@ internal fun CodeEditorState.createLanguageServerDefinition(
                 failure = { null }
             ) ?: return@runBlocking null
 
+            if (options.isEmpty()) return@runBlocking null
+
             val jsonElement = Json.parseToJsonElement(options)
             if (jsonElement is JsonObject) jsonElement.toMap() else null
         }
