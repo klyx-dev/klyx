@@ -66,7 +66,7 @@ fun buildProotArgs(
         val src = "/proc/self/fd/$fd"
         with(File(src)) {
             if (exists() && canRead() && canWrite()) {
-                logger.info { "$src -> /dev/$name" }
+                logger.verbose { "$src -> /dev/$name" }
                 bind(canonicalPath, "/dev/$name")
             }
         }
