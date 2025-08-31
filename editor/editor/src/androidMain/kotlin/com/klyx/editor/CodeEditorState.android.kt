@@ -191,7 +191,7 @@ suspend fun CodeEditorState.connectToLsp(
 
     Ok(Unit)
 } catch (err: Exception) {
-    logger.error(err) { err.message }
+    logger.warn(err) { err.message }
     Err(err.message ?: "Failed to connect to language server")
 }
 

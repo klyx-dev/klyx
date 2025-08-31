@@ -82,7 +82,7 @@ actual fun CodeEditor(
             state.tryConnectLspIfAvailable().onSuccess {
                 notifier.toast("Connected to language server for $language")
             }.onFailure {
-                logger.error { "failed to connect to lsp: $it" }
+                logger.warn { "failed to connect to lsp: $it" }
             }
         }
     }

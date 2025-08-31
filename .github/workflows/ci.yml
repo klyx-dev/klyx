@@ -127,43 +127,43 @@ jobs:
 #          path: '**/build/libs/*-all.jar'
 #          retention-days: 30
 
-  build-linux-native:
-    name: Build Linux Native
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      - run: sudo apt-get update && sudo apt-get install -y rpm alien dpkg-dev
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      - run: chmod +x gradlew
-      - name: Generate Tree-sitter grammar
-        run: ./gradlew generateTsGrammar
-      - name: Build Linux binaries
-        run: |
-          if ./gradlew tasks --all | grep -q "packageDeb"; then
-            ./gradlew packageDeb
-          else
-            echo "Skipping packageDeb, task not available"
-          fi
-          
-          if ./gradlew tasks --all | grep -q "packageRpm"; then
-            ./gradlew packageRpm
-          else
-            echo "Skipping packageRpm, task not available"
-          fi
+#  build-linux-native:
+#    name: Build Linux Native
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#          fetch-depth: 0
+#      - uses: actions/setup-java@v4
+#        with:
+#          java-version: '21'
+#          distribution: 'temurin'
+#      - run: sudo apt-get update && sudo apt-get install -y rpm alien dpkg-dev
+#      - uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+#          restore-keys: |
+#            ${{ runner.os }}-gradle-
+#      - run: chmod +x gradlew
+#      - name: Generate Tree-sitter grammar
+#        run: ./gradlew generateTsGrammar
+#      - name: Build Linux binaries
+#        run: |
+#          if ./gradlew tasks --all | grep -q "packageDeb"; then
+#            ./gradlew packageDeb
+#          else
+#            echo "Skipping packageDeb, task not available"
+#          fi
+#
+#          if ./gradlew tasks --all | grep -q "packageRpm"; then
+#            ./gradlew packageRpm
+#          else
+#            echo "Skipping packageRpm, task not available"
+#          fi
 
 #      - name: Upload DEB packages
 #        uses: actions/upload-artifact@v4
@@ -181,41 +181,41 @@ jobs:
 #          path: '**/build/compose/binaries/main/rpm/*.rpm'
 #          retention-days: 30
 
-  build-windows-native:
-    name: Build Windows Native App & Installer
-    runs-on: windows-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Generate Tree-sitter grammar
-        run: ./gradlew generateTsGrammar
-      - name: Build Windows native binary
-        run: |
-          if (./gradlew tasks --all | Select-String "packageMsi") {
-            ./gradlew packageMsi
-          } else {
-            echo "Skipping Windows native build, task not available"
-          }
+#  build-windows-native:
+#    name: Build Windows Native App & Installer
+#    runs-on: windows-latest
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#          fetch-depth: 0
+#
+#      - name: Set up JDK 21
+#        uses: actions/setup-java@v4
+#        with:
+#          java-version: '21'
+#          distribution: 'temurin'
+#
+#      - name: Cache Gradle packages
+#        uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+#          restore-keys: |
+#            ${{ runner.os }}-gradle-
+#
+#      - name: Generate Tree-sitter grammar
+#        run: ./gradlew generateTsGrammar
+#      - name: Build Windows native binary
+#        run: |
+#          if (./gradlew tasks --all | Select-String "packageMsi") {
+#            ./gradlew packageMsi
+#          } else {
+#            echo "Skipping Windows native build, task not available"
+#          }
 
 #      - name: Upload MSI installers
 #        uses: actions/upload-artifact@v4
@@ -225,38 +225,38 @@ jobs:
 #          path: '**/build/compose/binaries/main/msi/*.msi'
 #          retention-days: 30
 
-  build-macos-native:
-    name: Build macOS Native App & DMG
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      - run: chmod +x gradlew
-      - name: Generate Tree-sitter grammar
-        run: ./gradlew generateTsGrammar
-
-      - name: Package macOS app bundles
-        run: |
-          if ./gradlew tasks --all | grep -q "packageDmg"; then
-            ./gradlew packageDmg
-          else
-            echo "Skipping packageDmg"
-          fi
+#  build-macos-native:
+#    name: Build macOS Native App & DMG
+#    runs-on: macos-latest
+#
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#          fetch-depth: 0
+#      - uses: actions/setup-java@v4
+#        with:
+#          java-version: '21'
+#          distribution: 'temurin'
+#      - uses: actions/cache@v4
+#        with:
+#          path: |
+#            ~/.gradle/caches
+#            ~/.gradle/wrapper
+#          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+#          restore-keys: |
+#            ${{ runner.os }}-gradle-
+#      - run: chmod +x gradlew
+#      - name: Generate Tree-sitter grammar
+#        run: ./gradlew generateTsGrammar
+#
+#      - name: Package macOS app bundles
+#        run: |
+#          if ./gradlew tasks --all | grep -q "packageDmg"; then
+#            ./gradlew packageDmg
+#          else
+#            echo "Skipping packageDmg"
+#          fi
 
 #      - name: Create universal binary
 #        run: |
