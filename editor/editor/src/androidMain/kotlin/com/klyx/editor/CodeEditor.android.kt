@@ -30,6 +30,7 @@ import com.klyx.core.LocalNotifier
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
+import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
@@ -146,7 +147,7 @@ actual fun CodeEditor(
                 )
 
                 getComponent<EditorAutoCompletion>().apply {
-                    //setAdapter(AutoCompletionLayoutAdapter(density))
+                    setAdapter(AutoCompletionLayoutAdapter(density))
                     setEnabledAnimation(true)
                 }
 
