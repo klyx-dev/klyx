@@ -58,6 +58,6 @@ include(
     ":terminal:termux-shared"
 )
 
-file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
-    include(":tree-sitter:${it.name}")
-}
+//file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
+//    include(":tree-sitter:${it.name}")
+//}

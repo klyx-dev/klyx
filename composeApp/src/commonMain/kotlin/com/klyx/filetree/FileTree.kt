@@ -19,7 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyItemScope
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
@@ -58,23 +59,35 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.fastDistinctBy
 import androidx.compose.ui.util.fastForEach
 import com.klyx.DrawerWidth
 import com.klyx.core.file.KxFile
+import com.klyx.extension.api.Worktree
 import org.koin.compose.viewmodel.koinViewModel
+
+private inline fun <K, V> LazyListScope.items(
+    items: Map<K, V>,
+    noinline key: ((item: Map.Entry<K, V>) -> Any)? = null,
+    noinline contentType: (item: Map.Entry<K, V>) -> Any? = { null },
+    crossinline itemContent: @Composable LazyItemScope.(item: Map.Entry<K, V>) -> Unit
+) = items(
+    count = items.size,
+    key = if (key != null) { index: Int -> key(items.entries.elementAt(index)) } else null,
+    contentType = { index: Int -> contentType(items.entries.elementAt(index)) }
+) {
+    itemContent(items.entries.elementAt(it))
+}
 
 @Composable
 fun FileTree(
-    rootNodes: List<FileTreeNode>,
+    rootNodes: Map<Worktree, FileTreeNode> = emptyMap(),
     modifier: Modifier = Modifier,
     viewModel: FileTreeViewModel = koinViewModel(),
-    onFileClick: (KxFile) -> Unit = {},
-    onFileLongClick: (KxFile) -> Unit = {},
+    onFileClick: (KxFile, Worktree) -> Unit = { _, _ -> },
+    onFileLongClick: (KxFile, Worktree) -> Unit = { _, _ -> },
 ) {
     LaunchedEffect(rootNodes) {
         viewModel.updateRootNodes(rootNodes)
-        //viewModel.expandNode(rootNodes.first())
     }
 
     val nodes by viewModel.rootNodes.collectAsState()
@@ -92,11 +105,14 @@ fun FileTree(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(
-                    nodes.fastDistinctBy { it.file.absolutePath },
-                    key = { it.file.absolutePath }
-                ) { node ->
+                    nodes.entries
+                        .distinctBy { it.key.rootFile.absolutePath }
+                        .associate { it.toPair() },
+                    key = { it.key.rootFile.absolutePath }
+                ) { (worktree, node) ->
                     FileTreeItem(
                         viewModel = viewModel,
+                        worktree = worktree,
                         node = node,
                         depth = 0,
                         onFileClick = onFileClick,
@@ -111,11 +127,12 @@ fun FileTree(
 @Composable
 private fun FileTreeItem(
     node: FileTreeNode,
+    worktree: Worktree,
     viewModel: FileTreeViewModel,
     modifier: Modifier = Modifier,
     depth: Int = 0,
-    onFileClick: (KxFile) -> Unit = {},
-    onFileLongClick: (KxFile) -> Unit = {}
+    onFileClick: (KxFile, Worktree) -> Unit = { _, _ -> },
+    onFileLongClick: (KxFile, Worktree) -> Unit = { _, _ -> }
 ) {
     val isExpanded = viewModel.isNodeExpanded(node)
     val isSelected = viewModel.isNodeSelected(node)
@@ -143,7 +160,7 @@ private fun FileTreeItem(
         Modifier
     }
 
-    val fileNameColor = if (isSelected) {
+    val fgColor = if (isSelected) {
         MaterialTheme.colorScheme.onPrimaryContainer
     } else {
         MaterialTheme.colorScheme.onSurface
@@ -162,14 +179,14 @@ private fun FileTreeItem(
                         if (node.isDirectory) {
                             viewModel.toggleExpandedState(node)
                         } else {
-                            onFileClick(node.file)
+                            onFileClick(node.file, worktree)
                         }
 
                         viewModel.selectNode(node)
                     },
                     onLongClick = {
                         viewModel.selectNode(node)
-                        onFileLongClick(node.file)
+                        onFileLongClick(node.file, worktree)
                     }
                 )
                 .pointerInput(Unit) {
@@ -177,7 +194,7 @@ private fun FileTreeItem(
                         val event = awaitPointerEvent()
                         if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
                             event.changes.forEach { e -> e.consume() }
-                            onFileLongClick(node.file)
+                            onFileLongClick(node.file, worktree)
                         }
                     }
                 }
@@ -211,7 +228,8 @@ private fun FileTreeItem(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(16.dp)
-                                .rotate(rotationDegree)
+                                .rotate(rotationDegree),
+                            tint = fgColor
                         )
                     }
                 }
@@ -225,7 +243,7 @@ private fun FileTreeItem(
                 imageVector = getFileIcon(node),
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
-                tint = getFileIconColor(node)
+                tint = fgColor
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -234,7 +252,7 @@ private fun FileTreeItem(
                 text = node.name,
                 fontSize = 14.sp,
                 fontWeight = if (node.isDirectory) FontWeight.Medium else FontWeight.Normal,
-                color = fileNameColor,
+                color = fgColor,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -250,6 +268,7 @@ private fun FileTreeItem(
                         FileTreeItem(
                             modifier = Modifier.fillMaxWidth(),
                             node = child,
+                            worktree = worktree,
                             depth = depth + 1,
                             viewModel = viewModel,
                             onFileClick = onFileClick,
@@ -289,36 +308,5 @@ private fun getFileIcon(node: FileTreeNode): ImageVector {
         "mp4", "avi", "mov", "mkv" -> Icons.Default.VideoFile
         "mp3", "wav", "flac", "ogg" -> Icons.Default.AudioFile
         else -> Icons.AutoMirrored.Filled.InsertDriveFile
-    }
-}
-
-@Composable
-private fun getFileIconColor(node: FileTreeNode): Color {
-    if (node.file.isDirectory) {
-        return MaterialTheme.colorScheme.primary
-    }
-
-    return when (node.file.name.substringAfterLast('.', "").lowercase()) {
-        "kt", "kts" -> Color(0xFF7F52FF)
-        "java" -> Color(0xFFED8B00)
-        "js", "jsx" -> Color(0xFFF7DF1E)
-        "ts", "tsx" -> Color(0xFF3178C6)
-        "py" -> Color(0xFF3776AB)
-        "cpp", "c", "h", "hpp" -> Color(0xFF00599C)
-        "cs" -> Color(0xFF239120)
-        "go" -> Color(0xFF00ADD8)
-        "rs" -> Color(0xFF000000)
-        "swift" -> Color(0xFFFA7343)
-        "php" -> Color(0xFF777BB4)
-        "rb" -> Color(0xFFCC342D)
-        "html", "htm" -> Color(0xFFE34F26)
-        "css", "scss", "sass" -> Color(0xFF1572B6)
-        "json" -> Color(0xFFFFD700)
-        "xml" -> Color(0xFF0060AC)
-        "yaml", "yml" -> Color(0xFFCB171E)
-        "md" -> Color(0xFF083FA1)
-        "png", "jpg", "jpeg", "gif", "svg", "webp" -> Color(0xFF4CAF50)
-        "pdf" -> Color(0xFFD32F2F)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 }

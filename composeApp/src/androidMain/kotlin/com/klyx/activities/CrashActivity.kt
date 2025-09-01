@@ -2,6 +2,7 @@ package com.klyx.activities
 
 import android.os.Bundle
 import android.os.Process
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -42,6 +43,7 @@ class CrashActivity : KlyxActivity() {
     @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         val crashLog = intent.getStringExtra(EXTRA_CRASH_LOG) ?: "No crash log"
 
         setContent {

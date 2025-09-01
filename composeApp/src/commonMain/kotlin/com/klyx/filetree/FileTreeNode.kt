@@ -37,6 +37,6 @@ fun KxFile.toFileTreeNode() = FileTreeNode(this)
 fun PlatformFile.toFileTreeNode() = FileTreeNode(this.toKxFile())
 fun List<KxFile>.toFileTreeNodes() = map { it.toFileTreeNode() }
 
-fun Project.toFileTreeNodes() = worktrees.map { it.asFileTreeNode() }
+fun Project.toFileTreeNodes() = worktrees.associateWith { it.asFileTreeNode() }
 
 fun Worktree.asFileTreeNode() = FileTreeNode(rootFile)

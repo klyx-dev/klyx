@@ -2,7 +2,7 @@ import com.klyx.Configs
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidKotlinMultiplatformLibrary)
+    alias(libs.plugins.androidLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
 }
@@ -14,12 +14,7 @@ kotlin {
 
     jvmToolchain(21)
 
-    androidLibrary {
-        namespace = "com.klyx.editor"
-        compileSdk = Configs.Android.COMPILE_SDK_VERSION
-        minSdk = Configs.Android.MIN_SDK_VERSION
-    }
-
+    androidTarget()
     jvm()
 
     listOf(
@@ -57,9 +52,9 @@ kotlin {
                 implementation(projects.terminal.terminal)
                 implementation(projects.extensionApi)
 
-                rootProject.project("tree-sitter").subprojects.forEach {
-                    implementation(project(":tree-sitter:${it.name}"))
-                }
+//                rootProject.project("tree-sitter").subprojects.forEach {
+//                    implementation(project(":tree-sitter:${it.name}"))
+//                }
             }
         }
 
@@ -87,5 +82,37 @@ kotlin {
                 implementation(libs.ktreesitter)
             }
         }
+    }
+}
+
+android {
+    namespace = "com.klyx.editor"
+    compileSdk = Configs.Android.COMPILE_SDK_VERSION
+
+    defaultConfig {
+        minSdk = Configs.Android.MIN_SDK_VERSION
+
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+    }
+
+    buildFeatures {
+        compose = true
+        viewBinding = true
     }
 }

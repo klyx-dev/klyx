@@ -186,11 +186,11 @@ fun App(
                             FileTree(
                                 rootNodes = project.toFileTreeNodes(),
                                 modifier = Modifier.fillMaxSize(),
-                                onFileLongClick = {
+                                onFileLongClick = { _, _ ->
 
                                 },
-                                onFileClick = {
-                                    editorViewModel.openFile(it)
+                                onFileClick = { file, worktree ->
+                                    editorViewModel.openFile(file, worktree)
                                     scope.launch {
                                         drawerState.close()
                                     }

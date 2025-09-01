@@ -143,6 +143,7 @@ fun EditorScreen(
                             CodeEditor(
                                 modifier = Modifier.fillMaxSize(),
                                 state = tab.editorState,
+                                worktree = tab.worktree,
                                 fontFamily = fontFamily,
                                 fontSize = editorSettings.fontSize.sp,
                                 editable = !tab.isInternal,

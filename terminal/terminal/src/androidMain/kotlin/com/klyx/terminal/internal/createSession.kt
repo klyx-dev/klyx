@@ -14,8 +14,7 @@ import java.io.File
 
 typealias TerminalSessionId = String
 
-@PublishedApi
-internal val linker = if (Process.is64Bit()) "/system/bin/linker64" else "/system/bin/linker"
+val linker = if (Process.is64Bit()) "/system/bin/linker64" else "/system/bin/linker"
 
 context(context: Context)
 fun createSession(

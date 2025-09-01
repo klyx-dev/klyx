@@ -4,7 +4,6 @@ import android.app.Activity
 import android.content.Context
 import arrow.core.None
 import arrow.core.Option
-import arrow.core.Some
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -18,8 +17,8 @@ object ContextHolder : KoinComponent {
 
     private var currentActivity: Option<Activity> = None
 
-    fun setCurrentActivity(activity: Activity?) {
-        currentActivity = if (activity == null) None else Some(activity)
+    fun setCurrentActivity(activity: Option<Activity>) {
+        currentActivity = activity
     }
 
     fun currentActivityOrNull() = currentActivity.getOrNull()

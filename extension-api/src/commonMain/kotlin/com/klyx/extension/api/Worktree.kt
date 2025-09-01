@@ -75,6 +75,8 @@ class Worktree(val id: ULong, val rootFile: KxFile) {
 fun Worktree(path: String) = Worktree(path.toKxFile())
 fun Worktree(file: KxFile) = WorktreeRegistry.register(file)
 
+fun KxFile.toWorktree() = Worktree(this)
+
 val SystemWorktree = Worktree(Environment.DeviceHomeDir)
 
 private object WorktreeRegistry {

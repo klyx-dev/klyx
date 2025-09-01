@@ -1,5 +1,3 @@
-@file:Suppress("NoNameShadowing")
-
 package com.klyx.editor
 
 import android.content.Context
@@ -18,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -33,6 +32,7 @@ import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.extension.ExtensionManager
+import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.CodeEditor
@@ -78,6 +78,7 @@ private val logger = logger("CodeEditor")
 actual fun CodeEditor(
     state: CodeEditorState,
     modifier: Modifier,
+    worktree: Worktree?,
     fontFamily: FontFamily,
     fontSize: TextUnit,
     editable: Boolean,
@@ -100,6 +101,7 @@ actual fun CodeEditor(
     val typeface by fontFamilyResolver.resolveAsTypeface(style.fontFamily)
 
     val context = LocalContext.current
+    val density = LocalDensity.current
     val editor = remember(state) {
         setCodeEditorFactory(context, state)
     }
@@ -107,7 +109,7 @@ actual fun CodeEditor(
     LaunchedEffect(state.editor) {
         withContext(Dispatchers.Default) {
             if (state.editor != null && ExtensionManager.isExtensionAvailableForLanguage(state.file.language())) {
-                state.tryConnectLspIfAvailable().onSuccess {
+                state.tryConnectLspIfAvailable(worktree).onSuccess {
                     notifier.toast("Connected to language server for $language")
                 }.onFailure {
                     logger.warn { "failed to connect to lsp: $it" }
@@ -143,6 +145,11 @@ actual fun CodeEditor(
                     ViewGroup.LayoutParams.MATCH_PARENT
                 )
 
+                getComponent<EditorAutoCompletion>().apply {
+                    //setAdapter(AutoCompletionLayoutAdapter(density))
+                    setEnabledAnimation(true)
+                }
+
                 colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
                 colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
             }
@@ -159,11 +166,6 @@ actual fun CodeEditor(
                 this.editable = editable
 
                 colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
-
-                getComponent<EditorAutoCompletion>().apply {
-                    isEnabled = true
-                    setEnabledAnimation(true)
-                }
 
                 setEditorLanguage(state.textMateLanguageOrEmptyLanguage)
             }

@@ -13,6 +13,7 @@ import com.klyx.core.generateId
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.event.ContentChangeEvent
+import com.klyx.extension.api.Worktree
 
 typealias TabId = String
 
@@ -35,6 +36,7 @@ sealed class Tab(
         override val name: String,
         val file: KxFile,
         val editorState: CodeEditorState,
+        val worktree: Worktree? = null,
         val isInternal: Boolean = false,
         override val id: TabId = generateId(),
         override val content: @Composable () -> Unit = { Box(modifier = Modifier.fillMaxSize()) },

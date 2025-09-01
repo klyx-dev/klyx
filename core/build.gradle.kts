@@ -66,8 +66,6 @@ kotlin {
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
 
-                api(libs.composablesCore)
-
                 api(libs.kotlinx.serialization.json)
                 implementation(libs.json5k)
                 implementation(libs.ktoml.core)

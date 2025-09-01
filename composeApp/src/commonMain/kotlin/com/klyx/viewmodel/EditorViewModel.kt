@@ -17,6 +17,7 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.string
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.extension.api.Worktree
 import com.klyx.ifNull
 import com.klyx.res.Res.string
 import com.klyx.res.tab_title_default_settings
@@ -101,6 +102,7 @@ class EditorViewModel(
 
     fun openFile(
         file: KxFile,
+        worktree: Worktree? = null,
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
@@ -118,6 +120,7 @@ class EditorViewModel(
             val fileTab = Tab.FileTab(
                 id = file.id,
                 name = tabTitle,
+                worktree = worktree,
                 isInternal = isInternal,
                 file = file,
                 editorState = CodeEditorState(file)
@@ -311,7 +314,7 @@ fun EditorViewModel.showWelcome() {
 }
 
 fun EditorViewModel.openLogViewer() {
-    openTab("LogViewer") {
+    openTab("Logs") {
         LogViewerScreen(modifier = Modifier.fillMaxSize())
     }
 }

@@ -2,6 +2,7 @@ package com.klyx.extension
 
 import com.github.michaelbull.result.map
 import com.klyx.core.extension.Extension
+import com.klyx.core.logging.KxLogger
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.readCommandResult
 import com.klyx.extension.api.readResult
@@ -14,12 +15,14 @@ import kotlinx.coroutines.CloseableCoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalWasmApi::class, ExperimentalCoroutinesApi::class)
 data class LocalExtension(
     val extension: Extension,
-    val instance: WasmInstance,
+    val logger: KxLogger,
+    internal val instance: WasmInstance,
     private val extensionDispatcher: CloseableCoroutineDispatcher
 ) : AutoCloseable, CoroutineScope by CoroutineScope(extensionDispatcher + SupervisorJob()) {
     private val memory by lazy { instance.memory }
@@ -27,16 +30,19 @@ data class LocalExtension(
     /**
      * Initializes the extension.
      */
-    fun initialize() {
-        instance.call("init-extension")
+    suspend fun initialize() = withContext(extensionDispatcher) {
+        instance.call("init-extension");null
     }
 
     /**
      * Uninitializes the extension.
      */
     fun dispose() {
-        instance.call("uninstall")
-        close()
+        launch {
+            instance.call("uninstall")
+        }.invokeOnCompletion {
+            close()
+        }
     }
 
     /**

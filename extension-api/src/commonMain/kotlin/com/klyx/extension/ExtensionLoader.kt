@@ -1,12 +1,10 @@
 package com.klyx.extension
 
 import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
-import com.klyx.extension.api.SystemWorktree
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
@@ -68,19 +66,8 @@ object ExtensionLoader {
                     registerHostModule(*extraHostModules)
                 }
 
-                val localExtension = LocalExtension(extension, instance, dispatcher)
-
-                if (shouldCallInit) {
-                    localExtension.initialize()
-                }
-
-                localExtension.languageServerInitializationOptions("pylsp", SystemWorktree).onSuccess {
-                    println(it)
-                }
-
-                localExtension.languageServerWorkspaceConfiguration("pylsp", SystemWorktree).onSuccess {
-                    println(it)
-                }
+                val localExtension = LocalExtension(extension, logger, instance, dispatcher)
+                if (shouldCallInit) localExtension.initialize()
 
                 stdout.snapshot()
                     .decodeToString()

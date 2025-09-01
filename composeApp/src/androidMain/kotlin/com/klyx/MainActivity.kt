@@ -33,8 +33,12 @@ import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
+import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
+import com.klyx.terminal.internal.currentUser
+import com.klyx.terminal.ubuntuHome
 import com.klyx.viewmodel.EditorViewModel
+import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.showWelcome
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -56,6 +60,7 @@ class MainActivity : KlyxActivity() {
 
             val viewModel: EditorViewModel = koinViewModel()
             val fileTreeViewModel = koinViewModel<FileTreeViewModel>()
+            val klyxViewModel = koinViewModel<KlyxViewModel>()
             val projects by fileTreeViewModel.rootNodes.collectAsState()
 
             LaunchedEffect(projects) {
@@ -64,7 +69,7 @@ class MainActivity : KlyxActivity() {
                         if (projects.isEmpty()) {
                             "empty project"
                         } else {
-                            projects.joinToString(", ") { it.name }
+                            projects.entries.joinToString { it.value.name }
                         }
                     )
                 )
@@ -72,7 +77,9 @@ class MainActivity : KlyxActivity() {
 
             var extensionLoadFailure: String? by remember { mutableStateOf(null) }
             LaunchedEffect(Unit) {
-                withContext(dispatcher + SupervisorJob()) {
+                klyxViewModel.openProject(Worktree("$ubuntuHome/$currentUser/kt-test"))
+
+                launch(dispatcher + SupervisorJob()) {
                     ExtensionManager.loadExtensions().onFailure {
                         extensionLoadFailure = it
                     }

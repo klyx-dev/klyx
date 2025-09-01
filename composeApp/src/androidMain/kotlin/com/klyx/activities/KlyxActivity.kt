@@ -3,6 +3,8 @@ package com.klyx.activities
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
+import arrow.core.none
+import arrow.core.some
 import com.klyx.core.ContextHolder
 import com.klyx.core.SharedLocalProvider
 import com.klyx.core.WindowManager
@@ -14,7 +16,7 @@ open class KlyxActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
-        ContextHolder.setCurrentActivity(this)
+        ContextHolder.setCurrentActivity(none())
 
         WindowManager.currentTaskId = taskId
         WindowManager.addWindow(taskId)
@@ -32,17 +34,17 @@ open class KlyxActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        ContextHolder.setCurrentActivity(this)
+        ContextHolder.setCurrentActivity(some())
         WindowManager.currentTaskId = taskId
     }
 
     override fun onStart() {
         super.onStart()
-        ContextHolder.setCurrentActivity(this)
+        ContextHolder.setCurrentActivity(some())
     }
 
     override fun onRestart() {
         super.onRestart()
-        ContextHolder.setCurrentActivity(this)
+        ContextHolder.setCurrentActivity(some())
     }
 }

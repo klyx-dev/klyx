@@ -11,31 +11,31 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.editor.event.ContentChangeEvent
-import com.klyx.editor.language.pythonLang
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.createLanguageServerDefinition
 import com.klyx.extension.ExtensionManager
+import com.klyx.extension.api.SystemWorktree
+import com.klyx.extension.api.Worktree
+import com.klyx.extension.api.toWorktree
 import io.github.rosemoe.sora.event.Event
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.event.SubscriptionReceipt
 import io.github.rosemoe.sora.lang.Language
-import io.github.rosemoe.sora.langs.textmate.TextMateLanguage
-import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.lsp.client.languageserver.serverdefinition.LanguageServerDefinition
 import io.github.rosemoe.sora.lsp.editor.LspEditor
 import io.github.rosemoe.sora.lsp.editor.LspProject
+import io.github.rosemoe.sora.lsp.requests.Timeout
+import io.github.rosemoe.sora.lsp.requests.Timeouts
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.subscribeAlways
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
-import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentItem
-import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import kotlin.reflect.KProperty
+import kotlin.time.Duration.Companion.seconds
 import com.klyx.editor.event.Event as KlyxEvent
 
 @Stable
@@ -144,18 +144,23 @@ private val logger = logger("CodeEditorState")
 @OptIn(ExperimentalCodeEditorApi::class)
 suspend fun CodeEditorState.connectToLsp(
     definition: LanguageServerDefinition,
-    languageServerId: String
+    languageServerId: String,
+    worktree: Worktree?,
 ) = try {
-    val project = LspProject(project?.absolutePath ?: file.absolutePath).apply {
+    val projectPath = worktree?.rootFile?.absolutePath ?: file.parentFile?.absolutePath ?: file.absolutePath
+
+    val project = LspProject(projectPath).apply {
         addServerDefinition(definition)
     }
 
     lspProject = project
 
+    Timeout[Timeouts.INIT] = 200.seconds.inWholeMilliseconds.toInt()
+
     val lsp = project.createEditor(file.absolutePath).also { lsp ->
         lsp.editor = editor ?: error("Editor not initialized")
         lsp.wrapperLanguage = textMateLanguageOrEmptyLanguage
-        lsp.connectWithTimeout()
+        lsp.connect()
         lsp.openDocument()
     }
 
@@ -177,21 +182,6 @@ suspend fun CodeEditorState.connectToLsp(
         )
     )
     lspEditor!!.openDocument()
-
-    var version = 1
-    editor?.subscribeAlways<io.github.rosemoe.sora.event.ContentChangeEvent> { event ->
-        val params = DidChangeTextDocumentParams().apply {
-            textDocument = VersionedTextDocumentIdentifier(
-                "file://${file.absolutePath}",
-                version++
-            )
-            contentChanges = listOf(
-                TextDocumentContentChangeEvent(editor?.text.toString())
-            )
-        }
-        lspEditor?.requestManager?.didChange(params)
-    }
-
     Ok(Unit)
 } catch (err: Exception) {
     logger.warn(err) { err.message }
@@ -202,7 +192,7 @@ suspend fun CodeEditorState.connectToLsp(
 val CodeEditorState.languageServer get() = lspEditor?.languageServerWrapper?.getServer()
 
 @OptIn(ExperimentalCodeEditorApi::class)
-suspend fun CodeEditorState.tryConnectLspIfAvailable(): Result<Unit, String> {
+suspend fun CodeEditorState.tryConnectLspIfAvailable(worktree: Worktree?): Result<Unit, String> {
     val editor = editor ?: return Err("Editor not initialized")
     val languageName = file.language()
 
@@ -217,6 +207,12 @@ suspend fun CodeEditorState.tryConnectLspIfAvailable(): Result<Unit, String> {
     val extension = ExtensionManager.getExtensionForLanguage(languageName)
         ?: return Err("No extension found for language: $languageName")
 
-    val definition = createLanguageServerDefinition(editor.context, extension, languageServerId, languageId)
-    return connectToLsp(definition, languageServerId)
+    val definition = createLanguageServerDefinition(
+        context = editor.context,
+        worktree = worktree ?: file.parentFile?.toWorktree() ?: SystemWorktree,
+        extension = extension,
+        languageServerId = languageServerId,
+        languageId = languageId
+    )
+    return connectToLsp(definition, languageServerId, worktree)
 }
