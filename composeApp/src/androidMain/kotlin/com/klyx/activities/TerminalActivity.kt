@@ -24,7 +24,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -68,25 +67,8 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
         setContent {
             KlyxTheme(LocalAppSettings.current.theme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val networkState by rememberNetworkState()
-                    var progress by remember { mutableFloatStateOf(0f) }
-                    var downloadError: Throwable? by remember { mutableStateOf(null) }
                     var isCompleted by remember { mutableStateOf(isTerminalSetupDone) }
                     var user by remember { mutableStateOf(currentUser) }
-
-                    LaunchedEffect(networkState) {
-                        downloadError = null
-
-                        if (!isTerminalSetupDone && networkState.isConnected) {
-                            setupTerminal(
-                                onDownload = { downloaded, total ->
-                                    progress = if (total == null) 0f else downloaded.toFloat() / total
-                                },
-                                onComplete = { isCompleted = true },
-                                onError = { downloadError = it }
-                            )
-                        }
-                    }
 
                     if (isCompleted) {
                         Box(
