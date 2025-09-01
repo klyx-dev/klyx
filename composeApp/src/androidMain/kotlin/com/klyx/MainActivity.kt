@@ -77,8 +77,6 @@ class MainActivity : KlyxActivity() {
 
             var extensionLoadFailure: String? by remember { mutableStateOf(null) }
             LaunchedEffect(Unit) {
-                klyxViewModel.openProject(Worktree("$ubuntuHome/$currentUser/kt-test"))
-
                 launch(dispatcher + SupervisorJob()) {
                     ExtensionManager.loadExtensions().onFailure {
                         extensionLoadFailure = it
