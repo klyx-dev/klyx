@@ -3,7 +3,6 @@ package com.klyx.activities
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
-import arrow.core.none
 import arrow.core.some
 import com.klyx.core.ContextHolder
 import com.klyx.core.SharedLocalProvider
@@ -16,7 +15,7 @@ open class KlyxActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
-        ContextHolder.setCurrentActivity(none())
+        ContextHolder.setCurrentActivity(some())
 
         WindowManager.currentTaskId = taskId
         WindowManager.addWindow(taskId)
