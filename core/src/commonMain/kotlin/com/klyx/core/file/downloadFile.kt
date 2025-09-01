@@ -1,6 +1,7 @@
 package com.klyx.core.file
 
 import com.klyx.core.httpClient
+import io.ktor.client.content.ProgressListener
 import io.ktor.client.plugins.onDownload
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.prepareGet
@@ -14,7 +15,7 @@ import kotlin.time.Duration.Companion.minutes
 suspend fun downloadFile(
     url: String,
     outputPath: String,
-    onProgress: suspend (Float) -> Unit = {},
+    onDownload: ProgressListener? = null,
     onComplete: suspend () -> Unit = {}
 ) {
     val sink = SystemFileSystem.sink(Path(outputPath))
@@ -28,10 +29,7 @@ suspend fun downloadFile(
             socketTimeoutMillis = timeout
         }
 
-        onDownload { bytesSentTotal, contentLength ->
-            val progress = if (contentLength == null) 0f else (bytesSentTotal.toFloat() / contentLength)
-            onProgress(progress)
-        }
+        onDownload(onDownload)
     }.execute { response ->
         if (response.status.value in 200..299) {
             val channel = response.bodyAsChannel()

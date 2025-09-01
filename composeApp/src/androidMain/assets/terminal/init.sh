@@ -21,7 +21,8 @@ fi
 
 if ! id -u "$USER" >/dev/null 2>&1; then
     echo -e "\e[35;1mAdding user '$USER'...\e[0m"
-    adduser "$USER"
+    useradd -m -s /bin/bash "$USER"
+    passwd "$USER"
     echo "$USER ALL=(ALL:ALL) ALL" >> /etc/sudoers
 fi
 

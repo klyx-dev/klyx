@@ -25,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.klyx.core.LocalAppSettings
+import com.klyx.core.file.humanBytes
 import com.klyx.core.logging.logger
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
@@ -44,6 +46,7 @@ import com.klyx.terminal.klyxBinDir
 import com.klyx.ui.component.terminal.TerminalScreen
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.ui.theme.rememberFontFamily
+import io.ktor.client.content.ProgressListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
 import java.io.File
@@ -76,7 +79,9 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
 
                         if (!isTerminalSetupDone && networkState.isConnected) {
                             setupTerminal(
-                                onProgress = { progress = it },
+                                onDownload = { downloaded, total ->
+                                    progress = if (total == null) 0f else downloaded.toFloat() / total
+                                },
                                 onComplete = { isCompleted = true },
                                 onError = { downloadError = it }
                             )
@@ -153,7 +158,11 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
                             }
                         }
                     } else {
-                        SetupScreen(progress, downloadError)
+                        SetupScreen(
+                            onComplete = {
+                                isCompleted = true
+                            }
+                        )
                     }
                 }
             }
@@ -162,10 +171,8 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
 
     @Composable
     @OptIn(ExperimentalMaterial3ExpressiveApi::class)
-    @Suppress("MagicNumber")
     private fun SetupScreen(
-        progress: Float,
-        error: Throwable? = null
+        onComplete: () -> Unit
     ) {
         val networkState by rememberNetworkState()
         val fontFamily = rememberFontFamily("JetBrains Mono")
@@ -173,9 +180,38 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
             fontFamily = fontFamily
         )
 
+        var error: Throwable? by remember { mutableStateOf(null) }
+
+        var downloaded by remember { mutableLongStateOf(0L) }
+        var total by remember { mutableLongStateOf(0L) }
+
+        LaunchedEffect(networkState) {
+            error = null
+
+            if (!isTerminalSetupDone && networkState.isConnected) {
+                setupTerminal(
+                    onDownload = { bytesDownloaded, contentLength ->
+                        downloaded = bytesDownloaded
+                        total = contentLength ?: 0L
+                    },
+                    onComplete = onComplete,
+                    onError = { error = it }
+                )
+            }
+        }
+
+        val progress by remember {
+            derivedStateOf {
+                if (total == 0L) 0f else downloaded.toFloat() / total
+            }
+        }
+
         val (message, progressValue) = when {
             networkState.isNotConnected -> "No internet connection" to null
-            progress > 0 && progress < 1f -> "Almost there... ${(progress * 100).toInt()}% done!" to progress
+            progress > 0 && progress < 1f -> {
+                "Almost there... ${(progress * 100).toInt()}% (${downloaded.humanBytes()} / ${total.humanBytes()}) done!" to progress
+            }
+
             progress >= 1f -> "Extracting files, please wait a moment..." to null
             else -> "Downloading Ubuntu Root FileSystem, please wait a moment..." to null
         }
@@ -211,13 +247,13 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
     }
 
     private suspend fun setupTerminal(
-        onProgress: (Float) -> Unit = {},
+        onDownload: ProgressListener? = null,
         onComplete: () -> Unit = {},
         onError: (error: Throwable) -> Unit = {}
     ) {
         if (!isTerminalSetupDone) {
             downloadRootFs(
-                onProgress = onProgress,
+                onDownload = onDownload,
                 onComplete = { path ->
                     isTerminalSetupDone = try {
                         setupRootFs(path)

@@ -69,14 +69,17 @@ suspend fun KxFile.isValidUtf8() = withContext(Dispatchers.IO) { readBytes().isV
 suspend fun PlatformFile.isValidUtf8() = readBytes().isValidUtf8()
 
 fun Long.humanBytes(): String {
-    if (this < 1024) return "$this B"
-    val units = arrayOf("KB", "MB", "GB", "TB")
+    val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var v = this.toDouble()
     var u = 0
     while (v >= 1024 && u < units.lastIndex) {
         v /= 1024.0
         u++
     }
-    val rounded = if (v >= 100) "%.0f" else if (v >= 10) "%.1f" else "%.2f"
+    val rounded = when {
+        v >= 100 -> "%.0f"
+        v >= 10 -> "%.1f"
+        else -> "%.2f"
+    }
     return rounded.format(v) + " " + units[u]
 }
