@@ -140,6 +140,13 @@ class EditorViewModel(
                 else -> current.activeTabId
             }
 
+            val tab = current.openTabs.find { it.id == tabId }
+            if (tab is Tab.FileTab) {
+                viewModelScope.launch {
+                    onCloseFileTab(tab.worktree, tab.file)
+                }
+            }
+
             current.copy(
                 openTabs = updatedTabs,
                 activeTabId = newActiveTabId
@@ -285,6 +292,9 @@ class EditorViewModel(
         return results
     }
 }
+
+internal expect suspend fun onCloseFileTab(worktree: Worktree?, file: KxFile)
+internal expect suspend fun onSaveFile(worktree: Worktree?, file: KxFile)
 
 fun EditorViewModel.openSettings() = openFile(KxFile(Environment.SettingsFilePath))
 

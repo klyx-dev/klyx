@@ -54,9 +54,7 @@ kotlin {
 
             implementation(libs.material)
             implementation(libs.sora.language.textmate)
-            implementation("com.itsaky.androidide.treesitter:android-tree-sitter:4.3.1")
 
-            implementation(projects.editor.treeSitter)
             implementation(projects.terminal.terminalView)
             implementation(projects.terminal.termuxShared)
         }

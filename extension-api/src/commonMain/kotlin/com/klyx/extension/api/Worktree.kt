@@ -26,6 +26,8 @@ class Worktree(val id: ULong, val rootFile: KxFile) {
     private val fs = SystemFileSystem
     private val worktreePath = Path(rootFile.absolutePath)
 
+    val name get() = rootFile.name
+
     /**
      * Returns the textual contents of the specified file in the worktree.
      */
@@ -76,6 +78,8 @@ fun Worktree(path: String) = Worktree(path.toKxFile())
 fun Worktree(file: KxFile) = WorktreeRegistry.register(file)
 
 fun KxFile.toWorktree() = Worktree(this)
+fun KxFile.parentAsWorktree() = parentFile?.toWorktree()
+fun KxFile.parentAsWorktreeOrSelf() = parentAsWorktree() ?: toWorktree()
 
 val SystemWorktree = Worktree(Environment.DeviceHomeDir)
 

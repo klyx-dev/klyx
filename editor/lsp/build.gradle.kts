@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.kotlinxAtomicfu)
 }
 
 android {
@@ -35,6 +36,7 @@ android {
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_21
+        freeCompilerArgs.addAll("-Xcontext-parameters")
     }
 }
 
@@ -43,16 +45,23 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
 
-    implementation(platform(libs.sora.editor.bom))
-    implementation(libs.sora.editor)
+//    implementation(platform(libs.sora.editor.bom))
+//    implementation(libs.sora.editor)
 
     implementation(libs.lsp4j)
     implementation(libs.lsp4j.jsonrpc)
 
     implementation(projects.core)
-    //implementation(projects.editor.sora.editor)
+    implementation(projects.editor.sora.editor)
+
+    implementation(projects.extensionApi)
+    implementation(projects.terminal.terminal)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+}
+
+atomicfu {
+    transformJvm = true
 }

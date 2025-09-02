@@ -1,0 +1,120 @@
+package com.klyx.editor.lsp
+
+import com.github.michaelbull.result.Err
+import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.fold
+import com.github.michaelbull.result.getOrElse
+import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
+import com.klyx.core.file.KxFile
+import com.klyx.editor.lsp.util.languageId
+import com.klyx.editor.lsp.util.uriString
+import com.klyx.extension.ExtensionManager
+import com.klyx.extension.api.Worktree
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
+import org.eclipse.lsp4j.services.LanguageServer
+import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.atomic.AtomicInteger
+
+typealias LanguageId = String
+typealias LanguageName = String
+
+object LanguageServerManager {
+    private val languageServers = mutableMapOf<Pair<Worktree, LanguageId>, LanguageServer>()
+    private val languageClients = mutableMapOf<Pair<Worktree, LanguageId>, LanguageServerClient>()
+
+    private val documentVersions = mutableMapOf<String, AtomicInteger>()
+
+    private val scope = CoroutineScope(ForkJoinPool.commonPool().asCoroutineDispatcher())
+
+    internal fun nextVersion(uri: String): Int {
+        val counter = documentVersions.getOrPut(uri) { AtomicInteger(0) }
+        return counter.incrementAndGet()
+    }
+
+    suspend fun tryConnectLspIfAvailable(
+        worktree: Worktree, languageName: LanguageName
+    ) = withContext(Dispatchers.IO) lsp@{
+        if (!ExtensionManager.isExtensionAvailableForLanguage(languageName)) {
+            return@lsp Err("No language server extension available for language: $languageName")
+        }
+
+        val languageServerId = ExtensionManager.getLanguageServerIdForLanguage(languageName)
+            ?: return@lsp Err("No language server found for language: $languageName")
+
+        val languageId = ExtensionManager.getLanguageIdForLanguage(languageName)
+            ?: return@lsp Err("No language ID found for language: $languageName")
+
+        val extension = ExtensionManager.getExtensionForLanguage(languageName)
+            ?: return@lsp Err("No extension found for language: $languageName")
+
+        val key = worktree to languageId
+
+        if (languageServers.containsKey(key)) {
+            return@lsp Ok(languageClients[key]!!)
+        }
+
+        extension.languageServerCommand(languageServerId, worktree).fold(
+            success = { command ->
+                val client = LanguageServerClient(extension.logger)
+                val initializationOptions = extension.languageServerInitializationOptions(
+                    languageServerId = languageServerId,
+                    worktree = worktree
+                ).getOrElse { null }?.getOrNull()
+
+                client.initialize(command, worktree, initializationOptions).onSuccess {
+                    languageClients[key] = client
+                    languageServers[key] = client.languageServer
+
+                    extension.languageServerWorkspaceConfiguration(languageServerId, worktree).onSuccess { configs ->
+                        configs.onSome {
+                            client.changeWorkspaceConfiguration(it)
+                        }
+                    }
+                }.onFailure {
+                    return@lsp Err("Failed to initialize language server: $it")
+                }
+
+                Ok(client)
+            },
+            failure = ::Err
+        )
+    }
+
+    suspend fun openDocument(worktree: Worktree, file: KxFile) = withContext(Dispatchers.IO) w@{
+        val client = client(worktree, file.languageId)
+        client.openDocument(file.uriString, file.languageId, nextVersion(file.uriString), file.readText())
+    }
+
+    suspend fun changeDocument(worktree: Worktree, file: KxFile, newText: String) = withContext(Dispatchers.IO) {
+        val client = client(worktree, file.languageId)
+        val version = nextVersion(file.uriString)
+        client.changeDocument(file.uriString, version, newText)
+    }
+
+    suspend fun closeDocument(worktree: Worktree, file: KxFile) = withContext(Dispatchers.IO) {
+        val client = client(worktree, file.languageId)
+        client.closeDocument(file.uriString).also {
+            documentVersions.remove(file.uriString)
+        }
+    }
+
+    suspend fun saveDocument(worktree: Worktree, file: KxFile) = withContext(Dispatchers.IO) {
+        val client = client(worktree, file.languageId)
+        client.saveDocument(file.uriString, file.readText())
+    }
+
+    suspend fun completion(worktree: Worktree, file: KxFile, line: Int, character: Int) = withContext(Dispatchers.IO) {
+        val client = client(worktree, file.languageId)
+        client.completion(file.uriString, line, character)
+    }
+
+    private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {
+        return checkNotNull(languageClients[worktree to languageId]) {
+            "No language server client found for worktree: ${worktree.rootFile.absolutePath}, languageId: $languageId"
+        }
+    }
+}

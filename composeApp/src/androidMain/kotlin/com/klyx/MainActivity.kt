@@ -78,9 +78,11 @@ class MainActivity : KlyxActivity() {
             var extensionLoadFailure: String? by remember { mutableStateOf(null) }
             LaunchedEffect(Unit) {
                 launch(dispatcher + SupervisorJob()) {
+                    notifier.toast("Loading extensions...")
                     ExtensionManager.loadExtensions().onFailure {
                         extensionLoadFailure = it
                     }
+                    notifier.toast("Extensions loaded.")
                 }
 
                 if (prefs.getBoolean("show_welcome", true)) {

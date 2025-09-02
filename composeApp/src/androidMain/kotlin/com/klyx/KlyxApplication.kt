@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
-import com.itsaky.androidide.treesitter.TreeSitter
 import com.klyx.activities.CrashActivity
 import com.klyx.core.Environment
 import com.klyx.core.di.initKoin
@@ -49,7 +48,6 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         super.onCreate()
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
         instance = this
-        TreeSitter.loadLibrary()
 
         if (BuildConfig.BUILD_TYPE == "release") {
             LoggerConfig.Default = LoggerConfig(
