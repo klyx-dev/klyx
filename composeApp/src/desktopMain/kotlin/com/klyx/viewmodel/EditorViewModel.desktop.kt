@@ -8,3 +8,6 @@ internal actual suspend fun onCloseFileTab(
     file: KxFile
 ) {
 }
+
+internal actual suspend fun onSaveFile(worktree: Worktree?, file: KxFile) {
+}
