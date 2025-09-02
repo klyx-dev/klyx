@@ -161,7 +161,7 @@ class EditorLanguageServerClient(
                         publisher.cancel()
                     }
 
-                //publisher.updateList()
+                publisher.updateList()
             }
         }
 
