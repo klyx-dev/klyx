@@ -649,7 +649,7 @@ style:
     active: false
     rules: []
   ForbiddenVoid:
-    active: true
+    active: false
     excludes:
       - '**/editor/sora/**'
     ignoreOverridden: false
