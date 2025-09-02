@@ -28,6 +28,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.klyx.core.LocalNotifier
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
+import com.klyx.editor.completion.AutoCompletionLayout
 import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.EditorLanguageServerClient
@@ -63,9 +64,7 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_INSERT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import java.util.concurrent.ForkJoinPool
 
 @ExperimentalCodeEditorApi
 private fun setCodeEditorFactory(
@@ -116,7 +115,7 @@ actual fun CodeEditor(
     val scope = rememberCoroutineScope { Dispatchers.Default }
 
     LaunchedEffect(state.editor) {
-        launch {
+        scope.launch {
             if (state.editor != null) {
                 val client = EditorLanguageServerClient(
                     worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
@@ -159,6 +158,7 @@ actual fun CodeEditor(
 
                 getComponent<EditorAutoCompletion>().apply {
                     isEnabled = true
+                    setLayout(AutoCompletionLayout())
                     setAdapter(AutoCompletionLayoutAdapter(density))
                     setEnabledAnimation(true)
                 }

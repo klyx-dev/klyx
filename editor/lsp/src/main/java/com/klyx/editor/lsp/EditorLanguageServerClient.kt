@@ -28,7 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runBlocking
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.Position
@@ -117,7 +117,7 @@ class EditorLanguageServerClient(
         private val scope: CoroutineScope
     ) : Language {
         override fun getAnalyzeManager(): AnalyzeManager = wrapperLanguage.analyzeManager
-        override fun getInterruptionLevel(): Int = wrapperLanguage.interruptionLevel
+        override fun getInterruptionLevel(): Int = Language.INTERRUPTION_LEVEL_STRONG
 
         override fun requireAutoComplete(
             content: ContentReference,
@@ -125,7 +125,7 @@ class EditorLanguageServerClient(
             publisher: CompletionPublisher,
             extraArguments: Bundle
         ) {
-            scope.launch {
+            runBlocking {
                 val prefix = calculatePrefix(content, position)
                 val prefixLength = prefix.length
 
