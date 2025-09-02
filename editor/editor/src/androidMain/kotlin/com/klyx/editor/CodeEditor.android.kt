@@ -158,6 +158,7 @@ actual fun CodeEditor(
                 )
 
                 getComponent<EditorAutoCompletion>().apply {
+                    isEnabled = true
                     setAdapter(AutoCompletionLayoutAdapter(density))
                     setEnabledAnimation(true)
                 }
@@ -165,6 +166,7 @@ actual fun CodeEditor(
 
                 colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
                 colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
+                setEditorLanguage(state.textMateLanguageOrEmptyLanguage)
             }
         },
         onRelease = { it.release() },
@@ -179,8 +181,6 @@ actual fun CodeEditor(
                 this.editable = editable
 
                 colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
-
-                setEditorLanguage(state.textMateLanguageOrEmptyLanguage)
             }
         }
     )
@@ -213,7 +213,7 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(COMPLETION_WND_BACKGROUND, colorScheme.surfaceContainer)
     setColor(COMPLETION_WND_TEXT_PRIMARY, colorScheme.primary)
     setColor(COMPLETION_WND_TEXT_SECONDARY, colorScheme.secondary)
-    setColor(COMPLETION_WND_ITEM_CURRENT, colorScheme.onSurface)
+    setColor(COMPLETION_WND_ITEM_CURRENT, colorScheme.primaryContainer.copy(alpha = 0.6f))
 
     setColor(DIAGNOSTIC_TOOLTIP_BACKGROUND, colorScheme.surfaceColorAtElevation(1.dp))
     setColor(DIAGNOSTIC_TOOLTIP_BRIEF_MSG, colorScheme.primary)

@@ -100,11 +100,11 @@ class LanguageServerClient(
                 languageServer.initialized(InitializedParams())
                 serverCapabilities = result.capabilities
 
-                // logger.debug { "Language Server initialized: ${result.capabilities}" }
+                logger.debug { "Language Server initialized: ${result.capabilities}" }
                 Ok(result)
             }
         } catch (err: Exception) {
-            // logger.error(err) { "Failed to initialize LSP" }
+            logger.error(err) { "Failed to initialize LSP" }
             close()
             Err("Failed to initialize LSP: ${err.message}")
         }
