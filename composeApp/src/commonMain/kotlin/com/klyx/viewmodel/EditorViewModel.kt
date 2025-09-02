@@ -229,6 +229,11 @@ class EditorViewModel(
             if (file.canWrite) {
                 file.writeText(text)
                 tab.markAsSaved()
+
+                viewModelScope.launch {
+                    onSaveFile(tab.worktree, file)
+                }
+
                 true
             } else false
         } else false

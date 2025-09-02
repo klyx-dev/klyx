@@ -43,6 +43,7 @@ class EditorLanguageServerClient(
 ) : KoinComponent {
     private val applicationContext: Context by inject()
     private var serverClient: LanguageServerClient? = null
+    private val capabilities get() = serverClient?.serverCapabilities
 
     private val logger = logger()
 
@@ -54,11 +55,9 @@ class EditorLanguageServerClient(
                 LanguageServerManager.openDocument(worktree, file)
                 client.onDiagnostics = ::updateDiagnostics
 
-                withContext(Dispatchers.Main) {
-                    editor.subscribeAlways<ContentChangeEvent> { event ->
-                        scope.launch {
-                            LanguageServerManager.changeDocument(worktree, file, event.editor.text.toString())
-                        }
+                editor.subscribeAlways<ContentChangeEvent> { event ->
+                    scope.launch {
+                        LanguageServerManager.changeDocument(worktree, file, event.editor.text.toString())
                     }
                 }
             }.onFailure {
@@ -75,7 +74,9 @@ class EditorLanguageServerClient(
             diagnostics.transformToEditorDiagnostics(editor)
         )
 
-        editor.diagnostics = diagnosticsContainer
+        scope.launch(Dispatchers.Main) {
+            editor.diagnostics = diagnosticsContainer
+        }
     }
 
     private fun Position.getIndex(editor: CodeEditor): Int {
@@ -160,7 +161,7 @@ class EditorLanguageServerClient(
                         publisher.cancel()
                     }
 
-                publisher.updateList()
+                //publisher.updateList()
             }
         }
 

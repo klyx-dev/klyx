@@ -63,7 +63,9 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_INSERT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
+import java.util.concurrent.ForkJoinPool
 
 @ExperimentalCodeEditorApi
 private fun setCodeEditorFactory(
@@ -111,7 +113,7 @@ actual fun CodeEditor(
         setCodeEditorFactory(context, state)
     }
 
-    val scope = rememberCoroutineScope { Dispatchers.IO }
+    val scope = rememberCoroutineScope { Dispatchers.Default }
 
     LaunchedEffect(state.editor) {
         launch {

@@ -23,8 +23,8 @@ typealias LanguageId = String
 typealias LanguageName = String
 
 object LanguageServerManager {
-    private val languageServers = mutableMapOf<Pair<Worktree, LanguageId>, LanguageServer>()
-    private val languageClients = mutableMapOf<Pair<Worktree, LanguageId>, LanguageServerClient>()
+    private val languageServers = mutableMapOf<Pair<String, LanguageId>, LanguageServer>()
+    private val languageClients = mutableMapOf<Pair<String, LanguageId>, LanguageServerClient>()
 
     private val documentVersions = mutableMapOf<String, AtomicInteger>()
 
@@ -51,7 +51,7 @@ object LanguageServerManager {
         val extension = ExtensionManager.getExtensionForLanguage(languageName)
             ?: return@lsp Err("No extension found for language: $languageName")
 
-        val key = worktree to languageId
+        val key = worktree.uriString to languageId
 
         if (languageServers.containsKey(key)) {
             return@lsp Ok(languageClients[key]!!)
@@ -71,6 +71,7 @@ object LanguageServerManager {
 
                     extension.languageServerWorkspaceConfiguration(languageServerId, worktree).onSuccess { configs ->
                         configs.onSome {
+                            println(it)
                             client.changeWorkspaceConfiguration(it)
                         }
                     }
@@ -113,7 +114,7 @@ object LanguageServerManager {
     }
 
     private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {
-        return checkNotNull(languageClients[worktree to languageId]) {
+        return checkNotNull(languageClients[worktree.uriString to languageId]) {
             "No language server client found for worktree: ${worktree.rootFile.absolutePath}, languageId: $languageId"
         }
     }

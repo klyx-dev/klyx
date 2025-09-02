@@ -33,6 +33,7 @@ import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.ShowMessageRequestParams
@@ -99,13 +100,13 @@ class LanguageServerClient(
                 languageServer.initialized(InitializedParams())
                 serverCapabilities = result.capabilities
 
-                logger.debug { "LSP Server initialized: ${result.capabilities}" }
+                // logger.debug { "Language Server initialized: ${result.capabilities}" }
                 Ok(result)
             }
         } catch (err: Exception) {
-            logger.error(err) { "Failed to initialize LSP server" }
+            // logger.error(err) { "Failed to initialize LSP" }
             close()
-            Err("Failed to initialize LSP server: ${err.message}")
+            Err("Failed to initialize LSP: ${err.message}")
         }
     }
 
@@ -117,12 +118,12 @@ class LanguageServerClient(
                 if (json is JsonObject) {
                     val params = DidChangeConfigurationParams(json.toMap())
                     languageServer.workspaceService.didChangeConfiguration(params)
-                    logger.debug { "Changed workspace configuration: $configuration" }
+                    // logger.debug { "Changed workspace configuration: $configuration" }
                 }
             }
             Ok(Unit)
         } catch (e: Exception) {
-            logger.error(e) { "Error changing workspace configuration: $configuration" }
+            // logger.error(e) { "Error changing workspace configuration: $configuration" }
             Err(e.message ?: "Error changing workspace configuration: $configuration")
         }
     }
@@ -143,10 +144,10 @@ class LanguageServerClient(
             languageServer.textDocumentService.didOpen(params)
             openDocuments.add(uri)
 
-            logger.debug { "Opened document: $uri, version: $version" }
+            // logger.debug { "Opened document: $uri, version: $version" }
             Ok(Unit)
         } catch (e: Exception) {
-            logger.error(e) { "Error opening document: $uri" }
+            // logger.error(e) { "Error opening document: $uri" }
             Err(e.message ?: "Error opening document: $uri")
         }
     }
@@ -160,10 +161,10 @@ class LanguageServerClient(
             val params = DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
             languageServer.textDocumentService.didClose(params)
             openDocuments.remove(uri)
-            logger.debug { "Closed document: $uri" }
+            // logger.debug { "Closed document: $uri" }
             Ok(Unit)
         } catch (e: Exception) {
-            logger.error(e) { "Error closing document: $uri" }
+            // logger.error(e) { "Error closing document: $uri" }
             Err(e.message ?: "Error closing document: $uri")
         }
     }
@@ -171,7 +172,7 @@ class LanguageServerClient(
     suspend fun changeDocument(uri: String, version: Int, newText: String) = withContext(Dispatchers.IO) {
         try {
             if (!openDocuments.contains(uri)) {
-                logger.warn { "Ignoring change for unopened document: $uri" }
+                // logger.warn { "Ignoring change for unopened document: $uri" }
                 return@withContext Err("Document not opened: $uri")
             }
 
@@ -181,10 +182,10 @@ class LanguageServerClient(
             )
             languageServer.textDocumentService.didChange(params)
 
-            logger.debug { "Changed document: $uri, version: $version" }
+            // logger.debug { "Changed document: $uri, version: $version" }
             Ok(Unit)
         } catch (e: Exception) {
-            logger.error(e) { "Error changing document: $uri" }
+            // logger.error(e) { "Error changing document: $uri" }
             Err(e.message ?: "Error changing document: $uri")
         }
     }
@@ -197,10 +198,10 @@ class LanguageServerClient(
 
             val params = DidSaveTextDocumentParams(TextDocumentIdentifier(uri), text)
             languageServer.textDocumentService.didSave(params)
-            logger.debug { "Saved document: $uri" }
+            // logger.debug { "Saved document: $uri" }
             Ok(Unit)
         } catch (e: Exception) {
-            logger.error(e) { "Error saving document: $uri" }
+            // logger.error(e) { "Error saving document: $uri" }
             Err(e.message ?: "Error saving document: $uri")
         }
     }
@@ -215,7 +216,7 @@ class LanguageServerClient(
                 Position(line, character)
             )
             val result = languageServer.textDocumentService.completion(params).get()
-            logger.debug { "Completion result: $result" }
+            //logger.debug { "Completion result: $result" }
 
             if (result.isLeft) {
                 Ok(result.left)
@@ -225,7 +226,7 @@ class LanguageServerClient(
                 Err("Unknown completion result: $result")
             }
         } catch (e: Exception) {
-            logger.error(e) { "Error getting completion: $uri" }
+            // logger.error(e) { "Error getting completion: $uri" }
             Err(e.message ?: "Error getting completion: $uri")
         }
     }
@@ -246,10 +247,10 @@ class LanguageServerClient(
             )
 
             val result = languageServer.textDocumentService.formatting(params).get()
-            logger.debug { "Formatting result: $result" }
+            //logger.debug { "Formatting result: $result" }
             Ok(result)
         } catch (e: Exception) {
-            logger.error(e) { "Error formatting document: $uri" }
+            // logger.error(e) { "Error formatting document: $uri" }
             Err(e.message ?: "Error formatting document: $uri")
         }
     }
@@ -259,23 +260,27 @@ class LanguageServerClient(
     }
 
     override fun publishDiagnostics(params: PublishDiagnosticsParams) {
-        logger.debug { "Diagnostics for ${params.uri}: ${params.diagnostics.size} items" }
+        // logger.debug { "Diagnostics for ${params.uri}: ${params.diagnostics.size} items" }
         mainScope.launch { onDiagnostics(params.diagnostics) }
     }
 
     override fun showMessage(params: MessageParams) {
-        logger.debug { "Show message: ${params.message}" }
+        // logger.debug { "Show message: ${params.message}" }
         mainScope.launch { onShowMessage(params) }
     }
 
     override fun showMessageRequest(requestParams: ShowMessageRequestParams): CompletableFuture<MessageActionItem> {
-        logger.debug { "Show message request: ${requestParams.message}" }
+        // logger.debug { "Show message request: ${requestParams.message}" }
         return CompletableFuture.completedFuture(null)
     }
 
     override fun createProgress(params: WorkDoneProgressCreateParams): CompletableFuture<Void> {
-        logger.debug { "Create progress: ${params.token}" }
+        // logger.debug { "Create progress: ${params.token}" }
         return CompletableFuture.completedFuture(null)
+    }
+
+    override fun notifyProgress(params: ProgressParams) {
+        // logger.debug { "Notify progress: ${params.token}" }
     }
 
     override fun logMessage(params: MessageParams) {
