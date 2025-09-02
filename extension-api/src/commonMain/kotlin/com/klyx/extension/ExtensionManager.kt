@@ -111,7 +111,7 @@ object ExtensionManager {
         }
     }
 
-    fun getServerIdForLanguage(languageName: String): String? {
+    fun getLanguageServerIdForLanguage(languageName: String): String? {
         return loadedExtensions.firstNotNullOfOrNull { extension ->
             extension.extension.info.languageServers.entries.firstOrNull { (_, serverConfig) ->
                 languageName in serverConfig.languages || (serverConfig.languageIds?.keys?.contains(languageName) == true)

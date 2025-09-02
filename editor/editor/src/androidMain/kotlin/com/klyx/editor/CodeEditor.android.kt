@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -24,20 +25,19 @@ import androidx.compose.ui.text.font.resolveAsTypeface
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import com.klyx.core.LocalNotifier
-import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
-import com.klyx.extension.ExtensionManager
+import com.klyx.editor.lsp.EditorLanguageServerClient
 import com.klyx.extension.api.Worktree
+import com.klyx.extension.api.parentAsWorktreeOrSelf
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
+import io.github.rosemoe.sora.widget.component.EditorDiagnosticTooltipWindow
 import io.github.rosemoe.sora.widget.getComponent
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMMENT
@@ -47,6 +47,10 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_IT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_TEXT_PRIMARY
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_TEXT_SECONDARY
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.CURRENT_LINE
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTIP_ACTION
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTIP_BACKGROUND
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTIP_BRIEF_MSG
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTIP_DETAILED_MSG
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HARD_WRAP_MARKER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HIGHLIGHTED_DELIMITERS_FOREGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER
@@ -59,7 +63,7 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_INSERT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 
 @ExperimentalCodeEditorApi
 private fun setCodeEditorFactory(
@@ -107,14 +111,19 @@ actual fun CodeEditor(
         setCodeEditorFactory(context, state)
     }
 
+    val scope = rememberCoroutineScope { Dispatchers.IO }
+
     LaunchedEffect(state.editor) {
-        withContext(Dispatchers.Default) {
-            if (state.editor != null && ExtensionManager.isExtensionAvailableForLanguage(state.file.language())) {
-                state.tryConnectLspIfAvailable(worktree).onSuccess {
-                    notifier.toast("Connected to language server for $language")
-                }.onFailure {
-                    logger.warn { "failed to connect to lsp: $it" }
-                }
+        launch {
+            if (state.editor != null) {
+                val client = EditorLanguageServerClient(
+                    worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
+                    file = state.file,
+                    editor = state.editor!!,
+                    scope = scope
+                )
+
+                client.initialize()
             }
         }
     }
@@ -150,6 +159,7 @@ actual fun CodeEditor(
                     setAdapter(AutoCompletionLayoutAdapter(density))
                     setEnabledAnimation(true)
                 }
+                getComponent<EditorDiagnosticTooltipWindow>().isEnabled = true
 
                 colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
                 colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
@@ -202,4 +212,9 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(COMPLETION_WND_TEXT_PRIMARY, colorScheme.primary)
     setColor(COMPLETION_WND_TEXT_SECONDARY, colorScheme.secondary)
     setColor(COMPLETION_WND_ITEM_CURRENT, colorScheme.onSurface)
+
+    setColor(DIAGNOSTIC_TOOLTIP_BACKGROUND, colorScheme.surfaceColorAtElevation(1.dp))
+    setColor(DIAGNOSTIC_TOOLTIP_BRIEF_MSG, colorScheme.primary)
+    setColor(DIAGNOSTIC_TOOLTIP_DETAILED_MSG, colorScheme.onSurface)
+    setColor(DIAGNOSTIC_TOOLTIP_ACTION, colorScheme.primary)
 }

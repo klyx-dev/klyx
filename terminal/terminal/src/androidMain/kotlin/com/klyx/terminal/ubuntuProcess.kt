@@ -14,7 +14,7 @@ import kotlin.contracts.contract
 
 @OptIn(ExperimentalContracts::class)
 context(context: Context)
-fun ubuntuProcess(
+inline fun ubuntuProcess(
     vararg commands: String,
     loginUser: Boolean = true,
     block: ProcessBuilder.() -> Unit = {}

@@ -5,6 +5,8 @@ import com.klyx.core.theme.Contrast
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 
 @Serializable
@@ -69,30 +71,13 @@ data class AppSettings(
     @SerialComment("LSP Specific settings.")
     val lsp: Map<String, LspSettings> = mapOf(
         "pylsp" to LspSettings(
-            initializationOptions = buildJsonObject {
+            settings = buildJsonObject {
                 put("plugins", buildJsonObject {
-                    put("pyflakes", buildJsonObject {
+                    put("pycodestyle", buildJsonObject {
                         put("enabled", JsonPrimitive(true))
-                    })
-                    put("pylint", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("pydocstyle", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("pylint-quotes", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("mypy", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                        put("live_mode", JsonPrimitive(false))
-                    })
-                    put("pyright", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("flake8", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                        put("maxLineLength", JsonPrimitive(100))
+                        put("ignore", buildJsonArray {
+                            add("W292")
+                        })
                     })
                 })
             }

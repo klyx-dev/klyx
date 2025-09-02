@@ -68,13 +68,10 @@ kotlin {
             dependencies {
                 api(project.dependencies.platform(libs.sora.editor.bom))
                 api(libs.sora.editor)
-                api(projects.editor.sora.editorLsp)
                 api(projects.editor.lsp)
                 api(projects.editor.treeSitter)
 
                 implementation(libs.sora.language.textmate)
-                implementation(libs.sora.language.treesitter)
-                implementation(libs.sora.language.java)
 
                 implementation(libs.lsp4j)
                 implementation(libs.lsp4j.jsonrpc)
