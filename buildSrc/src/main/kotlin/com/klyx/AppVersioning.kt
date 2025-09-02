@@ -6,8 +6,7 @@ object AppVersioning {
     private val baseVersion = Version(
         major = 1,
         minor = 7,
-        patch = 0,
-        preRelease = "beta.4",
+        patch = 1,
         //buildMetadata = "build"
     )
 
