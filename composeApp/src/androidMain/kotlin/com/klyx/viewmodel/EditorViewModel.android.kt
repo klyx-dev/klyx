@@ -17,9 +17,13 @@ fun EditorViewModel.getActiveEditor() = activeTab.map {
 }
 
 internal actual suspend fun onCloseFileTab(worktree: Worktree?, file: KxFile) {
-    LanguageServerManager.closeDocument(worktree ?: file.parentAsWorktreeOrSelf(), file)
+    runCatching {
+        LanguageServerManager.closeDocument(worktree ?: file.parentAsWorktreeOrSelf(), file)
+    }
 }
 
 internal actual suspend fun onSaveFile(worktree: Worktree?, file: KxFile) {
-    LanguageServerManager.saveDocument(worktree ?: file.parentAsWorktreeOrSelf(), file)
+    runCatching {
+        LanguageServerManager.saveDocument(worktree ?: file.parentAsWorktreeOrSelf(), file)
+    }
 }
