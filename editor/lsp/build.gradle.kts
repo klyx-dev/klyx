@@ -45,15 +45,13 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
 
-//    implementation(platform(libs.sora.editor.bom))
-//    implementation(libs.sora.editor)
+    implementation(platform(libs.sora.editor.bom))
+    implementation(libs.sora.editor)
 
     implementation(libs.lsp4j)
     implementation(libs.lsp4j.jsonrpc)
 
     implementation(projects.core)
-    implementation(projects.editor.sora.editor)
-
     implementation(projects.extensionApi)
     implementation(projects.terminal.terminal)
 
