@@ -93,7 +93,7 @@ fun EditorScreen(
 
     Column(modifier = modifier) {
         if (openTabs.isNotEmpty()) {
-            EditorTabBar(
+            EditorTabRow(
                 tabs = openTabs,
                 selectedTab = pagerState.currentPage,
                 onTabSelected = { page ->
@@ -139,7 +139,7 @@ fun EditorScreen(
                             }
                         }
 
-                        key(tab.file.absolutePath) {
+                        //key(tab.file.absolutePath) {
                             CodeEditor(
                                 modifier = Modifier.fillMaxSize(),
                                 state = tab.editorState,
@@ -150,7 +150,7 @@ fun EditorScreen(
                                 pinLineNumber = editorSettings.pinLineNumbers,
                                 language = tab.file.language().lowercase()
                             )
-                        }
+                        //}
                     }
 
                     else -> {

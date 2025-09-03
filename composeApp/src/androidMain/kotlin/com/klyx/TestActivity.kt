@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import com.klyx.activities.KlyxActivity
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.terminal.ubuntuProcess
+import com.klyx.ui.component.editor.EditorTabRow
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.wasi.ExperimentalWasiApi
@@ -28,12 +29,12 @@ class TestActivity : KlyxActivity() {
                             .padding(innerPadding)
                             .fillMaxSize()
                     ) {
-                        LaunchedEffect(Unit) {
-                            ubuntuProcess("which", "pylsp"){
-                                onOutput { println(it) }
-                                onError { println(it) }
-                            }.start()
-                        }
+//                        LaunchedEffect(Unit) {
+//                            ubuntuProcess("which", "pylsp"){
+//                                onOutput { println(it) }
+//                                onError { println(it) }
+//                            }.start()
+//                        }
                     }
                 }
             }

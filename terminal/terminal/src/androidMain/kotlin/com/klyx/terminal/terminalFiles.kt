@@ -1,13 +1,17 @@
 package com.klyx.terminal
 
 import android.content.Context
+import com.klyx.terminal.internal.currentUser
 import java.io.File
 
 context(context: Context)
 val ubuntuDir get() = File(context.filesDir, "ubuntu")
 
 context(context: Context)
-val ubuntuHome get() = ubuntuDir.resolve("home")
+val ubuntuHomeDir get() = ubuntuDir.resolve("home")
+
+context(context: Context)
+val userHomeDir get() = if (currentUser == null) null else ubuntuHomeDir.resolve(currentUser!!)
 
 context(context: Context)
 val klyxFilesDir: File get() = context.filesDir

@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -51,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -60,6 +60,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.svg.SvgDecoder
 import com.klyx.DrawerWidth
 import com.klyx.core.file.KxFile
 import com.klyx.extension.api.Worktree
@@ -77,6 +81,14 @@ private inline fun <K, V> LazyListScope.items(
 ) {
     itemContent(items.entries.elementAt(it))
 }
+
+private val SvgImageLoader
+    @Composable
+    @ReadOnlyComposable
+    get() = ImageLoader
+        .Builder(LocalPlatformContext.current)
+        .components { add(SvgDecoder.Factory()) }
+        .build()
 
 @Composable
 fun FileTree(
@@ -245,6 +257,12 @@ private fun FileTreeItem(
                 modifier = Modifier.size(16.dp),
                 tint = fgColor
             )
+
+//            AsyncImage(
+//                "",
+//                contentDescription = null,
+//                imageLoader = SvgImageLoader
+//            )
 
             Spacer(modifier = Modifier.width(8.dp))
 

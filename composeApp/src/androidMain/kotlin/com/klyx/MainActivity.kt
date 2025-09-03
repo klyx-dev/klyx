@@ -33,17 +33,13 @@ import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.openFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
-import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
-import com.klyx.terminal.internal.currentUser
-import com.klyx.terminal.ubuntuHome
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.showWelcome
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 import java.util.concurrent.Executors
 

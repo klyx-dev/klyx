@@ -33,9 +33,6 @@
             <option value="$PROJECT_DIR$/editor" />
             <option value="$PROJECT_DIR$/editor/editor" />
             <option value="$PROJECT_DIR$/editor/lsp" />
-            <option value="$PROJECT_DIR$/editor/sora" />
-            <option value="$PROJECT_DIR$/editor/sora/editor" />
-            <option value="$PROJECT_DIR$/editor/sora/editor-lsp" />
             <option value="$PROJECT_DIR$/editor/tree-sitter" />
             <option value="$PROJECT_DIR$/extension-api" />
             <option value="$PROJECT_DIR$/ktreesitter-plugin" />

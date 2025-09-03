@@ -9,7 +9,7 @@ import com.klyx.core.logging.logger
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
 import com.klyx.terminal.ubuntuDir
-import com.klyx.terminal.ubuntuHome
+import com.klyx.terminal.ubuntuHomeDir
 import java.io.File
 
 private val logger = logger("Terminal")
@@ -22,7 +22,7 @@ fun buildProotArgs(
     loginUser: Boolean = true,
     vararg commands: String = emptyArray()
 ) = run {
-    val home = File(ubuntuHome, user.orEmpty())
+    val home = File(ubuntuHomeDir, user.orEmpty())
 
     val args = mutableListOf(
         "--kill-on-exit", "-w",

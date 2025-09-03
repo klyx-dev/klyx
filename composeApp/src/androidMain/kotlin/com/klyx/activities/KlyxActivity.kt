@@ -2,6 +2,7 @@ package com.klyx.activities
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import arrow.core.some
 import com.klyx.core.ContextHolder
@@ -14,6 +15,7 @@ import androidx.activity.compose.setContent as setContentInternal
 open class KlyxActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         FileKit.init(this)
         ContextHolder.setCurrentActivity(some())
 
