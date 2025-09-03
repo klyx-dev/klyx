@@ -1,75 +1,86 @@
 package com.klyx.ui.component
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun KlyxDialog(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    title: String? = null,
-    message: String? = null,
-    positiveButton: @Composable (() -> Unit)? = null,
-    negativeButton: @Composable (() -> Unit)? = null,
-    neutralButton: @Composable (() -> Unit)? = null
+    shape: Shape = AlertDialogDefaults.shape,
+    dismissButton: @Composable (() -> Unit)? = null,
+    icon: @Composable (() -> Unit)? = null,
+    title: @Composable (() -> Unit)? = null,
+    content: @Composable (() -> Unit)? = null,
+    confirmButton: @Composable (() -> Unit) = {}
 ) {
-    Dialog(onDismissRequest = onDismissRequest) {
-        Card(
-            modifier = modifier,
-            shape = RoundedCornerShape(8.dp)
-        ) {
-            Column {
-                val isAnyButtonAvailable = listOf(positiveButton, negativeButton, neutralButton).any { it != null }
+    AlertDialog(
+        modifier = modifier,
+        onDismissRequest = onDismissRequest,
+        confirmButton = confirmButton,
+        dismissButton = dismissButton,
+        icon = icon,
+        title = title,
+        text = content,
+        shape = shape
+    )
+}
 
-                Column(
-                    modifier = Modifier.padding(
-                        top = 16.dp, start = 16.dp, end = 16.dp,
-                        bottom = if (isAnyButtonAvailable) 0.dp else 16.dp
-                    )
-                ) {
-                    if (title != null) {
-                        Text(
-                            text = title,
-                            style = MaterialTheme.typography.titleLarge
-                        )
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-
-                    if (message != null) {
-                        Text(
-                            text = message,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                }
-
-                if (isAnyButtonAvailable) {
-                    Row(
-                        horizontalArrangement = Arrangement.Absolute.Right,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                    ) {
-                        if (neutralButton != null) neutralButton()
-                        if (negativeButton != null) negativeButton()
-                        if (positiveButton != null) positiveButton()
-                    }
-                }
+@Composable
+fun KlyxConfirmationDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    confirmText: String = "Confirm",
+    dismissText: String = "Cancel",
+    icon: ImageVector? = null,
+    modifier: Modifier = Modifier
+) {
+    KlyxDialog(
+        onDismissRequest = onDismiss,
+        modifier = modifier,
+        icon = icon?.let { { Icon(it, contentDescription = null) } },
+        title = { Text(title) },
+        content = { Text(message) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(confirmText)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(dismissText)
             }
         }
-    }
+    )
+}
+
+@Composable
+fun KlyxErrorDialog(
+    title: String = "Error",
+    message: String,
+    onDismiss: () -> Unit,
+    buttonText: String = "OK",
+    modifier: Modifier = Modifier
+) {
+    KlyxConfirmationDialog(
+        title = title,
+        message = message,
+        onConfirm = onDismiss,
+        onDismiss = onDismiss,
+        confirmText = buttonText,
+        dismissText = "",
+        icon = Icons.Default.Error,
+        modifier = modifier
+    )
 }
