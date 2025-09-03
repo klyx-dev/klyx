@@ -45,10 +45,6 @@ include(
     ":editor:lsp",
     ":editor:tree-sitter"
 )
-include(
-    ":editor:sora:editor",
-    ":editor:sora:editor-lsp"
-)
 include(":extension-api")
 include(":wasm", ":wasm-ksp")
 include(

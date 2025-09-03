@@ -1,17 +1,12 @@
 package com.klyx.core
 
-import com.blankj.utilcode.util.AppUtils
 import com.blankj.utilcode.util.FileUtils
 import com.blankj.utilcode.util.PathUtils
 import com.klyx.core.settings.SETTINGS_FILE_NAME
-import kotlinx.coroutines.runBlocking
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.getString
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object Environment {
     actual val AppName: String
-        get() = AppUtils.getAppName()
+        get() = "Klyx"
 
     actual val HomeDir: String
         get() = "${PathUtils.getExternalAppFilesPath()}/$AppName"
