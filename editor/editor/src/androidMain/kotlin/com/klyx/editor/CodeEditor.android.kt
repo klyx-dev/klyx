@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.klyx.core.LocalNotifier
+import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.editor.completion.AutoCompletionLayout
@@ -117,14 +118,18 @@ actual fun CodeEditor(
     LaunchedEffect(state.editor) {
         scope.launch {
             if (state.editor != null) {
-                val client = EditorLanguageServerClient(
-                    worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
-                    file = state.file,
-                    editor = state.editor!!,
-                    scope = scope
-                )
+                try {
+                    val client = EditorLanguageServerClient(
+                        worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
+                        file = state.file,
+                        editor = state.editor!!,
+                        scope = scope
+                    )
 
-                client.initialize()
+                    client.initialize()
+                } catch (err: Throwable) {
+                    logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
+                }
             }
         }
     }
