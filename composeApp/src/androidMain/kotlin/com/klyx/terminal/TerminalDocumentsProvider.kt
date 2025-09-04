@@ -112,10 +112,10 @@ class TerminalDocumentsProvider : DocumentsProvider() {
         var flags = 0
 
         if (file.canWrite()) {
-            if (file.isDirectory) {
-                flags = flags or Document.FLAG_DIR_SUPPORTS_CREATE
+            flags = if (file.isDirectory) {
+                flags or Document.FLAG_DIR_SUPPORTS_CREATE
             } else {
-                flags = flags or Document.FLAG_SUPPORTS_WRITE
+                flags or Document.FLAG_SUPPORTS_WRITE
             }
             flags = flags or Document.FLAG_SUPPORTS_DELETE
             flags = flags or Document.FLAG_SUPPORTS_RENAME

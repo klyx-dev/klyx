@@ -50,7 +50,11 @@
     <string name="extension_search_placeholder">Search extensions...</string>
     <string name="extension_uninstall_restart_prompt">Restart the app to complete the uninstall process.</string>
     <string name="extension_install_success">Extension installed successfully</string>
-    <string name="extension_author_label_singular">Author: %1$s</string>
-    <string name="extension_author_label_plural">Authors: %1$s</string>
+
+    <plurals name="extension_author_label">
+        <item quantity="one">Author: %1$s</item>
+        <item quantity="other">Authors: %1$s</item>
+    </plurals>
+
     <string name="extension_downloads">Downloads: %1$d</string>
 </resources>

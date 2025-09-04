@@ -41,3 +41,5 @@ fun Double.toFixed(decimals: Int): Double {
 fun Float.toFixed(decimals: Int): Float {
     return "%.${decimals}f".format(this).toFloat()
 }
+
+fun String.capitalize() = replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }

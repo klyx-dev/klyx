@@ -1,6 +1,7 @@
 package com.klyx.di
 
 import com.klyx.filetree.FileTreeViewModel
+import com.klyx.ui.component.extension.ExtensionViewModel
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.StatusBarViewModel
@@ -12,4 +13,5 @@ val commonModule = module {
     viewModelOf(::KlyxViewModel)
     viewModelOf(::FileTreeViewModel)
     viewModelOf(::StatusBarViewModel)
+    viewModelOf(::ExtensionViewModel)
 }

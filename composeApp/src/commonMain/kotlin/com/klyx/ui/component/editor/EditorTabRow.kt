@@ -45,7 +45,7 @@ fun EditorTabRow(
     val dirty by rememberUpdatedState(isDirty)
 
     Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(2.dp))
+        modifier = modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(5.dp))
     ) {
         LazyRow(
             modifier = Modifier

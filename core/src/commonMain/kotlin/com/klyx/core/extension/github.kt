@@ -6,9 +6,16 @@ import com.klyx.core.decodeBase64
 import com.klyx.core.fetchBody
 import com.klyx.core.fetchText
 import com.klyx.core.file.KxFile
+import com.klyx.core.logging.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Instant
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
@@ -47,38 +54,39 @@ suspend fun fetchExtensionEntries(): ExtensionsIndex {
     return Toml.decodeFromString(raw)
 }
 
-suspend fun fetchExtensions(): Result<List<ExtensionInfo>> = withContext(Dispatchers.IO) {
-    val extensions = mutableListOf<ExtensionInfo>()
-    val entries = try {
-        fetchExtensionEntries()
-    } catch (e: Exception) {
-        return@withContext Result.failure(e)
+fun fetchExtensionsFlow() = flow {
+    val extensionsIndex = fetchExtensionEntries()
+
+    for ((name, entry) in extensionsIndex) {
+        try {
+            val extension = fetchSingleExtension(name, entry)
+            emit(extension)
+        } catch (e: Exception) {
+            logger().error { "Failed to fetch extension $name: ${e.message}" }
+        }
     }
+}.flowOn(Dispatchers.IO)
 
-    for ((name, entry) in entries) {
-        val submoduleInfo = Json.parseToJsonElement(
-            fetchText("$BASE_GITHUB_API_EXTENSIONS_URL/${entry.submodule}")
-        ).jsonObject
+private suspend fun fetchSingleExtension(name: String, entry: ExtensionEntry): ExtensionInfo {
+    val submoduleInfo = Json.parseToJsonElement(
+        fetchText("$BASE_GITHUB_API_EXTENSIONS_URL/${entry.submodule}")
+    ).jsonObject
 
-        submoduleInfo["git_url"]?.jsonPrimitive?.contentOrNull?.let { gitUrl ->
-            val repoInfo = Json.parseToJsonElement(fetchText(gitUrl)).jsonObject
-            val tomlUrl = repoInfo["tree"]?.jsonArray?.find {
-                it.jsonObject["path"]?.jsonPrimitive?.contentOrNull == "extension.toml"
-            }?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull ?: return@withContext Result.failure(
-                ExtensionFetchException("Failed to fetch extension.toml URL for $name")
-            )
+    val gitUrl = submoduleInfo["git_url"]?.jsonPrimitive?.contentOrNull
+        ?: throw ExtensionFetchException("Failed to fetch extension Git URL for $name")
 
-            val tomlContent = Json.parseToJsonElement(
-                fetchText(tomlUrl)
-            ).jsonObject["content"]?.jsonPrimitive?.contentOrNull ?: return@withContext Result.failure(
-                ExtensionFetchException("Failed to fetch extension.toml content for $name")
-            )
+    val repoInfo = Json.parseToJsonElement(fetchText(gitUrl)).jsonObject
 
-            extensions.add(Toml.decodeFromString(decodeBase64(tomlContent).decodeToString()))
-        } ?: return@withContext Result.failure(ExtensionFetchException("Failed to fetch extension Git URL for $name"))
-    }
+    val tomlUrl = repoInfo["tree"]?.jsonArray?.find {
+        it.jsonObject["path"]?.jsonPrimitive?.contentOrNull == "extension.toml"
+    }?.jsonObject?.get("url")?.jsonPrimitive?.contentOrNull
+        ?: throw ExtensionFetchException("Failed to fetch extension.toml URL for $name")
 
-    Result.success(extensions)
+    val tomlContent = Json.parseToJsonElement(fetchText(tomlUrl)).jsonObject["content"]
+        ?.jsonPrimitive?.contentOrNull
+        ?: throw ExtensionFetchException("Failed to fetch extension.toml content for $name")
+
+    return Toml.decodeFromString(decodeBase64(tomlContent).decodeToString())
 }
 
 suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(Dispatchers.IO) {
@@ -97,6 +105,14 @@ suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(
 
     zip.extractRepoZip(internalDir)
     Result.success(internalDir)
+}
+
+suspend fun fetchLastUpdated(repo: String): LocalDateTime? {
+    val (username, reponame) = parseRepoInfo(repo)
+    val jsonText = fetchText("https://api.github.com/repos/$username/$reponame")
+    val json = Json.parseToJsonElement(jsonText).jsonObject
+    val pushedAt = json["pushed_at"]?.jsonPrimitive?.content ?: return null
+    return Instant.parse(pushedAt).toLocalDateTime(TimeZone.currentSystemDefault())
 }
 
 internal expect suspend fun ByteArray.extractRepoZip(targetDir: KxFile)
