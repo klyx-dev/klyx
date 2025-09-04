@@ -1,0 +1,63 @@
+name: Feature Request
+description: |
+  Suggest a new feature or improvement for Klyx.
+type: "Feature"
+body:
+  - type: textarea
+    attributes:
+      label: Summary
+      description: Provide a clear one-sentence summary of your feature request, followed by a detailed explanation.
+      value: |
+        <!-- Begin with a one-sentence summary of your feature request -->
+        SUMMARY_SENTENCE_HERE
+
+        ### Detailed Proposal
+        <!-- Explain your idea in detail:
+          - What problem does this feature solve?
+          - Why is it valuable or necessary?
+          - How should it ideally work?
+        -->
+
+        DESCRIPTION_HERE
+
+        ### Use Case / Motivation
+        <!-- Describe how this feature will help you or others.
+          - Add real-world examples if possible.
+          - Be as specific as you can.
+        -->
+
+        MOTIVATION_HERE
+
+        ### Alternatives Considered
+        <!-- If you thought of other approaches, mention them here.
+          - Explain why your proposal is better.
+        -->
+
+        ALTERNATIVES_HERE
+
+        ### Additional Context
+        <!-- Add screenshots, mockups, or references if relevant.
+          Hide large content inside collapsible blocks:
+
+        <details><summary>click to expand</summary>
+
+        ```
+        additional details
+        ```
+        </details>
+        -->
+
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Klyx Version and System Specs (if relevant)
+      description: |
+        Open Klyx, from the command palette select "klyx: copy system specs into clipboard".
+        This may help us understand performance or compatibility considerations.
+      placeholder: |
+        Output of "klyx: copy system specs into clipboard"
+    validations:
+      required: false

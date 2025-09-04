@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import com.blankj.utilcode.util.FileUtils
 import com.klyx.activities.CrashActivity
 import com.klyx.core.Environment
 import com.klyx.core.di.initKoin
@@ -114,6 +115,9 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
 @OptIn(ExperimentalTime::class)
 private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
     val logFile = File(Environment.LogsDir, "log_${Clock.System.now().toEpochMilliseconds()}.txt")
+    val externalLogFile = android.os.Environment.getExternalStorageDirectory().resolve("klyx/Logs/Klyx.log")
+    FileUtils.createFileByDeleteOldFile(externalLogFile)
+
     return if (logFile.createNewFile()) {
         val logString = buildString {
             appendLine("=== Crash Log ===")
@@ -136,6 +140,7 @@ private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
             }
         }
         logFile.writeText(logString)
+        externalLogFile.writeText(logString)
         logFile.toKxFile()
     } else {
         Log.e("Klyx", "Failed to save crash logs")

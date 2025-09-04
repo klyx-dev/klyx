@@ -1,0 +1,48 @@
+name: Crash Report
+description: Klyx is Crashing or Hanging
+type: "Crash"
+body:
+  - type: textarea
+    attributes:
+      label: Summary
+      description: Summarize the issue with detailed reproduction steps
+      value: |
+        <!-- Begin your issue with a one sentence summary -->
+        SUMMARY_SENTENCE_HERE
+
+        ### Description
+        <!-- Include all steps necessary to reproduce from a clean Klyx installation. Be verbose -->
+        Steps to trigger the problem:
+        1.
+        2.
+        3.
+
+        Actual Behavior:
+        Expected Behavior:
+
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Klyx Version and System Specs
+      description: 'Open Klyx, and in the command palette select "klyx: copy system specs into clipboard"'
+      placeholder: |
+        Output of "klyx: copy system specs into clipboard"
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: If applicable, attach your `~/klyx/Logs/Klyx.log` file to this issue.
+      description:
+      value: |
+        <details><summary>Klyx.log</summary>
+
+        <!-- Paste your log inside the code block. -->
+        ```log
+
+        ```
+
+        </details>
+    validations:
+      required: false

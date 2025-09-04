@@ -21,15 +21,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
+import com.blankj.utilcode.util.ClipboardUtils
 import com.github.michaelbull.result.onFailure
 import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.LocalSharedPreferences
+import com.klyx.core.cmd.CommandManager
+import com.klyx.core.cmd.command
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.event.subscribeToEvent
+import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
@@ -135,6 +139,38 @@ class MainActivity : KlyxActivity() {
                         }
                     )
                 }
+
+                var showCopiedDialog by remember { mutableStateOf(false) }
+                var specs by remember { mutableStateOf("") }
+
+                LaunchedEffect(Unit) {
+                    CommandManager.addCommand(command {
+                        name("klyx: copy system specs into clipboard")
+                        execute {
+                            specs = getSystemSpecs()
+                            ClipboardUtils.copyText("Klyx", specs)
+                            showCopiedDialog = true
+                        }
+                    })
+                }
+
+                if (showCopiedDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showCopiedDialog = false },
+                        title = {
+                            Text("Copied into clipboard")
+                        },
+                        text = {
+                            Text(specs)
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showCopiedDialog = false }) {
+                                Text("Ok")
+                            }
+                        },
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
             }
         }
     }
@@ -156,6 +192,20 @@ class MainActivity : KlyxActivity() {
             @Suppress("DEPRECATION")
             ActivityManager.TaskDescription(label)
         }
+    }
+
+    private fun getSystemSpecs() = buildString {
+        appendLine("Klyx: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        appendLine("Android Version: ${Build.VERSION.RELEASE}")
+        appendLine("Android SDK: ${Build.VERSION.SDK_INT}")
+        appendLine("Architecture: ${Build.SUPPORTED_ABIS.first()}")
+
+        val activityManager = getSystemService(ActivityManager::class.java)
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+
+        appendLine("Memory: ${memoryInfo.totalMem.humanBytes()}")
+        append("CPU Count: ${Runtime.getRuntime().availableProcessors()}")
     }
 
 //    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
