@@ -39,13 +39,18 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 - [ ] **Document Formatting** - Automatic code formatting
 - [ ] **Git Integration** - Basic git support for version control
 
-[//]: # (## Screenshots)
+## Screenshots
 
-[//]: # ()
-[//]: # (<div align="center">)
-
-[//]: # ()
-[//]: # (</div>)
+<div>
+  <img src="images/screenshot_1.jpg" width="32%" alt="Screenshot 1"/>
+  <img src="images/screenshot_2.jpg" width="32%" alt="Screenshot 2"/>
+  <img src="images/screenshot_3.jpg" width="32%" alt="Screenshot 3"/>
+</div>
+<div>
+  <img src="images/screenshot_4.jpg" width="32%" alt="Screenshot 4"/>
+  <img src="images/screenshot_5.jpg" width="32%" alt="Screenshot 5"/>
+  <img src="images/screenshot_6.jpg" width="32%" alt="Screenshot 6"/>
+</div>
 
 ## System Requirements
 
