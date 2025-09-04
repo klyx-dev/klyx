@@ -92,6 +92,8 @@ kotlin {
             implementation(libs.filekit.dialogs)
             implementation(libs.filekit.dialogs.compose)
 
+            implementation(libs.multiplatform.settings.no.arg)
+
             implementation(projects.shared)
             implementation(projects.core)
             implementation(projects.editor.editor)

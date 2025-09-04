@@ -57,4 +57,16 @@
     </plurals>
 
     <string name="extension_downloads">Downloads: %1$d</string>
+
+    <string name="disclaimer">By installing or using Klyx, you acknowledge that this software is provided "as is" without any warranty. The Klyx team and its contributors are not responsible for any kind of damage, data loss, or unexpected behavior that may occur while using this software.
+
+Klyx is licensed under the GNU General Public License v3.0. By continuing, you agree to the terms of this license and accept that you are solely responsible for how you use this software and its extensions.
+
+Please be cautious: always double-check every command before running it in your terminal. Only install extensions from trusted sources, and make sure to carefully read the README files or documentation of those extensions before adding them to your setup.
+
+By clicking "I Agree", you accept full responsibility for using Klyx under these terms.</string>
+
+    <string name="important_notice">Important Notice</string>
+    <string name="i_agree">I Agree</string>
+    <string name="exit">Exit</string>
 </resources>

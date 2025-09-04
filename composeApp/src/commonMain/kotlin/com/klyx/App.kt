@@ -10,12 +10,18 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
@@ -40,6 +46,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.LocalNotifier
@@ -60,7 +67,13 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
+import com.klyx.menu.quitApp
 import com.klyx.platform.PlatformInfo
+import com.klyx.res.Res
+import com.klyx.res.disclaimer
+import com.klyx.res.exit
+import com.klyx.res.i_agree
+import com.klyx.res.important_notice
 import com.klyx.tab.Tab
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
@@ -82,6 +95,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
 val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
@@ -145,6 +159,8 @@ fun App(
             }
         }
     }
+
+    var showDisclaimer by remember { mutableStateOf(!DisclaimerManager.hasAccepted()) }
 
     KlyxTheme(themeName) {
         val colorScheme = MaterialTheme.colorScheme
@@ -287,6 +303,39 @@ fun App(
                     }
 
                     extraContent()
+
+                    if (showDisclaimer) {
+                        AlertDialog(
+                            onDismissRequest = { },
+                            properties = DialogProperties(
+                                dismissOnBackPress = false,
+                                dismissOnClickOutside = false
+                            ),
+                            title = {
+                                Text(stringResource(Res.string.important_notice))
+                            },
+                            text = {
+                                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                    SelectionContainer {
+                                        Text(stringResource(Res.string.disclaimer))
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    DisclaimerManager.setAccepted()
+                                    showDisclaimer = false
+                                }) {
+                                    Text(stringResource(Res.string.i_agree))
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = ::quitApp) {
+                                    Text(stringResource(Res.string.exit))
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
