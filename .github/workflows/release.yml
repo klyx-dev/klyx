@@ -99,64 +99,80 @@ jobs:
         id: changelog
         run: |
           CURRENT_TAG=${GITHUB_REF#refs/tags/}
+          echo "Current tag: $CURRENT_TAG"
           
-          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -A1 "^${CURRENT_TAG}$" | tail -1)
+          PREVIOUS_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
           
-          if [ "$PREVIOUS_TAG" = "$CURRENT_TAG" ]; then
+          if [ -z "$PREVIOUS_TAG" ]; then
             PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
-            echo "First release, using initial commit as base"
+            echo "No previous tag found, using initial commit as base: $PREVIOUS_TAG"
+          else
+            echo "Previous tag: $PREVIOUS_TAG"
           fi
           
-          echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
           echo "previous-tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          echo "Generating changelog from $PREVIOUS_TAG to $CURRENT_TAG"
           
           CHANGELOG="## What's Changed\n\n"
           
-          FEATURES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^feat" --grep="^feature" | sed 's/^feat[(:]/**Feature**: /' | sed 's/^feature[(:]/**Feature**: /')
-          if [ ! -z "$FEATURES" ]; then
-            CHANGELOG="${CHANGELOG}### Features\n${FEATURES}\n\n"
+          get_commits() {
+            local pattern="$1"
+            local label="$2"
+            git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="$pattern" | sed "s/^${pattern%:*}[(:]/**${label}**: /"
+          }
+          
+          FEATURES=$(get_commits "^feat" "Feature")
+          FEATURES_ALT=$(get_commits "^feature" "Feature")
+          ALL_FEATURES="${FEATURES}${FEATURES:+$'\n'}${FEATURES_ALT}"
+          if [ ! -z "$ALL_FEATURES" ]; then
+            CHANGELOG="${CHANGELOG}### Features\n${ALL_FEATURES}\n\n"
           fi
           
-          # Bug fixes
-          FIXES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^fix" | sed 's/^fix[(:]/**Fix**: /')
+          FIXES=$(get_commits "^fix" "Fix")
           if [ ! -z "$FIXES" ]; then
             CHANGELOG="${CHANGELOG}### Bug Fixes\n${FIXES}\n\n"
           fi
           
-          # Documentation
-          DOCS=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^docs" | sed 's/^docs[(:]/**Documentation**: /')
+          DOCS=$(get_commits "^docs" "Documentation")
           if [ ! -z "$DOCS" ]; then
             CHANGELOG="${CHANGELOG}### Documentation\n${DOCS}\n\n"
           fi
           
-          # Performance improvements
-          PERF=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^perf" | sed 's/^perf[(:]/**Performance**: /')
+          PERF=$(get_commits "^perf" "Performance")
           if [ ! -z "$PERF" ]; then
             CHANGELOG="${CHANGELOG}### Performance\n${PERF}\n\n"
           fi
           
-          # Refactoring
-          REFACTOR=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^refactor" | sed 's/^refactor[(:]/**Refactor**: /')
+          REFACTOR=$(get_commits "^refactor" "Refactor")
           if [ ! -z "$REFACTOR" ]; then
             CHANGELOG="${CHANGELOG}### Refactoring\n${REFACTOR}\n\n"
           fi
           
-          # Chores and maintenance
-          CHORES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^chore" --grep="^build" --grep="^ci" | sed 's/^chore[(:]/**Maintenance**: /' | sed 's/^build[(:]/**Build**: /' | sed 's/^ci[(:]/**CI**: /')
-          if [ ! -z "$CHORES" ]; then
-            CHANGELOG="${CHANGELOG}### Maintenance\n${CHORES}\n\n"
+          CHORES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^chore" | sed 's/^chore[(:]/**Maintenance**: /')
+          BUILD=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^build" | sed 's/^build[(:]/**Build**: /')
+          CI=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^ci" | sed 's/^ci[(:]/**CI**: /')
+          ALL_MAINTENANCE="${CHORES}${CHORES:+$'\n'}${BUILD}${BUILD:+$'\n'}${CI}"
+          if [ ! -z "$ALL_MAINTENANCE" ]; then
+            CHANGELOG="${CHANGELOG}### Maintenance\n${ALL_MAINTENANCE}\n\n"
           fi
           
-          # Other commits that don't follow conventional commits
-          OTHER=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --invert-grep --grep="^feat" --grep="^fix" --grep="^docs" --grep="^perf" --grep="^refactor" --grep="^chore" --grep="^build" --grep="^ci" --grep="^feature")
+          OTHER=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" \
+            --invert-grep \
+            --grep="^feat" --grep="^feature" --grep="^fix" --grep="^docs" \
+            --grep="^perf" --grep="^refactor" --grep="^chore" --grep="^build" --grep="^ci" \
+            --grep="^test" --grep="^style" --grep="^revert")
           if [ ! -z "$OTHER" ]; then
             CHANGELOG="${CHANGELOG}### Other Changes\n${OTHER}\n\n"
           fi
           
-          # Add full changelog link
+          COMMIT_COUNT=$(git rev-list --count "${PREVIOUS_TAG}..HEAD")
+          CONTRIBUTORS=$(git log --pretty=format:"%an" "${PREVIOUS_TAG}..HEAD" | sort -u | wc -l)
+          
+          CHANGELOG="${CHANGELOG}---\n\n"
+          CHANGELOG="${CHANGELOG}📊 **${COMMIT_COUNT}** commits from **${CONTRIBUTORS}** contributor(s)\n\n"
+          
           CHANGELOG="${CHANGELOG}**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
           
-          # Save changelog to output (handle multiline)
           {
             echo 'changelog<<EOF'
             echo -e "$CHANGELOG"
