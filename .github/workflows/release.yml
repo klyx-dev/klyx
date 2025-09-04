@@ -115,42 +115,67 @@ jobs:
           
           CHANGELOG="## What's Changed\n\n"
           
+          EXCLUSION_PATTERNS="--invert-grep --grep=^chore(release): --grep=^release: --grep=^Release --grep=^chore: release --grep=^bump version --grep=^version bump"
+          
           get_commits() {
             local pattern="$1"
             local label="$2"
-            git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="$pattern" | sed "s/^${pattern%:*}[(:]/**${label}**: /"
+            git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" \
+              --grep="$pattern" \
+              $EXCLUSION_PATTERNS | sed "s/^${pattern%:*}[(:]/**${label}**: /"
           }
           
-          FEATURES=$(get_commits "^feat" "Feature")
-          FEATURES_ALT=$(get_commits "^feature" "Feature")
+          get_commits_with_exclusions() {
+            local pattern="$1"
+            local label="$2"
+            git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" \
+              --grep="$pattern" | \
+              grep -v -E "(chore\(release\):|release:|Release [v]?[0-9]|bump version|version bump)" | \
+              sed "s/^${pattern%:*}[(:]/**${label}**: /"
+          }
+          
+          FEATURES=$(get_commits_with_exclusions "^feat" "Feature")
+          FEATURES_ALT=$(get_commits_with_exclusions "^feature" "Feature")
           ALL_FEATURES="${FEATURES}${FEATURES:+$'\n'}${FEATURES_ALT}"
           if [ ! -z "$ALL_FEATURES" ]; then
             CHANGELOG="${CHANGELOG}### Features\n${ALL_FEATURES}\n\n"
           fi
           
-          FIXES=$(get_commits "^fix" "Fix")
+          FIXES=$(get_commits_with_exclusions "^fix" "Fix")
           if [ ! -z "$FIXES" ]; then
             CHANGELOG="${CHANGELOG}### Bug Fixes\n${FIXES}\n\n"
           fi
           
-          DOCS=$(get_commits "^docs" "Documentation")
+          DOCS=$(get_commits_with_exclusions "^docs" "Documentation")
           if [ ! -z "$DOCS" ]; then
             CHANGELOG="${CHANGELOG}### Documentation\n${DOCS}\n\n"
           fi
           
-          PERF=$(get_commits "^perf" "Performance")
+          PERF=$(get_commits_with_exclusions "^perf" "Performance")
           if [ ! -z "$PERF" ]; then
             CHANGELOG="${CHANGELOG}### Performance\n${PERF}\n\n"
           fi
           
-          REFACTOR=$(get_commits "^refactor" "Refactor")
+          REFACTOR=$(get_commits_with_exclusions "^refactor" "Refactor")
           if [ ! -z "$REFACTOR" ]; then
             CHANGELOG="${CHANGELOG}### Refactoring\n${REFACTOR}\n\n"
           fi
           
-          CHORES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^chore" | sed 's/^chore[(:]/**Maintenance**: /')
-          BUILD=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^build" | sed 's/^build[(:]/**Build**: /')
-          CI=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" --grep="^ci" | sed 's/^ci[(:]/**CI**: /')
+          CHORES=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" \
+            --grep="^chore" | \
+            grep -v -E "(chore\(release\):|release:|Release [v]?[0-9]|bump version|version bump)" | \
+            sed 's/^chore[(:]/**Maintenance**: /')
+          
+          BUILD=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" \
+            --grep="^build" | \
+            grep -v -E "(chore\(release\):|release:|Release [v]?[0-9]|bump version|version bump)" | \
+            sed 's/^build[(:]/**Build**: /')
+          
+          CI=$(git log --pretty=format:"* %s" "${PREVIOUS_TAG}..HEAD" \
+            --grep="^ci" | \
+            grep -v -E "(chore\(release\):|release:|Release [v]?[0-9]|bump version|version bump)" | \
+            sed 's/^ci[(:]/**CI**: /')
+          
           ALL_MAINTENANCE="${CHORES}${CHORES:+$'\n'}${BUILD}${BUILD:+$'\n'}${CI}"
           if [ ! -z "$ALL_MAINTENANCE" ]; then
             CHANGELOG="${CHANGELOG}### Maintenance\n${ALL_MAINTENANCE}\n\n"
@@ -160,16 +185,12 @@ jobs:
             --invert-grep \
             --grep="^feat" --grep="^feature" --grep="^fix" --grep="^docs" \
             --grep="^perf" --grep="^refactor" --grep="^chore" --grep="^build" --grep="^ci" \
-            --grep="^test" --grep="^style" --grep="^revert")
+            --grep="^test" --grep="^style" --grep="^revert" | \
+            grep -v -E "(chore\(release\):|release:|Release [v]?[0-9]|bump version|version bump)")
+          
           if [ ! -z "$OTHER" ]; then
             CHANGELOG="${CHANGELOG}### Other Changes\n${OTHER}\n\n"
           fi
-          
-          COMMIT_COUNT=$(git rev-list --count "${PREVIOUS_TAG}..HEAD")
-          CONTRIBUTORS=$(git log --pretty=format:"%an" "${PREVIOUS_TAG}..HEAD" | sort -u | wc -l)
-          
-          CHANGELOG="${CHANGELOG}---\n\n"
-          CHANGELOG="${CHANGELOG}📊 **${COMMIT_COUNT}** commits from **${CONTRIBUTORS}** contributor(s)\n\n"
           
           CHANGELOG="${CHANGELOG}**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
           
