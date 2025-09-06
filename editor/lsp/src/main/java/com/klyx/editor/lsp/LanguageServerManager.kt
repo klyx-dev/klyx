@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.services.LanguageServer
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.atomic.AtomicInteger
@@ -111,6 +112,11 @@ object LanguageServerManager {
     suspend fun completion(worktree: Worktree, file: KxFile, line: Int, character: Int) = withContext(Dispatchers.IO) {
         val client = client(worktree, file.languageId)
         client.completion(file.uriString, line, character)
+    }
+
+    suspend fun requestQuickFixes(worktree: Worktree, file: KxFile, diagnostic: Diagnostic) = run {
+        val client = client(worktree, file.languageId)
+        client.codeAction(file.uriString, diagnostic)
     }
 
     private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {

@@ -51,6 +51,11 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
   <img src="images/screenshot_5.jpg" width="32%" alt="Screenshot 5"/>
   <img src="images/screenshot_6.jpg" width="32%" alt="Screenshot 6"/>
 </div>
+<div>
+  <img src="images/screenshot_8.jpg" width="32%" alt="Screenshot 4"/>
+  <img src="images/screenshot_9.jpg" width="32%" alt="Screenshot 5"/>
+  <img src="images/screenshot_10.jpg" width="32%" alt="Screenshot 6"/>
+</div>
 
 ## System Requirements
 

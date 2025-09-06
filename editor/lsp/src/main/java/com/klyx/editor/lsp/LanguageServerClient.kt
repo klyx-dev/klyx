@@ -19,6 +19,10 @@ import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
+import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -27,6 +31,7 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.MessageActionItem
@@ -68,6 +73,7 @@ class LanguageServerClient(
     private lateinit var process: Process
 
     var onDiagnostics: (List<Diagnostic>) -> Unit = {}
+    var onApplyWorkspaceEdit: (ApplyWorkspaceEditParams) -> Unit = {}
 
     var onShowMessage: (MessageParams) -> Unit = { params ->
         notifier.toast(params.message)
@@ -257,6 +263,38 @@ class LanguageServerClient(
             // logger.error(e) { "Error formatting document: $uri" }
             Err(e.message ?: "Error formatting document: $uri")
         }
+    }
+
+    suspend fun codeAction(uri: String, diagnostic: Diagnostic) = withContext(Dispatchers.IO) {
+        try {
+            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
+
+            val params = CodeActionParams().apply {
+                textDocument = TextDocumentIdentifier(uri)
+                range = diagnostic.range
+                context = CodeActionContext(listOf(diagnostic))
+            }
+
+            val result = languageServer.textDocumentService.codeAction(params).get()
+            Ok(result.orEmpty())
+        } catch (e: Exception) {
+            Err(e.message ?: "Error getting code actions: $uri")
+        }
+    }
+
+    suspend fun executeCommand(command: String, args: List<Any>) = withContext(Dispatchers.IO) {
+        try {
+            val params = ExecuteCommandParams(command, args)
+            val result = languageServer.workspaceService.executeCommand(params).get()
+            Ok(result)
+        } catch (e: Exception) {
+            Err(e.message ?: "Error executing command: $command")
+        }
+    }
+
+    override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {
+        onApplyWorkspaceEdit(params)
+        return CompletableFuture.completedFuture(ApplyWorkspaceEditResponse(true))
     }
 
     override fun telemetryEvent(`object`: Any?) {

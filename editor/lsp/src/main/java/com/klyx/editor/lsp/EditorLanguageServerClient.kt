@@ -2,6 +2,7 @@ package com.klyx.editor.lsp
 
 import android.content.Context
 import android.os.Bundle
+import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.klyx.core.file.KxFile
@@ -16,6 +17,7 @@ import io.github.rosemoe.sora.lang.completion.CompletionPublisher
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticDetail
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticRegion
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer
+import io.github.rosemoe.sora.lang.diagnostic.Quickfix
 import io.github.rosemoe.sora.lang.format.Formatter
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler
 import io.github.rosemoe.sora.text.CharPosition
@@ -29,9 +31,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.WorkspaceEdit
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -54,6 +59,9 @@ class EditorLanguageServerClient(
                 editor.setEditorLanguage(LspLanguage(editor.editorLanguage, scope))
                 LanguageServerManager.openDocument(worktree, file)
                 client.onDiagnostics = ::updateDiagnostics
+                client.onApplyWorkspaceEdit = {
+                    applyWorkspaceEdit(it.edit)
+                }
 
                 editor.subscribeAlways<ContentChangeEvent> { event ->
                     scope.launch {
@@ -70,19 +78,36 @@ class EditorLanguageServerClient(
         val diagnosticsContainer = editor.diagnostics ?: DiagnosticsContainer()
         diagnosticsContainer.reset()
 
-        diagnosticsContainer.addDiagnostics(
-            diagnostics.transformToEditorDiagnostics(editor)
-        )
+        scope.launch {
+            val diagnosticRegions = diagnostics.mapIndexed { idx, diagnosticSource ->
+                val quickfixes = fetchQuickfixes(diagnosticSource)
+                DiagnosticRegion(
+                    diagnosticSource.range.start.getIndex(editor),
+                    diagnosticSource.range.end.getIndex(editor),
+                    diagnosticSource.severity.toEditorLevel(),
+                    idx.toLong(),
+                    DiagnosticDetail(
+                        diagnosticSource.severity.name,
+                        diagnosticSource.message,
+                        quickfixes,
+                        null
+                    )
+                )
+            }
 
-        scope.launch(Dispatchers.Main) {
-            editor.diagnostics = diagnosticsContainer
+            diagnosticsContainer.addDiagnostics(diagnosticRegions)
+
+            withContext(Dispatchers.Main) {
+                editor.diagnostics = diagnosticsContainer
+            }
         }
     }
 
     private fun Position.getIndex(editor: CodeEditor): Int {
+        val l = if (this.line == editor.lineCount) editor.lineCount - 1 else this.line
         return editor.text.getCharIndex(
             this.line,
-            editor.text.getColumnCount(this.line).coerceAtMost(this.character)
+            editor.text.getColumnCount(l).coerceAtMost(this.character)
         )
     }
 
@@ -109,6 +134,68 @@ class EditorLanguageServerClient(
             DiagnosticSeverity.Hint, DiagnosticSeverity.Information -> DiagnosticRegion.SEVERITY_TYPO
             DiagnosticSeverity.Error -> DiagnosticRegion.SEVERITY_ERROR
             DiagnosticSeverity.Warning -> DiagnosticRegion.SEVERITY_WARNING
+        }
+    }
+
+    private suspend fun fetchQuickfixes(diagnostic: Diagnostic): List<Quickfix> {
+        val result = LanguageServerManager
+            .requestQuickFixes(worktree, file, diagnostic)
+            .getOrElse { return emptyList() }
+
+        println(result)
+
+        return result.mapNotNull { either ->
+            when {
+                either.isRight -> {
+                    val action = either.right
+                    Quickfix(action.title ?: "Quickfix") {
+                        action.edit?.let { applyWorkspaceEdit(it) }
+                    }
+                }
+
+                either.isLeft -> {
+                    val command = either.left
+                    Quickfix(command.title) {
+                        scope.launch {
+                            serverClient?.executeCommand(command.command, command.arguments)
+                        }
+                    }
+                }
+
+                else -> null
+            }
+        }
+    }
+
+    private fun applyWorkspaceEdit(edit: WorkspaceEdit) {
+        println("APPLY: $edit")
+        val changes = mutableListOf<TextEdit>()
+
+        edit.changes?.forEach { (_, edits) ->
+            changes.addAll(edits)
+        }
+
+        edit.documentChanges?.forEach { docChange ->
+            if (docChange.isLeft) {
+                changes.addAll(docChange.left.edits)
+            }
+        }
+
+        if (changes.isEmpty()) return
+
+        val sortedEdits = changes.sortedWith(
+            compareByDescending<TextEdit> { it.range.start.line }
+                .thenByDescending { it.range.start.character }
+        )
+
+        scope.launch(Dispatchers.Main) {
+            val text = editor.text
+            for (te in sortedEdits) {
+                val startIdx = te.range.start.getIndex(editor)
+                val endIdx = te.range.end.getIndex(editor)
+
+                text.replace(startIdx, endIdx, te.newText)
+            }
         }
     }
 
