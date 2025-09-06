@@ -13,7 +13,7 @@ import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
 class LspCompletionItem(
-    private val item: CompletionItem,
+    val item: CompletionItem,
     prefixLength: Int
 ) : io.github.rosemoe.sora.lang.completion.CompletionItem(item.label, item.detail) {
 
@@ -21,11 +21,13 @@ class LspCompletionItem(
         this.prefixLength = prefixLength
         kind = item.kind?.let { CompletionItemKind.valueOf(it.name) } ?: CompletionItemKind.Text
         sortText = item.sortText
-        desc = item.labelDetails?.description
+        //desc = item.labelDetails?.description
         icon = SimpleCompletionIconDrawer.draw(kind ?: CompletionItemKind.Text)
     }
 
     override fun performCompletion(editor: CodeEditor, text: Content, position: CharPosition) {
+        println(item)
+
         val edit = when {
             item.textEdit?.isLeft == true -> item.textEdit.left
             item.textEdit?.isRight == true -> {
@@ -51,7 +53,11 @@ class LspCompletionItem(
                 range.end.line, range.end.character
             )
 
-            editor.snippetController.startSnippet(text.getCharIndex(range.start.line, range.start.character), codeSnippet, "")
+            editor.snippetController.startSnippet(
+                text.getCharIndex(range.start.line, range.start.character),
+                codeSnippet,
+                ""
+            )
         } else {
             editor.text.replace(
                 range.start.line, range.start.character,

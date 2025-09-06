@@ -28,12 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,13 +41,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.Message
 import com.klyx.core.logging.SimpleLogFormatter
 import com.klyx.core.logging.color
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.viewmodel.StatusBarViewModel
-import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.absoluteValue
 
@@ -80,19 +75,12 @@ fun StatusBar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            var logMessage: Message? by remember { mutableStateOf(null) }
-
-            LaunchedEffect(Unit) {
-                KxLog.logFlow.collect { message ->
-                    logMessage = message
-                    delay(500)
-                }
-            }
+            val logMessage: Message? by viewModel.currentLogMessage.collectAsStateWithLifecycle()
 
             if (logMessage != null) {
                 Seg(
                     modifier = Modifier.fillMaxWidth(0.4f),
-                    text = SimpleLogFormatter.format(logMessage!!),
+                    text = logMessage!!.message,
                     accent = logMessage!!.level.color,
                     onClick = onLogClick
                 )

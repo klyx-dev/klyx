@@ -156,6 +156,7 @@ fun App(
         withContext(Dispatchers.Default.limitedParallelism(4)) {
             KxLog.logFlow.collect { log ->
                 logBuffer.add(log)
+                statusBarViewModel.setCurrentLogMessage(log)
             }
         }
     }

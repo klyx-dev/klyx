@@ -12,6 +12,7 @@ import android.provider.DocumentsProvider
 import android.webkit.MimeTypeMap
 import com.klyx.R
 import com.klyx.core.Environment
+import com.klyx.core.terminal.SAFUtils
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -68,7 +69,7 @@ class TerminalDocumentsProvider : DocumentsProvider() {
         val result = MatrixCursor(projection ?: DEFAULT_ROOT_PROJECTION)
 
         result.newRow().apply {
-            add(Root.COLUMN_ROOT_ID, ROOT_ID)
+            add(Root.COLUMN_ROOT_ID, SAFUtils.ROOT_ID)
             add(Root.COLUMN_MIME_TYPES, "*/*")
             add(
                 Root.COLUMN_FLAGS,
@@ -77,7 +78,7 @@ class TerminalDocumentsProvider : DocumentsProvider() {
             add(Root.COLUMN_ICON, R.mipmap.ic_launcher)
             add(Root.COLUMN_TITLE, Environment.AppName)
             add(Root.COLUMN_SUMMARY, null)
-            add(Root.COLUMN_DOCUMENT_ID, ROOT_DOCUMENT_ID)
+            add(Root.COLUMN_DOCUMENT_ID, SAFUtils.ROOT_DOCUMENT_ID)
             add(Root.COLUMN_AVAILABLE_BYTES, home!!.freeSpace)
         }
 
@@ -90,9 +91,9 @@ class TerminalDocumentsProvider : DocumentsProvider() {
 
     private fun getFileForDocumentId(documentId: String): File {
         return when (documentId) {
-            ROOT_DOCUMENT_ID -> home!!
+            SAFUtils.ROOT_DOCUMENT_ID -> home!!
             else -> {
-                val relativePath = documentId.removePrefix("${ROOT_ID}_")
+                val relativePath = documentId.removePrefix("${SAFUtils.ROOT_ID}_")
                 File(home, relativePath)
             }
         }
@@ -100,10 +101,10 @@ class TerminalDocumentsProvider : DocumentsProvider() {
 
     private fun getDocumentIdForFile(file: File): String {
         return when {
-            file.absolutePath == home!!.absolutePath -> ROOT_DOCUMENT_ID
+            file.absolutePath == home!!.absolutePath -> SAFUtils.ROOT_DOCUMENT_ID
             else -> {
                 val relativePath = file.absolutePath.removePrefix(home!!.absolutePath).removePrefix("/")
-                "${ROOT_ID}_$relativePath"
+                "${SAFUtils.ROOT_ID}_$relativePath"
             }
         }
     }
@@ -329,9 +330,6 @@ class TerminalDocumentsProvider : DocumentsProvider() {
     }
 
     companion object {
-        private const val ROOT_ID = "klyx_terminal_home"
-        private const val ROOT_DOCUMENT_ID = "klyx_terminal_home_root"
-
         private val DEFAULT_ROOT_PROJECTION = arrayOf(
             Root.COLUMN_ROOT_ID,
             Root.COLUMN_MIME_TYPES,

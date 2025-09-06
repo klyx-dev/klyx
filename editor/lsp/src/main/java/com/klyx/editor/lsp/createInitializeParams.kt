@@ -1,6 +1,7 @@
 package com.klyx.editor.lsp
 
 import android.os.Process
+import com.klyx.core.logging.logger
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.api.Worktree
 import kotlinx.serialization.json.Json
@@ -49,6 +50,7 @@ fun createInitializeParams(
     @Suppress("DEPRECATION")
     // some older language servers still expect rootUri
     rootUri = worktree.uriString
+    logger().verbose { "Root URI: $rootUri" }
 
     workspaceFolders = listOf(
         WorkspaceFolder().apply {

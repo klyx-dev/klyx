@@ -3,16 +3,29 @@ package com.klyx.core.settings
 import androidx.compose.runtime.mutableStateOf
 import com.klyx.core.Environment
 import io.github.xn32.json5k.Json5
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNamingStrategy
 import java.io.File
 
-@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual object SettingsManager {
-    private val json = Json5 {
+    private val json5 = Json5 {
         prettyPrint = true
         encodeDefaults = true
         indentationWidth = 2
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    private val json = Json {
+        prettyPrintIndent = "  "
+        prettyPrint = true
+        namingStrategy = JsonNamingStrategy.SnakeCase
+        encodeDefaults = true
+        explicitNulls = false
+        isLenient = true
+        allowComments = true
     }
 
     actual var settings = mutableStateOf(AppSettings())

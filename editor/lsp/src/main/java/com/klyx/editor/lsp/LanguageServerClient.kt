@@ -41,7 +41,11 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WorkDoneProgressBegin
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+import org.eclipse.lsp4j.WorkDoneProgressEnd
+import org.eclipse.lsp4j.WorkDoneProgressKind
+import org.eclipse.lsp4j.WorkDoneProgressReport
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
@@ -265,22 +269,47 @@ class LanguageServerClient(
     }
 
     override fun showMessage(params: MessageParams) {
-        // logger.debug { "Show message: ${params.message}" }
         mainScope.launch { onShowMessage(params) }
+
+        when (params.type) {
+            MessageType.Error -> logger.error { params.message }
+            MessageType.Warning -> logger.warn { params.message }
+            MessageType.Info -> logger.info { params.message }
+            MessageType.Log -> logger.debug { params.message }
+        }
     }
 
     override fun showMessageRequest(requestParams: ShowMessageRequestParams): CompletableFuture<MessageActionItem> {
-        // logger.debug { "Show message request: ${requestParams.message}" }
         return CompletableFuture.completedFuture(null)
     }
 
     override fun createProgress(params: WorkDoneProgressCreateParams): CompletableFuture<Void> {
-        // logger.debug { "Create progress: ${params.token}" }
         return CompletableFuture.completedFuture(null)
     }
 
     override fun notifyProgress(params: ProgressParams) {
-        // logger.debug { "Notify progress: ${params.token}" }
+        val value = params.value
+
+        if (value.isLeft) {
+            val notification = value.left
+
+            when (notification.kind) {
+                WorkDoneProgressKind.begin -> {
+                    val begin = (notification as WorkDoneProgressBegin)
+                    logger.info { "${begin.title}${if (begin.message != null) ": ${begin.message}" else ""}" }
+                }
+
+                WorkDoneProgressKind.report -> {
+                    val report = (notification as WorkDoneProgressReport)
+                    logger.info { "${report.message}" }
+                }
+
+                WorkDoneProgressKind.end -> {
+                    val end = (notification as WorkDoneProgressEnd)
+                    logger.info { "${end.message}" }
+                }
+            }
+        }
     }
 
     override fun logMessage(params: MessageParams) {

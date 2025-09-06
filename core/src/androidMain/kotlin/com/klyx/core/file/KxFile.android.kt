@@ -12,6 +12,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
+import com.klyx.core.terminal.SAFUtils
 import com.klyx.ifNull
 import com.klyx.nothing
 import com.klyx.unsupported
@@ -178,16 +179,20 @@ actual fun KxFile(path: String): KxFile {
         val file = runCatching {
             UriUtils.uri2FileNoCacheCopy(uri).asDocumentFile()
         }.getOrElse {
-            if (DocumentsContract.isTreeUri(uri)) {
-                runCatching {
-                    context.contentResolver.takePersistableUriPermission(
-                        uri,
-                        FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
-                    )
+            try {
+                SAFUtils.getFileForDocumentId(SAFUtils.getDocumentIdForUri(uri)).asDocumentFile()
+            } catch (_: Exception) {
+                if (DocumentsContract.isTreeUri(uri)) {
+                    runCatching {
+                        context.contentResolver.takePersistableUriPermission(
+                            uri,
+                            FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+                        )
+                    }
+                    DocumentFile.fromTreeUri(context, uri)!!
+                } else {
+                    DocumentFile.fromSingleUri(context, uri)!!
                 }
-                DocumentFile.fromTreeUri(context, uri)!!
-            } else {
-                DocumentFile.fromSingleUri(context, uri)!!
             }
         }
 

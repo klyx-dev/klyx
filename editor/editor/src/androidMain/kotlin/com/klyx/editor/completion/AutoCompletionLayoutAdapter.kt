@@ -3,7 +3,6 @@ package com.klyx.editor.completion
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -31,6 +30,7 @@ class AutoCompletionLayoutAdapter(private val density: Density) : EditorCompleti
         val desc: TextView = view.findViewById(R.id.result_item_desc)
         desc.text = item.desc
         desc.setTextColor(getThemeColor(EditorColorScheme.COMPLETION_WND_TEXT_SECONDARY))
+        desc.visibility = if (item.desc.isNullOrEmpty()) View.GONE else View.VISIBLE
 
         view.tag = position
 
@@ -40,8 +40,6 @@ class AutoCompletionLayoutAdapter(private val density: Density) : EditorCompleti
             view.setBackgroundColor(0)
         }
 
-        val icon = view.findViewById<ImageView>(R.id.result_item_image)
-        icon.setImageDrawable(item.icon)
         return view
     }
 }

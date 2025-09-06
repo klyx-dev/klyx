@@ -4,6 +4,7 @@ package com.klyx.viewmodel
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.ViewModel
+import com.klyx.core.logging.Message
 import com.klyx.editor.CursorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,13 @@ data class StatusBarState(
 class StatusBarViewModel : ViewModel() {
     private val _state = MutableStateFlow(StatusBarState())
     val state = _state.asStateFlow()
+
+    private val _currentLogMessage = MutableStateFlow<Message?>(null)
+    val currentLogMessage = _currentLogMessage.asStateFlow()
+
+    fun setCurrentLogMessage(message: Message?) {
+        _currentLogMessage.update { message }
+    }
 
     fun setReadOnly(readOnly: Boolean) {
         _state.update { it.copy(readOnly = readOnly) }

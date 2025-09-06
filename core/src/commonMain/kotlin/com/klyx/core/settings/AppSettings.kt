@@ -4,8 +4,11 @@ import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.Contrast
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
+import kotlinx.serialization.json.putJsonObject
 
 @Serializable
 data class AppSettings(
@@ -70,41 +73,48 @@ data class AppSettings(
     val lsp: Map<String, LspSettings> = mapOf(
         "pylsp" to LspSettings(
 //            settings = buildJsonObject {
-//                put("plugins", buildJsonObject {
-//                    put("pycodestyle", buildJsonObject {
-//                        put("enabled", JsonPrimitive(true))
-//                        put("ignore", buildJsonArray {
+//                putJsonObject("plugins") {
+//                    putJsonObject("pycodestyle") {
+//                        put("enabled", true)
+//                        putJsonArray("ignore") {
 //                            add("W292")
-//                        })
-//                    })
-//                })
+//                        }
+//                    }
+//                }
 //            },
             initializationOptions = buildJsonObject {
-                put("plugins", buildJsonObject {
-                    put("pyflakes", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("pylint", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("pydocstyle", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("pylint-quotes", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("mypy", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                        put("live_mode", JsonPrimitive(false))
-                    })
-                    put("pyright", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                    })
-                    put("flake8", buildJsonObject {
-                        put("enabled", JsonPrimitive(true))
-                        put("maxLineLength", JsonPrimitive(100))
-                    })
-                })
+                putJsonObject("plugins") {
+                    putJsonObject("pyflakes") {
+                        put("enabled", true)
+                    }
+                    putJsonObject("pylint") {
+                        put("enabled", true)
+                    }
+                    putJsonObject("pydocstyle") {
+                        put("enabled", true)
+                    }
+                    putJsonObject("pylint-quotes") {
+                        put("enabled", true)
+                    }
+                    putJsonObject("mypy") {
+                        put("enabled", true)
+                        put("live_mode", false)
+                    }
+                    putJsonObject("pyright") {
+                        put("enabled", true)
+                    }
+                    putJsonObject("flake8") {
+                        put("enabled", true)
+                        put("maxLineLength", 100)
+                    }
+                }
+            }
+        ),
+        "rust-analyzer" to LspSettings(
+            initializationOptions = buildJsonObject {
+                put("cargo.buildScripts.enable", true)
+                put("procMacro.enable", true)
+                put("completion.fullFunctionSignatures.enable", true)
             }
         )
     )
