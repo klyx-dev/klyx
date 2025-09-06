@@ -9,35 +9,29 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 
 ## Features
 
-- [x] **Syntax Highlighting** - TextMate grammar support with multiple themes
-- [x] **Multi-tab Editing** - Open and manage multiple files simultaneously
-- [x] **File Tree Browser** - Navigate project structures with expandable file tree
-- [x] **Multiple Font Support** - Customizable fonts
-- [x] **Dynamic Color Schemes** - Material 3 design with adaptive colors
-- [x] **Theme Selector** - Easy theme switching with live preview
-- [x] **Status Bar** - Real-time cursor position and language information
-- [x] **Project Support** - Open and manage entire project directories
-- [x] **Multi-root Workspaces** - Support for multiple project roots
-- [x] **File Type Detection** - Automatic language detection based on file extensions
-- [x] **File Associations** - Support for 20+ programming languages and file types
-- [x] **LSP Support** - Full Language Server Protocol integration (via Extensions)
-- [x] **Auto-completion** - LSP-powered intelligent code completion
-- [x] **Error Diagnostics** - Real-time syntax and semantic error detection
-- [x] **Command Palette** - Quick access to all editor commands (Ctrl+Shift+P)
-- [x] **Keyboard Shortcuts** - Extensive keyboard shortcut support
-- [x] **Extension System** - Extensible architecture with plugin support
-- [x] **Built-in Terminal** - Full Ubuntu-based terminal environment
-- [x] **Package Management** - Ubuntu package system support
-- [x] **Custom User Sessions** - Create and manage terminal user accounts
-- [x] **Extension Manager** - Install and manage extensions
-- [x] **Extension Repository** - Browse and install community extensions
-- [x] **Language Server Extensions** - Add support for new programming languages
-- [ ] **Find & Replace** - Text search and replacement functionality
-- [ ] **Undo/Redo** - Complete editing history management
-- [ ] **Hover Information** - Context-aware documentation on hover
-- [ ] **Go to Definition** - Navigate to symbol definitions
-- [ ] **Document Formatting** - Automatic code formatting
-- [ ] **Git Integration** - Basic git support for version control
+- [x] Syntax Highlighting
+- [x] Multi-tab Editing
+- [x] File Tree Browser
+- [x] Multiple Font Support
+- [x] Dynamic Color Schemes (Android 12+)
+- [x] Theme Selector
+- [x] Status Bar
+- [x] Project Support
+- [x] Multi-root Workspaces
+- [x] File Type Detection
+- [x] LSP Support
+- [x] Command Palette
+- [x] Keyboard Shortcuts
+- [x] Extension System
+- [x] Built-in Terminal
+- [x] Custom User Sessions
+- [x] Language Server Extensions
+- [ ] Find & Replace
+- [ ] Undo/Redo
+- [ ] Hover Information
+- [ ] Go to Definition
+- [ ] Document Formatting
+- [ ] Git Integration
 
 ## Screenshots
 
@@ -52,9 +46,9 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
   <img src="images/screenshot_6.jpg" width="32%" alt="Screenshot 6"/>
 </div>
 <div>
-  <img src="images/screenshot_8.jpg" width="32%" alt="Screenshot 4"/>
-  <img src="images/screenshot_9.jpg" width="32%" alt="Screenshot 5"/>
-  <img src="images/screenshot_10.jpg" width="32%" alt="Screenshot 6"/>
+  <img src="images/screenshot_8.jpg" width="32%" alt="Screenshot 8"/>
+  <img src="images/screenshot_9.jpg" width="32%" alt="Screenshot 9"/>
+  <img src="images/screenshot_10.jpg" width="32%" alt="Screenshot 10"/>
 </div>
 
 ## System Requirements
@@ -83,7 +77,7 @@ We welcome contributions! If you're interested in helping improve Klyx, please c
 ```bash
 git clone --recurse-submodules https://github.com/klyx-dev/klyx.git
 cd klyx
-./gradlew build
+./gradlew assembleRelease
 ```
 
 ## License
