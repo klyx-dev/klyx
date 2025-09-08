@@ -2,71 +2,6 @@ package com.klyx.core.cmd
 
 import androidx.compose.ui.input.key.Key
 
-fun String.toKey(): Key? {
-    return when (this) {
-        "A" -> Key.A
-        "B" -> Key.B
-        "C" -> Key.C
-        "D" -> Key.D
-        "E" -> Key.E
-        "F" -> Key.F
-        "G" -> Key.G
-        "H" -> Key.H
-        "I" -> Key.I
-        "J" -> Key.J
-        "K" -> Key.K
-        "L" -> Key.L
-        "M" -> Key.M
-        "N" -> Key.N
-        "O" -> Key.O
-        "P" -> Key.P
-        "Q" -> Key.Q
-        "R" -> Key.R
-        "S" -> Key.S
-        "T" -> Key.T
-        "U" -> Key.U
-        "V" -> Key.V
-        "W" -> Key.W
-        "X" -> Key.X
-        "Y" -> Key.Y
-        "Z" -> Key.Z
-        "0" -> Key.Zero
-        "1" -> Key.One
-        "2" -> Key.Two
-        "3" -> Key.Three
-        "4" -> Key.Four
-        "5" -> Key.Five
-        "6" -> Key.Six
-        "7" -> Key.Seven
-        "8" -> Key.Eight
-        "9" -> Key.Nine
-        "Ctrl" -> Key.CtrlLeft // Or Key.CtrlRight
-        "Shift" -> Key.ShiftLeft // Or Key.ShiftRight
-        "Alt" -> Key.AltLeft // Or Key.AltRight
-        "Enter" -> Key.Enter
-        "Backspace" -> Key.Backspace
-        "Space" -> Key.Spacebar
-        "Tab" -> Key.Tab
-        "Esc" -> Key.Escape
-        "Delete" -> Key.Delete
-        "Home" -> Key.Home
-        "End" -> Key.MoveEnd
-        "Up" -> Key.DirectionUp
-        "Down" -> Key.DirectionDown
-        "Left" -> Key.DirectionLeft
-        "Right" -> Key.DirectionRight
-        "/" -> Key.Slash
-        "." -> Key.Period
-        "," -> Key.Comma
-        "-" -> Key.Minus
-        "=" -> Key.Equals
-        "+" -> Key.Plus
-        "[" -> Key.LeftBracket
-        "]" -> Key.RightBracket
-        else -> null // Return null if no match is found
-    }
-}
-
 fun Key.toKeyString(): String? {
     return when (this) {
         Key.A -> "A"
@@ -117,6 +52,33 @@ fun Key.toKeyString(): String? {
         Key.Minus -> "-"
         Key.Plus -> "+"
         Key.Equals -> "="
+        Key.LeftBracket -> "["
+        Key.RightBracket -> "]"
+        Key.CtrlLeft -> "Ctrl"
+        Key.CtrlRight -> "Ctrl"
+        Key.ShiftLeft -> "Shift"
+        Key.ShiftRight -> "Shift"
+        Key.AltLeft -> "Alt"
+        Key.AltRight -> "Alt"
+        Key.Delete -> "Delete"
+        Key.Home -> "Home"
+        Key.MoveEnd -> "End"
+        Key.DirectionUp -> "Up"
+        Key.DirectionDown -> "Down"
+        Key.DirectionLeft -> "Left"
+        Key.DirectionRight -> "Right"
+        Key.F1 -> "F1"
+        Key.F2 -> "F2"
+        Key.F3 -> "F3"
+        Key.F4 -> "F4"
+        Key.F5 -> "F5"
+        Key.F6 -> "F6"
+        Key.F7 -> "F7"
+        Key.F8 -> "F8"
+        Key.F9 -> "F9"
+        Key.F10 -> "F10"
+        Key.F11 -> "F11"
+        Key.F12 -> "F12"
         else -> null // Return null if no match is found
     }
 }

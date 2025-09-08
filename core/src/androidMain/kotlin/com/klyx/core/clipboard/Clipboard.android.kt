@@ -1,4 +1,4 @@
-package com.klyx.editor.clipboard
+package com.klyx.core.clipboard
 
 import android.content.ClipData
 import androidx.compose.ui.platform.Clipboard

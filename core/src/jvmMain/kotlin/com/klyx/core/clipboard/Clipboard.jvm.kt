@@ -1,4 +1,4 @@
-package com.klyx.editor.clipboard
+package com.klyx.core.clipboard
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.ClipEntry
