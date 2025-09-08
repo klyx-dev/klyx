@@ -54,6 +54,8 @@ class FileTreeViewModel(
         _clipboard.update { null }
     }
 
+    fun hasClip() = _clipboard.value != null
+
     fun pasteNode(targetNode: FileTreeNode): Boolean {
         val clip = _clipboard.value ?: return false
         if (targetNode.isDirectory.not()) return false

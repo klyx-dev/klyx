@@ -343,6 +343,11 @@ private fun FileTreeItem(
             onCopy = { viewModel.copyNode(node) },
             onCut = { viewModel.cutNode(node) },
             onPaste = {
+                if (!viewModel.hasClip()) {
+                    notifier.toast("Clipboard is empty")
+                    return@rememberFileTreeMenuItems
+                }
+
                 if (!viewModel.pasteNode(node)) {
                     notifier.toast("Failed to paste")
                 }
