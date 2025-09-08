@@ -2,6 +2,12 @@
 
 package com.klyx.ui.component.editor
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -41,8 +49,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.klyx.core.logging.Message
-import com.klyx.core.logging.SimpleLogFormatter
 import com.klyx.core.logging.color
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.viewmodel.StatusBarViewModel
@@ -75,15 +81,50 @@ fun StatusBar(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            val logMessage: Message? by viewModel.currentLogMessage.collectAsStateWithLifecycle()
+            val logState by viewModel.currentLogState.collectAsStateWithLifecycle()
+            if (logState.message != null) {
+                val message = logState.message!!
 
-            if (logMessage != null) {
-                Seg(
-                    modifier = Modifier.fillMaxWidth(0.4f),
-                    text = logMessage!!.message,
-                    accent = logMessage!!.level.color,
-                    onClick = onLogClick
-                )
+                if (logState.isProgressive) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "rotate")
+
+                    val rotation by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = -360f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(durationMillis = 1300, easing = LinearEasing),
+                            repeatMode = RepeatMode.Restart
+                        ),
+                        label = "rotationAnim"
+                    )
+
+                    Icon(
+                        imageVector = Icons.Default.Sync,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .rotate(rotation)
+                    )
+
+                    val percentage = message.metadata["percentage"] as? Int
+
+                    if (percentage != null) {
+                        Seg(
+                            text = "($percentage%)",
+                            accent = message.level.color,
+                            onClick = onLogClick
+                        )
+                    }
+                }
+
+                if (message.message.isNotBlank()) {
+                    Seg(
+                        modifier = Modifier.fillMaxWidth(0.4f),
+                        text = message.message,
+                        accent = message.level.color,
+                        onClick = onLogClick
+                    )
+                }
             }
         }
 

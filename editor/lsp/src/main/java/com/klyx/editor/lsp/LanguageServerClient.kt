@@ -334,17 +334,21 @@ class LanguageServerClient(
             when (notification.kind) {
                 WorkDoneProgressKind.begin -> {
                     val begin = (notification as WorkDoneProgressBegin)
-                    logger.info { "${begin.title}${if (begin.message != null) ": ${begin.message}" else ""}" }
+                    logger.progress(begin.percentage) { "${begin.title}${if (!begin.message.isNullOrBlank()) ": ${begin.message}" else ""}" }
                 }
 
                 WorkDoneProgressKind.report -> {
                     val report = (notification as WorkDoneProgressReport)
-                    logger.info { "${report.message}" }
+                    if (!report.message.isNullOrBlank()) logger.progress(report.percentage) { report.message }
                 }
 
                 WorkDoneProgressKind.end -> {
                     val end = (notification as WorkDoneProgressEnd)
-                    logger.info { "${end.message}" }
+                    if (!end.message.isNullOrBlank()) {
+                        logger.progress { end.message }
+                    } else {
+                        logger.info { "" }
+                    }
                 }
             }
         }

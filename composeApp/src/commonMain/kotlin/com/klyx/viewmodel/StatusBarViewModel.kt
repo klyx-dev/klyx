@@ -18,15 +18,21 @@ data class StatusBarState(
     val cursorState: CursorState? = null
 )
 
+@Stable
+data class LogState(
+    val message: Message? = null,
+    val isProgressive: Boolean = false
+)
+
 class StatusBarViewModel : ViewModel() {
     private val _state = MutableStateFlow(StatusBarState())
     val state = _state.asStateFlow()
 
-    private val _currentLogMessage = MutableStateFlow<Message?>(null)
-    val currentLogMessage = _currentLogMessage.asStateFlow()
+    private val _currentLogState = MutableStateFlow(LogState())
+    val currentLogState = _currentLogState.asStateFlow()
 
-    fun setCurrentLogMessage(message: Message?) {
-        _currentLogMessage.update { message }
+    fun setCurrentLogMessage(message: Message?, isProgressive: Boolean = false) {
+        _currentLogState.update { it.copy(message = message, isProgressive = isProgressive) }
     }
 
     fun setReadOnly(readOnly: Boolean) {

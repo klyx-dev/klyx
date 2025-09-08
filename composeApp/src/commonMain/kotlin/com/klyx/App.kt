@@ -60,6 +60,7 @@ import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.language
 import com.klyx.core.logging.KxLog
+import com.klyx.core.logging.MessageType
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.theme.ThemeManager
@@ -156,7 +157,7 @@ fun App(
         withContext(Dispatchers.Default.limitedParallelism(4)) {
             KxLog.logFlow.collect { log ->
                 logBuffer.add(log)
-                statusBarViewModel.setCurrentLogMessage(log)
+                statusBarViewModel.setCurrentLogMessage(log, isProgressive = log.type == MessageType.Progress)
             }
         }
     }

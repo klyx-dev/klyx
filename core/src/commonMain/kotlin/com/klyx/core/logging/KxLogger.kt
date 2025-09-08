@@ -60,15 +60,15 @@ class KxLogger private constructor(
     }
 
     fun warn(message: String?, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Warning, tag, message.toString(), throwable, metadata = metadata))
+        log(Message(Level.Warning, tag, message.toString(), throwable = throwable, metadata = metadata))
     }
 
     fun error(message: String?, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Error, tag, message.toString(), throwable, metadata = metadata))
+        log(Message(Level.Error, tag, message.toString(), throwable = throwable, metadata = metadata))
     }
 
     fun assert(message: String?, throwable: Throwable? = null, metadata: Map<String, Any> = emptyMap()) {
-        log(Message(Level.Assert, tag, message.toString(), throwable, metadata = metadata))
+        log(Message(Level.Assert, tag, message.toString(), throwable = throwable, metadata = metadata))
     }
 
     inline fun verbose(crossinline message: () -> String?) {
@@ -101,7 +101,7 @@ class KxLogger private constructor(
         vararg fields: Pair<String, Any>,
         throwable: Throwable? = null
     ) {
-        log(Message(level, tag, message, throwable, metadata = fields.toMap()))
+        log(Message(level, tag, message, throwable = throwable, metadata = fields.toMap()))
     }
 
     inline fun <T> measure(
@@ -119,7 +119,7 @@ class KxLogger private constructor(
                     Level.Error,
                     tag,
                     "Operation '$operationName' failed after ${duration.inWholeMilliseconds}ms",
-                    e,
+                    throwable = e,
                     metadata = mapOf(
                         "operation" to operationName,
                         "duration_ms" to duration.inWholeMilliseconds,
@@ -145,6 +145,24 @@ class KxLogger private constructor(
         )
 
         return result
+    }
+
+    fun progress(
+        message: String,
+        percentage: Int? = null,
+        token: String? = null,
+        metadata: Map<String, Any> = emptyMap()
+    ) {
+        val progressData = mutableMapOf<String, Any>()
+        percentage?.let { progressData["percentage"] = it }
+        token?.let { progressData["token"] = it }
+        log(Message(Level.Info, tag, message, metadata = metadata + progressData, type = MessageType.Progress))
+    }
+
+    inline fun progress(percentage: Int? = null, token: String? = null, crossinline message: () -> String) {
+        if (shouldLog(Level.Info)) {
+            progress(message(), percentage, token)
+        }
     }
 
     @PublishedApi
@@ -214,4 +232,13 @@ inline fun <reified T> T.logW(throwable: Throwable? = null, crossinline message:
 
 inline fun <reified T> T.logE(throwable: Throwable? = null, crossinline message: () -> String) {
     logger<T>().error(throwable, message)
+}
+
+inline fun <reified T> T.logProgress(
+    message: String,
+    percentage: Int? = null,
+    token: String? = null,
+    metadata: Map<String, Any> = emptyMap()
+) {
+    logger<T>().progress(message, percentage, token, metadata)
 }

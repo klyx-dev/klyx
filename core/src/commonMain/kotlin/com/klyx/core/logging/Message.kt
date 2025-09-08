@@ -10,11 +10,16 @@ data class Message(
     val level: Level,
     val tag: String,
     val message: String,
+    val type: MessageType = MessageType.Standard,
     val throwable: Throwable? = null,
     val timestamp: Instant = Clock.System.now(),
     val threadName: String = currentThreadName,
     val metadata: Map<String, Any> = emptyMap()
 )
+
+enum class MessageType {
+    Standard, Progress
+}
 
 fun Instant.toLogString(
     showMillis: Boolean = false,
