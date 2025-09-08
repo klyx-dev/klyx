@@ -7,11 +7,12 @@ import arrow.core.toOption
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.klyx.core.Notifier
-import com.klyx.core.logging.logger
+import com.klyx.core.logging.KxLogger
 import com.klyx.core.settings.LspSettings
 import com.klyx.core.settings.SettingsManager
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.lsp.CommandSettings
+import com.klyx.extension.api.lsp.LanguageServerInstallationStatus
 import com.klyx.extension.api.lsp.parseLanguageServerInstallationStatus
 import com.klyx.extension.api.parseSettingsLocation
 import com.klyx.extension.internal.asOption
@@ -42,8 +43,9 @@ import com.klyx.wasm.type.Err as WasmErr
 import com.klyx.wasm.type.Ok as WasmOk
 
 @HostModule("\$root")
-object Root : KoinComponent {
-    private val logger = logger("RootModule")
+class Root(
+    private val logger: KxLogger
+) : KoinComponent {
     private val notifier: Notifier by inject()
 
     @OptIn(ExperimentalSerializationApi::class)
@@ -109,12 +111,26 @@ object Root : KoinComponent {
         write(resultPtr, result.toBuffer())
     }
 
-    @Suppress("unused")
     @HostFunction
     fun setLanguageServerInstallationStatus(languageServerName: String, tag: Int, failedReason: String) {
         val status = parseLanguageServerInstallationStatus(tag, failedReason)
-        //TODO("Set language server installation status, not yet implemented: $status")
-        logger.info { "Set language server installation status: $status" }
+        when (status) {
+            LanguageServerInstallationStatus.CheckingForUpdate -> {
+                logger.progress { "[$languageServerName] checking for updates" }
+            }
+
+            LanguageServerInstallationStatus.Downloading -> {
+                logger.progress { "[$languageServerName] downloading" }
+            }
+
+            is LanguageServerInstallationStatus.Failed -> {
+                logger.error { "[$languageServerName] failed: ${status.reason}" }
+            }
+
+            LanguageServerInstallationStatus.None -> {
+                logger.info { "" }
+            }
+        }
     }
 
     @OptIn(ExperimentalSerializationApi::class)

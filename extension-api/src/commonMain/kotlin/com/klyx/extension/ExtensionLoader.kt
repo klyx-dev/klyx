@@ -6,6 +6,7 @@ import com.klyx.core.extension.Extension
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.modules.ProcessModule
+import com.klyx.extension.modules.Root
 import com.klyx.extension.modules.RootModule
 import com.klyx.extension.modules.SystemModule
 import com.klyx.wasm.ExperimentalWasmApi
@@ -62,7 +63,7 @@ object ExtensionLoader {
                         stderr(StdioSinkProvider { stderr })
                     }
 
-                    registerHostModule(RootModule, SystemModule, ProcessModule)
+                    registerHostModule(RootModule(Root(logger)), SystemModule, ProcessModule)
                     registerHostModule(*extraHostModules)
                 }
 
