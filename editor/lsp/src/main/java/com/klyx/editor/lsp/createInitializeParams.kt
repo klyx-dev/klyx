@@ -9,6 +9,7 @@ import kotlinx.serialization.json.JsonObject
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.ClientInfo
 import org.eclipse.lsp4j.CodeActionCapabilities
+import org.eclipse.lsp4j.CodeActionKind
 import org.eclipse.lsp4j.CodeActionKindCapabilities
 import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities
 import org.eclipse.lsp4j.CompletionCapabilities
@@ -75,7 +76,18 @@ fun createInitializeParams(
                 isPreferredSupport = true
                 codeActionLiteralSupport = CodeActionLiteralSupportCapabilities().apply {
                     dynamicRegistration = true
-                    codeActionKind = CodeActionKindCapabilities(listOf("quickfix", "refactor", "source"))
+                    codeActionKind = CodeActionKindCapabilities(
+                        listOf(
+                            CodeActionKind.QuickFix,
+                            CodeActionKind.Refactor,
+                            CodeActionKind.RefactorInline,
+                            CodeActionKind.RefactorExtract,
+                            CodeActionKind.RefactorRewrite,
+                            CodeActionKind.Source,
+                            CodeActionKind.SourceOrganizeImports,
+                            CodeActionKind.SourceFixAll,
+                        )
+                    )
                 }
             }
             completion = CompletionCapabilities().apply {

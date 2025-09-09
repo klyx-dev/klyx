@@ -1,13 +1,12 @@
 package com.klyx.extension
 
 import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
-import com.klyx.extension.api.SystemWorktree
 import com.klyx.extension.internal.userHomeDir
+import com.klyx.extension.modules.GitHubModule
 import com.klyx.extension.modules.HttpClientModule
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.Root
@@ -72,7 +71,13 @@ object ExtensionLoader {
                         stderr(StdioSinkProvider { stderr })
                     }
 
-                    registerHostModule(RootModule(Root(logger)), SystemModule, ProcessModule, HttpClientModule)
+                    registerHostModule(
+                        RootModule(Root(logger)),
+                        SystemModule,
+                        ProcessModule,
+                        HttpClientModule,
+                        GitHubModule
+                    )
                     registerHostModule(*extraHostModules)
                 }
 

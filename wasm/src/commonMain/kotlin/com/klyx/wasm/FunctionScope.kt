@@ -21,6 +21,8 @@ class FunctionScope internal constructor(
     inline fun takeLong() = take().asLong()
     inline fun takeULong() = take().asULong()
 
+    inline fun takeBoolean() = takeInt() != 0
+
     @OptIn(InternalExperimentalWasmApi::class)
     inline fun takeFloat() = take().asFloat()
 

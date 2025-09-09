@@ -35,6 +35,7 @@ fun <T> WasmType(value: T): WasmType = when (value) {
     else -> throw IllegalArgumentException("Unsupported value type: ${value!!::class}")
 }
 
+@Suppress("UnusedReceiverParameter")
 val Unit.wasm get() = WasmUnit
 val Boolean.wasm get() = WasmBool(this)
 val UByte.wasm get() = WasmUByte(this)

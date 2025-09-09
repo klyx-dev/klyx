@@ -256,7 +256,7 @@ class HostProcessor(
             }
 
             wasmTypes += when (name?.removePrefix("kotlin.")) {
-                "UByte", "Byte", "UShort", "Short", "UInt", "Int" -> "i32"
+                "UByte", "Byte", "UShort", "Short", "UInt", "Int", "Boolean" -> "i32"
                 "Long", "ULong" -> "i64"
                 "Float" -> "f32"
                 "Double" -> "f64"
@@ -307,6 +307,7 @@ class HostProcessor(
                         "ULong" -> "takeULong()"
                         "Float" -> "takeFloat()"
                         "Double" -> "takeDouble()"
+                        "Boolean" -> "takeBoolean()"
                         "String" -> "readUtf8String(takeInt(), takeInt())"
                         else -> "take()"
                     }

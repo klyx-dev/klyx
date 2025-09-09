@@ -70,7 +70,9 @@ kotlin {
                 implementation(libs.json5k)
                 implementation(libs.ktoml.core)
                 api(libs.ktor.client.core)
-                implementation(libs.ktor.client.cio)
+                api(libs.ktor.client.cio)
+                api(libs.ktor.client.content.negotiation)
+                api(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.commons.compress)
                 api(libs.koin.core)
 
