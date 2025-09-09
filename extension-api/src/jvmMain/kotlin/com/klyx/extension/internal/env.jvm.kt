@@ -34,3 +34,6 @@ actual fun executeCommand(
 ): Output {
     TODO("Not yet implemented")
 }
+
+actual val userHomeDir: String?
+    get() = System.getProperty("user.home")

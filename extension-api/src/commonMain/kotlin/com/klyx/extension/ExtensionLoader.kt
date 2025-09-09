@@ -1,10 +1,14 @@
 package com.klyx.extension
 
 import com.github.michaelbull.result.onFailure
+import com.github.michaelbull.result.onSuccess
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
+import com.klyx.extension.api.SystemWorktree
+import com.klyx.extension.internal.userHomeDir
+import com.klyx.extension.modules.HttpClientModule
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.Root
 import com.klyx.extension.modules.RootModule
@@ -59,11 +63,16 @@ object ExtensionLoader {
                         directory(home, home)
                         workingDirectory(home)
 
+                        userHomeDir?.let {
+                            directory(it, it)
+                            env("USER_HOME", it)
+                        }
+
                         stdout(StdioSinkProvider { stdout })
                         stderr(StdioSinkProvider { stderr })
                     }
 
-                    registerHostModule(RootModule(Root(logger)), SystemModule, ProcessModule)
+                    registerHostModule(RootModule(Root(logger)), SystemModule, ProcessModule, HttpClientModule)
                     registerHostModule(*extraHostModules)
                 }
 
