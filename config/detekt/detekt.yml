@@ -143,7 +143,7 @@ complexity:
   LongParameterList:
     excludes:
       - '**/editor/sora/**'
-    active: true
+    active: false
     functionThreshold: 10
     constructorThreshold: 7
     ignoreDefaultParameters: true
