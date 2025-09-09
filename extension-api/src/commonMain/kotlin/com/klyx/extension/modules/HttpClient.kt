@@ -201,7 +201,7 @@ object HttpClient {
     }
 
     @HostFunction("[resource-drop]http-response-stream")
-    fun dropHttpResourceStream(ptr: Int) {
+    fun dropHttpResponseStream(ptr: Int) {
         val pointer = ptr.asPointer()
         dropPtr(pointer)
     }
