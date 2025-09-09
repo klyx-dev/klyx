@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.resolveAsTypeface
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.language
 import com.klyx.core.logging.logger
@@ -95,6 +96,7 @@ actual fun CodeEditor(
     val isDarkMode = LocalIsDarkMode.current
     val fontFamilyResolver = LocalFontFamilyResolver.current
     val notifier = LocalNotifier.current
+    val appSettings = LocalAppSettings.current
 
     val style by remember {
         derivedStateOf {
@@ -123,7 +125,8 @@ actual fun CodeEditor(
                         worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
                         file = state.file,
                         editor = state.editor!!,
-                        scope = scope
+                        scope = scope,
+                        settings = appSettings
                     )
 
                     client.initialize()

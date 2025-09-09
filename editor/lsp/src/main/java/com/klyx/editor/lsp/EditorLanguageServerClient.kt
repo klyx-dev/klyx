@@ -7,7 +7,7 @@ import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
-import com.klyx.core.logging.logger
+import com.klyx.core.settings.AppSettings
 import com.klyx.editor.lsp.completion.LspCompletionItem
 import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
@@ -44,17 +44,16 @@ class EditorLanguageServerClient(
     private val worktree: Worktree,
     private val file: KxFile,
     private val editor: CodeEditor,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val settings: AppSettings
 ) : KoinComponent {
     private val applicationContext: Context by inject()
     private var serverClient: LanguageServerClient? = null
     private val capabilities get() = serverClient?.serverCapabilities
 
-    private val logger = logger()
-
     fun initialize() {
         scope.launch {
-            LanguageServerManager.tryConnectLspIfAvailable(worktree, file.language()).onSuccess { client ->
+            LanguageServerManager.tryConnectLspIfAvailable(worktree, file.language(), settings).onSuccess { client ->
                 serverClient = client
                 editor.setEditorLanguage(LspLanguage(editor.editorLanguage, scope))
                 LanguageServerManager.openDocument(worktree, file)
@@ -68,8 +67,6 @@ class EditorLanguageServerClient(
                         LanguageServerManager.changeDocument(worktree, file, event.editor.text.toString())
                     }
                 }
-            }.onFailure {
-                logger.warn { it }
             }
         }
     }

@@ -7,7 +7,10 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.klyx.core.file.KxFile
+import com.klyx.core.settings.AppSettings
+import com.klyx.core.toJson
 import com.klyx.editor.lsp.util.languageId
+import com.klyx.editor.lsp.util.toCommand
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
@@ -37,13 +40,15 @@ object LanguageServerManager {
     }
 
     suspend fun tryConnectLspIfAvailable(
-        worktree: Worktree, languageName: LanguageName
+        worktree: Worktree,
+        languageName: LanguageName,
+        appSettings: AppSettings
     ) = withContext(Dispatchers.IO) lsp@{
         if (!ExtensionManager.isExtensionAvailableForLanguage(languageName)) {
             return@lsp Err("No language server extension available for language: $languageName")
         }
 
-        val languageServerId = ExtensionManager.getLanguageServerIdForLanguage(languageName)
+        val languageServerId = ExtensionManager.getLanguageServerIdForLanguage(languageName, appSettings)
             ?: return@lsp Err("No language server found for language: $languageName")
 
         val languageId = ExtensionManager.getLanguageIdForLanguage(languageName)
@@ -56,6 +61,33 @@ object LanguageServerManager {
 
         if (languageServers.containsKey(key)) {
             return@lsp Ok(languageClients[key]!!)
+        }
+
+        appSettings.lsp[languageServerId]?.let { (binary, initializationOptions) ->
+            if (binary != null) {
+                val options = initializationOptions?.toJson()
+                val command = binary.toCommand()
+
+                if (command != null) {
+                    val client = LanguageServerClient(extension.logger)
+
+                    client.initialize(command, worktree, options).onSuccess {
+                        languageClients[key] = client
+                        languageServers[key] = client.languageServer
+
+                        extension.languageServerWorkspaceConfiguration(languageServerId, worktree)
+                            .onSuccess { configs ->
+                                configs.onSome {
+                                    client.changeWorkspaceConfiguration(it)
+                                }
+                            }
+                    }.onFailure {
+                        return@lsp Err("Failed to initialize language server: $it")
+                    }
+
+                    return@lsp Ok(client)
+                }
+            }
         }
 
         extension.languageServerCommand(languageServerId, worktree).fold(
@@ -72,7 +104,6 @@ object LanguageServerManager {
 
                     extension.languageServerWorkspaceConfiguration(languageServerId, worktree).onSuccess { configs ->
                         configs.onSome {
-                            println(it)
                             client.changeWorkspaceConfiguration(it)
                         }
                     }
@@ -82,7 +113,10 @@ object LanguageServerManager {
 
                 Ok(client)
             },
-            failure = ::Err
+            failure = {
+                extension.logger.error { it }
+                Err(it)
+            }
         )
     }
 

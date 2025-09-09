@@ -4,6 +4,7 @@ import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.Contrast
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -67,7 +68,7 @@ data class AppSettings(
     val showFps: Boolean = false,
 
     @SerialComment("Different settings for specific languages.")
-    val languages: Map<String, LanguageSettings> = emptyMap(),
+    val languages: Map<String, JsonObject> = emptyMap(),
 
     @SerialComment("LSP Specific settings.")
     val lsp: Map<String, LspSettings> = mapOf(

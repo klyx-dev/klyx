@@ -7,6 +7,7 @@ import arrow.core.toOption
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.klyx.core.Notifier
+import com.klyx.core.file.humanBytes
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.settings.LspSettings
 import com.klyx.core.settings.SettingsManager
@@ -31,12 +32,15 @@ import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
 import com.klyx.wasm.type.wstr
 import kotlinx.coroutines.runBlocking
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import com.klyx.wasm.type.Err as WasmErr
@@ -103,7 +107,21 @@ class Root(
     @HostFunction
     fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) = runBlocking {
         val result = try {
-            com.klyx.core.file.downloadFile(url, path)
+            Path(path).parent?.let { SystemFileSystem.createDirectories(it) }
+            com.klyx.core.file.downloadFile(
+                url = url,
+                outputPath = path,
+                onDownload = { bytesSentTotal, contentLength ->
+                    val progress = if (contentLength == null) 0f else bytesSentTotal.toFloat() / contentLength
+
+                    logger.progress((progress * 100).toInt()) {
+                        "(${bytesSentTotal.humanBytes()} / ${contentLength?.humanBytes()}) Downloading $url"
+                    }
+                },
+                onComplete = {
+                    logger.info { "" }
+                }
+            )
             WasmOk(WasmUnit)
         } catch (e: Exception) {
             WasmErr("$e".wstr)
@@ -157,10 +175,10 @@ class Root(
                     allSettings.languages[it] //?: error("Language setting not found: $it")
                 }
 
-                val s = languageSettings.map {
+                val s = languageSettings.map { settings ->
                     buildJsonObject {
-                        if (it != null) {
-                            put("tab_size", JsonPrimitive(it.tabSize))
+                        if (settings != null) {
+                            settings["tab_size"]?.let { put("tab_size", it) }
                         }
                     }.toJson()
                 }

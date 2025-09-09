@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -80,7 +79,10 @@ fun StatusBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             val logState by viewModel.currentLogState.collectAsStateWithLifecycle()
             if (logState.message != null) {
                 val message = logState.message!!
@@ -119,7 +121,6 @@ fun StatusBar(
 
                 if (message.message.isNotBlank()) {
                     Seg(
-                        modifier = Modifier.fillMaxWidth(0.4f),
                         text = message.message,
                         accent = message.level.color,
                         onClick = onLogClick

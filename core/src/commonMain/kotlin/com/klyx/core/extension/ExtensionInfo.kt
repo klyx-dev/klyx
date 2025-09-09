@@ -74,6 +74,7 @@ data class ExtensionInfo(
 data class LanguageServerConfig(
     val name: String,
     val languages: List<String> = emptyList(),
+    val language: String? = languages.firstOrNull(),
 
     @SerialName("language_ids")
     val languageIds: Map<String, String>? = null

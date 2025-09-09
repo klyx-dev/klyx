@@ -12,11 +12,11 @@ import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlin.time.Duration.Companion.minutes
 
-suspend fun downloadFile(
+suspend inline fun downloadFile(
     url: String,
     outputPath: String,
     onDownload: ProgressListener? = null,
-    onComplete: suspend () -> Unit = {}
+    noinline onComplete: suspend () -> Unit = {}
 ) {
     val sink = SystemFileSystem.sink(Path(outputPath))
 

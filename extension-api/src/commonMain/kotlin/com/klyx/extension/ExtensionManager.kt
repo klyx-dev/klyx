@@ -16,10 +16,12 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toOkioPath
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.languageIdentifiers
+import com.klyx.core.settings.AppSettings
 import com.klyx.wasm.ExperimentalWasmApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonArray
 import okio.Buffer
 import okio.FileSystem
 import okio.Path
@@ -106,15 +108,23 @@ object ExtensionManager {
     fun isExtensionAvailableForLanguage(languageName: String): Boolean {
         return loadedExtensions.any { extension ->
             extension.extension.info.languageServers.values.any { serverConfig ->
-                languageName in serverConfig.languages
+                languageName in serverConfig.languages || languageName.equals(serverConfig.language, ignoreCase = true)
             }
         }
     }
 
-    fun getLanguageServerIdForLanguage(languageName: String): String? {
+    fun getLanguageServerIdForLanguage(languageName: String, settings: AppSettings): String? {
+        settings.languages[languageName]?.let { languageSettings ->
+            (languageSettings["language_servers"] as? JsonArray)?.let { languageServers ->
+                return languageServers.firstOrNull()?.toString()
+            }
+        }
+
         return loadedExtensions.firstNotNullOfOrNull { extension ->
             extension.extension.info.languageServers.entries.firstOrNull { (_, serverConfig) ->
-                languageName in serverConfig.languages || (serverConfig.languageIds?.keys?.contains(languageName) == true)
+                languageName in serverConfig.languages ||
+                        (serverConfig.languageIds?.keys?.contains(languageName) == true) ||
+                        languageName.equals(serverConfig.language, ignoreCase = true)
             }?.key
         }
     }
@@ -122,7 +132,10 @@ object ExtensionManager {
     fun getLanguageIdForLanguage(languageName: String): String? {
         return loadedExtensions.firstNotNullOfOrNull { extension ->
             extension.extension.info.languageServers.values.firstNotNullOfOrNull { serverConfig ->
-                serverConfig.languageIds?.get(languageName) ?: if (languageName in serverConfig.languages) {
+                serverConfig.languageIds?.get(languageName) ?: if (
+                    languageName in serverConfig.languages ||
+                    languageName.equals(serverConfig.language, ignoreCase = true)
+                ) {
                     languageIdentifiers[languageName] ?: languageName.lowercase()
                 } else null
             }
@@ -132,7 +145,7 @@ object ExtensionManager {
     fun getExtensionsForLanguage(languageName: String): List<LocalExtension> {
         return loadedExtensions.filter { extension ->
             extension.extension.info.languageServers.values.any { serverConfig ->
-                languageName in serverConfig.languages
+                languageName in serverConfig.languages || languageName.equals(serverConfig.language, ignoreCase = true)
             }
         }
     }
