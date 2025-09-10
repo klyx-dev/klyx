@@ -75,6 +75,9 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.NON_PRINTABLE_CHA
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTED_TEXT_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_HANDLE
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_INSERT
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_BACKGROUND
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_TEXT_HIGHLIGHTED_PARAMETER
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_EDITING
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_INACTIVE
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.STATIC_SPAN_BACKGROUND
@@ -308,4 +311,8 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(DIAGNOSTIC_TOOLTIP_BRIEF_MSG, colorScheme.primary)
     setColor(DIAGNOSTIC_TOOLTIP_DETAILED_MSG, colorScheme.onSurface)
     setColor(DIAGNOSTIC_TOOLTIP_ACTION, colorScheme.primary)
+
+    setColor(SIGNATURE_BACKGROUND, colorScheme.surfaceColorAtElevation(2.dp))
+    setColor(SIGNATURE_TEXT_NORMAL, colorScheme.onSurface)
+    setColor(SIGNATURE_TEXT_HIGHLIGHTED_PARAMETER, colorScheme.primary)
 }

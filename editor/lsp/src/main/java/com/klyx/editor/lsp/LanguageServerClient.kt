@@ -7,6 +7,7 @@ import com.klyx.core.Notifier
 import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
+import com.klyx.editor.lsp.util.asTextDocumentIdentifier
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.internal.Command
 import com.klyx.terminal.ubuntuProcess
@@ -42,6 +43,7 @@ import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -109,6 +111,11 @@ class LanguageServerClient(
 
                 languageServer.initialized(InitializedParams())
                 serverCapabilities = result.capabilities
+
+                println(serverCapabilities.completionProvider?.triggerCharacters?.joinToString(" -- "))
+                println(serverCapabilities.completionProvider?.allCommitCharacters?.joinToString(" -- "))
+                println(serverCapabilities.signatureHelpProvider?.triggerCharacters?.joinToString(" -- "))
+                println(serverCapabilities.signatureHelpProvider?.retriggerCharacters?.joinToString(" -- "))
 
                 logger.debug { "Language Server initialized: ${result.capabilities}" }
                 Ok(result)
@@ -289,6 +296,22 @@ class LanguageServerClient(
             Ok(result)
         } catch (e: Exception) {
             Err(e.message ?: "Error executing command: $command")
+        }
+    }
+
+    suspend fun signatureHelp(uri: String, position: Position) = withContext(Dispatchers.IO) {
+        try {
+            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
+
+            val params = SignatureHelpParams().apply {
+                textDocument = uri.asTextDocumentIdentifier()
+                this.position = position
+            }
+
+            val result = languageServer.textDocumentService.signatureHelp(params).get()
+            Ok(result)
+        } catch (e: Exception) {
+            Err(e.message ?: "Error getting signature help: $uri")
         }
     }
 

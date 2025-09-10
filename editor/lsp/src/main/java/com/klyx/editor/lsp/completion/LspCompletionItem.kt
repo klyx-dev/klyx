@@ -26,8 +26,6 @@ class LspCompletionItem(
     }
 
     override fun performCompletion(editor: CodeEditor, text: Content, position: CharPosition) {
-        println(item)
-
         val edit = when {
             item.textEdit?.isLeft == true -> item.textEdit.left
             item.textEdit?.isRight == true -> {

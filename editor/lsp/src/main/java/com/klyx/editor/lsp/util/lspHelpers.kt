@@ -8,6 +8,7 @@ import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.TextRange
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextDocumentIdentifier
 import java.io.File
 import java.net.URI
 
@@ -18,6 +19,8 @@ val KxFile.uri: URI get() = File(absolutePath).toURI()
 val KxFile.uriString get() = uri.toString()
 
 val KxFile.languageId get() = ExtensionManager.getLanguageIdForLanguage(language()) ?: "invalid"
+
+fun String.asTextDocumentIdentifier() = TextDocumentIdentifier(this)
 
 fun createRange(start: Position, end: Position): Range {
     return Range(start, end)

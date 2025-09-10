@@ -9,8 +9,11 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.settings.AppSettings
 import com.klyx.editor.lsp.completion.LspCompletionItem
+import com.klyx.editor.lsp.editor.SignatureHelpWindow
+import com.klyx.editor.lsp.util.asLspPosition
 import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
+import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
 import io.github.rosemoe.sora.lang.completion.CompletionPublisher
@@ -35,10 +38,12 @@ import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.lang.ref.WeakReference
 
 class EditorLanguageServerClient(
     private val worktree: Worktree,
@@ -50,6 +55,14 @@ class EditorLanguageServerClient(
     private val applicationContext: Context by inject()
     private var serverClient: LanguageServerClient? = null
     private val capabilities get() = serverClient?.serverCapabilities
+
+    private val completionTriggers get() = capabilities?.completionProvider?.triggerCharacters.orEmpty()
+    private val signatureHelpTriggers get() = capabilities?.signatureHelpProvider?.triggerCharacters.orEmpty()
+    private val signatureHelpReTriggers get() = capabilities?.signatureHelpProvider?.retriggerCharacters.orEmpty()
+
+    private val signatureHelpWindowWeakReference = WeakReference(SignatureHelpWindow(editor))
+    val isShowSignatureHelp: Boolean
+        get() = signatureHelpWindowWeakReference.get()?.isShowing ?: false
 
     fun initialize() {
         scope.launch {
@@ -65,10 +78,40 @@ class EditorLanguageServerClient(
                 editor.subscribeAlways<ContentChangeEvent> { event ->
                     scope.launch {
                         LanguageServerManager.changeDocument(worktree, file, event.editor.text.toString())
+
+                        if (hitReTrigger(event.changedText)) {
+                            showSignatureHelp(null)
+                            return@launch
+                        }
+
+                        tryShowSignatureHelp(event.changeStart)
+                    }
+                }
+
+                editor.subscribeAlways<SelectionChangeEvent> { event ->
+                    if (hitReTrigger(event.editor.text[event.left.index].toString())) {
+                        showSignatureHelp(null)
+                        return@subscribeAlways
+                    }
+
+                    scope.launch {
+                        tryShowSignatureHelp(event.left)
                     }
                 }
             }
         }
+    }
+
+    private suspend fun tryShowSignatureHelp(position: CharPosition) {
+        LanguageServerManager
+            .signatureHelp(worktree, file, position.asLspPosition())
+            .onSuccess { signatureHelp ->
+                println(signatureHelp)
+                showSignatureHelp(signatureHelp)
+            }
+            .onFailure {
+                println("Error showing signature: $it")
+            }
     }
 
     private fun updateDiagnostics(diagnostics: List<Diagnostic>) {
@@ -98,6 +141,33 @@ class EditorLanguageServerClient(
                 editor.diagnostics = diagnosticsContainer
             }
         }
+    }
+
+    fun showSignatureHelp(signatureHelp: SignatureHelp?) {
+        val signatureHelpWindow = signatureHelpWindowWeakReference.get() ?: return
+
+        if (signatureHelp == null) {
+            editor.post { signatureHelpWindow.dismiss() }
+            return
+        }
+
+        editor.post { signatureHelpWindow.show(signatureHelp) }
+    }
+
+    fun hitReTrigger(eventText: CharSequence): Boolean {
+        for (trigger in signatureHelpReTriggers) {
+            return eventText in trigger
+        }
+
+        return false
+    }
+
+    fun hitTrigger(eventText: CharSequence): Boolean {
+        for (trigger in signatureHelpTriggers) {
+            return eventText in trigger
+        }
+
+        return false
     }
 
     private fun Position.getIndex(editor: CodeEditor): Int {
