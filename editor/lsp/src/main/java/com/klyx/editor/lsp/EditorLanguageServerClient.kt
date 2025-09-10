@@ -102,10 +102,12 @@ class EditorLanguageServerClient(
 
     private fun Position.getIndex(editor: CodeEditor): Int {
         val l = if (this.line == editor.lineCount) editor.lineCount - 1 else this.line
-        return editor.text.getCharIndex(
-            this.line,
-            editor.text.getColumnCount(l).coerceAtMost(this.character)
-        )
+        return runCatching {
+            editor.text.getCharIndex(
+                this.line,
+                editor.text.getColumnCount(l).coerceAtMost(this.character)
+            )
+        }.getOrElse { 0 }
     }
 
     private fun List<Diagnostic>.transformToEditorDiagnostics(editor: CodeEditor): List<DiagnosticRegion> {

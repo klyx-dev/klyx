@@ -2,10 +2,19 @@ package com.klyx.editor
 
 import android.content.Context
 import android.view.ViewGroup
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -14,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +32,7 @@ import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.resolveAsTypeface
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -55,6 +66,7 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTI
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTIP_BRIEF_MSG
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTIP_DETAILED_MSG
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HARD_WRAP_MARKER
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HIGHLIGHTED_DELIMITERS_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HIGHLIGHTED_DELIMITERS_FOREGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_BACKGROUND
@@ -63,6 +75,9 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.NON_PRINTABLE_CHA
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTED_TEXT_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_HANDLE
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_INSERT
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_EDITING
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_INACTIVE
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.STATIC_SPAN_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
@@ -156,42 +171,105 @@ actual fun CodeEditor(
         editor.colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
     }
 
-    AndroidView(
-        factory = {
-            editor.apply {
-                layoutParams = ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.MATCH_PARENT
-                )
+    Column {
+        AndroidView(
+            factory = {
+                editor.apply {
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
 
-                getComponent<EditorAutoCompletion>().apply {
-                    isEnabled = true
-                    setLayout(AutoCompletionLayout())
-                    setAdapter(AutoCompletionLayoutAdapter(density))
-                    setEnabledAnimation(true)
+                    getComponent<EditorAutoCompletion>().apply {
+                        isEnabled = true
+                        setLayout(AutoCompletionLayout())
+                        setAdapter(AutoCompletionLayoutAdapter(density))
+                        setEnabledAnimation(true)
+                    }
+                    getComponent<EditorDiagnosticTooltipWindow>().isEnabled = true
+
+                    colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
+                    colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
+                    setEditorLanguage(state.textMateLanguageOrEmptyLanguage)
                 }
-                getComponent<EditorDiagnosticTooltipWindow>().isEnabled = true
+            },
+            onRelease = { it.release() },
+            modifier = modifier.weight(1f),
+            update = { editor ->
+                editor.apply {
+                    setTextSize(style.fontSize.value)
+                    typefaceText = typeface
+                    typefaceLineNumber = typeface
 
-                colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
-                colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
-                setEditorLanguage(state.textMateLanguageOrEmptyLanguage)
+                    setPinLineNumber(pinLineNumber)
+                    this.editable = editable
+
+                    colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
+                }
             }
-        },
-        onRelease = { it.release() },
-        modifier = modifier,
-        update = { editor ->
-            editor.apply {
-                setTextSize(style.fontSize.value)
-                typefaceText = typeface
-                typefaceLineNumber = typeface
+        )
 
-                setPinLineNumber(pinLineNumber)
-                this.editable = editable
+        VirtualKeys(
+            editor = editor,
+            keys = remember {
+                listOf(
+                    "->" to "\t",
+                    "(" to "()",
+                    ")" to ")",
+                    "\"" to "\"\"",
+                    "{" to "{}",
+                    "}" to "}",
+                    "[" to "[]",
+                    "]" to "]",
+                    ";" to ";",
+                    "=" to "=",
+                    "+" to "+",
+                    "-" to "-",
+                    "|" to "|",
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
 
-                colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
-            }
+@Composable
+private fun VirtualKeys(
+    editor: CodeEditor,
+    keys: List<Pair<String, String>>,
+    modifier: Modifier = Modifier,
+    fontFamily: FontFamily = FontFamily.Default,
+) {
+    LazyRow(
+        modifier = modifier
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .border(Dp.Hairline, MaterialTheme.colorScheme.outline)
+            .padding(4.dp),
+        //contentPadding = PaddingValues(4.dp)
+    ) {
+        items(keys) { (display, insertText) ->
+            Text(
+                text = display,
+                fontFamily = fontFamily,
+                modifier = Modifier
+                    .clip(MaterialTheme.shapes.small)
+                    .clickable {
+                        if (editor.isEditable) {
+                            if ("\t" == insertText) {
+                                if (editor.snippetController.isInSnippet()) {
+                                    editor.snippetController.shiftToNextTabStop()
+                                } else {
+                                    editor.indentOrCommitTab()
+                                }
+                            } else {
+                                editor.insertText(insertText, 1)
+                            }
+                        }
+                    }
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            )
         }
-    )
+    }
 }
 
 private fun EditorColorScheme.setColor(type: Int, color: Color) {
@@ -214,6 +292,9 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(SELECTION_INSERT, selectionColors.handleColor)
 
     setColor(HIGHLIGHTED_DELIMITERS_FOREGROUND, colorScheme.primary)
+    setColor(HIGHLIGHTED_DELIMITERS_BACKGROUND, colorScheme.outlineVariant.copy(alpha = 0.2f))
+    setColor(SNIPPET_BACKGROUND_EDITING, colorScheme.outlineVariant.copy(alpha = 0.4f))
+    setColor(SNIPPET_BACKGROUND_INACTIVE, colorScheme.outlineVariant.copy(alpha = 0.4f))
     setColor(NON_PRINTABLE_CHAR, colorScheme.outline)
     setColor(HARD_WRAP_MARKER, colorScheme.onSurfaceVariant)
 

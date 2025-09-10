@@ -51,11 +51,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import com.klyx.core.Environment
 import com.klyx.tab.Tab
 
 private data class Gap(val leftPx: Float, val rightPx: Float)
 
+@Deprecated(
+    "Use EditorTabRow instead",
+    ReplaceWith("EditorTabRow", "com.klyx.ui.component.editor.EditorTabRow")
+)
 @Composable
 fun EditorTabBar(
     tabs: List<Tab>,
