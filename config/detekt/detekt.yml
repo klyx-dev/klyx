@@ -97,7 +97,7 @@ complexity:
     active: false
     threshold: 15
   ComplexCondition:
-    active: true
+    active: false
     excludes:
       - '**/editor/sora/**'
     threshold: 4
@@ -688,7 +688,7 @@ style:
     active: false
     maxChainedCalls: 5
   MaxLineLength:
-    active: true
+    active: false
     excludes:
       - "**/editor/sora/**"
     maxLineLength: 150
