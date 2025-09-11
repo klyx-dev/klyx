@@ -38,6 +38,7 @@ kotlin {
                 implementation(compose.runtime)
                 implementation(compose.foundation)
                 implementation(compose.material3)
+                implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
                 implementation(compose.components.uiToolingPreview)
@@ -66,6 +67,8 @@ kotlin {
 
         androidMain {
             dependencies {
+                implementation(libs.androidx.material3)
+
                 api(project.dependencies.platform(libs.sora.editor.bom))
                 api(libs.sora.editor)
                 api(projects.editor.lsp)
@@ -75,7 +78,7 @@ kotlin {
                 implementation(libs.lsp4j)
                 implementation(libs.lsp4j.jsonrpc)
 
-                implementation(libs.ktreesitter)
+                //implementation(libs.ktreesitter)
             }
         }
     }

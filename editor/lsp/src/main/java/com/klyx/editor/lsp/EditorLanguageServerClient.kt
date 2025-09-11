@@ -5,6 +5,7 @@ import android.os.Bundle
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
+import com.github.michaelbull.result.runCatching
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger
@@ -249,20 +250,22 @@ class EditorLanguageServerClient(
     }
 
     fun applyTextEdits(edits: List<TextEdit>, content: Content) {
-        edits.forEach { textEdit ->
-            val range = textEdit.range
-            val text = textEdit.newText
-            var startIndex = content.getCharIndex(range.start.line, range.start.character)
-            val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
-            var endIndex = content.getCharIndex(endLine, range.end.character)
+        runCatching {
+            edits.forEach { textEdit ->
+                val range = textEdit.range
+                val text = textEdit.newText
+                var startIndex = content.getCharIndex(range.start.line, range.start.character)
+                val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
+                var endIndex = content.getCharIndex(endLine, range.end.character)
 
-            if (endIndex < startIndex) {
-                logger().warn { "Invalid edit: start=$startIndex end=$endIndex" }
-                val diff = startIndex - endIndex
-                endIndex = startIndex
-                startIndex = endIndex - diff
+                if (endIndex < startIndex) {
+                    logger().warn { "Invalid edit: start=$startIndex end=$endIndex" }
+                    val diff = startIndex - endIndex
+                    endIndex = startIndex
+                    startIndex = endIndex - diff
+                }
+                content.replace(startIndex, endIndex, text)
             }
-            content.replace(startIndex, endIndex, text)
         }
     }
 

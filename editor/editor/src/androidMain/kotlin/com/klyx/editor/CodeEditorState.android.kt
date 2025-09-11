@@ -11,7 +11,6 @@ import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.event.SubscriptionReceipt
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.text.Content
-import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.subscribeAlways
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,9 +24,9 @@ actual class CodeEditorState actual constructor(
     actual val file: KxFile,
     actual val project: KxFile?
 ) {
-    private val subscriptions = mutableListOf<(CodeEditor) -> Unit>()
+    private val subscriptions = mutableListOf<(KlyxEditor) -> Unit>()
 
-    var editor: CodeEditor? = null
+    var editor: KlyxEditor? = null
         set(value) {
             field = value
             if (value != null) {
@@ -60,7 +59,7 @@ actual class CodeEditorState actual constructor(
     }
 
     @PublishedApi
-    internal fun addSubscription(attach: (CodeEditor) -> Unit) {
+    internal fun addSubscription(attach: (KlyxEditor) -> Unit) {
         subscriptions += attach
         editor?.let { attach(it) }
     }

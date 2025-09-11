@@ -1,7 +1,6 @@
 package com.klyx.editor
 
 import android.content.Context
-import android.view.ViewGroup
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,15 +20,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.resolveAsTypeface
@@ -39,24 +39,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
-import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.command
-import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
-import com.klyx.editor.completion.AutoCompletionLayout
-import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.EditorLanguageServerClient
+import com.klyx.editor.textaction.TextActionWindow
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.parentAsWorktreeOrSelf
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.CodeEditor
-import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
-import io.github.rosemoe.sora.widget.component.EditorDiagnosticTooltipWindow
-import io.github.rosemoe.sora.widget.getComponent
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMMENT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_BACKGROUND
@@ -84,6 +77,8 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_TEXT_HI
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_EDITING
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_INACTIVE
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_BACKGROUND
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
@@ -93,11 +88,11 @@ import kotlinx.coroutines.launch
 private fun setCodeEditorFactory(
     context: Context,
     state: CodeEditorState
-): CodeEditor {
-    val editor = CodeEditor(context)
+) = run {
+    val editor = KlyxEditor(context)
     editor.setText(state.content)
     state.editor = editor
-    return editor
+    editor
 }
 
 private val logger = logger("CodeEditor")
@@ -131,7 +126,10 @@ actual fun CodeEditor(
     val typeface by fontFamilyResolver.resolveAsTypeface(style.fontFamily)
 
     val context = LocalContext.current
+    val view = LocalView.current
     val density = LocalDensity.current
+    val compositionContext = rememberCompositionContext()
+
     val editor = remember(state) {
         setCodeEditorFactory(context, state)
     }
@@ -181,19 +179,7 @@ actual fun CodeEditor(
         AndroidView(
             factory = {
                 editor.apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-
-                    getComponent<EditorAutoCompletion>().apply {
-                        isEnabled = true
-                        setLayout(AutoCompletionLayout())
-                        setAdapter(AutoCompletionLayoutAdapter(density))
-                        setEnabledAnimation(true)
-                    }
-                    getComponent<EditorDiagnosticTooltipWindow>().isEnabled = true
-
+                    setTextActionWindow(TextActionWindow(this, view, compositionContext))
                     colorScheme = TextMateColorScheme.create(ThemeRegistry.getInstance())
                     colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
                     setEditorLanguage(state.textMateLanguageOrEmptyLanguage)
@@ -228,6 +214,7 @@ actual fun CodeEditor(
                     "[" to "[]",
                     "]" to "]",
                     ";" to ";",
+                    ":" to ":",
                     "=" to "=",
                     "+" to "+",
                     "-" to "-",
@@ -318,4 +305,7 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(SIGNATURE_BACKGROUND, colorScheme.surfaceColorAtElevation(2.dp))
     setColor(SIGNATURE_TEXT_NORMAL, colorScheme.onSurface)
     setColor(SIGNATURE_TEXT_HIGHLIGHTED_PARAMETER, colorScheme.primary)
+
+    setColor(TEXT_ACTION_WINDOW_BACKGROUND, colorScheme.surfaceColorAtElevation(3.dp))
+    setColor(TEXT_ACTION_WINDOW_ICON_COLOR, colorScheme.onSurface)
 }
