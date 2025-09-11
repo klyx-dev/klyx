@@ -30,7 +30,7 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 - [ ] Undo/Redo
 - [ ] Hover Information
 - [ ] Go to Definition
-- [ ] Document Formatting
+- [x] Document Formatting
 - [ ] Git Integration
 
 ## Screenshots
