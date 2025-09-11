@@ -7,6 +7,7 @@ import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
+import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
 import com.klyx.editor.lsp.completion.LspCompletionItem
 import com.klyx.editor.lsp.editor.SignatureHelpWindow
@@ -24,8 +25,8 @@ import io.github.rosemoe.sora.lang.diagnostic.Quickfix
 import io.github.rosemoe.sora.lang.format.Formatter
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler
 import io.github.rosemoe.sora.text.CharPosition
+import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.ContentReference
-import io.github.rosemoe.sora.util.ArrayList
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.subscribeAlways
@@ -46,10 +47,10 @@ import org.koin.core.component.inject
 import java.lang.ref.WeakReference
 
 class EditorLanguageServerClient(
-    private val worktree: Worktree,
-    private val file: KxFile,
-    private val editor: CodeEditor,
-    private val scope: CoroutineScope,
+    val worktree: Worktree,
+    val file: KxFile,
+    val editor: CodeEditor,
+    val scope: CoroutineScope,
     private val settings: AppSettings
 ) : KoinComponent {
     private val applicationContext: Context by inject()
@@ -106,7 +107,6 @@ class EditorLanguageServerClient(
         LanguageServerManager
             .signatureHelp(worktree, file, position.asLspPosition())
             .onSuccess { signatureHelp ->
-                println(signatureHelp)
                 showSignatureHelp(signatureHelp)
             }
             .onFailure {
@@ -180,24 +180,6 @@ class EditorLanguageServerClient(
         }.getOrElse { 0 }
     }
 
-    private fun List<Diagnostic>.transformToEditorDiagnostics(editor: CodeEditor): List<DiagnosticRegion> {
-        val result = ArrayList<DiagnosticRegion>()
-        var id = 0L
-        for (diagnosticSource in this) {
-            val diagnostic = DiagnosticRegion(
-                diagnosticSource.range.start.getIndex(editor),
-                diagnosticSource.range.end.getIndex(editor),
-                diagnosticSource.severity.toEditorLevel(),
-                id++,
-                DiagnosticDetail(
-                    diagnosticSource.severity.name, diagnosticSource.message, null, null
-                )
-            )
-            result.add(diagnostic)
-        }
-        return result
-    }
-
     private fun DiagnosticSeverity.toEditorLevel(): Short {
         return when (this) {
             DiagnosticSeverity.Hint, DiagnosticSeverity.Information -> DiagnosticRegion.SEVERITY_TYPO
@@ -210,8 +192,6 @@ class EditorLanguageServerClient(
         val result = LanguageServerManager
             .requestQuickFixes(worktree, file, diagnostic)
             .getOrElse { return emptyList() }
-
-        println(result)
 
         return result.mapNotNull { either ->
             when {
@@ -265,6 +245,24 @@ class EditorLanguageServerClient(
 
                 text.replace(startIdx, endIdx, te.newText)
             }
+        }
+    }
+
+    fun applyTextEdits(edits: List<TextEdit>, content: Content) {
+        edits.forEach { textEdit ->
+            val range = textEdit.range
+            val text = textEdit.newText
+            var startIndex = content.getCharIndex(range.start.line, range.start.character)
+            val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
+            var endIndex = content.getCharIndex(endLine, range.end.character)
+
+            if (endIndex < startIndex) {
+                logger().warn { "Invalid edit: start=$startIndex end=$endIndex" }
+                val diff = startIndex - endIndex
+                endIndex = startIndex
+                startIndex = endIndex - diff
+            }
+            content.replace(startIndex, endIndex, text)
         }
     }
 
@@ -334,7 +332,7 @@ class EditorLanguageServerClient(
         }
 
         override fun getFormatter(): Formatter {
-            return wrapperLanguage.formatter
+            return LspFormatter(this@EditorLanguageServerClient)
         }
 
         override fun getSymbolPairs(): SymbolPairMatch? {

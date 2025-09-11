@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
@@ -38,6 +39,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
+import com.klyx.core.cmd.CommandManager
+import com.klyx.core.cmd.command
+import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.LocalIsDarkMode
@@ -80,7 +84,6 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_TEXT_HI
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SIGNATURE_TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_EDITING
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_INACTIVE
-import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.STATIC_SPAN_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers

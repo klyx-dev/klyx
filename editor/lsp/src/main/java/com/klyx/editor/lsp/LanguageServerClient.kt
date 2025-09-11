@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
+import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.InitializedParams
@@ -41,6 +42,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.SignatureHelpParams
@@ -265,10 +267,32 @@ class LanguageServerClient(
 
             val result = languageServer.textDocumentService.formatting(params).get()
             //logger.debug { "Formatting result: $result" }
-            Ok(result)
+            Ok(result.orEmpty())
         } catch (e: Exception) {
             // logger.error(e) { "Error formatting document: $uri" }
             Err(e.message ?: "Error formatting document: $uri")
+        }
+    }
+
+    suspend fun formatDocumentRange(
+        uri: String,
+        range: Range,
+        tabSize: Int = 4,
+        insertSpaces: Boolean = true
+    ) = withContext(Dispatchers.IO) {
+        try {
+            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
+
+            val params = DocumentRangeFormattingParams(
+                uri.asTextDocumentIdentifier(),
+                FormattingOptions(tabSize, insertSpaces),
+                range
+            )
+
+            val result = languageServer.textDocumentService.rangeFormatting(params).get()
+            Ok(result.orEmpty())
+        } catch (e: Exception) {
+            Err(e.message ?: "Error range formatting document: $uri")
         }
     }
 

@@ -20,6 +20,7 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.services.LanguageServer
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.atomic.AtomicInteger
@@ -157,6 +158,16 @@ object LanguageServerManager {
     suspend fun signatureHelp(worktree: Worktree, file: KxFile, position: Position) = run {
         val client = client(worktree, file.languageId)
         client.signatureHelp(file.uriString, position)
+    }
+
+    suspend fun formatDocument(worktree: Worktree, file: KxFile) = run {
+        val client = client(worktree, file.languageId)
+        client.formatDocument(file.uriString)
+    }
+
+    suspend fun formatDocumentRange(worktree: Worktree, file: KxFile, range: Range) = run {
+        val client = client(worktree, file.languageId)
+        client.formatDocumentRange(file.uriString, range)
     }
 
     private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {
