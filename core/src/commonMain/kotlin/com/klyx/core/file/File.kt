@@ -6,6 +6,13 @@ import io.github.vinceglb.filekit.readBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
+import okio.FileSystem
+import okio.Path
+import okio.Path.Companion.toPath
+import okio.SYSTEM
+import okio.buffer
+import okio.openZip
+import okio.use
 
 typealias FileId = String
 
@@ -82,4 +89,27 @@ fun Long.humanBytes(): String {
         else -> "%.2f"
     }
     return rounded.format(v) + " " + units[u]
+}
+
+suspend fun unzip(zipPath: Path, destDir: Path) = withContext(Dispatchers.IO) {
+    val fs = FileSystem.SYSTEM
+    fs.createDirectories(destDir)
+
+    fs.openZip(zipPath).use { zipFs ->
+        for (entry in zipFs.listRecursively("/".toPath())) {
+            val target = destDir / entry.toString().removePrefix("/")
+            val metadata = zipFs.metadataOrNull(entry)
+
+            if (metadata?.isDirectory == true) {
+                fs.createDirectories(target)
+            } else {
+                fs.createDirectories(target.parent!!)
+                zipFs.source(entry).use { input ->
+                    fs.sink(target).use { output ->
+                        input.buffer().readAll(output)
+                    }
+                }
+            }
+        }
+    }
 }

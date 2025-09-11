@@ -61,6 +61,7 @@ import org.eclipse.lsp4j.services.LanguageServer
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.util.concurrent.CompletableFuture
+import kotlin.concurrent.thread
 
 class LanguageServerClient(
     private val logger: KxLogger = logger("LanguageServerClient")
@@ -93,6 +94,12 @@ class LanguageServerClient(
                 val (cmd, args, env) = serverCommand
                 val builder = ubuntuProcess(cmd, *args.toTypedArray()) { env { putAll(env) } }
                 process = builder.asJavaProcessBuilder().start()
+
+                thread {
+                    process.errorStream.bufferedReader().forEachLine {
+                        logger.error { it.ifEmpty { "-----------------" } }
+                    }
+                }
 
                 val launcher = Launcher.createLauncher(
                     this@LanguageServerClient,

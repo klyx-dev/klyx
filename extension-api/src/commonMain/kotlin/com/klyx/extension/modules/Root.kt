@@ -37,10 +37,9 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.put
+import okio.Path.Companion.toPath
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import com.klyx.wasm.type.Err as WasmErr
@@ -122,6 +121,17 @@ class Root(
                     logger.info { "" }
                 }
             )
+            WasmOk(WasmUnit)
+        } catch (e: Exception) {
+            WasmErr("$e".wstr)
+        }
+        write(resultPtr, result.toBuffer())
+    }
+
+    @HostFunction
+    fun WasmMemory.unzipFile(zipPath: String, destPath: String, resultPtr: Int) = runBlocking {
+        val result = try {
+            com.klyx.core.file.unzip(zipPath.toPath(), destPath.toPath())
             WasmOk(WasmUnit)
         } catch (e: Exception) {
             WasmErr("$e".wstr)
