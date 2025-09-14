@@ -194,14 +194,16 @@ jobs:
           
           CHANGELOG="${CHANGELOG}**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
           
+          echo "previous-tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+          
           {
-            echo 'changelog<<EOF'
-            echo -e "$CHANGELOG"
-            echo EOF
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
           } >> $GITHUB_OUTPUT
           
           echo "Generated changelog:"
-          echo -e "$CHANGELOG"
+          echo "$CHANGELOG"
 
   create-release:
     name: Create Release
