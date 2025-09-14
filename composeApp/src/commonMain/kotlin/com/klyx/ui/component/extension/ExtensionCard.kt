@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
@@ -24,10 +23,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.klyx.core.extension.ExtensionInfo
+import com.klyx.extension.ExtensionManager
+import com.klyx.res.Res
+import com.klyx.res.installed
+import com.klyx.res.update_available
 import com.klyx.ui.theme.DefaultKlyxShape
+import io.github.z4kn4fein.semver.toVersion
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExtensionCard(
@@ -36,6 +40,12 @@ fun ExtensionCard(
     isInstalled: Boolean = false,
     onClick: () -> Unit = {}
 ) {
+    val installedExt = ExtensionManager.findInstalledExtension(extension.id)
+    val installedVersion = installedExt?.info?.version?.toVersion()
+    val remoteVersion = extension.version.toVersion()
+
+    val updateAvailable = installedVersion != null && remoteVersion > installedVersion
+
     Card(
         modifier = modifier,
         shape = DefaultKlyxShape,
@@ -105,7 +115,13 @@ fun ExtensionCard(
                     contentAlignment = Alignment.TopEnd
                 ) {
                     Text(
-                        text = "Installed",
+                        text = stringResource(
+                            if (updateAvailable) {
+                                Res.string.update_available
+                            } else {
+                                Res.string.installed
+                            }
+                        ),
                         color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelSmall
                     )

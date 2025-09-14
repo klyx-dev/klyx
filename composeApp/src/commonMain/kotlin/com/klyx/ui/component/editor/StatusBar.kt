@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cached
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
@@ -101,7 +102,7 @@ fun StatusBar(
                     )
 
                     Icon(
-                        imageVector = Icons.Default.Sync,
+                        imageVector = Icons.Default.Cached,
                         contentDescription = null,
                         modifier = Modifier
                             .size(16.dp)
