@@ -23,8 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Cached
-import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -93,7 +92,7 @@ fun StatusBar(
 
                     val rotation by infiniteTransition.animateFloat(
                         initialValue = 0f,
-                        targetValue = -360f,
+                        targetValue = 360f,
                         animationSpec = infiniteRepeatable(
                             animation = tween(durationMillis = 1300, easing = LinearEasing),
                             repeatMode = RepeatMode.Restart
@@ -102,7 +101,7 @@ fun StatusBar(
                     )
 
                     Icon(
-                        imageVector = Icons.Default.Cached,
+                        imageVector = Icons.Default.Autorenew,
                         contentDescription = null,
                         modifier = Modifier
                             .size(16.dp)
