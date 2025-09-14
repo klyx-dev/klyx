@@ -71,4 +71,5 @@ By clicking "I Agree", you accept full responsibility for using Klyx under these
     <string name="exit">Exit</string>
 
     <string name="extension_disclaimer">Make sure to carefully read the README files or documentation of those extensions before adding them to your setup.</string>
+    <string name="update">Update</string>
 </resources>

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -24,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -58,7 +58,9 @@ import com.klyx.res.action_uninstall
 import com.klyx.res.extension_install_failed
 import com.klyx.res.extension_install_success
 import com.klyx.res.extension_uninstall_restart_prompt
+import com.klyx.res.update
 import com.klyx.ui.theme.DefaultKlyxShape
+import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.stringResource
@@ -141,10 +143,16 @@ class ExtensionDetailScreen(private val extensionInfoJson: String) : Screen {
                 Row {
                     val isInstalled = extensionInfo in installedExtensions.map { it.info }
 
+                    val installedExt = ExtensionManager.findInstalledExtension(extensionInfo.id)
+                    val installedVersion = installedExt?.info?.version?.toVersion()
+                    val remoteVersion = extensionInfo.version.toVersion()
+
+                    val updateAvailable = installedVersion != null && remoteVersion > installedVersion
+
                     if ((isDevExtension && isInstalled) || !isDevExtension) {
                         Button(
                             onClick = {
-                                if (isInstalled) {
+                                if (isInstalled && !updateAvailable) {
                                     ExtensionManager.uninstallExtension(extensionInfo)
                                     notifier.notify(string(string.extension_uninstall_restart_prompt))
                                     navigator.pop()
@@ -158,7 +166,7 @@ class ExtensionDetailScreen(private val extensionInfoJson: String) : Screen {
                                 }
                             },
                             shape = DefaultKlyxShape,
-                            colors = if (isInstalled) {
+                            colors = if (isInstalled && !updateAvailable) {
                                 ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.error,
                                     contentColor = MaterialTheme.colorScheme.onError
@@ -175,7 +183,15 @@ class ExtensionDetailScreen(private val extensionInfoJson: String) : Screen {
                                 )
                             } else {
                                 Icon(
-                                    if (isInstalled) Icons.Outlined.Delete else Icons.Outlined.Download,
+                                    if (isInstalled) {
+                                        if (updateAvailable) {
+                                            Icons.Outlined.Update
+                                        } else {
+                                            Icons.Outlined.Delete
+                                        }
+                                    } else {
+                                        Icons.Outlined.Download
+                                    },
                                     modifier = Modifier.size(14.dp),
                                     contentDescription = null,
                                 )
@@ -183,7 +199,19 @@ class ExtensionDetailScreen(private val extensionInfoJson: String) : Screen {
 
                             Spacer(modifier = Modifier.width(4.dp))
 
-                            Text(stringResource(if (isInstalled) string.action_uninstall else string.action_install))
+                            Text(
+                                stringResource(
+                                    if (isInstalled) {
+                                        if (updateAvailable) {
+                                            string.update
+                                        } else {
+                                            string.action_uninstall
+                                        }
+                                    } else {
+                                        string.action_install
+                                    }
+                                )
+                            )
                         }
 
                         Spacer(modifier = Modifier.width(8.dp))

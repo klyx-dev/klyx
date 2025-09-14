@@ -94,6 +94,8 @@ kotlin {
 
             implementation(libs.multiplatform.settings.no.arg)
 
+            implementation(libs.semver)
+
             implementation(projects.shared)
             implementation(projects.core)
             implementation(projects.editor.editor)
