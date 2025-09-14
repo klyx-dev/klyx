@@ -50,6 +50,7 @@ kotlin {
         androidMain {
             dependencies {
                 implementation(libs.material)
+                implementation(libs.commons.compress)
 
                 implementation(projects.terminal.terminalEmulator)
                 implementation(projects.terminal.terminalView)

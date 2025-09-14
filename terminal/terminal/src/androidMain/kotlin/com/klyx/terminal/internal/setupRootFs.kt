@@ -3,13 +3,16 @@ package com.klyx.terminal.internal
 import android.content.Context
 import com.klyx.core.file.downloadFile
 import com.klyx.core.logging.logger
-import com.klyx.core.process
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
 import com.klyx.terminal.ubuntuDir
 import io.ktor.client.content.ProgressListener
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
 
 val ubuntuRootFsUrl = when (PREFERRED_ABI) {
@@ -93,9 +96,36 @@ suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {
 suspend fun extractTarGz(
     inputPath: String,
     outputPath: String
-) = process(arrayOf("tar", "-xzf", inputPath, "-C", outputPath)) {
-    val logger = logger("ExtractTarGz")
+) = withContext(Dispatchers.IO) {
+    val tarGz = File(inputPath)
+    val dest = File(outputPath)
 
-    onError(logger::error)
-    onOutput(logger::info)
-}.execute().success
+    try {
+        dest.mkdirs()
+        tarGz.inputStream().use { fis ->
+            GzipCompressorInputStream(fis).use { gis ->
+                TarArchiveInputStream(gis).use { tis ->
+                    var entry = tis.nextEntry
+                    while (entry != null) {
+                        val outputFile = File(dest, entry.name)
+
+                        if (entry.isDirectory) {
+                            outputFile.mkdirs()
+                        } else {
+                            outputFile.parentFile?.mkdirs()
+                            outputFile.outputStream().use { fos ->
+                                tis.copyTo(fos)
+                            }
+                        }
+
+                        entry = tis.nextEntry
+                    }
+                }
+            }
+        }
+        true
+    } catch (err: Throwable) {
+        logger.error(err) { err.message ?: "Tar extraction failed" }
+        false
+    }
+}
