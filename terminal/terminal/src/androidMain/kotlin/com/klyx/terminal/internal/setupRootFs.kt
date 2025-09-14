@@ -1,6 +1,7 @@
 package com.klyx.terminal.internal
 
 import android.content.Context
+import android.system.Os
 import com.klyx.core.file.downloadFile
 import com.klyx.core.logging.logger
 import com.klyx.terminal.klyxBinDir
@@ -11,9 +12,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
+import java.io.FileNotFoundException
 
 val ubuntuRootFsUrl = when (PREFERRED_ABI) {
     "arm64-v8a" -> "https://cdimage.ubuntu.com/ubuntu-base/releases/plucky/release/ubuntu-base-25.04-base-arm64.tar.gz"
@@ -100,26 +103,46 @@ suspend fun extractTarGz(
     val tarGz = File(inputPath)
     val dest = File(outputPath)
 
+    val canonicalOutputDir = dest.canonicalFile
+    if (!tarGz.exists()) throw FileNotFoundException("File not found: ${tarGz.path}")
+
     try {
         dest.mkdirs()
-        tarGz.inputStream().use { fis ->
-            GzipCompressorInputStream(fis).use { gis ->
-                TarArchiveInputStream(gis).use { tis ->
-                    var entry = tis.nextEntry
-                    while (entry != null) {
-                        val outputFile = File(dest, entry.name)
+        GzipCompressorInputStream(tarGz.inputStream().buffered()).use { gzIn ->
+            TarArchiveInputStream(gzIn).use { tarIn ->
+                generateSequence { tarIn.nextEntry }.forEach { entry ->
+                    val tarEntry = entry
+                    val outputFile = File(dest, tarEntry.name).canonicalFile
 
-                        if (entry.isDirectory) {
+                    if (!outputFile.toPath().startsWith(canonicalOutputDir.toPath())) {
+                        throw SecurityException("Zip Slip vulnerability detected! Malicious entry: ${tarEntry.name}")
+                    }
+
+                    when {
+                        tarEntry.isDirectory -> {
                             outputFile.mkdirs()
-                        } else {
-                            outputFile.parentFile?.mkdirs()
-                            outputFile.outputStream().use { fos ->
-                                tis.copyTo(fos)
+                        }
+
+                        tarEntry.isSymbolicLink -> {
+                            try {
+                                Os.symlink(tarEntry.linkName, outputFile.absolutePath)
+                            } catch (_: Exception) {
+                                outputFile.parentFile?.mkdirs()
+                                outputFile.outputStream().use { fos ->
+                                    tarIn.copyTo(fos)
+                                }
                             }
                         }
 
-                        entry = tis.nextEntry
+                        else -> {
+                            outputFile.parentFile?.mkdirs()
+                            outputFile.outputStream().use { fos ->
+                                tarIn.copyTo(fos)
+                            }
+                        }
                     }
+
+                    restorePermissions(outputFile, tarEntry)
                 }
             }
         }
@@ -127,5 +150,29 @@ suspend fun extractTarGz(
     } catch (err: Throwable) {
         logger.error(err) { err.message ?: "Tar extraction failed" }
         false
+    }
+}
+
+private fun restorePermissions(file: File, entry: TarArchiveEntry) {
+    val mode = entry.mode
+
+    file.setReadable((mode and 0b100_000_000) != 0, true)
+    file.setWritable((mode and 0b010_000_000) != 0, true)
+    file.setExecutable((mode and 0b001_000_000) != 0, true)
+
+    file.setReadable((mode and 0b100_000) != 0, false)
+    file.setWritable((mode and 0b010_000) != 0, false)
+    file.setExecutable((mode and 0b001_000) != 0, false)
+
+    file.setReadable((mode and 0b100) != 0, false)
+    file.setWritable((mode and 0b010) != 0, false)
+    file.setExecutable((mode and 0b001) != 0, false)
+
+    file.setLastModified(entry.modTime.time)
+
+    try {
+        Os.chmod(file.absolutePath, mode)
+    } catch (_: Exception) {
+        // ignore
     }
 }
