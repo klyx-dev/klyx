@@ -79,7 +79,7 @@ class TerminalDocumentsProvider : DocumentsProvider() {
             add(Root.COLUMN_TITLE, Environment.AppName)
             add(Root.COLUMN_SUMMARY, null)
             add(Root.COLUMN_DOCUMENT_ID, SAFUtils.ROOT_DOCUMENT_ID)
-            add(Root.COLUMN_AVAILABLE_BYTES, home!!.freeSpace)
+            home?.let { add(Root.COLUMN_AVAILABLE_BYTES, it.freeSpace) }
         }
 
         return result

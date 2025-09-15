@@ -17,10 +17,10 @@ inline fun <T> WasmMemory.readOption(
     readSome: WasmMemory.(offset: Int) -> T
 ): Option<T> {
     val tag = uint32(pointer)
-    return if (tag == 0u) {
-        None
-    } else {
+    return if (tag == 1u) {
         Some(readSome(pointer + 4))
+    } else {
+        None
     }
 }
 

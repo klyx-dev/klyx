@@ -22,6 +22,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonPrimitive
 import okio.Buffer
 import okio.FileSystem
 import okio.Path
@@ -116,7 +118,7 @@ object ExtensionManager {
     fun getLanguageServerIdForLanguage(languageName: String, settings: AppSettings): String? {
         settings.languages[languageName]?.let { languageSettings ->
             (languageSettings["language_servers"] as? JsonArray)?.let { languageServers ->
-                return languageServers.firstOrNull()?.toString()
+                return runCatching { languageServers.firstOrNull()?.jsonPrimitive?.contentOrNull }.getOrNull()
             }
         }
 
