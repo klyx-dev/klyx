@@ -39,7 +39,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -61,6 +60,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
 
 class EditorLanguageServerClient(
@@ -84,12 +84,9 @@ class EditorLanguageServerClient(
 
     private val cacheMutex = Mutex()
 
-    private var signatureHelpWindow: SignatureHelpWindow? = null
+    private val signatureHelpWindowWeakReference = WeakReference(SignatureHelpWindow(editor))
 
-    private var documentChangeJob: Job? = null
-    private var signatureHelpJob: Job? = null
     private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1)
-    private val completionChannel = Channel<CompletionRequest>(Channel.UNLIMITED)
 
     private var lastSignaturePosition: CharPosition? = null
     private var lastDiagnosticsHash = AtomicInteger(0)
@@ -106,7 +103,6 @@ class EditorLanguageServerClient(
     )
 
     fun initialize() {
-        signatureHelpWindow = SignatureHelpWindow(editor)
         setupFlows()
 
         scope.launch {
@@ -138,20 +134,13 @@ class EditorLanguageServerClient(
             }
             .debounce(100)
             .flowOn(Dispatchers.Default)
-            .onEach { diagnostics -> updateDiagnosticsOptimized(diagnostics) }
+            .onEach { diagnostics -> updateDiagnostics(diagnostics) }
             .launchIn(scope)
-
-        scope.launch {
-            for (request in completionChannel) {
-                processCompletionRequest(request)
-            }
-        }
     }
 
     private fun setupEventSubscriptions() {
         editor.subscribeAlways<ContentChangeEvent> { event ->
-            documentChangeJob?.cancel()
-            documentChangeJob = scope.launch {
+            scope.launch {
                 delay(200)
 
                 LanguageServerManager.changeDocument(
@@ -166,30 +155,19 @@ class EditorLanguageServerClient(
                     return@launch
                 }
 
-                tryShowSignatureHelpDebounced(event.changeStart)
+                tryShowSignatureHelp(event.changeStart)
             }
         }
 
         editor.subscribeAlways<SelectionChangeEvent> { event ->
             val position = event.left
 
-            if (position == lastSignaturePosition) return@subscribeAlways
-            lastSignaturePosition = position
-
             if (hitReTrigger(event.editor.text[position.index].toString())) {
                 showSignatureHelp(null)
                 return@subscribeAlways
             }
 
-            tryShowSignatureHelpDebounced(position)
-        }
-    }
-
-    private fun tryShowSignatureHelpDebounced(position: CharPosition) {
-        signatureHelpJob?.cancel()
-        signatureHelpJob = scope.launch {
-            delay(150)
-            tryShowSignatureHelp(position)
+            scope.launch { tryShowSignatureHelp(position) }
         }
     }
 
@@ -204,7 +182,7 @@ class EditorLanguageServerClient(
             }
     }
 
-    private suspend fun updateDiagnosticsOptimized(diagnostics: List<Diagnostic>) {
+    private suspend fun updateDiagnostics(diagnostics: List<Diagnostic>) {
         val diagnosticsHash = diagnostics.hashCode()
         if (diagnosticsHash == lastDiagnosticsHash.get()) return
         lastDiagnosticsHash.set(diagnosticsHash)
@@ -251,16 +229,15 @@ class EditorLanguageServerClient(
     }
 
     fun showSignatureHelp(signatureHelp: SignatureHelp?) {
-        val window = signatureHelpWindow ?: return
+        println(signatureHelp)
+        val signatureHelpWindow = signatureHelpWindowWeakReference.get() ?: return
 
         if (signatureHelp == null) {
-            if (window.isShowing) {
-                editor.post { window.dismiss() }
-            }
+            editor.post { signatureHelpWindow.dismiss() }
             return
         }
 
-        editor.post { window.show(signatureHelp) }
+        editor.post { signatureHelpWindow.show(signatureHelp) }
     }
 
     fun hitReTrigger(eventText: CharSequence): Boolean {
@@ -419,8 +396,8 @@ class EditorLanguageServerClient(
                 }
 
                 val sortedItems = items.sortedWith { a, b ->
-                    val startsWithA = a.label.toString().startsWith(prefix, ignoreCase = true)
-                    val startsWithB = b.label.toString().startsWith(prefix, ignoreCase = true)
+                    val startsWithA = a.label.toString().startsWith(prefix)
+                    val startsWithB = b.label.toString().startsWith(prefix)
 
                     when {
                         startsWithA && !startsWithB -> -1
@@ -470,7 +447,7 @@ class EditorLanguageServerClient(
             extraArguments: Bundle
         ) {
             val request = CompletionRequest(content, position, publisher, extraArguments)
-            completionChannel.trySend(request)
+            runBlocking { processCompletionRequest(request) }
         }
 
         override fun getIndentAdvance(
@@ -518,12 +495,8 @@ class EditorLanguageServerClient(
     }
 
     fun dispose() {
-        documentChangeJob?.cancel()
-        signatureHelpJob?.cancel()
-        signatureHelpWindow?.dismiss()
-        signatureHelpWindow = null
-
-        completionChannel.cancel()
+        signatureHelpWindowWeakReference.get()?.dismiss()
+        signatureHelpWindowWeakReference.clear()
 
         scope.cancel()
 

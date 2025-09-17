@@ -83,7 +83,6 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDO
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 @ExperimentalCodeEditorApi
 private fun setCodeEditorFactory(
@@ -155,26 +154,6 @@ actual fun CodeEditor(
         }
 
         onDispose { client.dispose() }
-    }
-
-    LaunchedEffect(state.editor) {
-        scope.launch {
-            if (state.editor != null) {
-                try {
-                    val client = EditorLanguageServerClient(
-                        worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
-                        file = state.file,
-                        editor = state.editor!!,
-                        scope = scope,
-                        settings = appSettings
-                    )
-
-                    client.initialize()
-                } catch (err: Throwable) {
-                    logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
-                }
-            }
-        }
     }
 
     LaunchedEffect(state.content) {
