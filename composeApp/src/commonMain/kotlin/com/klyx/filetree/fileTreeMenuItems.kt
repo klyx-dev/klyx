@@ -24,6 +24,7 @@ fun rememberFileTreeMenuItems(
     onCopy: () -> Unit = {},
     onCut: () -> Unit = {},
     onPaste: () -> Unit = {},
+    onRefresh: () -> Unit = {},
 ): List<MenuItem> {
     val scope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
@@ -32,6 +33,14 @@ fun rememberFileTreeMenuItems(
     return remember {
         menu {
             group("filetree") {
+                item("Refresh") {
+                    onClick {
+                        onRefresh()
+                    }
+                }
+
+                divider()
+
                 item("New File") {
                     onClick {
                         onNewDocument(false)

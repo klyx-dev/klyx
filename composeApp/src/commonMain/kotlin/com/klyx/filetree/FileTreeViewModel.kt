@@ -14,6 +14,7 @@ import com.klyx.core.file.toOkioPath
 import com.klyx.extension.api.Worktree
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -34,6 +35,9 @@ class FileTreeViewModel(
 
     private val _clipboard = MutableStateFlow<ClipboardState?>(null)
     val clipboard = _clipboard.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
 
     var selectedNode by mutableStateOf<FileTreeNode?>(null)
 
@@ -85,7 +89,6 @@ class FileTreeViewModel(
                 notifier.toast(e.message ?: "Failed to paste")
                 false
             }
-            //renameNode(node, targetNode.file.resolve(node.name))
         } else {
             try {
                 val success = newFile.createNewFile()
@@ -172,14 +175,14 @@ class FileTreeViewModel(
         loadingNodes.remove(node.file.absolutePath)
     }
 
-    fun loadChildren(parent: FileTreeNode) {
+    fun loadChildren(parent: FileTreeNode, force: Boolean = false) {
         val parentPath = parent.file.absolutePath
-        addLoadingNode(parent)
 
-        if (childrenNodeCache.containsKey(parentPath)) {
-            removeLoadingNode(parent)
+        if (!force && childrenNodeCache.containsKey(parentPath)) {
             return
         }
+
+        addLoadingNode(parent)
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -190,6 +193,8 @@ class FileTreeViewModel(
                     .toFileTreeNodes()
 
                 childrenNodeCache[parentPath] = childNodes
+            } catch (e: Exception) {
+                notifier.toast("Failed to load directory: ${e.message}")
             } finally {
                 removeLoadingNode(parent)
             }
@@ -308,7 +313,7 @@ class FileTreeViewModel(
 
         if (expandedNodes.contains(parentPath)) {
             findNodeByPath(parentPath)?.let { parentNode ->
-                loadChildren(parentNode)
+                loadChildren(parentNode, force = true)
             }
         }
     }
@@ -340,11 +345,61 @@ class FileTreeViewModel(
     }
 
     fun refreshTree() {
-        childrenNodeCache.clear()
+        viewModelScope.launch {
+            _isRefreshing.value = true
 
-        expandedNodes.toList().forEach { path ->
-            findNodeByPath(path)?.let { node ->
-                loadChildren(node)
+            try {
+                delay(300)
+
+                childrenNodeCache.clear()
+
+                _rootNodes.value.values.forEach { rootNode ->
+                    loadChildren(rootNode, force = true)
+                }
+
+                val expandedPaths = expandedNodes.toList()
+                expandedPaths.forEach { path ->
+                    findNodeByPath(path)?.let { node ->
+                        loadChildren(node, force = true)
+                    }
+                }
+
+                notifier.toast("File tree refreshed")
+            } catch (e: Exception) {
+                notifier.toast("Refresh failed: ${e.message}")
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
+    }
+
+    fun refreshNode(node: FileTreeNode) {
+        viewModelScope.launch {
+            try {
+                invalidateParentCache(node.file.absolutePath)
+
+                if (node.isDirectory && isNodeExpanded(node)) {
+                    loadChildren(node, force = true)
+                }
+
+                node.file.parentFile?.let { parent ->
+                    invalidateParentCache(parent.absolutePath)
+                }
+
+                notifier.toast("\"${node.name}\" refreshed")
+            } catch (e: Exception) {
+                notifier.toast("Failed to refresh: ${e.message}")
+            }
+        }
+    }
+
+    fun refreshExpandedNodes() {
+        viewModelScope.launch {
+            val expandedPaths = expandedNodes.toList()
+            expandedPaths.forEach { path ->
+                findNodeByPath(path)?.let { node ->
+                    loadChildren(node, force = true)
+                }
             }
         }
     }

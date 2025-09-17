@@ -39,10 +39,12 @@ import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -100,6 +102,7 @@ private val SvgImageLoader
         .components { add(SvgDecoder.Factory()) }
         .build()
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FileTree(
     rootNodes: Map<Worktree, FileTreeNode> = emptyMap(),
@@ -113,33 +116,40 @@ fun FileTree(
     }
 
     val nodes by viewModel.rootNodes.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surface,
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .horizontalScroll(rememberScrollState())
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refreshTree() },
+            modifier = Modifier.fillMaxSize()
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .horizontalScroll(rememberScrollState())
             ) {
-                items(
-                    nodes.entries
-                        .distinctBy { it.key.rootFile.absolutePath }
-                        .associate { it.toPair() },
-                    key = { it.key.rootFile.absolutePath }
-                ) { (worktree, node) ->
-                    FileTreeItem(
-                        viewModel = viewModel,
-                        worktree = worktree,
-                        node = node,
-                        depth = 0,
-                        onFileClick = onFileClick,
-                        onFileLongClick = onFileLongClick
-                    )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(
+                        nodes.entries
+                            .distinctBy { it.key.rootFile.absolutePath }
+                            .associate { it.toPair() },
+                        key = { it.key.rootFile.absolutePath }
+                    ) { (worktree, node) ->
+                        FileTreeItem(
+                            viewModel = viewModel,
+                            worktree = worktree,
+                            node = node,
+                            depth = 0,
+                            onFileClick = onFileClick,
+                            onFileLongClick = onFileLongClick
+                        )
+                    }
                 }
             }
         }
@@ -351,7 +361,8 @@ private fun FileTreeItem(
                 if (!viewModel.pasteNode(node)) {
                     notifier.toast("Failed to paste")
                 }
-            }
+            },
+            onRefresh = { viewModel.refreshNode(node) }
         )
 
         if (showMenu) {

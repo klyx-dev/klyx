@@ -23,6 +23,8 @@ class WasmFunction(
             when (arg) {
                 is Long -> result += arg.asExecutionValue()
                 is Int -> result += arg.asExecutionValue()
+                is UInt -> result += arg.asExecutionValue()
+                is ULong -> result += arg.asExecutionValue()
                 is Short -> result += arg.asExecutionValue()
                 is Byte -> result += arg.asExecutionValue()
                 is Float -> result += arg.asExecutionValue()
