@@ -10,7 +10,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View.MeasureSpec
 import android.widget.TextView
-import com.klyx.editor.lsp.R
+import com.klyx.editor.R
 import io.github.rosemoe.sora.event.ColorSchemeUpdateEvent
 import io.github.rosemoe.sora.event.subscribeEvent
 import io.github.rosemoe.sora.widget.CodeEditor

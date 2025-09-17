@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import com.klyx.editor.KlyxEditor
-import com.klyx.editor.util.createParent
+import com.klyx.core.createParent
 import io.github.rosemoe.sora.R
 import io.github.rosemoe.sora.event.EditorFocusChangeEvent
 import io.github.rosemoe.sora.event.HandleStateChangeEvent

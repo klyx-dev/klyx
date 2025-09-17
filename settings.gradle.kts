@@ -42,7 +42,6 @@ include(":shared")
 include(":core")
 include(
     ":editor:editor",
-    ":editor:lsp",
     ":editor:tree-sitter"
 )
 include(":extension-api")

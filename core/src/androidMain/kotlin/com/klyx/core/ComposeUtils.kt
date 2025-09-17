@@ -1,4 +1,4 @@
-package com.klyx.editor.util
+package com.klyx.core
 
 import android.content.Context
 import android.view.ViewGroup
@@ -9,7 +9,7 @@ import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
-internal fun ComposeView.createParent(
+fun ComposeView.createParent(
     context: Context,
     viewTreeLifecycleOwner: LifecycleOwner?,
     viewTreeSavedStateRegistryOwner: SavedStateRegistryOwner?

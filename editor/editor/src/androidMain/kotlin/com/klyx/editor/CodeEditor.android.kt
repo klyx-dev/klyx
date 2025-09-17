@@ -16,7 +16,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -148,7 +147,7 @@ actual fun CodeEditor(
         )
 
         runCatching {
-            client.initialize()
+            client.initialize(view, compositionContext)
         }.onFailure { err ->
             logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
         }

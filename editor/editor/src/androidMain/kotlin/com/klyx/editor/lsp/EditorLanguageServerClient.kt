@@ -3,6 +3,8 @@ package com.klyx.editor.lsp
 import android.content.Context
 import android.os.Bundle
 import android.util.LruCache
+import android.view.View
+import androidx.compose.runtime.CompositionContext
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
@@ -111,7 +113,7 @@ class EditorLanguageServerClient(
         val extraArguments: Bundle
     )
 
-    fun initialize() {
+    fun initialize(localView: View, compositionContext: CompositionContext) {
         signatureHelpWindow.set(SignatureHelpWindow(editor))
         setupFlows()
 

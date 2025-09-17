@@ -71,7 +71,6 @@ kotlin {
 
                 api(project.dependencies.platform(libs.sora.editor.bom))
                 api(libs.sora.editor)
-                api(projects.editor.lsp)
 
                 implementation(libs.sora.language.textmate)
 
