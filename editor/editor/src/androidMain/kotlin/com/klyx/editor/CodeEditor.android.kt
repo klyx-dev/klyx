@@ -197,6 +197,7 @@ actual fun CodeEditor(
                     this.editable = editable
 
                     colorScheme.applyAppColorScheme(appColorScheme, selectionColors)
+                    update(appSettings.editor)
                 }
             }
         )
@@ -221,6 +222,7 @@ actual fun CodeEditor(
                     "|" to "|",
                 )
             },
+            fontFamily = fontFamily,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -244,6 +246,7 @@ private fun VirtualKeys(
             Text(
                 text = display,
                 fontFamily = fontFamily,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .clip(MaterialTheme.shapes.small)
                     .clickable {

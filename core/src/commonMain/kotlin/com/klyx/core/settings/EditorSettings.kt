@@ -22,5 +22,9 @@ data class EditorSettings(
 
     @SerialComment("Whether to pin line numbers in the editor")
     @SerialName("pin_line_numbers")
-    val pinLineNumbers: Boolean = false
+    val pinLineNumbers: Boolean = false,
+
+    @SerialComment("The number of spaces to use for indentation")
+    @SerialName("tab_size")
+    val tabSize: Int = 4,
 )

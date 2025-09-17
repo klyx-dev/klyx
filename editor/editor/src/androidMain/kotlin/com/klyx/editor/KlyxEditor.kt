@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.ViewGroup
 import androidx.compose.ui.unit.Density
+import com.klyx.core.settings.EditorSettings
 import com.klyx.editor.completion.AutoCompletionLayout
 import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.textaction.TextActionWindow
@@ -42,5 +43,9 @@ class KlyxEditor @JvmOverloads constructor(
 
     fun setTextActionWindow(window: TextActionWindow) {
         textActions = window
+    }
+
+    fun update(settings: EditorSettings) {
+        tabWidth = settings.tabSize
     }
 }

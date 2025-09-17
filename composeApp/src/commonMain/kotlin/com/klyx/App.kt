@@ -324,6 +324,7 @@ fun App(
                                 TextButton(onClick = {
                                     DisclaimerManager.setAccepted()
                                     showDisclaimer = false
+                                    klyxViewModel.showPermissionDialog()
                                 }) {
                                     Text(stringResource(Res.string.i_agree))
                                 }

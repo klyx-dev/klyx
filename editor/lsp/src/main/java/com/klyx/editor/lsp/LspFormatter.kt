@@ -22,7 +22,7 @@ class LspFormatter(private val client: EditorLanguageServerClient) : AsyncFormat
                 }
         }
 
-        return null
+        return cursorRange
     }
 
     override fun formatRegionAsync(
@@ -38,6 +38,6 @@ class LspFormatter(private val client: EditorLanguageServerClient) : AsyncFormat
                 }
         }
 
-        return null
+        return cursorRange
     }
 }
