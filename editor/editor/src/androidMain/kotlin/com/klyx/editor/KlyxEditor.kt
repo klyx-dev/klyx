@@ -41,6 +41,11 @@ class KlyxEditor @JvmOverloads constructor(
         getComponent<EditorTextActionWindow>().isEnabled = false
     }
 
+    @OptIn(ExperimentalCodeEditorApi::class)
+    suspend fun connectToLsp(state: CodeEditorState) {
+        //
+    }
+
     fun setTextActionWindow(window: TextActionWindow) {
         textActions = window
     }

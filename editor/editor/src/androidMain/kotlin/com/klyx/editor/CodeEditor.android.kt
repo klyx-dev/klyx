@@ -136,8 +136,8 @@ actual fun CodeEditor(
 
     val scope = rememberCoroutineScope { Dispatchers.Default }
 
-    DisposableEffect(state.editor) {
-        if (state.editor == null) return@DisposableEffect onDispose { }
+    LaunchedEffect(state.editor) {
+        if (state.editor == null) return@LaunchedEffect
 
         val client = EditorLanguageServerClient(
             worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
@@ -152,8 +152,6 @@ actual fun CodeEditor(
         }.onFailure { err ->
             logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
         }
-
-        onDispose { client.dispose() }
     }
 
     LaunchedEffect(state.content) {

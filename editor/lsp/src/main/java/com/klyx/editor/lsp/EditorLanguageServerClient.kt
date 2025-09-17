@@ -16,6 +16,7 @@ import com.klyx.editor.lsp.editor.SignatureHelpWindow
 import com.klyx.editor.lsp.util.asLspPosition
 import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
+import io.github.rosemoe.sora.event.EditorReleaseEvent
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
@@ -60,8 +61,8 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 class EditorLanguageServerClient(
     val worktree: Worktree,
@@ -74,22 +75,30 @@ class EditorLanguageServerClient(
     private var serverClient: LanguageServerClient? = null
     private val capabilities get() = serverClient?.serverCapabilities
 
-    private val completionTriggers get() = capabilities?.completionProvider?.triggerCharacters.orEmpty()
-    private val signatureHelpTriggers get() = capabilities?.signatureHelpProvider?.triggerCharacters.orEmpty()
-    private val signatureHelpReTriggers get() = capabilities?.signatureHelpProvider?.retriggerCharacters.orEmpty()
+    private val completionTriggersSet by lazy { capabilities?.completionProvider?.triggerCharacters?.toSet().orEmpty() }
+    private val signatureHelpTriggersSet by lazy {
+        capabilities?.signatureHelpProvider?.triggerCharacters?.toSet().orEmpty()
+    }
+    private val signatureHelpReTriggersSet by lazy {
+        capabilities?.signatureHelpProvider?.retriggerCharacters?.toSet().orEmpty()
+    }
 
-    private val prefixCache = LruCache<String, String>(100)
-    private val positionIndexCache = LruCache<String, Int>(200)
-    private val quickfixCache = LruCache<String, List<Quickfix>>(50)
+    private val prefixCache = LruCache<String, String>(300)
+    private val positionIndexCache = LruCache<String, Int>(500)
+    private val quickfixCache = LruCache<String, List<Quickfix>>(100)
+    private val diagnosticRegionCache = LruCache<String, DiagnosticRegion>(200)
 
     private val cacheMutex = Mutex()
 
-    private val signatureHelpWindowWeakReference = WeakReference(SignatureHelpWindow(editor))
+    private val signatureHelpWindow = AtomicReference<SignatureHelpWindow>()
 
-    private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1)
+    private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1, extraBufferCapacity = 1)
 
     private var lastSignaturePosition: CharPosition? = null
-    private var lastDiagnosticsHash = AtomicInteger(0)
+    private val lastDiagnosticsHash = AtomicInteger(0)
+
+    private var contentChangeJob: Job? = null
+    private var signatureHelpJob: Job? = null
 
     private val textEditComparator = compareByDescending<TextEdit> {
         it.range.start.line
@@ -103,26 +112,29 @@ class EditorLanguageServerClient(
     )
 
     fun initialize() {
+        signatureHelpWindow.set(SignatureHelpWindow(editor))
         setupFlows()
 
-        scope.launch {
-            LanguageServerManager.tryConnectLspIfAvailable(worktree, file.language(), settings).onSuccess { client ->
-                serverClient = client
-                editor.setEditorLanguage(LspLanguage(editor.editorLanguage, scope))
-                LanguageServerManager.openDocument(worktree, file)
-
-                client.onDiagnostics = { diagnostics ->
-                    diagnosticsFlow.tryEmit(diagnostics)
-                }
-
-                client.onApplyWorkspaceEdit = { workspaceEditRequest ->
-                    scope.launch(Dispatchers.Default) {
-                        applyWorkspaceEdit(workspaceEditRequest.edit)
+        scope.launch(Dispatchers.IO) {
+            LanguageServerManager
+                .tryConnectLspIfAvailable(worktree, file.language(), settings)
+                .onSuccess { client ->
+                    serverClient = client
+                    withContext(Dispatchers.Main) {
+                        editor.setEditorLanguage(LspLanguage(editor.editorLanguage, scope))
                     }
-                }
+                    LanguageServerManager.openDocument(worktree, file)
 
-                setupEventSubscriptions()
-            }
+                    client.onDiagnostics = diagnosticsFlow::tryEmit
+
+                    client.onApplyWorkspaceEdit = { workspaceEditRequest ->
+                        scope.launch(Dispatchers.Default) {
+                            applyWorkspaceEdit(workspaceEditRequest.edit)
+                        }
+                    }
+
+                    setupEventSubscriptions()
+                }
         }
     }
 
@@ -130,9 +142,9 @@ class EditorLanguageServerClient(
     private fun setupFlows() {
         diagnosticsFlow
             .distinctUntilChanged { old, new ->
-                old.hashCode() == new.hashCode()
+                old.size == new.size && old.hashCode() == new.hashCode()
             }
-            .debounce(100)
+            .debounce(50)
             .flowOn(Dispatchers.Default)
             .onEach { diagnostics -> updateDiagnostics(diagnostics) }
             .launchIn(scope)
@@ -140,8 +152,10 @@ class EditorLanguageServerClient(
 
     private fun setupEventSubscriptions() {
         editor.subscribeAlways<ContentChangeEvent> { event ->
-            scope.launch {
-                delay(200)
+            contentChangeJob?.cancel()
+
+            contentChangeJob = scope.launch(Dispatchers.Default) {
+                delay(150)
 
                 LanguageServerManager.changeDocument(
                     worktree,
@@ -162,13 +176,19 @@ class EditorLanguageServerClient(
         editor.subscribeAlways<SelectionChangeEvent> { event ->
             val position = event.left
 
-            if (hitReTrigger(event.editor.text[position.index].toString())) {
+            val text = event.editor.text.getOrNull(position.index)?.toString()
+            if (text != null && hitReTrigger(text)) {
                 showSignatureHelp(null)
                 return@subscribeAlways
             }
 
-            scope.launch { tryShowSignatureHelp(position) }
+            signatureHelpJob?.cancel()
+            signatureHelpJob = scope.launch(Dispatchers.Default) {
+                tryShowSignatureHelp(position)
+            }
         }
+
+        editor.subscribeAlways<EditorReleaseEvent> { dispose() }
     }
 
     private suspend fun tryShowSignatureHelp(position: CharPosition) {
@@ -184,8 +204,7 @@ class EditorLanguageServerClient(
 
     private suspend fun updateDiagnostics(diagnostics: List<Diagnostic>) {
         val diagnosticsHash = diagnostics.hashCode()
-        if (diagnosticsHash == lastDiagnosticsHash.get()) return
-        lastDiagnosticsHash.set(diagnosticsHash)
+        if (diagnosticsHash == lastDiagnosticsHash.getAndSet(diagnosticsHash)) return
 
         if (diagnostics.isEmpty()) {
             withContext(Dispatchers.Main) {
@@ -194,13 +213,13 @@ class EditorLanguageServerClient(
             return
         }
 
-        val diagnosticRegions = diagnostics.mapIndexedAsync { idx, diagnostic ->
-            coroutineScope {
+        val diagnosticRegions = coroutineScope {
+            diagnostics.mapIndexed { idx, diagnostic ->
                 async(Dispatchers.Default) {
-                    createDiagnosticRegion(idx, diagnostic)
+                    createDiagnosticRegionCached(idx, diagnostic)
                 }
-            }
-        }.awaitAll()
+            }.awaitAll()
+        }
 
         val container = DiagnosticsContainer().apply {
             addDiagnostics(diagnosticRegions)
@@ -208,6 +227,20 @@ class EditorLanguageServerClient(
 
         withContext(Dispatchers.Main) {
             editor.diagnostics = container
+        }
+    }
+
+    private suspend fun createDiagnosticRegionCached(idx: Int, diagnostic: Diagnostic): DiagnosticRegion {
+        val cacheKey = "${diagnostic.range}:${diagnostic.message.hashCode()}:$idx"
+
+        return cacheMutex.withLock {
+            diagnosticRegionCache.get(cacheKey)
+        } ?: run {
+            val region = createDiagnosticRegion(idx, diagnostic)
+            cacheMutex.withLock {
+                diagnosticRegionCache.put(cacheKey, region)
+            }
+            region
         }
     }
 
@@ -229,46 +262,47 @@ class EditorLanguageServerClient(
     }
 
     fun showSignatureHelp(signatureHelp: SignatureHelp?) {
-        println(signatureHelp)
-        val signatureHelpWindow = signatureHelpWindowWeakReference.get() ?: return
+        val helpWindow = signatureHelpWindow.get() ?: return
 
         if (signatureHelp == null) {
-            editor.post { signatureHelpWindow.dismiss() }
+            editor.post { helpWindow.dismiss() }
             return
         }
 
-        editor.post { signatureHelpWindow.show(signatureHelp) }
+        editor.post { helpWindow.show(signatureHelp) }
     }
 
     fun hitReTrigger(eventText: CharSequence): Boolean {
-        return signatureHelpReTriggers.any { trigger ->
-            eventText.contains(trigger)
-        }
+        val triggers = signatureHelpReTriggersSet
+        return if (triggers.isEmpty()) false
+        else eventText.any { it.toString() in triggers }
     }
 
     fun hitTrigger(eventText: CharSequence): Boolean {
-        return signatureHelpTriggers.any { trigger ->
-            eventText.contains(trigger)
-        }
+        val triggers = signatureHelpTriggersSet
+        return if (triggers.isEmpty()) false
+        else eventText.any { it.toString() in triggers }
     }
 
     private suspend fun Position.getIndexCached(editor: CodeEditor): Int {
         val key = "${this.line}:${this.character}"
         return cacheMutex.withLock {
-            positionIndexCache.get(key) ?: run {
-                val index = calculatePositionIndex(editor)
+            positionIndexCache.get(key)
+        } ?: run {
+            val index = calculatePositionIndex(editor)
+            cacheMutex.withLock {
                 positionIndexCache.put(key, index)
-                index
             }
+            index
         }
     }
 
     private fun Position.calculatePositionIndex(editor: CodeEditor): Int {
-        val safeLine = if (this.line >= editor.lineCount) editor.lineCount - 1 else this.line
+        val safeLine = (this.line).coerceAtMost(editor.lineCount - 1)
         return runCatching {
             val columnCount = editor.text.getColumnCount(safeLine)
-            val safeColumn = columnCount.coerceAtMost(this.character)
-            editor.text.getCharIndex(this.line, safeColumn)
+            val safeColumn = this.character.coerceAtMost(columnCount)
+            editor.text.getCharIndex(safeLine, safeColumn)
         }.getOrElse { 0 }
     }
 
@@ -281,13 +315,15 @@ class EditorLanguageServerClient(
     }
 
     private suspend fun fetchQuickfixesCached(diagnostic: Diagnostic): List<Quickfix> {
-        val cacheKey = "${diagnostic.range}:${diagnostic.message}"
+        val cacheKey = "${diagnostic.range}:${diagnostic.message.hashCode()}"
         return cacheMutex.withLock {
-            quickfixCache.get(cacheKey) ?: run {
-                val quickfixes = fetchQuickfixes(diagnostic)
+            quickfixCache.get(cacheKey)
+        } ?: run {
+            val quickfixes = fetchQuickfixes(diagnostic)
+            cacheMutex.withLock {
                 quickfixCache.put(cacheKey, quickfixes)
-                quickfixes
             }
+            quickfixes
         }
     }
 
@@ -301,9 +337,9 @@ class EditorLanguageServerClient(
                 either.isRight -> {
                     val action = either.right
                     Quickfix(action.title ?: "Quickfix") {
-                        action.edit?.let {
+                        action.edit?.let { edit ->
                             scope.launch(Dispatchers.Default) {
-                                applyWorkspaceEdit(it)
+                                applyWorkspaceEdit(edit)
                             }
                         }
                     }
@@ -312,7 +348,7 @@ class EditorLanguageServerClient(
                 either.isLeft -> {
                     val command = either.left
                     Quickfix(command.title) {
-                        scope.launch {
+                        scope.launch(Dispatchers.Default) {
                             serverClient?.executeCommand(command.command, command.arguments)
                         }
                     }
@@ -324,7 +360,10 @@ class EditorLanguageServerClient(
     }
 
     private fun collectAllTextEdits(edit: WorkspaceEdit): List<TextEdit> {
-        val changes = mutableListOf<TextEdit>()
+        val estimatedSize = (edit.changes?.values?.sumOf { it.size } ?: 0) +
+                (edit.documentChanges?.size ?: 0)
+
+        val changes = ArrayList<TextEdit>(estimatedSize)
 
         edit.changes?.forEach { (_, edits) ->
             changes.addAll(edits)
@@ -391,24 +430,42 @@ class EditorLanguageServerClient(
         LanguageServerManager
             .completion(worktree, file, request.position.line, request.position.column)
             .onSuccess { completionItems ->
-                val items = completionItems.map { item ->
-                    LspCompletionItem(item, prefixLength)
+                if (completionItems.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        request.publisher.cancel()
+                    }
+                    return@onSuccess
+                }
+
+                val items = if (completionItems.size > 50) {
+                    coroutineScope {
+                        completionItems.chunked(25).map { chunk ->
+                            async(Dispatchers.Default) {
+                                chunk.map { item -> LspCompletionItem(item, prefixLength) }
+                            }
+                        }.awaitAll().flatten()
+                    }
+                } else {
+                    completionItems.map { item -> LspCompletionItem(item, prefixLength) }
                 }
 
                 val sortedItems = items.sortedWith { a, b ->
-                    val startsWithA = a.label.toString().startsWith(prefix)
-                    val startsWithB = b.label.toString().startsWith(prefix)
+                    val labelA = a.label.toString()
+                    val labelB = b.label.toString()
+
+                    val startsWithA = labelA.startsWith(prefix)
+                    val startsWithB = labelB.startsWith(prefix)
 
                     when {
                         startsWithA && !startsWithB -> -1
                         !startsWithA && startsWithB -> 1
                         else -> {
-                            val sortA = (a.sortText ?: a.label.toString()).lowercase()
-                            val sortB = (b.sortText ?: b.label.toString()).lowercase()
+                            val sortA = (a.sortText ?: labelA).lowercase()
+                            val sortB = (b.sortText ?: labelB).lowercase()
                             val cmp = sortA.compareTo(sortB)
                             if (cmp != 0) cmp
                             else {
-                                val labelCmp = a.label.toString().compareTo(b.label.toString(), ignoreCase = true)
+                                val labelCmp = labelA.compareTo(labelB, ignoreCase = true)
                                 if (labelCmp != 0) labelCmp
                                 else {
                                     val kindA = a.kind?.ordinal ?: Int.MAX_VALUE
@@ -470,41 +527,48 @@ class EditorLanguageServerClient(
     }
 
     private suspend fun calculatePrefixCached(content: ContentReference, position: CharPosition): String {
-        val cacheKey = "${position.line}:${position.column}"
+        val cacheKey = "${position.line}:${position.column}:${content.hashCode()}"
         return cacheMutex.withLock {
-            prefixCache.get(cacheKey) ?: run {
-                val prefix = calculatePrefix(content, position)
+            prefixCache.get(cacheKey)
+        } ?: run {
+            val prefix = calculatePrefix(content, position)
+            cacheMutex.withLock {
                 prefixCache.put(cacheKey, prefix)
-                prefix
             }
+            prefix
         }
     }
 
     private fun calculatePrefix(content: ContentReference, position: CharPosition): String {
-        val sb = StringBuilder()
-        var col = position.column - 1
+        if (position.column == 0) return ""
 
-        while (col >= 0) {
-            val ch = content.charAt(position.line, col)
-            if (!Character.isJavaIdentifierPart(ch)) break
-            sb.append(ch)
-            col--
+        val line = content.getLine(position.line)
+        val col = (position.column - 1).coerceAtMost(line.length - 1)
+        var start = col
+
+        while (start >= 0 && line[start].isJavaIdentifierPart()) {
+            start--
         }
+        start++
 
-        return sb.reverse().toString()
+        return if (start <= col) line.substring(start, col + 1) else ""
     }
 
     fun dispose() {
-        signatureHelpWindowWeakReference.get()?.dismiss()
-        signatureHelpWindowWeakReference.clear()
+        contentChangeJob?.cancel()
+        signatureHelpJob?.cancel()
+
+        signatureHelpWindow.get()?.dismiss()
+        signatureHelpWindow.set(null)
 
         scope.cancel()
 
-        runBlocking {
+        scope.launch(Dispatchers.Default) {
             cacheMutex.withLock {
                 prefixCache.evictAll()
                 positionIndexCache.evictAll()
                 quickfixCache.evictAll()
+                diagnosticRegionCache.evictAll()
             }
         }
     }
@@ -512,4 +576,4 @@ class EditorLanguageServerClient(
 
 private suspend inline fun <T, R> List<T>.mapIndexedAsync(
     crossinline transform: suspend (index: Int, T) -> Deferred<R>
-): List<Deferred<R>> = mapIndexed { index, item -> transform(index, item) }
+) = mapIndexed { index, item -> transform(index, item) }
