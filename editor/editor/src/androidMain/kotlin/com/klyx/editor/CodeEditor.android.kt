@@ -16,6 +16,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -135,6 +136,26 @@ actual fun CodeEditor(
     }
 
     val scope = rememberCoroutineScope { Dispatchers.Default }
+
+    DisposableEffect(state.editor) {
+        if (state.editor == null) return@DisposableEffect onDispose { }
+
+        val client = EditorLanguageServerClient(
+            worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
+            file = state.file,
+            editor = state.editor!!,
+            scope = scope,
+            settings = appSettings
+        )
+
+        runCatching {
+            client.initialize()
+        }.onFailure { err ->
+            logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
+        }
+
+        onDispose { client.dispose() }
+    }
 
     LaunchedEffect(state.editor) {
         scope.launch {

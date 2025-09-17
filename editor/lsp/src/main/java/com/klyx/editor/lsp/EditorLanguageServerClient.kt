@@ -2,6 +2,7 @@ package com.klyx.editor.lsp
 
 import android.content.Context
 import android.os.Bundle
+import android.util.LruCache
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
@@ -23,7 +24,6 @@ import io.github.rosemoe.sora.lang.diagnostic.DiagnosticDetail
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticRegion
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer
 import io.github.rosemoe.sora.lang.diagnostic.Quickfix
-import io.github.rosemoe.sora.lang.format.Formatter
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.Content
@@ -32,10 +32,26 @@ import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.subscribeAlways
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
@@ -45,7 +61,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.lang.ref.WeakReference
+import java.util.concurrent.atomic.AtomicInteger
 
 class EditorLanguageServerClient(
     val worktree: Worktree,
@@ -62,45 +78,118 @@ class EditorLanguageServerClient(
     private val signatureHelpTriggers get() = capabilities?.signatureHelpProvider?.triggerCharacters.orEmpty()
     private val signatureHelpReTriggers get() = capabilities?.signatureHelpProvider?.retriggerCharacters.orEmpty()
 
-    private val signatureHelpWindowWeakReference = WeakReference(SignatureHelpWindow(editor))
-    val isShowSignatureHelp: Boolean
-        get() = signatureHelpWindowWeakReference.get()?.isShowing ?: false
+    private val prefixCache = LruCache<String, String>(100)
+    private val positionIndexCache = LruCache<String, Int>(200)
+    private val quickfixCache = LruCache<String, List<Quickfix>>(50)
+
+    private val cacheMutex = Mutex()
+
+    private var signatureHelpWindow: SignatureHelpWindow? = null
+
+    private var documentChangeJob: Job? = null
+    private var signatureHelpJob: Job? = null
+    private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1)
+    private val completionChannel = Channel<CompletionRequest>(Channel.UNLIMITED)
+
+    private var lastSignaturePosition: CharPosition? = null
+    private var lastDiagnosticsHash = AtomicInteger(0)
+
+    private val textEditComparator = compareByDescending<TextEdit> {
+        it.range.start.line
+    }.thenByDescending { it.range.start.character }
+
+    private data class CompletionRequest(
+        val content: ContentReference,
+        val position: CharPosition,
+        val publisher: CompletionPublisher,
+        val extraArguments: Bundle
+    )
 
     fun initialize() {
+        signatureHelpWindow = SignatureHelpWindow(editor)
+        setupFlows()
+
         scope.launch {
             LanguageServerManager.tryConnectLspIfAvailable(worktree, file.language(), settings).onSuccess { client ->
                 serverClient = client
                 editor.setEditorLanguage(LspLanguage(editor.editorLanguage, scope))
                 LanguageServerManager.openDocument(worktree, file)
-                client.onDiagnostics = ::updateDiagnostics
-                client.onApplyWorkspaceEdit = {
-                    applyWorkspaceEdit(it.edit)
+
+                client.onDiagnostics = { diagnostics ->
+                    diagnosticsFlow.tryEmit(diagnostics)
                 }
 
-                editor.subscribeAlways<ContentChangeEvent> { event ->
-                    scope.launch {
-                        LanguageServerManager.changeDocument(worktree, file, event.editor.text.toString())
-
-                        if (hitReTrigger(event.changedText)) {
-                            showSignatureHelp(null)
-                            return@launch
-                        }
-
-                        tryShowSignatureHelp(event.changeStart)
+                client.onApplyWorkspaceEdit = { workspaceEditRequest ->
+                    scope.launch(Dispatchers.Default) {
+                        applyWorkspaceEdit(workspaceEditRequest.edit)
                     }
                 }
 
-                editor.subscribeAlways<SelectionChangeEvent> { event ->
-                    if (hitReTrigger(event.editor.text[event.left.index].toString())) {
-                        showSignatureHelp(null)
-                        return@subscribeAlways
-                    }
-
-                    scope.launch {
-                        tryShowSignatureHelp(event.left)
-                    }
-                }
+                setupEventSubscriptions()
             }
+        }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun setupFlows() {
+        diagnosticsFlow
+            .distinctUntilChanged { old, new ->
+                old.hashCode() == new.hashCode()
+            }
+            .debounce(100)
+            .flowOn(Dispatchers.Default)
+            .onEach { diagnostics -> updateDiagnosticsOptimized(diagnostics) }
+            .launchIn(scope)
+
+        scope.launch {
+            for (request in completionChannel) {
+                processCompletionRequest(request)
+            }
+        }
+    }
+
+    private fun setupEventSubscriptions() {
+        editor.subscribeAlways<ContentChangeEvent> { event ->
+            documentChangeJob?.cancel()
+            documentChangeJob = scope.launch {
+                delay(200)
+
+                LanguageServerManager.changeDocument(
+                    worktree,
+                    file,
+                    event.editor.text.toString()
+                )
+
+                val changeText = event.changedText
+                if (hitReTrigger(changeText)) {
+                    showSignatureHelp(null)
+                    return@launch
+                }
+
+                tryShowSignatureHelpDebounced(event.changeStart)
+            }
+        }
+
+        editor.subscribeAlways<SelectionChangeEvent> { event ->
+            val position = event.left
+
+            if (position == lastSignaturePosition) return@subscribeAlways
+            lastSignaturePosition = position
+
+            if (hitReTrigger(event.editor.text[position.index].toString())) {
+                showSignatureHelp(null)
+                return@subscribeAlways
+            }
+
+            tryShowSignatureHelpDebounced(position)
+        }
+    }
+
+    private fun tryShowSignatureHelpDebounced(position: CharPosition) {
+        signatureHelpJob?.cancel()
+        signatureHelpJob = scope.launch {
+            delay(150)
+            tryShowSignatureHelp(position)
         }
     }
 
@@ -111,73 +200,98 @@ class EditorLanguageServerClient(
                 showSignatureHelp(signatureHelp)
             }
             .onFailure {
-                println("Error showing signature: $it")
+                logger().debug { "Signature help failed: $it" }
             }
     }
 
-    private fun updateDiagnostics(diagnostics: List<Diagnostic>) {
-        val diagnosticsContainer = editor.diagnostics ?: DiagnosticsContainer()
-        diagnosticsContainer.reset()
+    private suspend fun updateDiagnosticsOptimized(diagnostics: List<Diagnostic>) {
+        val diagnosticsHash = diagnostics.hashCode()
+        if (diagnosticsHash == lastDiagnosticsHash.get()) return
+        lastDiagnosticsHash.set(diagnosticsHash)
 
-        scope.launch {
-            val diagnosticRegions = diagnostics.mapIndexed { idx, diagnosticSource ->
-                val quickfixes = fetchQuickfixes(diagnosticSource)
-                DiagnosticRegion(
-                    diagnosticSource.range.start.getIndex(editor),
-                    diagnosticSource.range.end.getIndex(editor),
-                    diagnosticSource.severity.toEditorLevel(),
-                    idx.toLong(),
-                    DiagnosticDetail(
-                        diagnosticSource.severity.name,
-                        diagnosticSource.message,
-                        quickfixes,
-                        null
-                    )
-                )
-            }
-
-            diagnosticsContainer.addDiagnostics(diagnosticRegions)
-
+        if (diagnostics.isEmpty()) {
             withContext(Dispatchers.Main) {
-                editor.diagnostics = diagnosticsContainer
+                editor.diagnostics?.reset()
             }
-        }
-    }
-
-    fun showSignatureHelp(signatureHelp: SignatureHelp?) {
-        val signatureHelpWindow = signatureHelpWindowWeakReference.get() ?: return
-
-        if (signatureHelp == null) {
-            editor.post { signatureHelpWindow.dismiss() }
             return
         }
 
-        editor.post { signatureHelpWindow.show(signatureHelp) }
+        val diagnosticRegions = diagnostics.mapIndexedAsync { idx, diagnostic ->
+            coroutineScope {
+                async(Dispatchers.Default) {
+                    createDiagnosticRegion(idx, diagnostic)
+                }
+            }
+        }.awaitAll()
+
+        val container = DiagnosticsContainer().apply {
+            addDiagnostics(diagnosticRegions)
+        }
+
+        withContext(Dispatchers.Main) {
+            editor.diagnostics = container
+        }
+    }
+
+    private suspend fun createDiagnosticRegion(idx: Int, diagnostic: Diagnostic): DiagnosticRegion {
+        val quickfixes = fetchQuickfixesCached(diagnostic)
+
+        return DiagnosticRegion(
+            diagnostic.range.start.getIndexCached(editor),
+            diagnostic.range.end.getIndexCached(editor),
+            diagnostic.severity.toEditorLevel(),
+            idx.toLong(),
+            DiagnosticDetail(
+                diagnostic.severity.name,
+                diagnostic.message,
+                quickfixes,
+                null
+            )
+        )
+    }
+
+    fun showSignatureHelp(signatureHelp: SignatureHelp?) {
+        val window = signatureHelpWindow ?: return
+
+        if (signatureHelp == null) {
+            if (window.isShowing) {
+                editor.post { window.dismiss() }
+            }
+            return
+        }
+
+        editor.post { window.show(signatureHelp) }
     }
 
     fun hitReTrigger(eventText: CharSequence): Boolean {
-        for (trigger in signatureHelpReTriggers) {
-            return eventText in trigger
+        return signatureHelpReTriggers.any { trigger ->
+            eventText.contains(trigger)
         }
-
-        return false
     }
 
     fun hitTrigger(eventText: CharSequence): Boolean {
-        for (trigger in signatureHelpTriggers) {
-            return eventText in trigger
+        return signatureHelpTriggers.any { trigger ->
+            eventText.contains(trigger)
         }
-
-        return false
     }
 
-    private fun Position.getIndex(editor: CodeEditor): Int {
-        val l = if (this.line == editor.lineCount) editor.lineCount - 1 else this.line
+    private suspend fun Position.getIndexCached(editor: CodeEditor): Int {
+        val key = "${this.line}:${this.character}"
+        return cacheMutex.withLock {
+            positionIndexCache.get(key) ?: run {
+                val index = calculatePositionIndex(editor)
+                positionIndexCache.put(key, index)
+                index
+            }
+        }
+    }
+
+    private fun Position.calculatePositionIndex(editor: CodeEditor): Int {
+        val safeLine = if (this.line >= editor.lineCount) editor.lineCount - 1 else this.line
         return runCatching {
-            editor.text.getCharIndex(
-                this.line,
-                editor.text.getColumnCount(l).coerceAtMost(this.character)
-            )
+            val columnCount = editor.text.getColumnCount(safeLine)
+            val safeColumn = columnCount.coerceAtMost(this.character)
+            editor.text.getCharIndex(this.line, safeColumn)
         }.getOrElse { 0 }
     }
 
@@ -186,6 +300,17 @@ class EditorLanguageServerClient(
             DiagnosticSeverity.Hint, DiagnosticSeverity.Information -> DiagnosticRegion.SEVERITY_TYPO
             DiagnosticSeverity.Error -> DiagnosticRegion.SEVERITY_ERROR
             DiagnosticSeverity.Warning -> DiagnosticRegion.SEVERITY_WARNING
+        }
+    }
+
+    private suspend fun fetchQuickfixesCached(diagnostic: Diagnostic): List<Quickfix> {
+        val cacheKey = "${diagnostic.range}:${diagnostic.message}"
+        return cacheMutex.withLock {
+            quickfixCache.get(cacheKey) ?: run {
+                val quickfixes = fetchQuickfixes(diagnostic)
+                quickfixCache.put(cacheKey, quickfixes)
+                quickfixes
+            }
         }
     }
 
@@ -199,7 +324,11 @@ class EditorLanguageServerClient(
                 either.isRight -> {
                     val action = either.right
                     Quickfix(action.title ?: "Quickfix") {
-                        action.edit?.let { applyWorkspaceEdit(it) }
+                        action.edit?.let {
+                            scope.launch(Dispatchers.Default) {
+                                applyWorkspaceEdit(it)
+                            }
+                        }
                     }
                 }
 
@@ -217,8 +346,7 @@ class EditorLanguageServerClient(
         }
     }
 
-    private fun applyWorkspaceEdit(edit: WorkspaceEdit) {
-        println("APPLY: $edit")
+    private fun collectAllTextEdits(edit: WorkspaceEdit): List<TextEdit> {
         val changes = mutableListOf<TextEdit>()
 
         edit.changes?.forEach { (_, edits) ->
@@ -231,48 +359,107 @@ class EditorLanguageServerClient(
             }
         }
 
-        if (changes.isEmpty()) return
+        return changes
+    }
 
-        val sortedEdits = changes.sortedWith(
-            compareByDescending<TextEdit> { it.range.start.line }
-                .thenByDescending { it.range.start.character }
-        )
+    private suspend fun applyWorkspaceEdit(edit: WorkspaceEdit) {
+        val allChanges = collectAllTextEdits(edit)
+        if (allChanges.isEmpty()) return
 
-        scope.launch(Dispatchers.Main) {
+        val sortedEdits = allChanges.sortedWith(textEditComparator)
+
+        withContext(Dispatchers.Main) {
             val text = editor.text
-            for (te in sortedEdits) {
-                val startIdx = te.range.start.getIndex(editor)
-                val endIdx = te.range.end.getIndex(editor)
 
-                text.replace(startIdx, endIdx, te.newText)
+            sortedEdits.forEach { textEdit ->
+                val startIdx = textEdit.range.start.getIndexCached(editor)
+                val endIdx = textEdit.range.end.getIndexCached(editor)
+
+                if (startIdx <= endIdx && startIdx >= 0 && endIdx <= text.length) {
+                    text.replace(startIdx, endIdx, textEdit.newText)
+                }
             }
         }
     }
 
     fun applyTextEdits(edits: List<TextEdit>, content: Content) {
+        if (edits.isEmpty()) return
+
         runCatching {
-            edits.forEach { textEdit ->
+            val sortedEdits = edits.sortedWith(textEditComparator)
+
+            sortedEdits.forEach { textEdit ->
                 val range = textEdit.range
                 val text = textEdit.newText
-                var startIndex = content.getCharIndex(range.start.line, range.start.character)
-                val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
-                var endIndex = content.getCharIndex(endLine, range.end.character)
 
-                if (endIndex < startIndex) {
-                    logger().warn { "Invalid edit: start=$startIndex end=$endIndex" }
-                    val diff = startIndex - endIndex
-                    endIndex = startIndex
-                    startIndex = endIndex - diff
+                val startIndex = content.getCharIndex(range.start.line, range.start.character)
+                val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
+                val endIndex = content.getCharIndex(endLine, range.end.character)
+
+                if (startIndex <= endIndex && startIndex >= 0) {
+                    content.replace(startIndex, endIndex, text)
+                } else {
+                    logger().warn { "Invalid edit range: start=$startIndex end=$endIndex" }
                 }
-                content.replace(startIndex, endIndex, text)
             }
+        }.onFailure {
+            logger().error(it) { "Failed to apply text edits" }
         }
+    }
+
+    private suspend fun processCompletionRequest(request: CompletionRequest) {
+        val prefix = calculatePrefixCached(request.content, request.position)
+        val prefixLength = prefix.length
+
+        LanguageServerManager
+            .completion(worktree, file, request.position.line, request.position.column)
+            .onSuccess { completionItems ->
+                val items = completionItems.map { item ->
+                    LspCompletionItem(item, prefixLength)
+                }
+
+                val sortedItems = items.sortedWith { a, b ->
+                    val startsWithA = a.label.toString().startsWith(prefix, ignoreCase = true)
+                    val startsWithB = b.label.toString().startsWith(prefix, ignoreCase = true)
+
+                    when {
+                        startsWithA && !startsWithB -> -1
+                        !startsWithA && startsWithB -> 1
+                        else -> {
+                            val sortA = (a.sortText ?: a.label.toString()).lowercase()
+                            val sortB = (b.sortText ?: b.label.toString()).lowercase()
+                            val cmp = sortA.compareTo(sortB)
+                            if (cmp != 0) cmp
+                            else {
+                                val labelCmp = a.label.toString().compareTo(b.label.toString(), ignoreCase = true)
+                                if (labelCmp != 0) labelCmp
+                                else {
+                                    val kindA = a.kind?.ordinal ?: Int.MAX_VALUE
+                                    val kindB = b.kind?.ordinal ?: Int.MAX_VALUE
+                                    kindA - kindB
+                                }
+                            }
+                        }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    request.publisher.addItems(sortedItems)
+                    request.publisher.updateList()
+                }
+            }.onFailure {
+                logger().debug { "Completion failed: $it" }
+                withContext(Dispatchers.Main) {
+                    request.publisher.cancel()
+                }
+            }
     }
 
     private inner class LspLanguage(
         private val wrapperLanguage: Language,
         private val scope: CoroutineScope
     ) : Language {
+
         override fun getAnalyzeManager(): AnalyzeManager = wrapperLanguage.analyzeManager
         override fun getInterruptionLevel(): Int = Language.INTERRUPTION_LEVEL_STRONG
 
@@ -282,72 +469,37 @@ class EditorLanguageServerClient(
             publisher: CompletionPublisher,
             extraArguments: Bundle
         ) {
-            runBlocking {
-                val prefix = calculatePrefix(content, position)
-                val prefixLength = prefix.length
-
-                LanguageServerManager
-                    .completion(worktree, file, position.line, position.column)
-                    .onSuccess { completionItems ->
-                        val items = completionItems.map { item ->
-                            LspCompletionItem(item, prefixLength)
-                        }
-
-                        publisher.setComparator { a, b ->
-                            val startsWithA = a.label.toString().startsWith(prefix, ignoreCase = true)
-                            val startsWithB = b.label.toString().startsWith(prefix, ignoreCase = true)
-
-                            if (startsWithA && !startsWithB) return@setComparator -1
-                            if (!startsWithA && startsWithB) return@setComparator 1
-
-                            val sortA = (a.sortText ?: a.label.toString()).lowercase()
-                            val sortB = (b.sortText ?: b.label.toString()).lowercase()
-                            val cmp = sortA.compareTo(sortB)
-                            if (cmp != 0) return@setComparator cmp
-
-                            val labelCmp = a.label.toString().compareTo(b.label.toString(), ignoreCase = true)
-                            if (labelCmp != 0) return@setComparator labelCmp
-
-                            val kindA = a.kind?.ordinal ?: Int.MAX_VALUE
-                            val kindB = b.kind?.ordinal ?: Int.MAX_VALUE
-                            kindA - kindB
-                        }
-                        publisher.addItems(items)
-                    }.onFailure {
-                        println(it)
-                        publisher.cancel()
-                    }
-
-                publisher.updateList()
-            }
+            val request = CompletionRequest(content, position, publisher, extraArguments)
+            completionChannel.trySend(request)
         }
 
         override fun getIndentAdvance(
             content: ContentReference,
             line: Int,
             column: Int
-        ): Int {
-            return wrapperLanguage.getIndentAdvance(content, line, column)
-        }
+        ): Int = wrapperLanguage.getIndentAdvance(content, line, column)
 
-        override fun useTab(): Boolean {
-            return wrapperLanguage.useTab()
-        }
+        override fun useTab() = wrapperLanguage.useTab()
 
-        override fun getFormatter(): Formatter {
-            return LspFormatter(this@EditorLanguageServerClient)
-        }
+        override fun getFormatter() = LspFormatter(this@EditorLanguageServerClient)
 
-        override fun getSymbolPairs(): SymbolPairMatch? {
-            return wrapperLanguage.symbolPairs
-        }
+        override fun getSymbolPairs(): SymbolPairMatch? = wrapperLanguage.symbolPairs
 
-        override fun getNewlineHandlers(): Array<out NewlineHandler?>? {
-            return wrapperLanguage.newlineHandlers
-        }
+        override fun getNewlineHandlers(): Array<out NewlineHandler?>? = wrapperLanguage.newlineHandlers
 
         override fun destroy() {
             scope.cancel()
+        }
+    }
+
+    private suspend fun calculatePrefixCached(content: ContentReference, position: CharPosition): String {
+        val cacheKey = "${position.line}:${position.column}"
+        return cacheMutex.withLock {
+            prefixCache.get(cacheKey) ?: run {
+                val prefix = calculatePrefix(content, position)
+                prefixCache.put(cacheKey, prefix)
+                prefix
+            }
         }
     }
 
@@ -364,5 +516,27 @@ class EditorLanguageServerClient(
 
         return sb.reverse().toString()
     }
+
+    fun dispose() {
+        documentChangeJob?.cancel()
+        signatureHelpJob?.cancel()
+        signatureHelpWindow?.dismiss()
+        signatureHelpWindow = null
+
+        completionChannel.cancel()
+
+        scope.cancel()
+
+        runBlocking {
+            cacheMutex.withLock {
+                prefixCache.evictAll()
+                positionIndexCache.evictAll()
+                quickfixCache.evictAll()
+            }
+        }
+    }
 }
 
+private suspend inline fun <T, R> List<T>.mapIndexedAsync(
+    crossinline transform: suspend (index: Int, T) -> Deferred<R>
+): List<Deferred<R>> = mapIndexed { index, item -> transform(index, item) }
