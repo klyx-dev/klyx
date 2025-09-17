@@ -176,7 +176,7 @@ fun App(
             }
         }
 
-        var showOpenProjectDialog by remember { mutableStateOf(false) }
+        val isTabOpen by editorViewModel.isTabOpen.collectAsState()
 
         CompositionLocalProvider(
             LocalDrawerState provides drawerState,
@@ -218,7 +218,7 @@ fun App(
                         }
                     }
                 },
-                gesturesEnabled = drawerState.isOpen
+                gesturesEnabled = drawerState.isOpen || !isTabOpen
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),

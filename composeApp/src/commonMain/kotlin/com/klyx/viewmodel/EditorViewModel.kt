@@ -64,6 +64,10 @@ class EditorViewModel(
         (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.editorState
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    val isTabOpen = _state.map {
+        it.openTabs.isNotEmpty()
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     fun openTab(tab: Tab) {
         _state.update { current ->
             if (current.openTabs.any { it.id == tab.id }) {
