@@ -51,7 +51,7 @@ public class MessageDialogUtils {
                                    final DialogInterface.OnClickListener onNegativeButton,
                                    final DialogInterface.OnDismissListener onDismiss) {
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(context, com.google.android.material.R.style.Theme_AppCompat_Light_Dialog);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, com.google.android.material.R.style.Theme_Material3_Light_Dialog);
 
         LayoutInflater inflater = (LayoutInflater) context.getSystemService( Context.LAYOUT_INFLATER_SERVICE );
         View view = inflater.inflate(R.layout.dialog_show_message, null);

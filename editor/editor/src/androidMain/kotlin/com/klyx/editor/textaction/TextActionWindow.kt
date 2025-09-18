@@ -9,17 +9,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.surfaceColorAtElevation
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.findViewTreeLifecycleOwner
-import androidx.savedstate.findViewTreeSavedStateRegistryOwner
 import com.klyx.editor.KlyxEditor
-import com.klyx.core.createParent
+import com.klyx.editor.compose.ComposeActionPopup
 import io.github.rosemoe.sora.R
 import io.github.rosemoe.sora.event.EditorFocusChangeEvent
 import io.github.rosemoe.sora.event.HandleStateChangeEvent
@@ -28,59 +25,44 @@ import io.github.rosemoe.sora.event.LongPressEvent
 import io.github.rosemoe.sora.event.ScrollEvent
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.event.subscribeAlways
-import io.github.rosemoe.sora.widget.base.EditorPopupWindow
 import kotlin.math.max
 import kotlin.math.min
 
 class TextActionWindow(
-    private val editor: KlyxEditor,
+    editor: KlyxEditor,
     localView: View,
     compositionContext: CompositionContext
-) : EditorPopupWindow(editor, FEATURE_SHOW_OUTSIDE_VIEW_ALLOWED) {
+) : ComposeActionPopup(editor, localView, compositionContext) {
     companion object {
         private const val DELAY = 200L
         private const val CHECK_FOR_DISMISS_INTERVAL = 100L
     }
 
     private val handler = editor.eventHandler
-    private val eventManager = editor.createSubEventManager()
-
     private var lastScroll = 0L
     private var lastPosition = 0
     private var lastCause = 0
 
-    init {
-        popup.contentView = ComposeView(localView.context).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setParentCompositionContext(compositionContext)
-
-            setContent {
-                Row(
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.small)
-                        .background(MaterialTheme.colorScheme.surfaceColorAtElevation(popup.elevation.dp))
-                        .horizontalScroll(rememberScrollState())
-                        .fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextActionItems(editor, onClick = { dismiss() })
-                }
-            }
-        }.createParent(
-            localView.context,
-            localView.findViewTreeLifecycleOwner(),
-            localView.findViewTreeSavedStateRegistryOwner()
-        ).apply {
-            measure(
-                View.MeasureSpec.makeMeasureSpec(1000000, View.MeasureSpec.AT_MOST),
-                View.MeasureSpec.makeMeasureSpec(100000, View.MeasureSpec.AT_MOST)
-            )
-        }
-
+    override fun onInitialized() {
         popup.animationStyle = R.style.text_action_popup_animation
         setSize((editor.dpUnit * 200).toInt(), (editor.dpUnit * 48).toInt())
-
         subscribeEvents()
+    }
+
+    @Composable
+    override fun Content() {
+        Row(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.small)
+                .background(MaterialTheme.colorScheme.surfaceColorAtElevation(popup.elevation.dp))
+                .horizontalScroll(rememberScrollState())
+                .fillMaxSize(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextActionItems(editor) { actionId ->
+                onActionPerformed(actionId)
+            }
+        }
     }
 
     private fun subscribeEvents() {
@@ -91,6 +73,12 @@ class TextActionWindow(
             subscribeAlways<LongPressEvent>(::onEditorLongPress)
             subscribeAlways<EditorFocusChangeEvent>(::onEditorFocusChange)
         }
+    }
+
+    override fun onBeforeShow(): Boolean {
+        return !editor.snippetController.isInSnippet() &&
+                editor.hasFocus() &&
+                !editor.isInMouseMode()
     }
 
     private fun onSelectionChange(event: SelectionChangeEvent) {
@@ -216,12 +204,5 @@ class TextActionWindow(
         val panelX = ((handleLeftX + handleRightX) / 2f - popup.contentView.measuredWidth / 2f).toInt()
         setLocationAbsolutely(panelX, top)
         show()
-    }
-
-    override fun show() {
-        if (editor.snippetController.isInSnippet() || !editor.hasFocus() || editor.isInMouseMode()) {
-            return
-        }
-        super.show()
     }
 }

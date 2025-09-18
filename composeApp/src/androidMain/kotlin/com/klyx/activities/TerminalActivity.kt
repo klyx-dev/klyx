@@ -13,8 +13,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularWavyProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProvideTextStyle
@@ -53,7 +52,6 @@ import java.io.File
 class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
     private val logger = logger()
 
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -152,7 +150,6 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
     }
 
     @Composable
-    @OptIn(ExperimentalMaterial3ExpressiveApi::class)
     private fun SetupScreen(
         onComplete: () -> Unit
     ) {
@@ -210,11 +207,11 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
                 ) {
                     if (error == null && networkState.isConnected) {
                         if (progressValue != null) {
-                            CircularWavyProgressIndicator(
+                            CircularProgressIndicator(
                                 progress = { progressValue },
                             )
                         } else {
-                            CircularWavyProgressIndicator()
+                            CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(2.dp))
                         }
                     }

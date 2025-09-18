@@ -25,6 +25,7 @@ import org.eclipse.lsp4j.HoverCapabilities
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.OnTypeFormattingCapabilities
+import org.eclipse.lsp4j.ParameterInformationCapabilities
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
 import org.eclipse.lsp4j.RangeFormattingCapabilities
 import org.eclipse.lsp4j.RenameCapabilities
@@ -108,7 +109,11 @@ fun createInitializeParams(
                 dynamicRegistration = true
                 signatureInformation = SignatureInformationCapabilities().apply {
                     documentationFormat = listOf(MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT)
+                    parameterInformation = ParameterInformationCapabilities().apply {
+                        labelOffsetSupport = true
+                    }
                 }
+                contextSupport = true
             }
             definition = DefinitionCapabilities().apply {
                 dynamicRegistration = true

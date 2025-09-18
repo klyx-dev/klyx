@@ -46,6 +46,9 @@ kotlin {
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
 
+                implementation(libs.multiplatform.markdown.renderer)
+                implementation(libs.multiplatform.markdown.renderer.m3)
+
                 implementation(kotlin("reflect"))
 
                 implementation(projects.core)

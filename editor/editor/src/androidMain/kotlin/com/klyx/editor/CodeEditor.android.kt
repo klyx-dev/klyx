@@ -255,7 +255,16 @@ private fun VirtualKeys(
                                     editor.indentOrCommitTab()
                                 }
                             } else {
-                                editor.insertText(insertText, 1)
+                                if (editor.cursor.isSelected && insertText.length > 1) {
+                                    val left = editor.cursor.left
+                                    val right = editor.cursor.right
+                                    val selectedText = editor.text.substring(left, right)
+
+                                    val newText = "${insertText[0]}$selectedText${insertText[1]}"
+                                    editor.text.replace(left, right, newText)
+                                } else {
+                                    editor.insertText(insertText, 1)
+                                }
                             }
                         }
                     }

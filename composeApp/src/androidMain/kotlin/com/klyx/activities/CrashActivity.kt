@@ -12,10 +12,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFlexibleTopAppBar
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -33,14 +32,13 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
-import java.util.Date
 
 class CrashActivity : KlyxActivity() {
     companion object {
         const val EXTRA_CRASH_LOG = "extra_crash_log"
     }
 
-    @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -54,7 +52,7 @@ class CrashActivity : KlyxActivity() {
                 Scaffold(
                     modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                     topBar = {
-                        LargeFlexibleTopAppBar(
+                        LargeTopAppBar(
                             title = {
                                 Text(
                                     "App Crash Report",
@@ -62,13 +60,13 @@ class CrashActivity : KlyxActivity() {
                                     overflow = TextOverflow.Ellipsis
                                 )
                             },
-                            subtitle = {
-                                Text(
-                                    Date().toString(),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
+//                            subtitle = {
+//                                Text(
+//                                    Date().toString(),
+//                                    maxLines = 1,
+//                                    overflow = TextOverflow.Ellipsis
+//                                )
+//                            },
                             navigationIcon = {
                                 TooltipBox(
                                     positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),

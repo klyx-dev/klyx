@@ -13,9 +13,10 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
+import com.klyx.editor.KlyxEditor
 import com.klyx.editor.lsp.completion.LspCompletionItem
-import com.klyx.editor.lsp.editor.SignatureHelpWindow
 import com.klyx.editor.lsp.util.asLspPosition
+import com.klyx.editor.signature.SignatureHelpWindow
 import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.EditorReleaseEvent
@@ -69,7 +70,7 @@ import java.util.concurrent.atomic.AtomicReference
 class EditorLanguageServerClient(
     val worktree: Worktree,
     val file: KxFile,
-    val editor: CodeEditor,
+    val editor: KlyxEditor,
     val scope: CoroutineScope,
     private val settings: AppSettings
 ) : KoinComponent {
@@ -86,9 +87,7 @@ class EditorLanguageServerClient(
     }
 
     private val prefixCache = LruCache<String, String>(300)
-    private val positionIndexCache = LruCache<String, Int>(500)
     private val quickfixCache = LruCache<String, List<Quickfix>>(100)
-    private val diagnosticRegionCache = LruCache<String, DiagnosticRegion>(200)
 
     private val cacheMutex = Mutex()
 
@@ -114,7 +113,7 @@ class EditorLanguageServerClient(
     )
 
     fun initialize(localView: View, compositionContext: CompositionContext) {
-        signatureHelpWindow.set(SignatureHelpWindow(editor))
+        signatureHelpWindow.set(SignatureHelpWindow(editor, localView, compositionContext))
         setupFlows()
 
         scope.launch(Dispatchers.IO) {
@@ -157,36 +156,43 @@ class EditorLanguageServerClient(
             contentChangeJob?.cancel()
 
             contentChangeJob = scope.launch(Dispatchers.Default) {
-                delay(150)
-
                 LanguageServerManager.changeDocument(
                     worktree,
                     file,
                     event.editor.text.toString()
                 )
 
-                val changeText = event.changedText
-                if (hitReTrigger(changeText)) {
+                delay(150)
+
+                val text = event.editor.text.getOrNull(event.changeStart.index - 1)?.toString().orEmpty()
+                if (hitReTrigger(text)) {
                     showSignatureHelp(null)
                     return@launch
                 }
 
-                tryShowSignatureHelp(event.changeStart)
+                if (hitTrigger(text)) {
+                    tryShowSignatureHelp(event.changeStart)
+                }
             }
         }
 
         editor.subscribeAlways<SelectionChangeEvent> { event ->
             val position = event.left
 
-            val text = event.editor.text.getOrNull(position.index)?.toString()
+            val text = event.editor.text.getOrNull(position.index - 1)?.toString()
+            println("Text: $text")
             if (text != null && hitReTrigger(text)) {
                 showSignatureHelp(null)
                 return@subscribeAlways
             }
 
-            signatureHelpJob?.cancel()
-            signatureHelpJob = scope.launch(Dispatchers.Default) {
-                tryShowSignatureHelp(position)
+            if (text != null && hitTrigger(text)) {
+                signatureHelpJob?.cancel()
+                signatureHelpJob = scope.launch(Dispatchers.Default) {
+                    tryShowSignatureHelp(position)
+                }
+            } else {
+                showSignatureHelp(null)
             }
         }
 
@@ -197,6 +203,7 @@ class EditorLanguageServerClient(
         LanguageServerManager
             .signatureHelp(worktree, file, position.asLspPosition())
             .onSuccess { signatureHelp ->
+                println(signatureHelp)
                 showSignatureHelp(signatureHelp)
             }
             .onFailure {
@@ -218,7 +225,7 @@ class EditorLanguageServerClient(
         val diagnosticRegions = coroutineScope {
             diagnostics.mapIndexed { idx, diagnostic ->
                 async(Dispatchers.Default) {
-                    createDiagnosticRegionCached(idx, diagnostic)
+                    createDiagnosticRegion(idx, diagnostic)
                 }
             }.awaitAll()
         }
@@ -232,26 +239,12 @@ class EditorLanguageServerClient(
         }
     }
 
-    private suspend fun createDiagnosticRegionCached(idx: Int, diagnostic: Diagnostic): DiagnosticRegion {
-        val cacheKey = "${diagnostic.range}:${diagnostic.message.hashCode()}:$idx"
-
-        return cacheMutex.withLock {
-            diagnosticRegionCache.get(cacheKey)
-        } ?: run {
-            val region = createDiagnosticRegion(idx, diagnostic)
-            cacheMutex.withLock {
-                diagnosticRegionCache.put(cacheKey, region)
-            }
-            region
-        }
-    }
-
     private suspend fun createDiagnosticRegion(idx: Int, diagnostic: Diagnostic): DiagnosticRegion {
         val quickfixes = fetchQuickfixesCached(diagnostic)
 
         return DiagnosticRegion(
-            diagnostic.range.start.getIndexCached(editor),
-            diagnostic.range.end.getIndexCached(editor),
+            diagnostic.range.start.calculatePositionIndex(editor),
+            diagnostic.range.end.calculatePositionIndex(editor),
             diagnostic.severity.toEditorLevel(),
             idx.toLong(),
             DiagnosticDetail(
@@ -264,6 +257,9 @@ class EditorLanguageServerClient(
     }
 
     fun showSignatureHelp(signatureHelp: SignatureHelp?) {
+        println(signatureHelp == null)
+        println(signatureHelp)
+
         val helpWindow = signatureHelpWindow.get() ?: return
 
         if (signatureHelp == null) {
@@ -284,19 +280,6 @@ class EditorLanguageServerClient(
         val triggers = signatureHelpTriggersSet
         return if (triggers.isEmpty()) false
         else eventText.any { it.toString() in triggers }
-    }
-
-    private suspend fun Position.getIndexCached(editor: CodeEditor): Int {
-        val key = "${this.line}:${this.character}"
-        return cacheMutex.withLock {
-            positionIndexCache.get(key)
-        } ?: run {
-            val index = calculatePositionIndex(editor)
-            cacheMutex.withLock {
-                positionIndexCache.put(key, index)
-            }
-            index
-        }
     }
 
     private fun Position.calculatePositionIndex(editor: CodeEditor): Int {
@@ -390,8 +373,8 @@ class EditorLanguageServerClient(
             val text = editor.text
 
             sortedEdits.forEach { textEdit ->
-                val startIdx = textEdit.range.start.getIndexCached(editor)
-                val endIdx = textEdit.range.end.getIndexCached(editor)
+                val startIdx = textEdit.range.start.calculatePositionIndex(editor)
+                val endIdx = textEdit.range.end.calculatePositionIndex(editor)
 
                 if (startIdx <= endIdx && startIdx >= 0 && endIdx <= text.length) {
                     text.replace(startIdx, endIdx, textEdit.newText)
@@ -568,9 +551,7 @@ class EditorLanguageServerClient(
         scope.launch(Dispatchers.Default) {
             cacheMutex.withLock {
                 prefixCache.evictAll()
-                positionIndexCache.evictAll()
                 quickfixCache.evictAll()
-                diagnosticRegionCache.evictAll()
             }
         }
     }

@@ -115,7 +115,7 @@ data class AppSettings(
             initializationOptions = buildJsonObject {
                 put("cargo.buildScripts.enable", true)
                 put("procMacro.enable", true)
-                put("completion.fullFunctionSignatures.enable", true)
+                //put("completion.fullFunctionSignatures.enable", true)
             }
         )
     )

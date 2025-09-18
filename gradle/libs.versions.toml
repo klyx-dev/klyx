@@ -1,8 +1,8 @@
 [versions]
-agp = "8.11.0"
-androidx-activity = "1.10.1"
-androidx-core = "1.16.0"
-androidx-lifecycle = "2.9.1"
+agp = "8.13.0"
+androidx-activity = "1.11.0"
+androidx-core = "1.17.0"
+androidx-lifecycle = "2.9.4"
 annotation = "1.9.1"
 chasm = "1.0.0"
 coil = "3.3.0"
@@ -11,17 +11,17 @@ iconsLucide = "1.1.0"
 kfswatch = "1.3.1"
 kotlinResult = "2.1.0"
 log4k = "1.5.0"
+multiplatformMarkdownRenderer = "0.37.0"
 multiplatformSettingsNoArg = "1.3.0"
 semver = "3.0.0"
 voyager = "1.1.0-beta03"
 wasip1Bindings = "0.6.0"
-collection = "1.5.0"
 composeHotReload = "1.0.0-beta03"
-composeMultiplatform = "1.8.2"
+composeMultiplatform = "1.9.0"
 junit = "4.13.2"
-kotlin = "2.2.10"
+kotlin = "2.2.20"
 kotlinx-coroutines = "1.10.2"
-kotlinx-datetime = "0.6.0"
+kotlinx-datetime = "0.7.1"
 kotlinx-io = "0.8.0"
 ktor = "3.2.3"
 commonsCompress = "1.28.0"
@@ -31,13 +31,9 @@ kotlinxSerialization = "1.9.0"
 ktoml = "0.7.1"
 ktreesitter = "0.24.1"
 okio = "3.16.0"
-core = "1.16.0"
-lifecycle = "2.9.1"
-composeBom = "2025.06.01"
-material = "1.12.0"
-truth = "1.4.4"
+material = "1.13.0"
 utilcodex = "1.31.1"
-compose-material3 = "1.4.0-alpha18"
+compose-material3 = "1.4.0-rc01"
 koin = "4.1.0"
 oshi-core = "6.8.2"
 runner = "1.7.0"
@@ -47,16 +43,14 @@ sora-editor = "0.23.7"
 lsp4j = "0.24.0"
 espressoCore = "3.7.0"
 appcompat = "1.7.1"
-ksp = "2.2.10-2.0.2"
+ksp = "2.2.20-2.0.3"
 detekt = "1.23.8"
 filekit = "0.10.0"
 arrow = "2.1.2"
-lifecycleRuntimeKtx = "2.9.4"
-composeBomVersion = "2025.09.00"
 
 [libraries]
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
-androidx-core = { module = "androidx.core:core", version.ref = "core" }
+androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 bindings-chasm-wasip1 = { module = "at.released.weh:bindings-chasm-wasip1", version.ref = "wasip1Bindings" }
 chasm = { module = "io.github.charlietap.chasm:chasm", version.ref = "chasm" }
@@ -67,6 +61,8 @@ icons-lucide = { module = "com.composables:icons-lucide", version.ref = "iconsLu
 kfswatch = { module = "io.github.irgaly.kfswatch:kfswatch", version.ref = "kfswatch" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 log4k = { module = "de.peilicke.sascha:log4k", version.ref = "log4k" }
+multiplatform-markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
+multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettingsNoArg" }
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
 voyager-screenmodel = { module = "cafe.adriel.voyager:voyager-screenmodel", version.ref = "voyager" }
@@ -132,15 +128,6 @@ filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose
 
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
-androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
-androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBomVersion" }
-androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
-androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
-androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
-androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
-androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
-androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-androidx-compose-ui-text = { group = "androidx.compose.ui", name = "ui-text" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }

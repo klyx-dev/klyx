@@ -27,38 +27,38 @@ import com.klyx.editor.KlyxEditor
 @Composable
 internal fun RowScope.TextActionItems(
     editor: KlyxEditor,
-    onClick: () -> Unit = {}
+    onClick: (String) -> Unit = {}
 ) {
     IconButton(
         Icons.Default.SelectAll,
         "Select All"
     ) {
         editor.selectAll()
-        onClick()
+        onClick("selectall")
     }
 
     IconButton(Icons.Default.ContentCopy, "Copy") {
         editor.copyText()
         editor.setSelection(editor.cursor.rightLine, editor.cursor.rightColumn)
-        onClick()
+        onClick("copy")
     }
 
     IconButton(Icons.Default.ContentCut, "Cut") {
         if (editor.cursor.isSelected) {
             editor.cutText()
         }
-        onClick()
+        onClick("cut")
     }
 
     IconButton(Icons.Default.ContentPaste, "Paste") {
         editor.pasteText()
         editor.setSelection(editor.cursor.rightLine, editor.cursor.rightColumn)
-        onClick()
+        onClick("paste")
     }
 
     IconButton(KlyxIcons.TextSelectStart, "Long Select") {
         editor.beginLongSelect()
-        onClick()
+        onClick("longselect")
     }
 
     IconButton(Icons.AutoMirrored.Filled.FormatAlignLeft, "Format Code") {
@@ -70,7 +70,7 @@ internal fun RowScope.TextActionItems(
         } else {
             editor.formatCodeAsync()
         }
-        onClick()
+        onClick("formatcode")
     }
 }
 
