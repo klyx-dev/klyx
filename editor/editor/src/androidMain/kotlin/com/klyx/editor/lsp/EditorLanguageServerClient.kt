@@ -95,7 +95,6 @@ class EditorLanguageServerClient(
 
     private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1, extraBufferCapacity = 1)
 
-    private var lastSignaturePosition: CharPosition? = null
     private val lastDiagnosticsHash = AtomicInteger(0)
 
     private var contentChangeJob: Job? = null

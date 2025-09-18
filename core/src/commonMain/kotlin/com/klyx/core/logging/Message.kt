@@ -1,18 +1,18 @@
 package com.klyx.core.logging
 
 import com.klyx.core.currentThreadName
-import kotlinx.datetime.Clock
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
-data class Message(
+data class Message @OptIn(ExperimentalTime::class) constructor(
     val level: Level,
     val tag: String,
     val message: String,
     val type: MessageType = MessageType.Standard,
     val throwable: Throwable? = null,
-    val timestamp: Instant = Clock.System.now(),
+    val timestamp: kotlin.time.Instant = kotlin.time.Clock.System.now(),
     val threadName: String = currentThreadName,
     val metadata: Map<String, Any> = emptyMap()
 )
@@ -21,6 +21,7 @@ enum class MessageType {
     Standard, Progress
 }
 
+@OptIn(ExperimentalTime::class)
 fun Instant.toLogString(
     showMillis: Boolean = false,
     zone: TimeZone = TimeZone.currentSystemDefault()

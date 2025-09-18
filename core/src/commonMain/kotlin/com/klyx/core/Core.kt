@@ -32,12 +32,12 @@ fun dayWithSuffix(day: Int): String {
 
 fun LocalDate.formatDate(): String {
     val monthName = month.name.lowercase().replaceFirstChar { it.uppercaseChar() }
-    val daySuffix = dayWithSuffix(dayOfMonth)
+    val daySuffix = dayWithSuffix(day)
     return "$monthName $daySuffix, $year"
 }
 
 fun LocalDateTime.formatDateTime(): String {
-    val daySuffix = dayWithSuffix(dayOfMonth)
+    val daySuffix = dayWithSuffix(day)
     val monthName = month.name.lowercase().replaceFirstChar { it.uppercaseChar() }
     val hour = hour.toString().padStart(2, '0')
     val minute = minute.toString().padStart(2, '0')

@@ -2,6 +2,7 @@ package com.klyx.core.logging
 
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
 
 interface LogFormatter {
     fun format(message: Message): String
@@ -12,6 +13,7 @@ class DefaultLogFormatter(
     private val includeTimestamp: Boolean = true,
     private val includeMetadata: Boolean = true
 ) : LogFormatter {
+    @OptIn(ExperimentalTime::class)
     override fun format(message: Message): String {
         val parts = mutableListOf<String>()
 
@@ -39,6 +41,7 @@ class DefaultLogFormatter(
 }
 
 object CompactLogFormatter : LogFormatter {
+    @OptIn(ExperimentalTime::class)
     override fun format(message: Message): String {
         val time = message.timestamp.toLocalDateTime(TimeZone.currentSystemDefault())
         val timeStr = "${time.hour.toString().padStart(2, '0')}:${
@@ -77,6 +80,7 @@ class ColoredConsoleFormatter(
         const val DIM = "\u001B[2m"
     }
 
+    @OptIn(ExperimentalTime::class)
     override fun format(message: Message): String {
         val time = message.timestamp.toLocalDateTime(TimeZone.currentSystemDefault())
         val timeStr = "${time.hour.toString().padStart(2, '0')}:${

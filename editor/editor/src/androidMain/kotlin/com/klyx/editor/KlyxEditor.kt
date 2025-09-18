@@ -42,6 +42,7 @@ class KlyxEditor @JvmOverloads constructor(
     }
 
     @OptIn(ExperimentalCodeEditorApi::class)
+    @Suppress("RedundantSuspendModifier")
     suspend fun connectToLsp(state: CodeEditorState) {
         //
     }

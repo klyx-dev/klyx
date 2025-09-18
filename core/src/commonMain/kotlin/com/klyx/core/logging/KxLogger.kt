@@ -1,9 +1,11 @@
+@file:OptIn(ExperimentalTime::class)
+
 package com.klyx.core.logging
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-import kotlinx.datetime.Clock
+import kotlin.time.ExperimentalTime
 
 class KxLogger private constructor(
     @PublishedApi
@@ -109,11 +111,11 @@ class KxLogger private constructor(
         level: Level = Level.Debug,
         block: () -> T
     ): T {
-        val startTime = Clock.System.now()
+        val startTime = kotlin.time.Clock.System.now()
         val result = try {
             block()
         } catch (e: Exception) {
-            val duration = Clock.System.now() - startTime
+            val duration = kotlin.time.Clock.System.now() - startTime
             log(
                 Message(
                     Level.Error,
@@ -130,7 +132,7 @@ class KxLogger private constructor(
             throw e
         }
 
-        val duration = Clock.System.now() - startTime
+        val duration = kotlin.time.Clock.System.now() - startTime
         log(
             Message(
                 level,

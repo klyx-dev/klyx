@@ -57,7 +57,7 @@ internal fun SignatureHelpContent(
 
     val activeSignatureIndex = (signatureHelp.activeSignature ?: 0).coerceAtLeast(0)
     val activeParameterIndex = signatureHelp.activeParameter ?: -1
-    val signatures = signatureHelp.signatures ?: emptyList()
+    val signatures = signatureHelp.signatures.orEmpty()
 
     if (signatures.isEmpty()) return
 
@@ -174,7 +174,7 @@ private fun HighlightedSignatureLabel(
     activeParamIndex: Int
 ) {
     val label = signature.label
-    val parameters = signature.parameters ?: emptyList()
+    val parameters = signature.parameters.orEmpty()
 
     val annotatedString = buildAnnotatedString {
         if (parameters.isEmpty()) {

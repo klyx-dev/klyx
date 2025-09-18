@@ -13,7 +13,6 @@ import androidx.compose.ui.text.input.TextEditorState
 import androidx.compose.ui.text.input.TextFieldValue
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
-import kotlinx.coroutines.flow.Flow
 
 @ExperimentalCodeEditorApi
 internal actual suspend fun PlatformTextInputSessionScope.createInputRequest(
@@ -25,7 +24,7 @@ internal actual suspend fun PlatformTextInputSessionScope.createInputRequest(
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi
-        override val focusedRectInRoot: Flow<Rect>
+        override val focusedRectInRoot: () -> Rect?
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi
@@ -41,23 +40,19 @@ internal actual suspend fun PlatformTextInputSessionScope.createInputRequest(
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi
-        override val outputValue: Flow<TextFieldValue>
-            get() = TODO("Not yet implemented")
-
-        @ExperimentalComposeUiApi
         override val state: TextEditorState
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi
-        override val textClippingRectInRoot: Flow<Rect>
+        override val textClippingRectInRoot: () -> Rect?
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi
-        override val textFieldRectInRoot: Flow<Rect>
+        override val textFieldRectInRoot: () -> Rect?
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi
-        override val textLayoutResult: Flow<TextLayoutResult>
+        override val textLayoutResult: () -> TextLayoutResult?
             get() = TODO("Not yet implemented")
 
         @ExperimentalComposeUiApi

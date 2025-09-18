@@ -1,9 +1,12 @@
+@file:OptIn(ExperimentalTime::class)
+
 package com.klyx.core.logging
 
-import kotlinx.datetime.Instant
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
 @DslMarker
 private annotation class LogFormatterDslBuilder

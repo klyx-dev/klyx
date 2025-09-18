@@ -12,7 +12,6 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -22,6 +21,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlin.time.ExperimentalTime
 
 private const val BASE_RAW_URL = "https://raw.githubusercontent.com/klyx-dev/extensions/main"
 const val EXTENSIONS_INDEX_URL = "$BASE_RAW_URL/extensions.toml"
@@ -107,12 +107,13 @@ suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(
     Result.success(internalDir)
 }
 
+@OptIn(ExperimentalTime::class)
 suspend fun fetchLastUpdated(repo: String): LocalDateTime? {
     val (username, reponame) = parseRepoInfo(repo)
     val jsonText = fetchText("https://api.github.com/repos/$username/$reponame")
     val json = Json.parseToJsonElement(jsonText).jsonObject
     val pushedAt = json["pushed_at"]?.jsonPrimitive?.content ?: return null
-    return Instant.parse(pushedAt).toLocalDateTime(TimeZone.currentSystemDefault())
+    return kotlin.time.Instant.parse(pushedAt).toLocalDateTime(TimeZone.currentSystemDefault())
 }
 
 internal expect suspend fun ByteArray.extractRepoZip(targetDir: KxFile)
