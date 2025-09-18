@@ -7,6 +7,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.core.Environment
 import com.klyx.core.Notifier
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.io.FileCloseEvent
+import com.klyx.core.event.io.FileOpenEvent
+import com.klyx.core.event.io.FileSaveEvent
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
@@ -133,6 +137,8 @@ class EditorViewModel(
             withContext(Dispatchers.Main) {
                 openTab(fileTab)
             }
+
+            EventBus.instance.post(FileOpenEvent(file, worktree?.rootFile))
         }
     }
 
@@ -146,8 +152,9 @@ class EditorViewModel(
 
             val tab = current.openTabs.find { it.id == tabId }
             if (tab is Tab.FileTab) {
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.Default) {
                     onCloseFileTab(tab.worktree, tab.file)
+                    EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                 }
             }
 
@@ -234,8 +241,9 @@ class EditorViewModel(
                 file.writeText(text)
                 tab.markAsSaved()
 
-                viewModelScope.launch {
+                viewModelScope.launch(Dispatchers.Default) {
                     onSaveFile(tab.worktree, file)
+                    EventBus.instance.post(FileSaveEvent(file, tab.worktree?.rootFile))
                 }
 
                 true
@@ -266,11 +274,17 @@ class EditorViewModel(
                 id = newFile.id,
                 name = newFile.name,
                 file = newFile,
+                worktree = tab.worktree,
                 editorState = CodeEditorState(editorState)
             )
 
             replaceTab(tab.id, newTab)
             tab.markAsSaved()
+
+            viewModelScope.launch(Dispatchers.Default) {
+                onSaveFile(tab.worktree, newFile)
+                EventBus.instance.post(FileSaveEvent(newFile, tab.worktree?.rootFile))
+            }
             true
         } else false
     }
@@ -292,7 +306,14 @@ class EditorViewModel(
                         false
                     }
 
-                    if (saved) tab.markAsSaved()
+                    if (saved) {
+                        tab.markAsSaved()
+
+                        viewModelScope.launch(Dispatchers.Default) {
+                            onSaveFile(tab.worktree, file)
+                            EventBus.instance.post(FileSaveEvent(file, tab.worktree?.rootFile))
+                        }
+                    }
                     results[tab.name] = saved
                 }
             }

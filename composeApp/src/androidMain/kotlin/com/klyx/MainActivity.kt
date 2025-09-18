@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,6 +21,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.content.edit
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ClipboardUtils
 import com.github.michaelbull.result.onFailure
@@ -35,6 +39,7 @@ import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
+import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.extension.ExtensionManager
 import com.klyx.filetree.FileTreeViewModel
@@ -103,6 +108,24 @@ class MainActivity : KlyxActivity() {
                 }
 
                 //openActivity(RustLspActivity::class)
+            }
+
+            val lifecycleOwner = LocalLifecycleOwner.current
+
+            DisposableEffect(lifecycleOwner) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_CREATE) {
+                        val data = intent.data
+                        if (data != null) {
+                            viewModel.openFile(data.toKxFile())
+                        }
+                    }
+                }
+
+                val lifecycle = lifecycleOwner.lifecycle
+                lifecycle.addObserver(observer)
+
+                onDispose { lifecycle.removeObserver(observer) }
             }
 
             val settings = LocalAppSettings.current

@@ -171,6 +171,8 @@ fun KxFile.extractZip(outputDir: File) {
     }
 }
 
+fun Uri.toKxFile() = KxFile(this.toString())
+
 actual fun KxFile(path: String): KxFile {
     val context = ContextHolder.context
     val uri = path.toUri()

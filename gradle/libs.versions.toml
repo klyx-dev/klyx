@@ -6,11 +6,8 @@ androidx-lifecycle = "2.9.4"
 annotation = "1.9.1"
 chasm = "1.0.0"
 coil = "3.3.0"
-composablesCore = "1.43.1"
-iconsLucide = "1.1.0"
 kfswatch = "1.3.1"
 kotlinResult = "2.1.0"
-log4k = "1.5.0"
 multiplatformMarkdownRenderer = "0.37.0"
 multiplatformSettingsNoArg = "1.3.0"
 semver = "3.0.0"
@@ -35,7 +32,6 @@ material = "1.13.0"
 utilcodex = "1.31.1"
 compose-material3 = "1.4.0-rc01"
 koin = "4.1.0"
-oshi-core = "6.8.2"
 runner = "1.7.0"
 coreVersion = "1.7.0"
 junitVersion = "1.3.0"
@@ -56,11 +52,8 @@ bindings-chasm-wasip1 = { module = "at.released.weh:bindings-chasm-wasip1", vers
 chasm = { module = "io.github.charlietap.chasm:chasm", version.ref = "chasm" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
-composablesCore = { module = "com.composables:core", version.ref = "composablesCore" }
-icons-lucide = { module = "com.composables:icons-lucide", version.ref = "iconsLucide" }
 kfswatch = { module = "io.github.irgaly.kfswatch:kfswatch", version.ref = "kfswatch" }
 kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
-log4k = { module = "de.peilicke.sascha:log4k", version.ref = "log4k" }
 multiplatform-markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettingsNoArg" }
@@ -84,7 +77,6 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3",
 androidx-google-fonts = { module = "androidx.compose.ui:ui-text-google-fonts" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 utilcodex = { module = "com.blankj:utilcodex", version.ref = "utilcodex" }
-oshi-core = { module = "com.github.oshi:oshi-core", version.ref = "oshi-core" }
 ksp = { module = "com.google.devtools.ksp:symbol-processing-api", version.ref = "ksp" }
 
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -107,10 +99,8 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 sora-editor-bom = { module = "io.github.rosemoe:editor-bom", version.ref = "sora-editor" }
 sora-editor = { module = "io.github.rosemoe:editor" }
-sora-editor-lsp = { module = "io.github.rosemoe:editor-lsp" }
 sora-language-textmate = { module = "io.github.rosemoe:language-textmate" }
 sora-language-treesitter = { module = "io.github.rosemoe:language-treesitter" }
-sora-language-java = { module = "io.github.rosemoe:language-java" }
 lsp4j = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j", version.ref = "lsp4j" }
 lsp4j-jsonrpc = { module = "org.eclipse.lsp4j:org.eclipse.lsp4j.jsonrpc", version.ref = "lsp4j" }
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }

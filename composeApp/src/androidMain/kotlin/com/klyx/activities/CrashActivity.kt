@@ -19,6 +19,7 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBarDefaults
@@ -69,7 +70,7 @@ class CrashActivity : KlyxActivity() {
 //                            },
                             navigationIcon = {
                                 TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
                                     tooltip = { PlainTooltip { Text("Close App") } },
                                     state = rememberTooltipState(),
                                 ) {
@@ -85,7 +86,7 @@ class CrashActivity : KlyxActivity() {
                             },
                             actions = {
                                 TooltipBox(
-                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(),
+                                    positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Below),
                                     tooltip = { PlainTooltip { Text("Report Crash") } },
                                     state = rememberTooltipState(),
                                 ) {
