@@ -12,7 +12,7 @@ android {
         implementation "androidx.annotation:annotation:1.9.1"
         implementation libs.androidx.core
         implementation libs.material
-        implementation "com.google.guava:guava:33.4.8-jre"
+        implementation "com.google.guava:guava:33.5.0-jre"
         implementation "io.noties.markwon:core:$markwonVersion"
         implementation "io.noties.markwon:ext-strikethrough:$markwonVersion"
         implementation "io.noties.markwon:linkify:$markwonVersion"
