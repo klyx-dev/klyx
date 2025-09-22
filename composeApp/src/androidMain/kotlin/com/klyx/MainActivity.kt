@@ -2,6 +2,7 @@ package com.klyx
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -12,7 +13,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,15 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ClipboardUtils
 import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
-import com.klyx.core.LocalSharedPreferences
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
 import com.klyx.core.event.CrashEvent
@@ -41,26 +37,18 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import org.koin.compose.viewmodel.koinViewModel
-import java.util.concurrent.Executors
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class MainActivity : KlyxActivity() {
-
-    private val dispatcher = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    private val editorViewModel by viewModel<EditorViewModel>()
+    private val fileTreeViewModel by viewModel<FileTreeViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             val notifier = LocalNotifier.current
-            val prefs = LocalSharedPreferences.current
-
-            val viewModel: EditorViewModel = koinViewModel()
-            val fileTreeViewModel = koinViewModel<FileTreeViewModel>()
-            val klyxViewModel = koinViewModel<KlyxViewModel>()
             val projects by fileTreeViewModel.rootNodes.collectAsState()
 
             LaunchedEffect(projects) {
@@ -89,24 +77,6 @@ class MainActivity : KlyxActivity() {
                 }
 
                 //openActivity(RustLspActivity::class)
-            }
-
-            val lifecycleOwner = LocalLifecycleOwner.current
-
-            DisposableEffect(lifecycleOwner) {
-                val observer = LifecycleEventObserver { _, event ->
-                    if (event == Lifecycle.Event.ON_CREATE) {
-                        val data = intent.data
-                        if (data != null) {
-                            viewModel.openFile(data.toKxFile())
-                        }
-                    }
-                }
-
-                val lifecycle = lifecycleOwner.lifecycle
-                lifecycle.addObserver(observer)
-
-                onDispose { lifecycle.removeObserver(observer) }
             }
 
             val settings = LocalAppSettings.current
@@ -161,6 +131,24 @@ class MainActivity : KlyxActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_EDIT) {
+            val uri = intent.data!!
+            editorViewModel.openFile(uri.toKxFile())
+            setIntent(Intent())
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 
     @SuppressLint("RestrictedApi")

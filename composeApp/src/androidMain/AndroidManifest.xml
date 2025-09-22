@@ -30,10 +30,11 @@
 
         <activity
             android:name=".MainActivity"
-            android:resizeableActivity="true"
+            android:exported="true"
+            android:alwaysRetainTaskState="true"
             android:launchMode="singleInstancePerTask"
-            android:windowSoftInputMode="adjustResize"
-            android:exported="true">
+            android:resizeableActivity="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -42,11 +43,16 @@
 
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.EDIT" />
+
                 <category android:name="android.intent.category.DEFAULT" />
 
-                <data android:mimeType="*/*" />
-                <data android:scheme="file" />
-                <data android:scheme="content" />
+                <data
+                    android:mimeType="*/*"
+                    android:scheme="file" />
+                <data
+                    android:mimeType="*/*"
+                    android:scheme="content" />
             </intent-filter>
         </activity>
 
