@@ -11,19 +11,18 @@ import com.klyx.extension.internal.Command
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmInstance
 import com.klyx.wasm.WasmMemory
-import kotlinx.coroutines.CloseableCoroutineDispatcher
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-@OptIn(ExperimentalWasmApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalWasmApi::class)
 data class LocalExtension(
     val extension: Extension,
     val logger: KxLogger,
     internal val instance: WasmInstance,
-    private val extensionDispatcher: CloseableCoroutineDispatcher
+    private val extensionDispatcher: CoroutineDispatcher
 ) : AutoCloseable, CoroutineScope by CoroutineScope(extensionDispatcher + SupervisorJob()) {
     private val memory by lazy { instance.memory }
 
@@ -118,7 +117,5 @@ data class LocalExtension(
         readErr = WasmMemory::readLengthPrefixedUtf8String
     )
 
-    override fun close() {
-        extensionDispatcher.close()
-    }
+    override fun close() {}
 }

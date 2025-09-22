@@ -76,6 +76,7 @@ import com.klyx.res.exit
 import com.klyx.res.i_agree
 import com.klyx.res.important_notice
 import com.klyx.tab.Tab
+import com.klyx.ui.SplashScreen
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
@@ -89,6 +90,7 @@ import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.StatusBarViewModel
 import com.klyx.viewmodel.openLogViewer
+import com.klyx.viewmodel.showWelcome
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -162,191 +164,228 @@ fun App(
         }
     }
 
+    var extensionLoadFailure: String? by remember { mutableStateOf(null) }
+
+    LaunchedEffect(Unit) {
+        if (appPrefs.getBoolean("show_welcome", true)) {
+            editorViewModel.showWelcome()
+            appPrefs.putBoolean("show_welcome", false)
+        }
+    }
+
     var showDisclaimer by remember { mutableStateOf(!DisclaimerManager.hasAccepted()) }
+    var showUi by remember { mutableStateOf(false) }
 
     KlyxTheme(themeName) {
-        val colorScheme = MaterialTheme.colorScheme
-        val background = remember(colorScheme) { colorScheme.background }
+        if (!showUi) {
+            SplashScreen(
+                modifier = Modifier.fillMaxSize(),
+                onSetupFailure = {
+                    extensionLoadFailure = it
+                    showUi = true
+                },
+                onSetupSuccess = { showUi = true }
+            )
+        } else {
+            val colorScheme = MaterialTheme.colorScheme
+            val background = remember(colorScheme) { colorScheme.background }
 
-        LaunchedEffect(Unit) {
-            lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
-                if (event.isCtrlPressed && event.isShiftPressed && event.key == Key.P) {
-                    CommandManager.showPalette()
+            LaunchedEffect(Unit) {
+                lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
+                    if (event.isCtrlPressed && event.isShiftPressed && event.key == Key.P) {
+                        CommandManager.showPalette()
+                    }
                 }
             }
-        }
 
-        val isTabOpen by editorViewModel.isTabOpen.collectAsState()
+            val isTabOpen by editorViewModel.isTabOpen.collectAsState()
 
-        CompositionLocalProvider(
-            LocalDrawerState provides drawerState,
-            LocalLogBuffer provides logBuffer
-        ) {
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet(
-                        drawerState = drawerState,
-                        modifier = Modifier
-                            .width(DrawerWidth)
-                            .fillMaxHeight()
-                    ) {
-                        if (project.isEmpty()) {
-                            Column(
-                                modifier = Modifier.fillMaxSize(),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                TextButtonWithShortcut(
-                                    text = "Open a project",
-                                    modifier = Modifier.padding(top = 20.dp),
-                                    shortcut = keyShortcutOf(ctrl = true, alt = true, key = Key.O)
+            CompositionLocalProvider(
+                LocalDrawerState provides drawerState,
+                LocalLogBuffer provides logBuffer
+            ) {
+                ModalNavigationDrawer(
+                    drawerState = drawerState,
+                    drawerContent = {
+                        ModalDrawerSheet(
+                            drawerState = drawerState,
+                            modifier = Modifier
+                                .width(DrawerWidth)
+                                .fillMaxHeight()
+                        ) {
+                            if (project.isEmpty()) {
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    directoryPicker.launch()
-                                }
-                            }
-                        } else {
-                            FileTree(
-                                rootNodes = project.toFileTreeNodes(),
-                                modifier = Modifier.fillMaxSize(),
-                                onFileClick = { file, worktree ->
-                                    editorViewModel.openFile(file, worktree)
-                                    scope.launch {
-                                        drawerState.close()
+                                    TextButtonWithShortcut(
+                                        text = "Open a project",
+                                        modifier = Modifier.padding(top = 20.dp),
+                                        shortcut = keyShortcutOf(ctrl = true, alt = true, key = Key.O)
+                                    ) {
+                                        directoryPicker.launch()
                                     }
                                 }
-                            )
+                            } else {
+                                FileTree(
+                                    rootNodes = project.toFileTreeNodes(),
+                                    modifier = Modifier.fillMaxSize(),
+                                    onFileClick = { file, worktree ->
+                                        editorViewModel.openFile(file, worktree)
+                                        scope.launch {
+                                            drawerState.close()
+                                        }
+                                    }
+                                )
+                            }
                         }
-                    }
-                },
-                gesturesEnabled = drawerState.isOpen || !isTabOpen
-            ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = colorScheme.surfaceColorAtElevation(5.dp),
-                    contentColor = colorScheme.onSurface
+                    },
+                    gesturesEnabled = drawerState.isOpen || !isTabOpen
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .systemBarsPadding()
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = colorScheme.surfaceColorAtElevation(5.dp),
+                        contentColor = colorScheme.onSurface
                     ) {
-                        MainMenuBar()
-
-                        if (CommandManager.showCommandPalette) {
-                            CommandPalette(
-                                commands = CommandManager.commands,
-                                recentlyUsedCommands = CommandManager.recentlyUsedCommands,
-                                onDismissRequest = CommandManager::hidePalette
-                            )
-                        }
-
-                        if (ThemeManager.showThemeSelector) {
-                            ThemeSelector(
-                                onDismissRequest = ThemeManager::hideThemeSelector
-                            )
-                        }
-
-                        Surface(
-                            color = background,
+                        Column(
                             modifier = Modifier
-                                .imePadding()
+                                .fillMaxSize()
                                 .systemBarsPadding()
                         ) {
-                            Column {
-                                LaunchedEffect(Unit) {
-                                    launch {
-                                        editorViewModel.activeFile.collect { file ->
-                                            statusBarViewModel.setLanguage(file?.language())
-                                        }
-                                    }
-                                }
+                            MainMenuBar()
 
-                                val activeTab by editorViewModel.activeTab.collectAsState(null)
+                            if (CommandManager.showCommandPalette) {
+                                CommandPalette(
+                                    commands = CommandManager.commands,
+                                    recentlyUsedCommands = CommandManager.recentlyUsedCommands,
+                                    onDismissRequest = CommandManager::hidePalette
+                                )
+                            }
 
-                                LaunchedEffect(activeTab?.id) {
-                                    when (val tab = activeTab) {
-                                        is Tab.FileTab -> {
-                                            tab.editorState.cursor.collectLatest { cursorState ->
-                                                statusBarViewModel.setCursorState(cursorState)
+                            if (ThemeManager.showThemeSelector) {
+                                ThemeSelector(
+                                    onDismissRequest = ThemeManager::hideThemeSelector
+                                )
+                            }
+
+                            Surface(
+                                color = background,
+                                modifier = Modifier
+                                    .imePadding()
+                                    .systemBarsPadding()
+                            ) {
+                                Column {
+                                    LaunchedEffect(Unit) {
+                                        launch {
+                                            editorViewModel.activeFile.collect { file ->
+                                                statusBarViewModel.setLanguage(file?.language())
                                             }
                                         }
+                                    }
 
-                                        else -> {
-                                            statusBarViewModel.setCursorState(null)
+                                    val activeTab by editorViewModel.activeTab.collectAsState(null)
+
+                                    LaunchedEffect(activeTab?.id) {
+                                        when (val tab = activeTab) {
+                                            is Tab.FileTab -> {
+                                                tab.editorState.cursor.collectLatest { cursorState ->
+                                                    statusBarViewModel.setCursorState(cursorState)
+                                                }
+                                            }
+
+                                            else -> {
+                                                statusBarViewModel.setCursorState(null)
+                                            }
                                         }
                                     }
+
+                                    EditorScreen(
+                                        modifier = Modifier.weight(1f),
+                                        editorViewModel = editorViewModel,
+                                        klyxViewModel = klyxViewModel
+                                    )
+
+                                    StatusBar(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        onLogClick = { klyxViewModel.showLogViewer() }
+                                    )
                                 }
+                            }
 
-                                EditorScreen(
-                                    modifier = Modifier.weight(1f),
-                                    editorViewModel = editorViewModel,
-                                    klyxViewModel = klyxViewModel
-                                )
-
-                                StatusBar(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onLogClick = { klyxViewModel.showLogViewer() }
+                            if (appState.showLogViewer) {
+                                LogViewerSheet(
+                                    buffer = logBuffer,
+                                    onOpenAsTabClick = {
+                                        editorViewModel.openLogViewer()
+                                    },
+                                    onDismissRequest = klyxViewModel::dismissLogViewer
                                 )
                             }
                         }
 
-                        if (appState.showLogViewer) {
-                            LogViewerSheet(
-                                buffer = logBuffer,
-                                onOpenAsTabClick = {
-                                    editorViewModel.openLogViewer()
+                        extraContent()
+
+                        if (extensionLoadFailure != null) {
+                            AlertDialog(
+                                onDismissRequest = { extensionLoadFailure = null },
+                                text = {
+                                    Text(
+                                        text = "Failed to load extensions:\n$extensionLoadFailure"
+                                    )
                                 },
-                                onDismissRequest = klyxViewModel::dismissLogViewer
+                                confirmButton = {
+                                    TextButton(onClick = { extensionLoadFailure = null }) {
+                                        Text("OK")
+                                    }
+                                }
+                            )
+                        }
+
+                        if (showDisclaimer) {
+                            AlertDialog(
+                                onDismissRequest = { },
+                                properties = DialogProperties(
+                                    dismissOnBackPress = false,
+                                    dismissOnClickOutside = false
+                                ),
+                                title = {
+                                    Text(stringResource(Res.string.important_notice))
+                                },
+                                text = {
+                                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                        SelectionContainer {
+                                            Text(stringResource(Res.string.disclaimer))
+                                        }
+                                    }
+                                },
+                                confirmButton = {
+                                    TextButton(onClick = {
+                                        DisclaimerManager.setAccepted()
+                                        showDisclaimer = false
+                                        klyxViewModel.showPermissionDialog()
+                                    }) {
+                                        Text(stringResource(Res.string.i_agree))
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = ::quitApp) {
+                                        Text(stringResource(Res.string.exit))
+                                    }
+                                }
                             )
                         }
                     }
-
-                    extraContent()
-
-                    if (showDisclaimer) {
-                        AlertDialog(
-                            onDismissRequest = { },
-                            properties = DialogProperties(
-                                dismissOnBackPress = false,
-                                dismissOnClickOutside = false
-                            ),
-                            title = {
-                                Text(stringResource(Res.string.important_notice))
-                            },
-                            text = {
-                                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                                    SelectionContainer {
-                                        Text(stringResource(Res.string.disclaimer))
-                                    }
-                                }
-                            },
-                            confirmButton = {
-                                TextButton(onClick = {
-                                    DisclaimerManager.setAccepted()
-                                    showDisclaimer = false
-                                    klyxViewModel.showPermissionDialog()
-                                }) {
-                                    Text(stringResource(Res.string.i_agree))
-                                }
-                            },
-                            dismissButton = {
-                                TextButton(onClick = ::quitApp) {
-                                    Text(stringResource(Res.string.exit))
-                                }
-                            }
-                        )
-                    }
                 }
             }
-        }
 
-        NotificationOverlay()
+            NotificationOverlay()
 
-        if (appState.showPermissionDialog) {
-            PermissionDialog(
-                onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
-                onRequestPermission = { requestFileAccessPermission() }
-            )
+            if (appState.showPermissionDialog) {
+                PermissionDialog(
+                    onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
+                    onRequestPermission = { requestFileAccessPermission() }
+                )
+            }
         }
     }
 }

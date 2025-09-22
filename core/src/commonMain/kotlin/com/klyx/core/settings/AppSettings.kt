@@ -5,10 +5,8 @@ import com.klyx.core.theme.Contrast
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.add
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
 
 @Serializable
@@ -66,6 +64,14 @@ data class AppSettings(
 
     @SerialComment("Whether to show the FPS counter in the UI")
     val showFps: Boolean = false,
+
+    @SerialComment(
+        """
+        Whether to load extensions on app startup or at runtime.
+        If disabled, extensions will be loaded at runtime instead of on the splash screen.
+        """
+    )
+    val loadExtensionsOnStartup: Boolean = true,
 
     @SerialComment("Different settings for specific languages.")
     val languages: Map<String, JsonObject> = emptyMap(),

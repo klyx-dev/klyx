@@ -20,13 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.content.edit
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import com.blankj.utilcode.util.ClipboardUtils
-import com.github.michaelbull.result.onFailure
 import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
@@ -41,12 +39,9 @@ import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
-import com.klyx.extension.ExtensionManager
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
-import com.klyx.viewmodel.showWelcome
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -80,21 +75,7 @@ class MainActivity : KlyxActivity() {
                 )
             }
 
-            var extensionLoadFailure: String? by remember { mutableStateOf(null) }
             LaunchedEffect(Unit) {
-                launch(dispatcher + SupervisorJob()) {
-                    notifier.toast("Loading extensions...")
-                    ExtensionManager.loadExtensions().onFailure {
-                        extensionLoadFailure = it
-                    }
-                    notifier.toast("Extensions loaded.")
-                }
-
-                if (prefs.getBoolean("show_welcome", true)) {
-                    viewModel.showWelcome()
-                    prefs.edit { putBoolean("show_welcome", false) }
-                }
-
                 subscribeToEvent<CrashEvent> { event ->
                     val isLogFileSaved = event.logFile != null
 
@@ -147,22 +128,6 @@ class MainActivity : KlyxActivity() {
             )
 
             App(themeName = settings.theme) {
-                extensionLoadFailure?.let {
-                    AlertDialog(
-                        onDismissRequest = { extensionLoadFailure = null },
-                        text = {
-                            Text(
-                                text = "Failed to load extensions:\n$it"
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(onClick = { extensionLoadFailure = null }) {
-                                Text("OK")
-                            }
-                        }
-                    )
-                }
-
                 var showCopiedDialog by remember { mutableStateOf(false) }
                 var specs by remember { mutableStateOf("") }
 

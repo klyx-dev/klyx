@@ -20,6 +20,12 @@ import com.klyx.core.settings.AppSettings
 import com.klyx.wasm.ExperimentalWasmApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.contentOrNull
@@ -36,6 +42,9 @@ import okio.use
 object ExtensionManager {
     val installedExtensions = mutableStateListOf<Extension>()
     val loadedExtensions = mutableStateListOf<LocalExtension>()
+
+    private val _loadingState = MutableStateFlow(0 to 0) // (loaded, total)
+    val loadingState = _loadingState.asStateFlow()
 
     private val fs = FileSystem.SYSTEM
     private val logger = logger()
@@ -169,21 +178,32 @@ object ExtensionManager {
 
     suspend fun loadExtensions() = withContext(Dispatchers.IO) {
         try {
-            listOf(
+            val dirs = listOf(
                 Environment.ExtensionsDir to false,
                 Environment.DevExtensionsDir to true
-            ).forEach { (dirPath, isDev) ->
+            ).flatMap { (dirPath, isDev) ->
                 val directory = dirPath.toPath()
-                if (!fs.exists(directory)) {
-                    fs.createDirectories(directory)
-                }
-
-                fs.list(directory).forEach { child ->
-                    if (fs.metadata(child).isDirectory) {
-                        loadExtension(child.toKxFile(), isDev)
-                    }
-                }
+                if (!fs.exists(directory)) fs.createDirectories(directory)
+                fs.list(directory)
+                    .filter { fs.metadata(it).isDirectory }
+                    .map { it to isDev }
             }
+
+            _loadingState.update { 0 to dirs.size }
+
+            coroutineScope {
+                dirs.chunked(4).map { chunk ->
+                    async {
+                        chunk.map { (child, isDev) ->
+                            async {
+                                loadExtension(child.toKxFile(), isDev)
+                                _loadingState.update { (loaded, total) -> (loaded + 1) to total }
+                            }
+                        }.awaitAll()
+                    }
+                }.awaitAll()
+            }
+
             Ok(Unit)
         } catch (err: Exception) {
             logger.error(err) { err.message }

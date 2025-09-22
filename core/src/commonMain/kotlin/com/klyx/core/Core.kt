@@ -1,5 +1,8 @@
 package com.klyx.core
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.Json
@@ -15,6 +18,8 @@ inline fun <reified T> T.toJson() = run {
     val json = Json { prettyPrint = true }
     json.encodeToString(this)
 }
+
+val DefaultScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
 expect val currentThreadName: String
 

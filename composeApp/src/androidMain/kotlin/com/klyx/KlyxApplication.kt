@@ -23,7 +23,6 @@ import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -60,7 +59,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             AssetsFileResolver(assets)
         )
 
-        launch(Dispatchers.IO) {
+        launch {
             GrammarRegistry.getInstance().loadGrammars("textmate/languages.json")
 
             val themes = listOf("darcula", "quietlight")

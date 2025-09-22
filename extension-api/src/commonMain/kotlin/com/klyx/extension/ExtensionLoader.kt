@@ -19,9 +19,8 @@ import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.StdioSinkProvider
 import com.klyx.wasm.wasi.withWasiPreview1
 import com.klyx.wasm.wasm
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.newFixedThreadPoolContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
 import kotlinx.io.bytestring.decodeToString
@@ -30,21 +29,15 @@ import kotlinx.io.snapshot
 object ExtensionLoader {
     private val home = Environment.DeviceHomeDir
 
-    @OptIn(
-        DelicateCoroutinesApi::class,
-        ExperimentalCoroutinesApi::class,
-        ExperimentalWasmApi::class,
-        ExperimentalWasiApi::class
-    )
+    @OptIn(ExperimentalWasmApi::class, ExperimentalWasiApi::class)
     suspend fun loadExtension(
         extension: Extension,
         shouldCallInit: Boolean = false,
         vararg extraHostModules: HostModule
     ) = run {
         val logger = logger(extension.info.id)
-        val dispatcher = newFixedThreadPoolContext(10, extension.info.id)
 
-        withContext(dispatcher) {
+        withContext(Dispatchers.IO) {
             extension.themeFiles.forEach { file ->
                 ThemeManager.loadThemeFamily(file.source()).onFailure {
                     logger.error("Unable to load the theme: $it")
@@ -81,7 +74,7 @@ object ExtensionLoader {
                     registerHostModule(*extraHostModules)
                 }
 
-                val localExtension = LocalExtension(extension, logger, instance, dispatcher)
+                val localExtension = LocalExtension(extension, logger, instance, Dispatchers.Default)
                 if (shouldCallInit) localExtension.initialize()
 
                 stdout.snapshot()
@@ -95,7 +88,6 @@ object ExtensionLoader {
                     .lineSequence()
                     .filter { it.isNotEmpty() }
                     .forEach(logger::error)
-
                 localExtension
             }
         }
