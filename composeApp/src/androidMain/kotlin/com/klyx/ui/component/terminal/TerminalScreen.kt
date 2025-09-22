@@ -23,6 +23,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -36,15 +37,17 @@ import com.klyx.terminal.extrakeys.ExtraKeysInfo
 import com.klyx.terminal.extrakeys.ExtraKeysView
 import com.klyx.terminal.extrakeys.ExtraKeysViewClient
 import com.klyx.terminal.internal.createSession
+import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import kotlinx.coroutines.launch
 
 @Composable
-context(context: Context)
 fun TerminalScreen(
     user: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSessionFinish: (TerminalSession) -> Unit = {}
 ) {
+    val context = LocalContext.current
     val density = LocalDensity.current
 
     val terminal = remember { with(context) { TerminalView(user) } }
@@ -60,7 +63,9 @@ fun TerminalScreen(
         AndroidView(
             factory = {
                 terminal.apply {
-                    setTerminalViewClient(TerminalViewClient(this, extraKeysView, context as? Activity))
+                    setTerminalViewClient(TerminalViewClient(this, extraKeysView, context as? Activity).also {
+                        it.onSessionFinish = onSessionFinish
+                    })
                 }
             },
             modifier = Modifier

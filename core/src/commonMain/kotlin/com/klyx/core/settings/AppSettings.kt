@@ -73,6 +73,9 @@ data class AppSettings(
     )
     val loadExtensionsOnStartup: Boolean = true,
 
+    @SerialComment("Whether to show terminal tab option or not in the menu.")
+    val terminalTab: Boolean = false,
+
     @SerialComment("Different settings for specific languages.")
     val languages: Map<String, JsonObject> = emptyMap(),
 

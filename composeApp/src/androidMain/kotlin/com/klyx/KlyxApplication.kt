@@ -16,6 +16,7 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.di.commonModule
+import com.klyx.terminal.klyxBinDir
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
@@ -80,6 +81,14 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         initKoin(commonModule) {
             androidLogger()
             androidContext(this@KlyxApplication)
+        }
+
+        launch {
+            runCatching {
+                File(klyxBinDir, "init").writeBytes(
+                    assets.open("terminal/init.sh").use { it.readBytes() }
+                )
+            }
         }
     }
 }

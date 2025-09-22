@@ -1,9 +1,10 @@
 package com.klyx.menu
 
 import com.klyx.unsupported
+import com.klyx.viewmodel.EditorViewModel
 import kotlin.system.exitProcess
 
-internal actual fun openSystemTerminal() {
+internal actual fun openSystemTerminal(viewModel: EditorViewModel, openAsTab: Boolean) {
 }
 
 internal actual fun restartApp(isKillProcess: Boolean) {

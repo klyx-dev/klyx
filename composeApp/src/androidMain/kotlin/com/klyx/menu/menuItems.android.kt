@@ -9,10 +9,16 @@ import com.klyx.activities.utils.launchNewWindow
 import com.klyx.core.ContextHolder
 import com.klyx.core.WindowManager
 import com.klyx.core.openActivity
+import com.klyx.viewmodel.EditorViewModel
+import com.klyx.viewmodel.openTerminalTab
 
-internal actual fun openSystemTerminal() {
-    with(ContextHolder.currentActivity()) {
-        openActivity(TerminalActivity::class)
+internal actual fun openSystemTerminal(viewModel: EditorViewModel, openAsTab: Boolean) {
+    if (openAsTab) {
+        viewModel.openTerminalTab()
+    } else {
+        with(ContextHolder.currentActivity()) {
+            openActivity(TerminalActivity::class)
+        }
     }
 }
 

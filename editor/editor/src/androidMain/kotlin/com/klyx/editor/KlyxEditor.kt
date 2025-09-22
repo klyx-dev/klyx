@@ -39,6 +39,8 @@ class KlyxEditor @JvmOverloads constructor(
 
         getComponent<EditorDiagnosticTooltipWindow>().isEnabled = true
         getComponent<EditorTextActionWindow>().isEnabled = false
+
+        lineNumberMarginLeft = 9f
     }
 
     @OptIn(ExperimentalCodeEditorApi::class)

@@ -51,6 +51,8 @@ import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.BLOCK_LINE
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.BLOCK_LINE_CURRENT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMMENT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_CORNER
@@ -68,7 +70,13 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HIGHLIGHTED_DELIM
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_CURRENT
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_PANEL
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_PANEL_TEXT
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.MATCHED_TEXT_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.NON_PRINTABLE_CHAR
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SCROLL_BAR_THUMB
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SCROLL_BAR_THUMB_PRESSED
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SCROLL_BAR_TRACK
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTED_TEXT_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_HANDLE
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SELECTION_INSERT
@@ -293,6 +301,8 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(SELECTION_HANDLE, selectionColors.handleColor)
     setColor(SELECTION_INSERT, selectionColors.handleColor)
 
+    setColor(MATCHED_TEXT_BACKGROUND, colorScheme.secondary.copy(alpha = 0.4f))
+
     setColor(HIGHLIGHTED_DELIMITERS_FOREGROUND, colorScheme.primary)
     setColor(HIGHLIGHTED_DELIMITERS_BACKGROUND, colorScheme.outlineVariant.copy(alpha = 0.2f))
     setColor(SNIPPET_BACKGROUND_EDITING, colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -317,4 +327,14 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
 
     setColor(TEXT_ACTION_WINDOW_BACKGROUND, colorScheme.surfaceColorAtElevation(3.dp))
     setColor(TEXT_ACTION_WINDOW_ICON_COLOR, colorScheme.onSurface)
+
+    setColor(SCROLL_BAR_TRACK, colorScheme.surfaceColorAtElevation(1.dp))
+    setColor(SCROLL_BAR_THUMB, colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+    setColor(SCROLL_BAR_THUMB_PRESSED, colorScheme.primary.copy(alpha = 0.7f))
+
+    setColor(LINE_NUMBER_PANEL, colorScheme.surfaceContainer)
+    setColor(LINE_NUMBER_PANEL_TEXT, colorScheme.onSurface)
+
+    setColor(BLOCK_LINE, colorScheme.outlineVariant.copy(alpha = 0.4f))
+    setColor(BLOCK_LINE_CURRENT, colorScheme.primary.copy(alpha = 0.6f))
 }

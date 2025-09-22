@@ -22,6 +22,7 @@ import com.klyx.core.string
 import com.klyx.editor.CodeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.extension.api.Worktree
+import com.klyx.extension.api.parentAsWorktree
 import com.klyx.ifNull
 import com.klyx.res.Res.string
 import com.klyx.res.tab_title_default_settings
@@ -110,7 +111,7 @@ class EditorViewModel(
 
     fun openFile(
         file: KxFile,
-        worktree: Worktree? = null,
+        worktree: Worktree? = file.parentAsWorktree(),
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {

@@ -11,6 +11,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.core.DOCS_URL
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
+import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.core.cmd.CommandManager
@@ -21,6 +22,7 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.logging.logger
+import com.klyx.core.settings.AppSettings
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.filetree.asFileTreeNode
@@ -70,7 +72,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.files.SystemFileSystem
 
-internal expect fun openSystemTerminal()
+internal expect fun openSystemTerminal(viewModel: EditorViewModel, openAsTab: Boolean = false)
 internal expect fun restartApp(isKillProcess: Boolean = true)
 internal expect fun quitApp(): Nothing
 
@@ -89,6 +91,7 @@ fun rememberMenuItems(
     val notifier = LocalNotifier.current
     val uriHandler = LocalUriHandler.current
     val drawerState = LocalDrawerState.current
+    val appSettings = LocalAppSettings.current
     val scope = rememberCoroutineScope()
 
     val openDrawerIfClosed = {
@@ -140,9 +143,9 @@ fun rememberMenuItems(
 
     val activeFile by viewModel.activeFile.collectAsStateWithLifecycle()
 
-    return remember(viewModel, klyxViewModel, activeFile) {
+    return remember(viewModel, klyxViewModel, activeFile, appSettings) {
         menu {
-            klyxMenuGroup(viewModel, klyxViewModel)
+            klyxMenuGroup(viewModel, klyxViewModel, appSettings)
 
             fileMenuGroup(
                 onNewFileClick = { viewModel.openFile(KxFile("untitled")) },
@@ -200,7 +203,8 @@ fun rememberMenuItems(
 
 private fun MenuBuilder.klyxMenuGroup(
     editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel
+    klyxViewModel: KlyxViewModel,
+    appSettings: AppSettings
 ) = group(string.klyx_menu_title) {
     item(string.menu_item_about_klyx) {
         onClick { klyxViewModel.showAboutDialog() }
@@ -220,8 +224,16 @@ private fun MenuBuilder.klyxMenuGroup(
     divider()
 
     item("Terminal") {
-        onClick { openSystemTerminal() }
+        onClick { openSystemTerminal(editorViewModel) }
     }
+
+    if (appSettings.terminalTab) {
+        item("Terminal Tab") {
+            onClick { openSystemTerminal(editorViewModel, openAsTab = true) }
+        }
+    }
+
+    divider()
 
     item(string.menu_item_command_palette) {
         shortcut(keyShortcutOf(Key.P, ctrl = true, shift = true))

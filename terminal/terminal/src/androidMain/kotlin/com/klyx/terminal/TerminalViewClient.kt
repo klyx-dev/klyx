@@ -16,6 +16,8 @@ class TerminalViewClient(
     private val extraKeysView: ExtraKeysView,
     private val activity: Activity? = null,
 ) : TerminalViewClient {
+    var onSessionFinish: (TerminalSession) -> Unit = {}
+
     /**
      * Callback function on scale events according to [android.view.ScaleGestureDetector.getScaleFactor].
      */
@@ -58,7 +60,8 @@ class TerminalViewClient(
         session: TerminalSession?
     ): Boolean {
         if (e?.keyCode == KeyEvent.KEYCODE_ENTER && session?.isRunning == false) {
-            activity?.finishAfterTransition()
+            //activity?.finishAfterTransition()
+            onSessionFinish(session)
             return true
         }
         return false

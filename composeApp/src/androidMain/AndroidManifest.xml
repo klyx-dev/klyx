@@ -19,6 +19,7 @@
     <application
         android:name=".KlyxApplication"
         android:allowBackup="true"
+        android:appCategory="game"
         android:enableOnBackInvokedCallback="true"
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
