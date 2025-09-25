@@ -64,6 +64,7 @@ import com.klyx.res.extension_search_placeholder
 import com.klyx.res.no_extensions
 import com.klyx.res.no_internet_connection
 import com.klyx.ui.theme.DefaultKlyxShape
+import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
@@ -209,7 +210,11 @@ class ExtensionListScreen : Screen {
             ExtensionFilter.All -> installedExtensions + extensions.fastFilter { it !in installedExtensions }
             ExtensionFilter.Installed -> installedExtensions
             ExtensionFilter.NotInstalled -> extensions.fastFilter { it !in installedExtensions }
-        }.fastFilter { it.name.contains(searchQuery, ignoreCase = true) }
+        }.fastMap { ext ->
+            ext to FuzzySearch.partialRatio(searchQuery.lowercase(), ext.name.lowercase())
+        }.fastFilter { (_, score) -> searchQuery.isBlank() || score >= 60 }
+            .sortedByDescending { it.second }
+            .fastMap { it.first }
 
         if (filteredExtensions.isNotEmpty()) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
