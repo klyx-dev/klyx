@@ -1,6 +1,7 @@
 package com.klyx.extension
 
 import com.github.michaelbull.result.map
+import com.klyx.core.DefaultScope
 import com.klyx.core.extension.Extension
 import com.klyx.core.logging.KxLogger
 import com.klyx.extension.api.Worktree
@@ -11,8 +12,7 @@ import com.klyx.extension.internal.Command
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmInstance
 import com.klyx.wasm.WasmMemory
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -22,22 +22,25 @@ data class LocalExtension(
     val extension: Extension,
     val logger: KxLogger,
     internal val instance: WasmInstance,
-    private val extensionDispatcher: CoroutineDispatcher
-) : AutoCloseable, CoroutineScope by CoroutineScope(extensionDispatcher + SupervisorJob()) {
+) : AutoCloseable {
     private val memory by lazy { instance.memory }
+
+    private val coroutineContext = Dispatchers.Default + SupervisorJob()
 
     /**
      * Initializes the extension.
      */
-    suspend fun initialize() = withContext(extensionDispatcher) {
-        instance.call("init-extension");null
+    suspend fun initialize() {
+        withContext(Dispatchers.Default) {
+            instance.call("init-extension")
+        }
     }
 
     /**
      * Uninitializes the extension.
      */
     fun dispose() {
-        launch {
+        DefaultScope.launch {
             instance.call("uninstall")
         }.invokeOnCompletion {
             close()
@@ -47,7 +50,7 @@ data class LocalExtension(
     /**
      * Returns the command used to start up the language server.
      */
-    suspend fun languageServerCommand(languageServerId: String, worktree: Worktree) = withContext(extensionDispatcher) {
+    suspend fun languageServerCommand(languageServerId: String, worktree: Worktree) = withContext(coroutineContext) {
         val fn = instance.function("language-server-command")
         val result = fn(languageServerId, worktree)[0]
         memory.readCommandResult(result.asInt()).map { (command, args, env) ->
@@ -67,7 +70,7 @@ data class LocalExtension(
     suspend fun languageServerInitializationOptions(
         languageServerId: String,
         worktree: Worktree
-    ) = withContext(extensionDispatcher) {
+    ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-initialization-options")
         val result = fn(languageServerId, worktree)[0]
         memory.readStringOptionResult(result.asInt())
@@ -79,7 +82,7 @@ data class LocalExtension(
     suspend fun languageServerWorkspaceConfiguration(
         languageServerId: String,
         worktree: Worktree
-    ) = withContext(extensionDispatcher) {
+    ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-workspace-configuration")
         val result = fn(languageServerId, worktree)[0]
         memory.readStringOptionResult(result.asInt())
@@ -92,7 +95,7 @@ data class LocalExtension(
         languageServerId: String,
         targetLanguageServerId: String,
         worktree: Worktree
-    ) = withContext(extensionDispatcher) {
+    ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-additional-initialization-options")
         val result = fn(languageServerId, targetLanguageServerId, worktree)[0]
         memory.readStringOptionResult(result.asInt())
@@ -105,7 +108,7 @@ data class LocalExtension(
         languageServerId: String,
         targetLanguageServerId: String,
         worktree: Worktree
-    ) = withContext(extensionDispatcher) {
+    ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-additional-workspace-configuration")
         val result = fn(languageServerId, targetLanguageServerId, worktree)[0]
         memory.readStringOptionResult(result.asInt())

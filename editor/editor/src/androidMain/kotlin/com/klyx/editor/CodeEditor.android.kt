@@ -67,6 +67,7 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.DIAGNOSTIC_TOOLTI
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HARD_WRAP_MARKER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HIGHLIGHTED_DELIMITERS_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.HIGHLIGHTED_DELIMITERS_FOREGROUND
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_DIVIDER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.LINE_NUMBER_CURRENT
@@ -337,4 +338,6 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
 
     setColor(BLOCK_LINE, colorScheme.outlineVariant.copy(alpha = 0.4f))
     setColor(BLOCK_LINE_CURRENT, colorScheme.primary.copy(alpha = 0.6f))
+
+    setColor(LINE_DIVIDER, colorScheme.outline)
 }

@@ -79,7 +79,7 @@ object ExtensionLoader {
             }
         }
 
-        val localExtension = LocalExtension(extension, logger, instance, Dispatchers.Default)
+        val localExtension = LocalExtension(extension, logger, instance)
 
         if (shouldCallInit) {
             withContext(Dispatchers.Default) {
