@@ -5,8 +5,8 @@ import io.github.z4kn4fein.semver.Version
 object AppVersioning {
     private val baseVersion = Version(
         major = 1,
-        minor = 7,
-        patch = 4,
+        minor = 8,
+        patch = 0,
         //buildMetadata = "build"
     )
 
