@@ -3,6 +3,8 @@ package com.klyx.editor.lsp
 import android.content.Context
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
+import com.github.michaelbull.result.mapError
+import com.github.michaelbull.result.runCatching
 import com.klyx.core.Notifier
 import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.KxLogger
@@ -35,6 +37,7 @@ import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FormattingOptions
+import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
@@ -60,8 +63,8 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.io.IOException
 import java.util.concurrent.CompletableFuture
-import kotlin.concurrent.thread
 
 class LanguageServerClient(
     private val logger: KxLogger = logger("LanguageServerClient")
@@ -95,9 +98,15 @@ class LanguageServerClient(
                 val builder = ubuntuProcess(cmd, *args.toTypedArray()) { env { putAll(env) } }
                 process = builder.asJavaProcessBuilder().start()
 
-                thread {
-                    process.errorStream.bufferedReader().forEachLine {
-                        logger.error { it.ifEmpty { "-----------------" } }
+                mainScope.launch {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            process.errorStream.bufferedReader().forEachLine {
+                                logger.error { it.ifEmpty { "-----------------" } }
+                            }
+                        } catch (e: IOException) {
+                            logger.warn(e) { "LSP error stream closed or an error occurred while reading." }
+                        }
                     }
                 }
 
@@ -121,10 +130,12 @@ class LanguageServerClient(
                 languageServer.initialized(InitializedParams())
                 serverCapabilities = result.capabilities
 
-                println(serverCapabilities.completionProvider?.triggerCharacters?.joinToString(" -- "))
-                println(serverCapabilities.completionProvider?.allCommitCharacters?.joinToString(" -- "))
-                println(serverCapabilities.signatureHelpProvider?.triggerCharacters?.joinToString(" -- "))
-                println(serverCapabilities.signatureHelpProvider?.retriggerCharacters?.joinToString(" -- "))
+                with(serverCapabilities) {
+                    println(completionProvider?.triggerCharacters?.joinToString(" -- "))
+                    println(completionProvider?.allCommitCharacters?.joinToString(" -- "))
+                    println(signatureHelpProvider?.triggerCharacters?.joinToString(" -- "))
+                    println(signatureHelpProvider?.retriggerCharacters?.joinToString(" -- "))
+                }
 
                 logger.debug { "Language Server initialized: ${result.capabilities}" }
                 Ok(result)
@@ -344,6 +355,15 @@ class LanguageServerClient(
         } catch (e: Exception) {
             Err(e.message ?: "Error getting signature help: $uri")
         }
+    }
+
+    suspend fun hover(uri: String, position: Position) = withContext(Dispatchers.IO) {
+        runCatching {
+            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
+
+            val params = HoverParams(uri.asTextDocumentIdentifier(), position)
+            languageServer.textDocumentService.hover(params).get()
+        }.mapError { it.message ?: "Error getting hover: $uri" }
     }
 
     override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {

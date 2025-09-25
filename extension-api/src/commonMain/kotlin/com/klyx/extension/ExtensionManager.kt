@@ -52,7 +52,7 @@ object ExtensionManager {
     @OptIn(ExperimentalWasmApi::class)
     suspend fun installExtension(directory: KxFile, isDevExtension: Boolean = false) = withContext(Dispatchers.IO) {
         val tomlFile = directory.find("extension.toml") ?: return@withContext Err("extension.toml not found")
-        val info = parseToml(tomlFile.source())
+        val info = withContext(Dispatchers.Default) { parseToml(tomlFile.source()) }
 
         val extensionDirectory = if (isDevExtension) Environment.DevExtensionsDir else Environment.ExtensionsDir
         val installDirectory = KxFile(extensionDirectory, info.id)
@@ -68,7 +68,10 @@ object ExtensionManager {
         }
 
         try {
-            val extension = parseExtension(installDirectory, info).copy(isDevExtension = isDevExtension)
+            val extension = withContext(Dispatchers.Default) {
+                parseExtension(installDirectory, info).copy(isDevExtension = isDevExtension)
+            }
+
             installedExtensions.removeAll { it.info.id == extension.info.id }
             loadedExtensions.removeAll { it.extension.info.id == extension.info.id }
             installedExtensions.add(extension)
@@ -195,9 +198,12 @@ object ExtensionManager {
                 dirs.chunked(4).map { chunk ->
                     async {
                         chunk.map { (child, isDev) ->
-                            async {
-                                loadExtension(child.toKxFile(), isDev)
-                                _loadingState.update { (loaded, total) -> (loaded + 1) to total }
+                            async(Dispatchers.IO) {
+                                try {
+                                    loadExtension(child.toKxFile(), isDev)
+                                } finally {
+                                    _loadingState.update { (loaded, total) -> (loaded + 1) to total }
+                                }
                             }
                         }.awaitAll()
                     }
@@ -213,14 +219,20 @@ object ExtensionManager {
 
     @OptIn(ExperimentalWasmApi::class)
     private suspend fun loadExtension(directory: KxFile, isDevExtension: Boolean) {
-        directory.resolve("extension.toml").source().use { tomlSource ->
-            val info = parseToml(tomlSource)
-            val extension = parseExtension(directory, info).copy(isDevExtension = isDevExtension)
-            installedExtensions.add(extension)
+        val tomlFileSource = directory.resolve("extension.toml").source()
+        val info = withContext(Dispatchers.Default) {
+            parseToml(tomlFileSource)
+        }
 
-            ExtensionLoader.loadExtension(extension, true)?.let {
-                loadedExtensions.add(it)
-            }
+        tomlFileSource.close()
+
+        val extension = withContext(Dispatchers.Default) {
+            parseExtension(directory, info).copy(isDevExtension = isDevExtension)
+        }
+        installedExtensions.add(extension)
+
+        ExtensionLoader.loadExtension(extension, true)?.let {
+            loadedExtensions.add(it)
         }
     }
 

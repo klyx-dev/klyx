@@ -32,13 +32,12 @@ import com.klyx.tab.TabId
 import com.klyx.ui.component.WelcomeScreen
 import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.ui.component.log.LogViewerScreen
+import com.klyx.viewmodel.util.stateInWhileSubscribed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -59,7 +58,7 @@ class EditorViewModel(
 
     val activeFile = _state.map { tabState ->
         (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.file
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    }.stateInWhileSubscribed(initialValue = null)
 
     val activeTab = _state.map { tabState ->
         tabState.openTabs.find { it.id == tabState.activeTabId }
@@ -67,11 +66,11 @@ class EditorViewModel(
 
     val currentEditorState = _state.map { tabState ->
         (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.editorState
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+    }.stateInWhileSubscribed(initialValue = null)
 
     val isTabOpen = _state.map {
         it.openTabs.isNotEmpty()
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    }.stateInWhileSubscribed(initialValue = false)
 
     fun openTab(tab: Tab) {
         _state.update { current ->

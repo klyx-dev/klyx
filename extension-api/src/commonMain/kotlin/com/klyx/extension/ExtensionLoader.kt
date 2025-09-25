@@ -34,7 +34,7 @@ object ExtensionLoader {
         extension: Extension,
         shouldCallInit: Boolean = false,
         vararg extraHostModules: HostModule
-    ) = run {
+    ): LocalExtension? {
         val logger = logger(extension.info.id)
 
         withContext(Dispatchers.IO) {
@@ -43,53 +43,63 @@ object ExtensionLoader {
                     logger.error("Unable to load the theme: $it")
                 }
             }
+        }
 
-            extension.wasmFiles.firstOrNull()?.let { file ->
-                val stdout = Buffer()
-                val stderr = Buffer()
+        val wasmFile = extension.wasmFiles.firstOrNull() ?: return null
+        val wasmBytes = withContext(Dispatchers.IO) { wasmFile.readBytes() }
 
-                val instance = wasm {
-                    module { bytes(file.readBytes()) }
+        val stdout = Buffer()
+        val stderr = Buffer()
 
-                    withWasiPreview1 {
-                        directory(home, home)
-                        workingDirectory(home)
+        val instance = withContext(Dispatchers.Default) {
+            wasm {
+                module { bytes(wasmBytes) }
 
-                        userHomeDir?.let {
-                            directory(it, it)
-                            env("USER_HOME", it)
-                        }
+                withWasiPreview1 {
+                    directory(home, home)
+                    workingDirectory(home)
 
-                        stdout(StdioSinkProvider { stdout })
-                        stderr(StdioSinkProvider { stderr })
+                    userHomeDir?.let {
+                        directory(it, it)
+                        env("USER_HOME", it)
                     }
 
-                    registerHostModule(
-                        RootModule(Root(logger)),
-                        SystemModule,
-                        ProcessModule,
-                        HttpClientModule,
-                        GitHubModule
-                    )
-                    registerHostModule(*extraHostModules)
+                    stdout(StdioSinkProvider { stdout })
+                    stderr(StdioSinkProvider { stderr })
                 }
 
-                val localExtension = LocalExtension(extension, logger, instance, Dispatchers.Default)
-                if (shouldCallInit) localExtension.initialize()
-
-                stdout.snapshot()
-                    .decodeToString()
-                    .lineSequence()
-                    .filter { it.isNotEmpty() }
-                    .forEach(logger::info)
-
-                stderr.snapshot()
-                    .decodeToString()
-                    .lineSequence()
-                    .filter { it.isNotEmpty() }
-                    .forEach(logger::error)
-                localExtension
+                registerHostModule(
+                    RootModule(Root(logger)),
+                    SystemModule,
+                    ProcessModule,
+                    HttpClientModule,
+                    GitHubModule
+                )
+                registerHostModule(*extraHostModules)
             }
         }
+
+        val localExtension = LocalExtension(extension, logger, instance, Dispatchers.Default)
+
+        if (shouldCallInit) {
+            withContext(Dispatchers.Default) {
+                localExtension.initialize()
+            }
+        }
+
+        withContext(Dispatchers.IO) {
+            stdout.snapshot()
+                .decodeToString()
+                .lineSequence()
+                .filter { it.isNotEmpty() }
+                .forEach(logger::info)
+
+            stderr.snapshot()
+                .decodeToString()
+                .lineSequence()
+                .filter { it.isNotEmpty() }
+                .forEach(logger::error)
+        }
+        return localExtension
     }
 }

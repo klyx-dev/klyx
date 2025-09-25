@@ -122,52 +122,51 @@ object LanguageServerManager {
         )
     }
 
-    suspend fun openDocument(worktree: Worktree, file: KxFile) = withContext(Dispatchers.IO) w@{
-        val client = client(worktree, file.languageId)
-        client.openDocument(file.uriString, file.languageId, nextVersion(file.uriString), file.readText())
+    suspend fun openDocument(worktree: Worktree, file: KxFile) = withClient(worktree, file) {
+        it.openDocument(file.uriString, file.languageId, nextVersion(file.uriString), file.readText())
     }
 
-    suspend fun changeDocument(worktree: Worktree, file: KxFile, newText: String) = withContext(Dispatchers.IO) {
-        val client = client(worktree, file.languageId)
+    suspend fun changeDocument(worktree: Worktree, file: KxFile, newText: String) = withClient(worktree, file) {
         val version = nextVersion(file.uriString)
-        client.changeDocument(file.uriString, version, newText)
+        it.changeDocument(file.uriString, version, newText)
     }
 
-    suspend fun closeDocument(worktree: Worktree, file: KxFile) = withContext(Dispatchers.IO) {
-        val client = client(worktree, file.languageId)
-        client.closeDocument(file.uriString).also {
+    suspend fun closeDocument(worktree: Worktree, file: KxFile) = withClient(worktree, file) {
+        it.closeDocument(file.uriString).also {
             documentVersions.remove(file.uriString)
         }
     }
 
-    suspend fun saveDocument(worktree: Worktree, file: KxFile) = withContext(Dispatchers.IO) {
-        val client = client(worktree, file.languageId)
-        client.saveDocument(file.uriString, file.readText())
+    suspend fun saveDocument(worktree: Worktree, file: KxFile) = withClient(worktree, file) {
+        it.saveDocument(file.uriString, file.readText())
     }
 
-    suspend fun completion(worktree: Worktree, file: KxFile, line: Int, character: Int) = withContext(Dispatchers.IO) {
-        val client = client(worktree, file.languageId)
-        client.completion(file.uriString, line, character)
+    suspend fun completion(worktree: Worktree, file: KxFile, line: Int, character: Int) = withClient(worktree, file) {
+        it.completion(file.uriString, line, character)
     }
 
-    suspend fun requestQuickFixes(worktree: Worktree, file: KxFile, diagnostic: Diagnostic) = run {
-        val client = client(worktree, file.languageId)
-        client.codeAction(file.uriString, diagnostic)
+    suspend fun requestQuickFixes(
+        worktree: Worktree,
+        file: KxFile,
+        diagnostic: Diagnostic
+    ) = withClient(worktree, file) {
+        it.codeAction(file.uriString, diagnostic)
     }
 
-    suspend fun signatureHelp(worktree: Worktree, file: KxFile, position: Position) = run {
-        val client = client(worktree, file.languageId)
-        client.signatureHelp(file.uriString, position)
+    suspend fun signatureHelp(worktree: Worktree, file: KxFile, position: Position) = withClient(worktree, file) {
+        it.signatureHelp(file.uriString, position)
     }
 
-    suspend fun formatDocument(worktree: Worktree, file: KxFile) = run {
-        val client = client(worktree, file.languageId)
-        client.formatDocument(file.uriString)
+    suspend fun formatDocument(worktree: Worktree, file: KxFile) = withClient(worktree, file) {
+        it.formatDocument(file.uriString)
     }
 
-    suspend fun formatDocumentRange(worktree: Worktree, file: KxFile, range: Range) = run {
-        val client = client(worktree, file.languageId)
-        client.formatDocumentRange(file.uriString, range)
+    suspend fun formatDocumentRange(worktree: Worktree, file: KxFile, range: Range) = withClient(worktree, file) {
+        it.formatDocumentRange(file.uriString, range)
+    }
+
+    suspend fun hover(worktree: Worktree, file: KxFile, position: Position) = withClient(worktree, file) {
+        it.hover(file.uriString, position)
     }
 
     private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {
@@ -175,4 +174,10 @@ object LanguageServerManager {
             "No language server client found for worktree: ${worktree.rootFile.absolutePath}, languageId: $languageId"
         }
     }
+
+    private suspend inline fun <T> withClient(
+        worktree: Worktree,
+        file: KxFile,
+        crossinline block: suspend (LanguageServerClient) -> T
+    ) = block(client(worktree, file.languageId))
 }
