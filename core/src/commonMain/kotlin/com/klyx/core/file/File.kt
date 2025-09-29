@@ -91,6 +91,8 @@ fun Long.humanBytes(): String {
     return rounded.format(v) + " " + units[u]
 }
 
+fun Int.humanBytes(): String = toLong().humanBytes()
+
 suspend fun unzip(zipPath: Path, destDir: Path) = withContext(Dispatchers.IO) {
     val fs = FileSystem.SYSTEM
     fs.createDirectories(destDir)

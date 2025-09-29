@@ -1,4 +1,4 @@
-package com.klyx.editor.input
+package com.klyx.editor.compose.input
 
 import android.os.Build
 import android.os.Bundle
@@ -13,18 +13,9 @@ import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputContentInfo
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
-import com.klyx.editor.CodeEditorState
-import com.klyx.editor.ExperimentalCodeEditorApi
-import kotlinx.coroutines.CoroutineScope
-import kotlin.coroutines.CoroutineContext
+import com.klyx.editor.compose.CodeEditorState
 
-@OptIn(ExperimentalCodeEditorApi::class)
-class CodeEditorInputConnection(
-    view: View,
-    coroutineContext: CoroutineContext,
-    private val state: CodeEditorState
-) : InputConnection {
-    private val scope = CoroutineScope(coroutineContext)
+internal class CodeEditorInputConnection(view: View, private val state: CodeEditorState) : InputConnection {
     private val context = view.context
 
     override fun beginBatchEdit(): Boolean {
@@ -64,6 +55,7 @@ class CodeEditorInputConnection(
 
     override fun commitText(text: CharSequence, newCursorPosition: Int): Boolean {
         println("commitText: $text, newCursorPosition: $newCursorPosition")
+        state.text.insert(newCursorPosition, text.toString())
         return true
     }
 
@@ -138,6 +130,8 @@ class CodeEditorInputConnection(
     }
 
     override fun sendKeyEvent(event: KeyEvent): Boolean {
+        println("sendKeyEvent: $event")
+        state.handleKeyEvent(event.asComposeKeyEvent())
         EventBus.instance.postSync(event.asComposeKeyEvent())
         return true
     }
