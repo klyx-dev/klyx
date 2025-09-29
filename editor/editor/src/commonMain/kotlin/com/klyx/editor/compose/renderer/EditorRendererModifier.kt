@@ -27,6 +27,7 @@ private class EditorRendererModifierNode(
     private var scrollY = 0f
 
     override fun ContentDrawScope.draw() {
+        val result = textMeasurer.measure("")
 //        val colorScheme = currentValueOf(LocalEditorColorScheme)
 //        val appColorScheme = currentValueOf(LocalAppColorScheme)
 //

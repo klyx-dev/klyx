@@ -77,7 +77,7 @@ private fun Int.toSurrogates(dst: CharArray, index: Int) {
     dst[index] = Char.highSurrogate(this)
 }
 
-private fun codePointAt(seq: CharSequence, index: Int): Int {
+private fun codePointAt1(seq: CharSequence, index: Int): Int {
     var index = index
     val c1 = seq[index]
     if (c1.isHighSurrogate() && ++index < seq.length) {
@@ -90,7 +90,8 @@ private fun codePointAt(seq: CharSequence, index: Int): Int {
 }
 
 @JvmName("getCodePointAt")
-fun CharSequence.codePointAt(index: Int) = codePointAt(this, index)
+fun CharSequence.codePointAt(index: Int) = codePointAt1(this, index)
+fun Char.Companion.codePointAt(seq: CharSequence, index: Int) = codePointAt1(seq, index)
 
 private fun codePointToChars(codePoint: Int): CharArray {
     return when {

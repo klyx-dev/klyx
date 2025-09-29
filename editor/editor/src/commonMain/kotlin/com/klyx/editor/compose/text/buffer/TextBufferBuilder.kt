@@ -1,19 +1,33 @@
 package com.klyx.editor.compose.text.buffer
 
+import com.klyx.editor.compose.text.LineBreak
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 @OptIn(ExperimentalContracts::class)
 inline fun buildTextBuffer(
-    lineBreak: Boolean = true,
+    lineBreak: LineBreak = LineBreak.LF,
+    normalizeLineBreaks: Boolean = true,
     builderAction: TextBufferBuilder.() -> Unit
 ): PieceTreeTextBuffer {
     contract { callsInPlace(builderAction, InvocationKind.EXACTLY_ONCE) }
-    return TextBufferBuilder().apply(builderAction).build(lineBreak)
+    return TextBufferBuilder().apply(builderAction).build(lineBreak, normalizeLineBreaks)
 }
 
-val EmptyTextBuffer = buildTextBuffer { }
+@Suppress("NOTHING_TO_INLINE")
+inline fun buildTextBuffer(
+    sequence: CharSequence,
+    lineBreak: LineBreak = LineBreak.LF,
+    normalizeLineBreaks: Boolean = true
+) = PieceTreeTextBufferBuilder(sequence).build(lineBreak, normalizeLineBreaks)
+
+fun CharSequence.toTextBuffer(
+    lineBreak: LineBreak = LineBreak.LF,
+    normalizeLineBreaks: Boolean = true
+) = buildTextBuffer(this, lineBreak, normalizeLineBreaks)
+
+val EmptyTextBuffer = PieceTreeTextBufferBuilder().build()
 
 @DslMarker
 private annotation class TextBufferDsl
@@ -27,11 +41,14 @@ class TextBufferBuilder {
     }
 
     @PublishedApi
-    internal fun build(lineBreak: Boolean): PieceTreeTextBuffer {
+    internal fun build(
+        lineBreak: LineBreak = LineBreak.LF,
+        normalizeLineBreaks: Boolean = true
+    ): PieceTreeTextBuffer {
         val pieceBuilder = PieceTreeTextBufferBuilder()
         for (chunk in chunks) {
             pieceBuilder.acceptChunk(chunk)
         }
-        return pieceBuilder.build(normalizeLineBreaks = lineBreak)
+        return pieceBuilder.build(lineBreak, normalizeLineBreaks)
     }
 }

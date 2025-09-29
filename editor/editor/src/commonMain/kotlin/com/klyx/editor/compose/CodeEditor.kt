@@ -3,6 +3,7 @@ package com.klyx.editor.compose
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +23,7 @@ fun CodeEditor(
 
     EditorCanvas(
         state = state,
-        modifier = modifier,
+        modifier = modifier.clipToBounds(),
         editable = editable
     ) {
         drawColor(colorScheme.background)

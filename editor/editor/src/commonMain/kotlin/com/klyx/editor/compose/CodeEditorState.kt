@@ -7,14 +7,14 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.klyx.editor.compose.text.buffer.EmptyTextBuffer
-import com.klyx.editor.compose.text.buffer.buildTextBuffer
+import com.klyx.editor.compose.text.buffer.toTextBuffer
 
 @Stable
 class CodeEditorState(
     initialText: String,
     val scrollState: EditorScrollState
 ) {
-    val text = if (initialText.isEmpty()) EmptyTextBuffer else buildTextBuffer { append(initialText) }
+    val text = if (initialText.isEmpty()) EmptyTextBuffer else initialText.toTextBuffer()
 
     internal var version by mutableIntStateOf(0)
         private set

@@ -81,7 +81,7 @@ class PieceTreeTextBuffer : CharSequence {
     }
 
     fun insert(offset: Int, text: String) {
-        pieceTree.insert(offset, text)
+
     }
 
     // read the all piece content
@@ -220,7 +220,7 @@ class PieceTreeTextBuffer : CharSequence {
         var operations = mutableListOf<ValidatedEditOperation>()
         for (i in 0..<rawOperations.size) {
             val op = rawOperations[i]
-            if (canReduceOperations && i < 1000/*op._isTracked*/) {
+            if (canReduceOperations && i < 1000/*op.isTracked*/) {
                 canReduceOperations = false
             }
 

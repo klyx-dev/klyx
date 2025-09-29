@@ -734,7 +734,7 @@ internal class PieceTreeBase {
                     val buffer = buffers[x.piece.bufferIndex].buffer
                     val startOffset = this.offsetInBuffer(x.piece.bufferIndex, x.piece.start)
                     nodeStartOffset += x.sizeLeft
-                    searchCache.set(
+                    searchCache.insert(
                         CacheEntry(
                             node = x,
                             nodeStartOffset = nodeStartOffset,
@@ -1577,7 +1577,7 @@ internal class PieceTreeBase {
                     remainder = offset - x.sizeLeft,
                     nodeStartOffset = nodeStartOffset
                 )
-                searchCache.set(CacheEntry(x, nodeStartOffset, 0))
+                searchCache.insert(CacheEntry(x, nodeStartOffset, 0))
                 return ret
             } else {
                 offset -= x.sizeLeft + x.piece.length

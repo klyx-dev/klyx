@@ -24,7 +24,7 @@ internal class PieceTreeSearchCache(val limit: Int) {
         }
     }
 
-    fun set(nodePosition: CacheEntry) = lock.withLock {
+    fun insert(nodePosition: CacheEntry) = lock.withLock {
         if (cache.size >= limit) {
             cache.removeAt(0)
         }
