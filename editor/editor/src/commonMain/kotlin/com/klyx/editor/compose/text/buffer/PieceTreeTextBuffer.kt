@@ -164,7 +164,7 @@ class PieceTreeTextBuffer : CharSequence {
     fun getCharCode(index: Int) = pieceTree.getCharCode(index)
     fun getLineLength(lineNumber: Int) = pieceTree.getLineLength(lineNumber)
 
-    @Suppress("unused")
+    @Suppress("unused", "FunctionOnlyReturningConstant")
     fun getLineMinColumn(lineNumber: Int) = 1
     fun getLineMaxColumn(lineNumber: Int) = getLineLength(lineNumber) + 1
 

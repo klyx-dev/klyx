@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
@@ -24,6 +25,7 @@ import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.TextSelectStart
 import com.klyx.editor.KlyxEditor
 
+@Suppress("UnusedReceiverParameter")
 @Composable
 internal fun RowScope.TextActionItems(
     editor: KlyxEditor,
@@ -82,7 +84,7 @@ private fun IconButton(
     onClick: () -> Unit = {}
 ) {
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(1.dp),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(positioning = TooltipAnchorPosition.Above),
         state = rememberTooltipState(),
         tooltip = {
             if (contentDescription != null) {

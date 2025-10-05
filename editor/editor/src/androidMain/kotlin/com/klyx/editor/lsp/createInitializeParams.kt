@@ -45,6 +45,7 @@ import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
 
+@Suppress("DEPRECATION")
 fun createInitializeParams(
     worktree: Worktree,
     initializationOptions: String? = null
@@ -52,7 +53,6 @@ fun createInitializeParams(
     processId = Process.myPid()
     clientInfo = ClientInfo("Klyx")
 
-    @Suppress("DEPRECATION")
     // some older language servers still expect rootUri
     rootUri = worktree.uriString
     logger().verbose { "Root URI: $rootUri" }

@@ -9,6 +9,7 @@ import kotlinx.serialization.Serializable
  * 1. Make TreeNode.piece immutable, then reading and writing can run in parallel.
  * 2. TreeNode/Buffers normalization should not happen during snapshot reading.
  */
+@Suppress("ConstructorParameterNaming")
 @Serializable
 internal class PieceTreeSnapshot(val tree: PieceTreeBase, val BOM: String) {
     private val pieces = mutableListOf<Piece>()

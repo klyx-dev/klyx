@@ -131,6 +131,7 @@ internal class PieceTreeBase {
         normalizeLineBreak(newLineBreak = lineBreak)
     }
 
+    @Suppress("FunctionParameterNaming")
     fun createSnapshot(BOM: String) = PieceTreeSnapshot(this, BOM)
 
     override fun equals(other: Any?): Boolean {

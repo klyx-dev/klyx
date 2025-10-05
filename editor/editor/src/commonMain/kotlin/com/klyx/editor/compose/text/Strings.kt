@@ -49,7 +49,7 @@ object Strings {
     }
 
     /** Generated using https://github.com/alexdima/unicode-utils/blob/master/generate-rtl-test.js */
-    val CONTAINS_RTL =
+    const val CONTAINS_RTL =
         "(?:[\u05BE\u05C0\u05C3\u05C6\u05D0-\u05F4\u0608\u060B\u060D\u061B-\u064A\u066D-\u066F\u0671-\u06D5\u06E5\u06E6\u06EE\u06EF\u06FA-\u0710\u0712-\u072F\u074D-\u07A5\u07B1-\u07EA\u07F4\u07F5\u07FA-\u0815\u081A\u0824\u0828\u0830-\u0858\u085E-\u08BD\u200F\uFB1D\uFB1F-\uFB28\uFB2A-\uFD3D\uFD50-\uFDFC\uFE70-\uFEFC]|\uD802[\uDC00-\uDD1B\uDD20-\uDE00\uDE10-\uDE33\uDE40-\uDEE4\uDEEB-\uDF35\uDF40-\uDFFF]|\uD803[\uDC00-\uDCFF]|\uD83A[\uDC00-\uDCCF\uDD00-\uDD43\uDD50-\uDFFF]|\uD83B[\uDC00-\uDEBB])"
 
     /** Returns true if `str` contains any Unicode character that is classified as "R" or "AL". */
@@ -57,14 +57,14 @@ object Strings {
         return CONTAINS_RTL.toRegex(RegexOption.IGNORE_CASE).containsMatchIn(str)
     }
 
-    val UNUSUAL_LINE_TERMINATORS = "[\u2028\u2029]" // LINE SEPARATOR (LS) or PARAGRAPH SEPARATOR (PS)
+    const val UNUSUAL_LINE_TERMINATORS = "[\u2028\u2029]" // LINE SEPARATOR (LS) or PARAGRAPH SEPARATOR (PS)
 
     /** Returns true if `str` contains unusual line terminators, like LS or PS */
     fun containsUnusualLineTerminators(str: String): Boolean {
         return UNUSUAL_LINE_TERMINATORS.toRegex(RegexOption.IGNORE_CASE).containsMatchIn(str)
     }
 
-    val IS_BASIC_ASCII = "^[\t\n\r\\x20-\\x7E]*$"
+    const val IS_BASIC_ASCII = "^[\t\n\r\\x20-\\x7E]*$"
 
     /**
      * Returns true if `str` contains only basic ASCII characters in the range 32 - 126 (including 32 and 126) or \n, \r, \t
