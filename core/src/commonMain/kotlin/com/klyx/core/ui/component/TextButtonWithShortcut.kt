@@ -1,4 +1,4 @@
-package com.klyx.core.components
+package com.klyx.core.ui.component
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer

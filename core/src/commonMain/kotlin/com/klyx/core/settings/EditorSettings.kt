@@ -26,5 +26,5 @@ data class EditorSettings(
 
     @SerialComment("The number of spaces to use for indentation")
     @SerialName("tab_size")
-    val tabSize: Int = 4,
+    val tabSize: UInt = 4u,
 )

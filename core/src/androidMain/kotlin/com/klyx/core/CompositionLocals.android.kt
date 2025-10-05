@@ -1,6 +1,10 @@
 package com.klyx.core
 
 import android.content.SharedPreferences
+import android.os.Build
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -23,4 +27,13 @@ actual fun PlatformLocalProvider(content: @Composable () -> Unit) {
 
 val LocalSharedPreferences = staticCompositionLocalOf<SharedPreferences> {
     noLocalProvidedFor<SharedPreferences>()
+}
+
+@Composable
+actual fun dynamicDarkColorScheme(): ColorScheme {
+    return if (Build.VERSION.SDK_INT >= 31) {
+        dynamicDarkColorScheme(LocalContext.current)
+    } else {
+        darkColorScheme()
+    }
 }

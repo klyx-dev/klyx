@@ -14,7 +14,7 @@ import com.klyx.core.theme.ThemeManager
 import com.klyx.core.theme.orDefault
 
 @Composable
-actual fun KlyxTheme(themeName: String?, content: @Composable (() -> Unit)) {
+fun KlyxTheme(themeName: String?, content: @Composable (() -> Unit)) {
     val context = LocalContext.current
     val settings = LocalAppSettings.current
     val isDarkMode = LocalIsDarkMode.current
@@ -42,7 +42,7 @@ actual fun KlyxTheme(themeName: String?, content: @Composable (() -> Unit)) {
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = AppTypography,
+        typography = Typography,
         content = content
     )
 }

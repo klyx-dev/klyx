@@ -1,6 +1,9 @@
 package com.klyx.core
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -10,14 +13,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.watchAndReload
 import com.klyx.core.notification.LocalNotificationManager
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.settings.SettingsManager
+import com.klyx.core.settings.paletteStyles
 import com.klyx.core.theme.Appearance
+import com.klyx.core.theme.DEFAULT_SEED_COLOR
+import com.klyx.core.theme.FixedColorRoles
 import com.klyx.core.theme.LocalContrast
 import com.klyx.core.theme.LocalIsDarkMode
+import com.kyant.monet.LocalTonalPalettes
+import com.kyant.monet.PaletteStyle
+import com.kyant.monet.TonalPalettes.Companion.toTonalPalettes
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
@@ -62,16 +72,30 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
         }
     }
 
+    val tonalPalettes = if (settings.dynamicColor) {
+        dynamicDarkColorScheme().toTonalPalettes()
+    } else {
+        Color(settings.seedColor).toTonalPalettes(
+            paletteStyles.getOrElse(settings.paletteStyleIndex) { PaletteStyle.TonalSpot }
+        )
+    }
+
     CompositionLocalProvider(
         LocalNotifier provides koinInject(),
         LocalNotificationManager provides koinInject(),
         LocalAppSettings provides settings,
         LocalIsDarkMode provides darkMode,
-        LocalContrast provides settings.contrast
+        LocalContrast provides settings.contrast,
+        LocalSeedColor provides settings.seedColor,
+        LocalPaletteStyleIndex provides settings.paletteStyleIndex,
+        LocalTonalPalettes provides tonalPalettes
     ) {
         PlatformLocalProvider(content)
     }
 }
+
+@Composable
+expect fun dynamicDarkColorScheme(): ColorScheme
 
 val LocalAppSettings = compositionLocalOf<AppSettings> {
     noLocalProvidedFor<AppSettings>()
@@ -80,3 +104,13 @@ val LocalAppSettings = compositionLocalOf<AppSettings> {
 val LocalBuildVariant = staticCompositionLocalOf<BuildVariant> {
     noLocalProvidedFor<BuildVariant>()
 }
+
+val LocalFixedColorRoles = staticCompositionLocalOf {
+    FixedColorRoles.fromColorSchemes(
+        lightColors = lightColorScheme(),
+        darkColors = darkColorScheme(),
+    )
+}
+
+val LocalSeedColor = compositionLocalOf { DEFAULT_SEED_COLOR }
+val LocalPaletteStyleIndex = compositionLocalOf { 0 }

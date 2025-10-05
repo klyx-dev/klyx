@@ -2,6 +2,7 @@ package com.klyx.core.settings
 
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.Contrast
+import com.klyx.core.theme.DEFAULT_SEED_COLOR
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
@@ -58,6 +59,9 @@ data class AppSettings(
     """
     )
     val theme: String = "Ocean Breeze",
+
+    val seedColor: Int = DEFAULT_SEED_COLOR,
+    val paletteStyleIndex: Int = 0,
 
     @SerialComment("The editor settings")
     val editor: EditorSettings = EditorSettings(),

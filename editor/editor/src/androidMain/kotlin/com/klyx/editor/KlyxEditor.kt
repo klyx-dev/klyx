@@ -54,6 +54,6 @@ class KlyxEditor @JvmOverloads constructor(
     }
 
     fun update(settings: EditorSettings) {
-        tabWidth = settings.tabSize
+        tabWidth = settings.tabSize.toInt()
     }
 }

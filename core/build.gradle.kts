@@ -58,7 +58,8 @@ kotlin {
 
                 implementation(compose.runtime)
                 implementation(compose.foundation)
-                implementation(compose.material3)
+                implementation(libs.compose.material3)
+                implementation(libs.navigation.compose)
                 implementation(compose.materialIconsExtended)
                 implementation(compose.ui)
                 implementation(compose.components.resources)
@@ -90,6 +91,7 @@ kotlin {
                 api(libs.arrow.fx.coroutines)
 
                 api(libs.kfswatch)
+                implementation(libs.multiplatform.settings.no.arg)
 
                 implementation(projects.shared)
                 implementation(projects.wasm)
@@ -119,4 +121,10 @@ kotlin {
 
 atomicfu {
     transformJvm = false
+}
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "${Configs.KLYX_NAMESPACE}.core.res"
+    generateResClass = auto
 }

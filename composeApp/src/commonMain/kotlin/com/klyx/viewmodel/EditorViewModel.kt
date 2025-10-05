@@ -62,7 +62,7 @@ class EditorViewModel(
 
     val activeTab = _state.map { tabState ->
         tabState.openTabs.find { it.id == tabState.activeTabId }
-    }
+    }.stateInWhileSubscribed(null)
 
     val currentEditorState = _state.map { tabState ->
         (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.editorState

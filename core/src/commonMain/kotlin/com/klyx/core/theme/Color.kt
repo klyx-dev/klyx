@@ -3,6 +3,7 @@ package com.klyx.core.theme
 import androidx.annotation.FloatRange
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 private val colorNameMap = mapOf(
@@ -67,6 +68,7 @@ fun Color.blend(
 }
 
 @Composable
+@ReadOnlyComposable
 fun Color.harmonizeWithPrimary(
     @FloatRange(
         from = 0.0,
@@ -77,4 +79,8 @@ fun Color.harmonizeWithPrimary(
 fun Color.isLightColor(): Boolean {
     val luminance = (0.299 * red + 0.587 * green + 0.114 * blue)
     return luminance > 0.5
+}
+
+fun Color.applyOpacity(enabled: Boolean): Color {
+    return if (enabled) this else this.copy(alpha = 0.62f)
 }

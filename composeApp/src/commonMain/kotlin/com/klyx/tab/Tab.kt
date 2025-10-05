@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.klyx.tab
 
 import androidx.compose.foundation.layout.Box
@@ -55,3 +57,5 @@ sealed class Tab(
         }
     }
 }
+
+inline fun Tab.isFileTab() = this is Tab.FileTab

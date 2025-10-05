@@ -35,7 +35,7 @@ fun main() {
                     false
                 }
             ) {
-                App()
+                AppEntry()
             }
         }
     }

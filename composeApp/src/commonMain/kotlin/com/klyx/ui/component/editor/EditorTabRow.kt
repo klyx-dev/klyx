@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -44,27 +43,23 @@ fun EditorTabRow(
 ) {
     val dirty by rememberUpdatedState(isDirty)
 
-    Box(
-        modifier = modifier.background(MaterialTheme.colorScheme.surfaceColorAtElevation(5.dp))
+    LazyRow(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        contentPadding = PaddingValues(4.dp)
     ) {
-        LazyRow(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 48.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(4.dp)
-        ) {
-            itemsIndexed(tabs) { index, tab ->
-                EditorTab(
-                    tab = tab,
-                    isSelected = index == selectedTab,
-                    onClick = { onTabSelected(index) },
-                    onClose = { onClose(index) },
-                    isDirty = dirty(index),
-                    modifier = Modifier.animateItem()
-                )
-            }
+        itemsIndexed(tabs) { index, tab ->
+            EditorTab(
+                tab = tab,
+                isSelected = index == selectedTab,
+                onClick = { onTabSelected(index) },
+                onClose = { onClose(index) },
+                isDirty = dirty(index),
+                modifier = Modifier.animateItem()
+            )
         }
     }
 }

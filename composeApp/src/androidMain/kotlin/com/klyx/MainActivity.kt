@@ -8,25 +8,16 @@ import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
-import com.blankj.utilcode.util.ClipboardUtils
 import com.klyx.activities.KlyxActivity
 import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
-import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.command
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
@@ -97,39 +88,7 @@ class MainActivity : KlyxActivity() {
                 )
             )
 
-            App(themeName = settings.theme) {
-                var showCopiedDialog by remember { mutableStateOf(false) }
-                var specs by remember { mutableStateOf("") }
-
-                LaunchedEffect(Unit) {
-                    CommandManager.addCommand(command {
-                        name("klyx: copy system specs into clipboard")
-                        execute {
-                            specs = getSystemSpecs()
-                            ClipboardUtils.copyText("Klyx", specs)
-                            showCopiedDialog = true
-                        }
-                    })
-                }
-
-                if (showCopiedDialog) {
-                    AlertDialog(
-                        onDismissRequest = { showCopiedDialog = false },
-                        title = {
-                            Text("Copied into clipboard")
-                        },
-                        text = {
-                            Text(specs)
-                        },
-                        confirmButton = {
-                            TextButton(onClick = { showCopiedDialog = false }) {
-                                Text("Ok")
-                            }
-                        },
-                        shape = MaterialTheme.shapes.medium
-                    )
-                }
-            }
+            AppEntry()
         }
     }
 

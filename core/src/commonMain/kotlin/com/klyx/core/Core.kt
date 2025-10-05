@@ -49,3 +49,10 @@ fun LocalDateTime.formatDateTime(): String {
 
     return "$monthName $daySuffix, $year at $hour:$minute"
 }
+
+object GitHub {
+    const val KLYX_ORG_URL = "https://github.com/klyx-dev"
+    const val KLYX_REPO_URL = "$KLYX_ORG_URL/klyx"
+
+    const val RELEASE_URL = "$KLYX_REPO_URL/releases"
+}
