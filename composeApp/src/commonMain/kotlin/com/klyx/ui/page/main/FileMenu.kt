@@ -28,7 +28,7 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.ui.component.DropdownMenuDivider
-import com.klyx.core.ui.component.ShortcutText
+import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.filetree.asFileTreeNode
@@ -115,17 +115,15 @@ fun FileMenu(
         onDismissRequest = onDismissRequest
     ) {
         DropdownMenuItem(
-            text = { Text("New") },
+            text = "New",
             onClick = { editorViewModel.openFile(KxFile("untitled")) },
-            leadingIcon = {
+            icon = {
                 Icon(
                     Icons.Outlined.Add,
                     contentDescription = "Create new file"
                 )
             },
-            trailingIcon = {
-                ShortcutText(keyShortcutOf(ctrl = true, key = Key.N))
-            }
+            shortcut = keyShortcutOf(ctrl = true, key = Key.N)
         )
 
         DropdownMenuDivider()
@@ -142,17 +140,15 @@ fun FileMenu(
         )
 
         DropdownMenuItem(
-            text = { Text("Open Folder...") },
+            text = "Open Folder...",
             onClick = { directoryPicker.launch() },
-            leadingIcon = {
+            icon = {
                 Icon(
                     Icons.Outlined.DriveFolderUpload,
                     contentDescription = "Open Folder"
                 )
             },
-            trailingIcon = {
-                ShortcutText(keyShortcutOf(ctrl = true, key = Key.O))
-            }
+            shortcut = keyShortcutOf(ctrl = true, key = Key.O)
         )
 
         DropdownMenuDivider()
@@ -173,7 +169,7 @@ fun FileMenu(
         activeTab?.let { tab ->
             if (tab is Tab.FileTab && !tab.isInternal) {
                 DropdownMenuItem(
-                    text = { Text("Save") },
+                    text = "Save",
                     onClick = {
                         val file = activeFile
                         if (file == null) {
@@ -189,19 +185,17 @@ fun FileMenu(
                         }
                     },
                     enabled = tab.isModified,
-                    leadingIcon = {
+                    icon = {
                         Icon(
                             Icons.Outlined.Save,
                             contentDescription = "Save"
                         )
                     },
-                    trailingIcon = {
-                        ShortcutText(keyShortcutOf(ctrl = true, key = Key.S))
-                    }
+                    shortcut = keyShortcutOf(ctrl = true, key = Key.S)
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Save As...") },
+                    text = "Save As...",
                     onClick = {
                         val file = activeFile
                         if (file == null) {
@@ -210,19 +204,17 @@ fun FileMenu(
                         }
                         fileSaver.launch(file.name)
                     },
-                    leadingIcon = {
+                    icon = {
                         Icon(
                             Icons.Outlined.SaveAs,
                             contentDescription = "Save As"
                         )
                     },
-                    trailingIcon = {
-                        ShortcutText(keyShortcutOf(ctrl = true, shift = true, key = Key.S))
-                    }
+                    shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.S)
                 )
 
                 DropdownMenuItem(
-                    text = { Text("Save All") },
+                    text = "Save All",
                     onClick = {
                         val results = editorViewModel.saveAll()
                         if (results.isEmpty()) {
@@ -241,15 +233,13 @@ fun FileMenu(
                             }
                         }
                     },
-                    leadingIcon = {
+                    icon = {
                         Icon(
                             Icons.Outlined.Save,
                             contentDescription = "Save All"
                         )
                     },
-                    trailingIcon = {
-                        ShortcutText(keyShortcutOf(ctrl = true, alt = true, key = Key.S))
-                    }
+                    shortcut = keyShortcutOf(ctrl = true, alt = true, key = Key.S)
                 )
 
                 DropdownMenuDivider()

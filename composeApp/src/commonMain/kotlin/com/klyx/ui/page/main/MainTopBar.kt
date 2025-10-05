@@ -32,19 +32,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.core.FpsTracker
 import com.klyx.core.LocalAppSettings
+import com.klyx.core.LocalNotifier
+import com.klyx.core.file.toKxFile
 import com.klyx.core.toFixed
 import com.klyx.core.ui.Route
 import com.klyx.extension.api.Project
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.res.Res
+import com.klyx.res.Res.string
 import com.klyx.res.label_fps
+import com.klyx.res.notification_no_active_file
+import com.klyx.res.notification_saved
 import com.klyx.res.settings
 import com.klyx.tab.Tab
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
+import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -60,13 +67,36 @@ fun MainTopBar(
     onNavigateToRoute: (String) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
+    val notifier = LocalNotifier.current
+    val activeFile by editorViewModel.activeFile.collectAsStateWithLifecycle()
+
+    val fileSaver = rememberFileSaverLauncher { file ->
+        if (file != null) {
+            val saved = editorViewModel.saveCurrentAs(file.toKxFile())
+            if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
+        }
+    }
+
     val commonActions: @Composable RowScope.() -> Unit = {
         SettingsButton(onNavigateToRoute)
 
         activeTab?.let { tab ->
             if (isTabOpen && tab is Tab.FileTab && !tab.isInternal) {
                 IconButton(
-                    onClick = {},
+                    onClick = {
+                        val file = activeFile
+                        if (file == null) {
+                            notifier.notify(com.klyx.core.string(string.notification_no_active_file))
+                            return@IconButton
+                        }
+
+                        if (file.path == "/untitled") {
+                            fileSaver.launch(file.name)
+                        } else {
+                            val saved = editorViewModel.saveCurrent()
+                            if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
+                        }
+                    },
                     enabled = tab.isModified
                 ) {
                     Icon(Icons.Outlined.Save, contentDescription = "Save")

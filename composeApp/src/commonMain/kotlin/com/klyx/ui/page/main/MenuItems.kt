@@ -25,7 +25,7 @@ import com.klyx.core.icon.Klyx
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.Pip
 import com.klyx.core.ui.component.DropdownMenuDivider
-import com.klyx.core.ui.component.ShortcutText
+import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.extension.api.Project
 import com.klyx.menu.closeCurrentWindow
 import com.klyx.menu.openNewWindow
@@ -48,17 +48,15 @@ fun ColumnScope.DropdownMenuItems(
     val isTabOpen by editorViewModel.isTabOpen.collectAsStateWithLifecycle()
 
     DropdownMenuItem(
-        text = { Text("New Window") },
+        text = "New Window",
         onClick = { openNewWindow() },
-        leadingIcon = {
+        icon = {
             Icon(
                 KlyxIcons.BackToTab,
                 contentDescription = "Open New Window"
             )
         },
-        trailingIcon = {
-            ShortcutText(keyShortcutOf(ctrl = true, shift = true, key = Key.N))
-        }
+        shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.N)
     )
 
     DropdownMenuItem(
@@ -94,31 +92,27 @@ fun ColumnScope.DropdownMenuItems(
     DropdownMenuDivider()
 
     DropdownMenuItem(
-        text = { Text("Command Palette") },
+        text = "Command Palette",
         onClick = { CommandManager.showPalette() },
-        leadingIcon = {
+        icon = {
             Icon(
                 Icons.Outlined.KeyboardCommandKey,
                 contentDescription = "Open Command Palette"
             )
         },
-        trailingIcon = {
-            ShortcutText(keyShortcutOf(ctrl = true, shift = true, key = Key.P))
-        }
+        shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.P)
     )
 
     DropdownMenuItem(
-        text = { Text("Extensions") },
+        text = "Extensions",
         onClick = { editorViewModel.openExtensionScreen() },
-        leadingIcon = {
+        icon = {
             Icon(
                 Icons.Outlined.Extension,
                 contentDescription = "Extensions"
             )
         },
-        trailingIcon = {
-            ShortcutText(keyShortcutOf(ctrl = true, shift = true, key = Key.X))
-        }
+        shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.X)
     )
 
     DropdownMenuDivider()
@@ -150,17 +144,15 @@ fun ColumnScope.DropdownMenuItems(
     }
 
     DropdownMenuItem(
-        text = { Text("Close Window") },
+        text = "Close Window",
         onClick = { closeCurrentWindow() },
-        leadingIcon = {
+        icon = {
             Icon(
                 KlyxIcons.Pip,
                 contentDescription = "Close Window"
             )
         },
-        trailingIcon = {
-            ShortcutText(keyShortcutOf(ctrl = true, shift = true, key = Key.W))
-        }
+        shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.W)
     )
 
     DropdownMenuDivider()
@@ -200,17 +192,15 @@ fun ColumnScope.DropdownMenuItems(
     )
 
     DropdownMenuItem(
-        text = { Text("Quit") },
+        text = "Quit",
         onClick = { quitApp() },
-        leadingIcon = {
+        icon = {
             Icon(
                 Icons.AutoMirrored.Outlined.ExitToApp,
                 contentDescription = "Quit App"
             )
         },
-        trailingIcon = {
-            ShortcutText(keyShortcutOf(key = Key.Q, ctrl = true))
-        }
+        shortcut = keyShortcutOf(key = Key.Q, ctrl = true)
     )
 
     DropdownMenuDivider()

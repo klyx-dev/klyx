@@ -16,7 +16,7 @@ actual class PackageInfo {
                     ?.getResourceAsStream("META-INF/MANIFEST.MF") ?: return null
                 val manifest = Manifest(stream)
                 manifest.mainAttributes.getValue(key)
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 null
             }
         }
