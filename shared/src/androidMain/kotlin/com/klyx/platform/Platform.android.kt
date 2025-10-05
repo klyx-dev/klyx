@@ -15,7 +15,7 @@ import org.koin.core.component.inject
 
 @SuppressLint("HardwareIds")
 actual object PlatformInfo : KoinComponent {
-    private val context: Context by inject()
+    internal val context: Context by inject()
 
     actual val name = "Android"
     actual val version: String = Build.VERSION.RELEASE
