@@ -64,6 +64,7 @@ fun FontSizeDialog(
                     value = fontSize,
                     onValueChange = { fontSize = it },
                     placeholder = { Text("14") },
+                    suffix = { Text("sp") },
                     shape = MaterialTheme.shapes.small,
                     keyboardOptions = KeyboardOptions(
                         imeAction = ImeAction.Done,
