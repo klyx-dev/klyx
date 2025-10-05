@@ -17,6 +17,7 @@ import com.klyx.core.settings.update
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.Contrast
 import com.klyx.core.theme.LocalContrast
+import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceSingleChoiceItem
 import com.klyx.core.ui.component.PreferenceSubtitle
@@ -36,6 +37,7 @@ fun DarkThemePreferences(onNavigateBack: () -> Unit) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val appSettings = LocalAppSettings.current
+    val isDarkMode = LocalIsDarkMode.current
     val isHighContrastModeEnabled = LocalContrast.current == Contrast.High
 
     Scaffold(
@@ -84,7 +86,8 @@ fun DarkThemePreferences(onNavigateBack: () -> Unit) {
                 PreferenceSwitchVariant(
                     title = stringResource(Res.string.high_contrast),
                     icon = Icons.Outlined.Contrast,
-                    isChecked = isHighContrastModeEnabled,
+                    enabled = isDarkMode,
+                    isChecked = isHighContrastModeEnabled && isDarkMode,
                     onClick = { checked ->
                         appSettings.update {
                             it.copy(contrast = if (checked) Contrast.High else Contrast.Normal)
