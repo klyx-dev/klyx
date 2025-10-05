@@ -3,7 +3,6 @@ package com.klyx.core.file
 import com.klyx.core.Environment
 import com.klyx.core.io.R_OK
 import com.klyx.core.logging.logger
-import com.klyx.fileSeparatorChar
 import io.github.irgaly.kfswatch.KfsDirectoryWatcher
 import io.github.irgaly.kfswatch.KfsEvent
 import io.github.irgaly.kfswatch.KfsLogger
@@ -16,6 +15,7 @@ import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlinx.io.files.SystemPathSeparator
 import kotlinx.io.okio.asOkioSink
 import kotlinx.io.okio.asOkioSource
 import okio.Path.Companion.toPath
@@ -74,6 +74,7 @@ fun KxFile.okioSource() = source().asOkioSource()
 fun KxFile.okioSink() = sink().asOkioSink()
 
 fun okio.Path.toKxFile() = KxFile(toString())
+fun Path.toKxFile() = KxFile(toString())
 
 val KxFile.size get() = SystemFileSystem.metadataOrNull(Path(absolutePath))?.size
 
@@ -86,10 +87,10 @@ fun KxFile.find(name: String): KxFile? = listFiles()?.find { it.name == name }
 
 fun KxFile.resolve(relative: KxFile): KxFile {
     val baseName = this.toString()
-    return if (baseName.isEmpty() || baseName.endsWith(fileSeparatorChar)) {
+    return if (baseName.isEmpty() || baseName.endsWith(SystemPathSeparator)) {
         KxFile(baseName + relative)
     } else {
-        KxFile(baseName + fileSeparatorChar + relative)
+        KxFile(baseName + SystemPathSeparator + relative)
     }
 }
 

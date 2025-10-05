@@ -15,5 +15,3 @@ class NativePlatform : Platform {
 actual fun platform(): Platform = NativePlatform()
 
 actual val lineSeparator = "\n"
-
-actual val fileSeparatorChar = '/'

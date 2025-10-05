@@ -8,6 +8,4 @@ interface Platform {
 
 expect val lineSeparator: String
 
-expect val fileSeparatorChar: Char
-
 expect fun platform(): Platform

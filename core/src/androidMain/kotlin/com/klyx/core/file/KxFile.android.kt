@@ -14,7 +14,8 @@ import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
 import com.klyx.core.terminal.SAFUtils
 import com.klyx.ifNull
-import com.klyx.nothing
+import com.klyx.unimplemented
+import com.klyx.runtimeError
 import com.klyx.unsupported
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
@@ -51,11 +52,11 @@ actual open class KxFile(
     actual val exists: Boolean get() = file?.exists() ?: raw.exists()
     actual val canRead: Boolean get() = file?.canRead() ?: raw.canRead()
     actual val canWrite: Boolean get() = file?.canWrite() ?: raw.canWrite()
-    actual val canExecute: Boolean get() = file?.canExecute() ?: nothing()
+    actual val canExecute: Boolean get() = file?.canExecute() ?: unimplemented()
     actual val length: Long get() = file?.length() ?: raw.length()
     actual val lastModified: Long get() = file?.lastModified() ?: raw.lastModified()
     actual val extension: String get() = file?.extension ?: name.substringAfterLast(".", "")
-    actual val isHidden: Boolean get() = file?.isHidden ?: nothing()
+    actual val isHidden: Boolean get() = file?.isHidden ?: unimplemented()
     actual val isFile: Boolean get() = file?.isFile ?: raw.isFile
     actual val isDirectory: Boolean get() = file?.isDirectory ?: raw.isDirectory
 
@@ -120,7 +121,7 @@ actual open class KxFile(
     fun canWatchFileEvents() = file != null && !isFromTermux()
 
     actual fun source(): RawSource {
-        val input = inputStream() ?: nothing("Failed to open input stream for $absolutePath")
+        val input = inputStream() ?: runtimeError("Failed to open input stream for $absolutePath")
         return input.asSource()
     }
 }
@@ -212,6 +213,6 @@ actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
 }
 
 actual fun KxFile.sink(): RawSink {
-    val output = outputStream() ?: nothing("Failed to open output stream for $absolutePath")
+    val output = outputStream() ?: runtimeError("Failed to open output stream for $absolutePath")
     return output.asSink()
 }
