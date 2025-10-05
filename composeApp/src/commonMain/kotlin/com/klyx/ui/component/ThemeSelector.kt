@@ -24,7 +24,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,7 +39,7 @@ import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.klyx.core.LocalAppSettings
-import com.klyx.core.settings.SettingsManager
+import com.klyx.core.settings.update
 import com.klyx.core.theme.ThemeManager
 import com.klyx.ui.theme.DefaultKlyxShape
 
@@ -105,12 +104,12 @@ fun ThemeSelector(
                                 .wrapContentHeight()
                                 .clip(DefaultKlyxShape)
                                 .clickable {
-                                    SettingsManager.updateSettings(
-                                        SettingsManager.settings.value.copy(
+                                    settings.update {
+                                        it.copy(
                                             theme = theme.name,
                                             dynamicColor = false
                                         )
-                                    )
+                                    }
                                     //onDismissRequest()
                                 }
                                 .then(
@@ -131,7 +130,7 @@ fun ThemeSelector(
                                         val query = searchQuery.lowercase()
                                         val startIndex = themeName.lowercase().indexOf(query)
                                         if (startIndex != -1) {
-                                            append(themeName.substring(0, startIndex))
+                                            append(themeName.take(startIndex))
                                             withStyle(
                                                 SpanStyle(
                                                     color = MaterialTheme.colorScheme.primary

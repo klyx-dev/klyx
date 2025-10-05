@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.watchAndReload
 import com.klyx.core.notification.LocalNotificationManager
@@ -44,7 +45,7 @@ expect fun PlatformLocalProvider(content: @Composable () -> Unit)
 
 @Composable
 fun SharedLocalProvider(content: @Composable () -> Unit) {
-    val settings by SettingsManager.settings
+    val settings by SettingsManager.settings.collectAsStateWithLifecycle()
     val settingsFile = remember { KxFile(Environment.SettingsFilePath) }
     val scope = rememberCoroutineScope()
 

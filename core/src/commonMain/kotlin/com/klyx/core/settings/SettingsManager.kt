@@ -1,16 +1,13 @@
-@file:OptIn(ExperimentalContracts::class)
-
 package com.klyx.core.settings
 
-import androidx.compose.runtime.mutableStateOf
 import com.klyx.core.Environment
 import com.klyx.core.file.KxFile
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
-import kotlin.contracts.ExperimentalContracts
-import kotlin.contracts.InvocationKind
-import kotlin.contracts.contract
 
 const val SETTINGS_FILE_NAME = "settings.json"
 
@@ -29,7 +26,8 @@ object SettingsManager {
     private val settingsFile = KxFile(Environment.SettingsFilePath)
     private val internalSettingsFile = KxFile(Environment.InternalSettingsFilePath)
 
-    var settings = mutableStateOf(AppSettings())
+    private val _settings = MutableStateFlow(AppSettings())
+    val settings = _settings.asStateFlow()
 
     val defaultSettings: AppSettings
         get() = json.decodeFromString(internalSettingsFile.readText())
@@ -49,7 +47,7 @@ object SettingsManager {
         if (settingsFile.exists) {
             runCatching {
                 val text = settingsFile.readText()
-                settings.value = json.decodeFromString(text)
+                _settings.update { json.decodeFromString(text) }
                 save()
             }.onFailure { save() }
         } else {
@@ -64,18 +62,16 @@ object SettingsManager {
         }.onFailure { it.printStackTrace() }
     }
 
-    fun updateSettings(settings: AppSettings) {
-        this.settings.value = settings
+    fun updateSettings(function: (AppSettings) -> AppSettings) {
+        _settings.update { function(settings.value) }
         save()
     }
 }
 
-inline fun AppSettings.update(function: (AppSettings) -> AppSettings) {
-    contract { callsInPlace(function, InvocationKind.EXACTLY_ONCE) }
-    SettingsManager.updateSettings(function(this))
+inline fun AppSettings.update(crossinline function: (AppSettings) -> AppSettings) {
+    SettingsManager.updateSettings { function(this) }
 }
 
-inline fun EditorSettings.update(function: (EditorSettings) -> EditorSettings) {
-    contract { callsInPlace(function, InvocationKind.EXACTLY_ONCE) }
+inline fun EditorSettings.update(crossinline function: (EditorSettings) -> EditorSettings) {
     SettingsManager.settings.value.update { it.copy(editor = function(this)) }
 }
