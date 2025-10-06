@@ -52,6 +52,7 @@ import com.klyx.tab.Tab
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -111,7 +112,9 @@ fun MainTopBar(
     val fps by fpsTracker.fps
 
     LaunchedEffect(Unit) {
-        fpsTracker.start()
+        launch(Dispatchers.Default) {
+            fpsTracker.start()
+        }
     }
 
     if (isTabOpen) {
