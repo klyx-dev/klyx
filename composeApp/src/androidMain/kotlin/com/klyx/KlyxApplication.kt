@@ -50,10 +50,23 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
         instance = this
 
+        try {
+            Environment.init()
+        } catch (e: Exception) {
+            Log.e("Klyx", "Failed to initialize environment", e)
+            handleUncaughtException(Thread.currentThread(), e)
+        }
+
+        @Suppress("SimplifyBooleanWithConstants")
         if (BuildConfig.BUILD_TYPE == "release") {
             LoggerConfig.Default = LoggerConfig(
                 minimumLevel = Level.Info
             )
+        }
+
+        initKoin(commonModule) {
+            androidLogger()
+            androidContext(this@KlyxApplication)
         }
 
         FileProviderRegistry.getInstance().addFileProvider(
@@ -78,11 +91,6 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             }
         }
 
-        initKoin(commonModule) {
-            androidLogger()
-            androidContext(this@KlyxApplication)
-        }
-
         launch {
             runCatching {
                 File(klyxBinDir, "init").writeBytes(
@@ -101,7 +109,7 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
         return
     }
 
-    val file = saveLogs(thread, throwable)
+    val file = runCatching { saveLogs(thread, throwable) }.getOrNull()
     EventBus.instance.postSync(CrashEvent(thread, throwable, file))
 
     if (thread.name == "main") {
@@ -112,11 +120,11 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
         ).show()
     }
 
-    Log.e("Klyx", file?.readText() ?: "App crashed. No crash logs.")
+    Log.e("Klyx", file?.readText() ?: buildLogString(thread, throwable))
 
     startActivity(Intent(this, CrashActivity::class.java).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        putExtra(CrashActivity.EXTRA_CRASH_LOG, file?.readText())
+        putExtra(CrashActivity.EXTRA_CRASH_LOG, file?.readText() ?: buildLogString(thread, throwable))
     })
 }
 
@@ -127,31 +135,33 @@ private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
     FileUtils.createFileByDeleteOldFile(externalLogFile)
 
     return if (logFile.createNewFile()) {
-        val logString = buildString {
-            appendLine("=== Crash Log ===")
-            appendLine("Time: ${Date()}")
-
-            val id = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-                thread.threadId()
-            } else {
-                @Suppress("DEPRECATION")
-                thread.id
-            }
-
-            appendLine("Thread: ${thread.name} (id=$id)")
-            appendLine("Exception: ${throwable::class.qualifiedName}")
-            appendLine("Message: ${throwable.message}")
-            appendLine()
-            appendLine("Stack Trace:")
-            throwable.stackTrace.forEach { trace ->
-                appendLine("\tat $trace")
-            }
-        }
+        val logString = buildLogString(thread, throwable)
         logFile.writeText(logString)
         externalLogFile.writeText(logString)
         logFile.toKxFile()
     } else {
         Log.e("Klyx", "Failed to save crash logs")
         null
+    }
+}
+
+private fun buildLogString(thread: Thread, throwable: Throwable): String = buildString {
+    appendLine("=== Crash Log ===")
+    appendLine("Time: ${Date()}")
+
+    val id = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+        thread.threadId()
+    } else {
+        @Suppress("DEPRECATION")
+        thread.id
+    }
+
+    appendLine("Thread: ${thread.name} (id=$id)")
+    appendLine("Exception: ${throwable::class.qualifiedName}")
+    appendLine("Message: ${throwable.message}")
+    appendLine()
+    appendLine("Stack Trace:")
+    throwable.stackTrace.forEach { trace ->
+        appendLine("\tat $trace")
     }
 }

@@ -2,6 +2,8 @@ package com.klyx.activities
 
 import android.os.Bundle
 import android.os.Process
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
@@ -30,11 +32,10 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.core.LocalAppSettings
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
 
-class CrashActivity : KlyxActivity() {
+class CrashActivity : ComponentActivity() {
     companion object {
         const val EXTRA_CRASH_LOG = "extra_crash_log"
     }
@@ -46,7 +47,7 @@ class CrashActivity : KlyxActivity() {
         val crashLog = intent.getStringExtra(EXTRA_CRASH_LOG) ?: "No crash log"
 
         setContent {
-            KlyxTheme(LocalAppSettings.current.theme) {
+            KlyxTheme {
                 val uriHandler = LocalUriHandler.current
                 val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -74,9 +75,7 @@ class CrashActivity : KlyxActivity() {
                                     tooltip = { PlainTooltip { Text("Close App") } },
                                     state = rememberTooltipState(),
                                 ) {
-                                    IconButton(onClick = {
-                                        Process.sendSignal(Process.myPid(), Process.SIGNAL_KILL)
-                                    }) {
+                                    IconButton(onClick = ::finishAffinity) {
                                         Icon(
                                             imageVector = Icons.Filled.Close,
                                             contentDescription = "Close App"

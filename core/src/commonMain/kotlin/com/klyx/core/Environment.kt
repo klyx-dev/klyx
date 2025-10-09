@@ -16,6 +16,8 @@ expect object Environment {
     val SettingsFilePath: String
     val InternalSettingsFilePath: String
     val LogsDir: String
+
+    fun init()
 }
 
 private val SimpleStringFormatRegex = Regex("""%(\d+)\$[ds]""")

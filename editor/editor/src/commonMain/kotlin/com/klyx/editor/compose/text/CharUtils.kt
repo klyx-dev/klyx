@@ -4,12 +4,6 @@ package com.klyx.editor.compose.text
 
 import kotlin.jvm.JvmName
 
-fun String.normalizeLineBreaks(targetType: LineBreakType = LineBreakType.LF): String {
-    return this.replace("\r\n", "\n")
-        .replace("\r", "\n")
-        .replace("\n", targetType.sequence)
-}
-
 /**
  * The minimum value of a
  * [Unicode supplementary code point](http://www.unicode.org/glossary/#supplementary_code_point), constant `U+10000`.

@@ -16,11 +16,12 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.isValidUtf8
+import com.klyx.core.file.okioSink
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.string
-import com.klyx.editor.CodeEditorState
-import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.compose.CodeEditorState
+import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.parentAsWorktree
 import com.klyx.ifNull
@@ -41,6 +42,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okio.buffer
+import okio.use
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
@@ -48,7 +51,6 @@ data class TabState(
     val pendingFiles: List<KxFile> = emptyList()
 )
 
-@OptIn(ExperimentalCodeEditorApi::class)
 @Suppress("MemberVisibilityCanBePrivate", "unused")
 class EditorViewModel(
     private val notifier: Notifier
@@ -108,6 +110,7 @@ class EditorViewModel(
 
     fun isPendingFile(file: KxFile) = file in _state.value.pendingFiles
 
+    @OptIn(ExperimentalComposeCodeEditorApi::class)
     fun openFile(
         file: KxFile,
         worktree: Worktree? = file.parentAsWorktree(),
@@ -232,13 +235,18 @@ class EditorViewModel(
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
 
         return if (tab is Tab.FileTab) {
-            val text by tab.editorState
+            val buffer = tab.editorState.buffer
             val file = tab.file
 
             if (file.path == "untitled") return false
 
             if (file.canWrite) {
-                file.writeText(text)
+                buffer.readPiecesContent { content ->
+                    file.okioSink().buffer().use { sink ->
+                        sink.write(content.encodeToByteArray())
+                    }
+                }
+
                 tab.markAsSaved()
 
                 viewModelScope.launch(Dispatchers.Default) {
@@ -263,8 +271,12 @@ class EditorViewModel(
             val editorState = tab.editorState
 
             try {
-                val text by editorState
-                newFile.writeText(text)
+                val buffer = editorState.buffer
+                buffer.readPiecesContent { content ->
+                    newFile.okioSink().buffer().use { sink ->
+                        sink.write(content.encodeToByteArray())
+                    }
+                }
             } catch (e: Exception) {
                 notifier.error(e.message.orEmpty())
                 return false
@@ -275,7 +287,7 @@ class EditorViewModel(
                 name = newFile.name,
                 file = newFile,
                 worktree = tab.worktree,
-                editorState = CodeEditorState(editorState)
+                editorState = editorState.copy()
             )
 
             replaceTab(tab.id, newTab)
@@ -295,11 +307,15 @@ class EditorViewModel(
         _state.value.openTabs.forEach { tab ->
             if (tab is Tab.FileTab) {
                 val file = tab.file
-                val text by tab.editorState
+                val buffer = tab.editorState.buffer
 
                 if (file.path != "untitled") {
                     val saved = try {
-                        file.writeText(text)
+                        buffer.readPiecesContent { content ->
+                            file.okioSink().buffer().use { sink ->
+                                sink.write(content.encodeToByteArray())
+                            }
+                        }
                         true
                     } catch (e: Exception) {
                         notifier.error(e.message.orEmpty())

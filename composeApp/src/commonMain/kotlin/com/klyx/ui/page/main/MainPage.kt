@@ -87,9 +87,9 @@ fun MainPage(
             LaunchedEffect(activeTab?.id) {
                 when (val tab = activeTab) {
                     is Tab.FileTab -> {
-                        tab.editorState.cursor.collectLatest { cursorState ->
-                            statusBarViewModel.setCursorState(cursorState)
-                        }
+//                        tab.editorState.cursor.collectLatest { cursorState ->
+//                            statusBarViewModel.setCursorState(cursorState)
+//                        }
                     }
 
                     else -> {

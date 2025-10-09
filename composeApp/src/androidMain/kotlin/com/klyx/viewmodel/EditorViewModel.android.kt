@@ -3,22 +3,10 @@ package com.klyx.viewmodel
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
 import com.klyx.core.file.KxFile
-import com.klyx.core.generateId
-import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.lsp.LanguageServerManager
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.parentAsWorktreeOrSelf
-import com.klyx.tab.Tab
 import com.klyx.ui.component.terminal.Terminal
-import kotlinx.coroutines.flow.map
-
-@OptIn(ExperimentalCodeEditorApi::class)
-fun EditorViewModel.getActiveEditor() = activeTab.map {
-    when (val tab = it) {
-        is Tab.FileTab -> tab.editorState.editor
-        else -> null
-    }
-}
 
 fun EditorViewModel.openTerminalTab() {
     val id = "term"

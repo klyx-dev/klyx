@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
+import kotlin.experimental.ExperimentalTypeInference
+import kotlin.jvm.JvmName
 
 const val SETTINGS_FILE_NAME = "settings.json"
 
@@ -47,8 +49,7 @@ object SettingsManager {
         if (settingsFile.exists) {
             runCatching {
                 val text = settingsFile.readText()
-                _settings.update { json.decodeFromString(text) }
-                save()
+                updateSettings { json.decodeFromString(text) }
             }.onFailure { save() }
         } else {
             save()
@@ -57,7 +58,7 @@ object SettingsManager {
 
     fun save() {
         runCatching {
-            settingsFile.delete()
+            if (!settingsFile.delete()) error("Failed to delete settings file")
             settingsFile.writeText(json.encodeToString(settings.value))
         }.onFailure { it.printStackTrace() }
     }
@@ -68,10 +69,13 @@ object SettingsManager {
     }
 }
 
-inline fun AppSettings.update(crossinline function: (AppSettings) -> AppSettings) {
-    SettingsManager.updateSettings { function(this) }
-}
-
-inline fun EditorSettings.update(crossinline function: (EditorSettings) -> EditorSettings) {
-    SettingsManager.settings.value.update { it.copy(editor = function(this)) }
+@OptIn(ExperimentalTypeInference::class)
+@JvmName("updateSettings")
+inline fun <S : KlyxSettings> S.update(@BuilderInference crossinline function: (S) -> S) {
+    SettingsManager.updateSettings {
+        when (val settings = function(this)) {
+            is AppSettings -> settings
+            is EditorSettings -> it.copy(editor = settings)
+        }
+    }
 }

@@ -20,4 +20,5 @@ actual object Environment {
         get() = TODO("Not yet implemented")
     actual val LogsDir: String
         get() = TODO("Not yet implemented")
+    actual fun init() {}
 }

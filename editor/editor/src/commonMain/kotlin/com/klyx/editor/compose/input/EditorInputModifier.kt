@@ -3,11 +3,11 @@ package com.klyx.editor.compose.input
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyInputModifierNode
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
-import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.currentValueOf
-import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.PlatformTextInputModifierNode
@@ -21,7 +21,7 @@ private class EditorInputModifierNode(
     var state: CodeEditorState,
     var editable: Boolean
 ) : Modifier.Node(), FocusEventModifierNode, PlatformTextInputModifierNode, CompositionLocalConsumerModifierNode,
-    ObserverModifierNode {
+    KeyInputModifierNode {
 
     private var focusedJob: Job? = null
     private var keyboardController: SoftwareKeyboardController? = null
@@ -43,18 +43,19 @@ private class EditorInputModifierNode(
     }
 
     override fun onAttach() {
-        onObservedReadsChanged()
+        keyboardController = currentValueOf(LocalSoftwareKeyboardController)
     }
 
     override fun onDetach() {
         keyboardController = null
     }
 
-    override fun onObservedReadsChanged() {
-        observeReads {
-            keyboardController = currentValueOf(LocalSoftwareKeyboardController)
-        }
+    override fun onKeyEvent(event: KeyEvent): Boolean {
+        state.handleKeyEvent(event)
+        return true
     }
+
+    override fun onPreKeyEvent(event: KeyEvent) = false
 }
 
 private data class EditorInputModifierNodeElement(

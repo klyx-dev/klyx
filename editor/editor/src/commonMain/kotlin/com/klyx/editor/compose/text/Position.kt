@@ -1,5 +1,6 @@
 package com.klyx.editor.compose.text
 
+import androidx.compose.runtime.Stable
 import kotlinx.serialization.Serializable
 
 /**
@@ -9,11 +10,9 @@ import kotlinx.serialization.Serializable
  *  @property column column (the first character in a line is between column 1 and column 2)
  */
 @Serializable
-data class Position(var lineNumber: Int = 1, var column: Int = 1) : Comparable<Position> {
+@Stable
+internal open class Position(var lineNumber: Int = 1, var column: Int = 1) : Comparable<Position> {
     companion object {
-        /** Test if `obj` is an `Position`. */
-        fun isPosition(obj: Any?) = obj is Position
-
         /**
          * Test if position `a` is before position `b`. If the two positions are equal, the result
          * will be true.
@@ -42,10 +41,10 @@ data class Position(var lineNumber: Int = 1, var column: Int = 1) : Comparable<P
      * @param newColumn new column
      */
     fun with(newLineNumber: Int = this.lineNumber, newColumn: Int = this.column): Position {
-        if (newLineNumber == this.lineNumber && newColumn == this.column) {
-            return this
+        return if (newLineNumber == this.lineNumber && newColumn == this.column) {
+            this
         } else {
-            return Position(newLineNumber, newColumn)
+            Position(newLineNumber, newColumn)
         }
     }
 
@@ -79,4 +78,4 @@ data class Position(var lineNumber: Int = 1, var column: Int = 1) : Comparable<P
 }
 
 /** Create a [Position] from an `Position`. */
-fun Position(pos: Position) = Position(pos.lineNumber, pos.column)
+internal fun Position(pos: Position) = Position(pos.lineNumber, pos.column)

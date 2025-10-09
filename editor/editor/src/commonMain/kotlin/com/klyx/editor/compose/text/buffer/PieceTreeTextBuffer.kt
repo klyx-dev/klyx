@@ -10,6 +10,7 @@ import com.klyx.editor.compose.text.SingleEditOperation
 import com.klyx.editor.compose.text.Strings
 import com.klyx.editor.compose.text.TextChange
 import com.klyx.editor.compose.text.ValidatedEditOperation
+import com.klyx.editor.compose.text.asCursor
 import com.klyx.editor.compose.text.codePointAt
 import kotlinx.serialization.Serializable
 
@@ -95,17 +96,17 @@ class PieceTreeTextBuffer : CharSequence {
     }
 
     fun offsetAt(lineNumber: Int, column: Int) = pieceTree.offsetAt(lineNumber, column)
-    fun offsetAt(position: Position) = pieceTree.offsetAt(position.lineNumber, position.column)
-    fun positionAt(index: Int) = pieceTree.positionAt(index)
+    internal fun offsetAt(position: Position) = pieceTree.offsetAt(position.lineNumber, position.column)
+    internal fun positionAt(index: Int) = pieceTree.positionAt(index)
 
-    fun rangeAt(start: Int, length: Int): Range {
+    internal fun rangeAt(start: Int, length: Int): Range {
         val end = start + length
         val startPosition = positionAt(start)
         val endPosition = positionAt(end)
         return Range(startPosition, endPosition)
     }
 
-    fun getValueInRange(range: Range, lineBreak: LineBreak = LineBreak.TextDefined): String {
+    internal fun getValueInRange(range: Range, lineBreak: LineBreak = LineBreak.TextDefined): String {
         return pieceTree.getValueInRange(range, lineBreak.sequence)
     }
 
@@ -113,7 +114,7 @@ class PieceTreeTextBuffer : CharSequence {
         return getValueInRange(Range(startLine, startColumn, endLine, endColumn))
     }
 
-    fun getValueLengthInRange(range: Range, lineBreak: LineBreak = LineBreak.TextDefined): Int {
+    internal fun getValueLengthInRange(range: Range, lineBreak: LineBreak = LineBreak.TextDefined): Int {
         if (range.isEmpty()) return 0
 
         if (range.startLine == range.endLine) {
@@ -125,7 +126,7 @@ class PieceTreeTextBuffer : CharSequence {
         return endOffset - startOffset
     }
 
-    fun getCharacterCountInRange(range: Range, lineBreak: LineBreak = LineBreak.TextDefined): Int {
+    internal fun getCharacterCountInRange(range: Range, lineBreak: LineBreak = LineBreak.TextDefined): Int {
         if (mightContainNonBasicASCII) {
             // we must count by iterating
             var result = 0
@@ -185,7 +186,7 @@ class PieceTreeTextBuffer : CharSequence {
     fun lines() = pieceTree.lines()
 
     // search text by regex
-    fun find(
+    internal fun find(
         regex: Regex,
         searchRange: Range,
         limitResultCount: Int,
@@ -199,7 +200,7 @@ class PieceTreeTextBuffer : CharSequence {
     }
 
     // search text by word
-    fun find(
+    internal fun find(
         searchText: String,
         searchRange: Range,
         limitResultCount: Int,
@@ -207,7 +208,7 @@ class PieceTreeTextBuffer : CharSequence {
     ) = pieceTree.findMatchesByWord(searchText, searchRange, limitResultCount, isCancelled)
 
     // text edits
-    fun applyEdits(
+    internal fun applyEdits(
         rawOperations: List<SingleEditOperation>,
         recordTrimAutoWhitespace: Boolean = false,
         computeUndoEdits: Boolean = false
@@ -225,8 +226,8 @@ class PieceTreeTextBuffer : CharSequence {
             }
 
             var validText = ""
-            // compute text eol
-            val (eolCount, firstLineLength, lastLineLength, eol) = Strings.countLineBreaks(op.text)
+            // compute text line break
+            val (eolCount, firstLineLength, lastLineLength, lineBreak) = Strings.countLineBreaks(op.text)
 
             val validatedRange = op.range
             op.text?.let {
@@ -244,11 +245,11 @@ class PieceTreeTextBuffer : CharSequence {
                     mightContainUnusualLineTerminators = Strings.containsUnusualLineTerminators(it)
                 }
 
-                val expectedStrLineBreak = if (lineBreak == "\r\n") LineBreak.CRLF else LineBreak.LF
-                validText = if (eol == LineBreak.TextDefined || eol == expectedStrLineBreak) {
+                val expectedStrLineBreak = if (this.lineBreak == "\r\n") LineBreak.CRLF else LineBreak.LF
+                validText = if (lineBreak == LineBreak.TextDefined || lineBreak == expectedStrLineBreak) {
                     op.text
                 } else {
-                    op.text.replace(Strings.newLine, lineBreak)
+                    op.text.replace(Strings.newLine, this.lineBreak)
                 }
             }
 
@@ -384,8 +385,6 @@ class PieceTreeTextBuffer : CharSequence {
             }
         }
 
-        // onDidChangeContent.fire()
-
         return ApplyEditsResult(contentChanges, reverseOperations, trimAutoWhitespaceLineNumbers)
     }
 
@@ -442,7 +441,7 @@ class PieceTreeTextBuffer : CharSequence {
         return mutableListOf(this.toSingleEditOperation())
     }
 
-    fun List<ValidatedEditOperation>.toSingleEditOperation(): ValidatedEditOperation {
+    internal fun List<ValidatedEditOperation>.toSingleEditOperation(): ValidatedEditOperation {
         var forceMoveMarkers = false
         val firstEditRange = first().range
         val lastEditRange = last().range
@@ -512,18 +511,18 @@ class PieceTreeTextBuffer : CharSequence {
             val startLine = range.startLine
             val startColumn = range.startColumn
 
-            val (eolCount, firstLineLength, lastLineLength, _) = Strings.countLineBreaks(text)
+            val (lineBreakCount, firstLineLength, lastLineLength, _) = Strings.countLineBreaks(text)
 
             val inverseRange = if (text.isNotEmpty()) {
                 // the operation inserts something
-                val lineCount = eolCount + 1
+                val lineCount = lineBreakCount + 1
 
                 if (lineCount == 1) {
                     // single line insert
                     Range(startLine, startColumn, startLine, startColumn + firstLineLength)
                 } else {
                     // multi line insert
-                    Range(startLine, startColumn, startLine + lineCount - 1, lastLineLength + 1)
+                    Range(startLine, startColumn, startLine + lineCount - 1, lastLineLength)
                 }
             } else {
                 // There is nothing to insert
@@ -563,14 +562,12 @@ class PieceTreeTextBuffer : CharSequence {
                     // the operation inserts something
                     val lineCount = op.eolCount + 1
 
-                    if (lineCount == 1) {
+                    resultRange = if (lineCount == 1) {
                         // single line insert
-                        resultRange =
-                            Range(startLineNumber, startColumn, startLineNumber, startColumn + op.firstLineLength)
+                        Range(startLineNumber, startColumn, startLineNumber, startColumn + op.firstLineLength)
                     } else {
                         // multi line insert
-                        resultRange =
-                            Range(startLineNumber, startColumn, startLineNumber + lineCount - 1, op.lastLineLength + 1)
+                        Range(startLineNumber, startColumn, startLineNumber + lineCount - 1, op.lastLineLength)
                     }
                 } else {
                     // There is nothing to insert

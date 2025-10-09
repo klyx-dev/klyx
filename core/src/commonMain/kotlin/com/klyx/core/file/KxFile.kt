@@ -60,11 +60,10 @@ expect open class KxFile {
     fun writeText(text: String, charset: String = "UTF-8")
     fun readLines(charset: String = "UTF-8"): List<String>
 
-    fun source(): RawSource
-
     override fun toString(): String
 }
 
+expect fun KxFile.source(): RawSource
 expect fun KxFile.sink(): RawSink
 
 fun KxFile.toKotlinxIoPath() = Path(absolutePath)
@@ -82,6 +81,8 @@ expect fun KxFile(path: String): KxFile
 expect fun KxFile(parent: KxFile, child: String): KxFile
 expect fun KxFile(parent: String, child: String): KxFile
 expect fun KxFile(parent: KxFile, child: KxFile): KxFile
+
+fun KxFile.deleteAndCreate() = run { delete(); createNewFile() }
 
 fun KxFile.find(name: String): KxFile? = listFiles()?.find { it.name == name }
 

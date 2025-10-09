@@ -14,7 +14,7 @@ data class Identifier(
 )
 
 @Serializable
-data class ValidatedEditOperation(
+internal data class ValidatedEditOperation(
     val sortIndex: Int = 0,
     val identifier: Identifier? = null,
     /** The range to replace. This can be empty to emulate a simple insert/delete. */
@@ -44,7 +44,7 @@ data class ValidatedEditOperation(
 )
 
 @Serializable
-data class SingleEditOperation(
+internal data class SingleEditOperation(
     val range: Range,
     val text: String?,
     val identifier: Identifier? = null,
@@ -53,7 +53,7 @@ data class SingleEditOperation(
 )
 
 @Serializable
-data class ReverseEditOperation(
+internal data class ReverseEditOperation(
     val sortIndex: Int,
     val identifier: Identifier?,
     val range: Range,
@@ -62,7 +62,7 @@ data class ReverseEditOperation(
 )
 
 @Serializable
-data class ContentChange(
+internal data class ContentChange(
     /** The range to replace. This can be empty to emulate a simple insert/delete. */
     val range: Range,
     /** The offset of the range that got replaced. */
@@ -79,7 +79,7 @@ data class ContentChange(
 )
 
 @Serializable
-data class ApplyEditsResult(
+internal data class ApplyEditsResult(
     val changes: List<ContentChange>,
     val reverseEdits: List<ReverseEditOperation>?,
     val trimAutoWhitespaceLineNumbers: List<Int>?

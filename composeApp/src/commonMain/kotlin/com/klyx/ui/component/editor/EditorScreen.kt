@@ -3,19 +3,15 @@ package com.klyx.ui.component.editor
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -30,9 +26,8 @@ import com.klyx.core.cmd.command
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
-import com.klyx.core.language
-import com.klyx.editor.CodeEditor
 import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.compose.CodeEditor
 import com.klyx.tab.Tab
 import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel
@@ -123,10 +118,8 @@ fun EditorScreen(
                 key = { openTabs.getOrNull(it)?.id ?: generateId() },
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
-                val tab = openTabs.getOrNull(page)
-
-                when {
-                    tab is Tab.FileTab -> {
+                when (val tab = openTabs.getOrNull(page)) {
+                    is Tab.FileTab -> {
                         val file = tab.file
 
                         if (file.path != "/untitled") {
@@ -140,29 +133,19 @@ fun EditorScreen(
                         }
 
                         //key(tab.file.absolutePath) {
-                            CodeEditor(
-                                modifier = Modifier.fillMaxSize(),
-                                state = tab.editorState,
-                                worktree = tab.worktree,
-                                fontFamily = fontFamily,
-                                fontSize = editorSettings.fontSize.sp,
-                                editable = !tab.isInternal,
-                                pinLineNumber = editorSettings.pinLineNumbers,
-                                language = tab.file.language().lowercase()
-                            )
+                        CodeEditor(
+                            modifier = Modifier.fillMaxSize(),
+                            state = tab.editorState,
+                            fontFamily = fontFamily,
+                            fontSize = editorSettings.fontSize.sp,
+                            editable = !tab.isInternal,
+                            pinLineNumber = editorSettings.pinLineNumbers
+                        )
                         //}
                     }
 
-                    else -> {
-                        tab?.content?.invoke() ?: run {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("Unknown Tab: ${tab?.name.orEmpty()}")
-                            }
-                        }
-                    }
+                    is Tab.AnyTab -> tab.content.invoke()
+                    else -> {}
                 }
             }
         } else {
@@ -174,37 +157,4 @@ fun EditorScreen(
             }
         }
     }
-}
-
-@Composable
-fun PermissionDialog(
-    onDismissRequest: () -> Unit,
-    onRequestPermission: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    AlertDialog(
-        modifier = modifier,
-        onDismissRequest = onDismissRequest,
-        title = {
-            Text("Storage Permission Required")
-        },
-        text = {
-            Text("Klyx needs access to your device's storage to function properly. Please grant permission to continue.")
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onRequestPermission()
-                    onDismissRequest()
-                }
-            ) {
-                Text("Grant Permission")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        }
-    )
 }

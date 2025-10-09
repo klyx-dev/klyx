@@ -17,7 +17,6 @@ import com.kyant.monet.dynamicColorScheme
 
 @Composable
 fun KlyxTheme(
-    themeName: String? = null,
     darkTheme: Boolean = LocalIsDarkMode.current,
     isHighContrastModeEnabled: Boolean = LocalContrast.current == Contrast.High,
     content: @Composable () -> Unit

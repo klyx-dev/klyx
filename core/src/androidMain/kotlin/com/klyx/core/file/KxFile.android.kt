@@ -14,8 +14,8 @@ import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
 import com.klyx.core.terminal.SAFUtils
 import com.klyx.ifNull
-import com.klyx.unimplemented
 import com.klyx.runtimeError
+import com.klyx.unimplemented
 import com.klyx.unsupported
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
@@ -25,6 +25,7 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 import kotlinx.io.readString
+import kotlinx.io.writeString
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.BufferedInputStream
@@ -96,7 +97,7 @@ actual open class KxFile(
     actual fun readText(charset: String): String = source().buffered().readString(Charset.forName(charset))
 
     actual fun writeBytes(bytes: ByteArray) {
-        file?.writeBytes(bytes) ?: outputStream()?.use { it.write(bytes) }
+        sink().buffered().write(bytes)
     }
 
     actual fun writeText(text: String, charset: String) {
@@ -119,11 +120,6 @@ actual open class KxFile(
 
     fun isFromTermux() = raw.uri.isFromTermux()
     fun canWatchFileEvents() = file != null && !isFromTermux()
-
-    actual fun source(): RawSource {
-        val input = inputStream() ?: runtimeError("Failed to open input stream for $absolutePath")
-        return input.asSource()
-    }
 }
 
 private fun DocumentFile.deleteRecursively(): Boolean {
@@ -210,6 +206,11 @@ actual fun KxFile(path: String): KxFile {
 
 actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
     return requiresPermission(ContextHolder.context, permissionFlags)
+}
+
+actual fun KxFile.source(): RawSource {
+    val input = inputStream() ?: runtimeError("Failed to open input stream for $absolutePath")
+    return input.asSource()
 }
 
 actual fun KxFile.sink(): RawSink {

@@ -45,7 +45,7 @@ import com.klyx.core.ui.animatedComposable
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.ui.DisclaimerDialog
-import com.klyx.ui.component.editor.PermissionDialog
+import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.component.log.LogBuffer
 import com.klyx.ui.page.SettingsPage
 import com.klyx.ui.page.main.MainPage

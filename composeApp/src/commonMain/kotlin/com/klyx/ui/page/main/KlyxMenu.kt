@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.RestartAlt
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -12,10 +13,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.menu.restartApp
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openLogViewer
+import com.klyx.viewmodel.openSettings
 
 @Composable
 fun KlyxMenu(
@@ -30,6 +33,19 @@ fun KlyxMenu(
         shape = MaterialTheme.shapes.medium,
         onDismissRequest = onDismissRequest
     ) {
+        DropdownMenuItem(
+            text = { Text("Open Settings File") },
+            onClick = { editorViewModel.openSettings() },
+            leadingIcon = {
+                Icon(
+                    Icons.Outlined.Settings,
+                    contentDescription = null
+                )
+            }
+        )
+
+        DropdownMenuDivider()
+
         DropdownMenuItem(
             text = { Text("Logs") },
             onClick = { editorViewModel.openLogViewer() },

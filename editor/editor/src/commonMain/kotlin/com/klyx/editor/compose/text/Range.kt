@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
  * @property endColumn Column on which the range ends in line `endLine`.
  */
 @Serializable
-data class Range(
+internal open class Range(
     var startLine: Int = 1,
     var startColumn: Int = 1,
     var endLine: Int = 1,
@@ -250,32 +250,33 @@ data class Range(
     override fun toString() = "Range($startLine, $startColumn ,$endLine, $endColumn)"
 }
 
-fun Range(range: Range) = Range(range.startLine, range.startColumn, range.endLine, range.endColumn)
-fun Range(start: Position, end: Position = start) = Range.fromPositions(start, end)
+internal fun Range(range: Range) = Range(range.startLine, range.startColumn, range.endLine, range.endColumn)
+internal fun Range(start: Position, end: Position = start) = Range.fromPositions(start, end)
+internal fun Range(cursor: Cursor) = Range(cursor.line, cursor.column)
 
 /**
  * @see Range.areIntersecting
  */
-fun Range.areIntersecting(other: Range) = Range.areIntersecting(this, other)
+internal fun Range.areIntersecting(other: Range) = Range.areIntersecting(this, other)
 
 /**
  * @see Range.areIntersectingOrTouching
  */
-fun Range.areIntersectingOrTouching(other: Range) = Range.areIntersectingOrTouching(this, other)
+internal fun Range.areIntersectingOrTouching(other: Range) = Range.areIntersectingOrTouching(this, other)
 
 /**
  * @see Range.spansMultipleLines
  */
-fun Range.spansMultipleLines() = Range.spansMultipleLines(this)
+internal fun Range.spansMultipleLines() = Range.spansMultipleLines(this)
 
 /**
  * @see Range.compareRangesUsingStarts
  */
-fun Range.compareUsingStarts(other: Range) = Range.compareRangesUsingStarts(this, other)
+internal fun Range.compareUsingStarts(other: Range) = Range.compareRangesUsingStarts(this, other)
 
 /**
  * @see Range.compareRangesUsingEnds
  */
-fun Range.compareUsingEnds(other: Range) = Range.compareRangesUsingEnds(this, other)
+internal fun Range.compareUsingEnds(other: Range) = Range.compareRangesUsingEnds(this, other)
 
-fun Position.toRange() = Range(this)
+internal fun Position.toRange() = Range(this)

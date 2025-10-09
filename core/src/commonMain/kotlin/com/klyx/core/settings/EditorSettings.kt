@@ -27,4 +27,4 @@ data class EditorSettings(
     @SerialComment("The number of spaces to use for indentation")
     @SerialName("tab_size")
     val tabSize: UInt = 4u,
-)
+) : KlyxSettings

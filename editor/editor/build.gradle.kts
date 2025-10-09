@@ -86,6 +86,18 @@ kotlin {
                 //implementation(libs.ktreesitter)
             }
         }
+
+        iosMain {
+            dependencies {
+                implementation("org.jetbrains.skiko:skiko:0.9.27")
+            }
+        }
+
+        jvmMain {
+            dependencies {
+                implementation("org.jetbrains.skiko:skiko:0.9.27")
+            }
+        }
     }
 }
 

@@ -3,6 +3,7 @@ package com.klyx.extension
 import com.github.michaelbull.result.onFailure
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
+import com.klyx.core.file.source
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.internal.userHomeDir

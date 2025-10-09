@@ -16,13 +16,12 @@ internal val LocalAppColorScheme = staticCompositionLocalOf { darkColorScheme() 
 
 @Composable
 internal fun ProvideEditorCompositionLocals(
-    colorScheme: EditorColorScheme = DefaultEditorColorScheme,
+    colorScheme: EditorColorScheme,
     content: @Composable () -> Unit
 ) {
     CompositionLocalProvider(
         LocalEditorColorScheme provides colorScheme,
         LocalAppColorScheme provides MaterialTheme.colorScheme,
-    ) {
-        content()
-    }
+        content = content
+    )
 }

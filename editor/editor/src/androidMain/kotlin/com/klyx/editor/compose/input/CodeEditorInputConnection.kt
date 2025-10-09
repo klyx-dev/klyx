@@ -15,7 +15,9 @@ import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.editor.compose.CodeEditorState
 
-internal class CodeEditorInputConnection(view: View, private val state: CodeEditorState) : InputConnection {
+internal class CodeEditorInputConnection(
+    private val view: View, private val state: CodeEditorState
+) : InputConnection {
     private val context = view.context
 
     override fun beginBatchEdit(): Boolean {
@@ -55,12 +57,13 @@ internal class CodeEditorInputConnection(view: View, private val state: CodeEdit
 
     override fun commitText(text: CharSequence, newCursorPosition: Int): Boolean {
         println("commitText: $text, newCursorPosition: $newCursorPosition")
-        state.text.insert(newCursorPosition, text.toString())
+        state.insert(text.toString())
         return true
     }
 
     override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
         println("deleteSurroundingText: beforeLength=$beforeLength, afterLength=$afterLength")
+        state.delete()
         return true
     }
 

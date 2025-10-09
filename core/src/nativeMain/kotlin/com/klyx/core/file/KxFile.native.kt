@@ -12,7 +12,6 @@ import platform.posix.R_OK as POSIX_R_OK
 import platform.posix.W_OK as POSIX_W_OK
 import platform.posix.X_OK as POSIX_X_OK
 
-@Suppress(names = ["EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING"])
 actual open class KxFile {
     actual val name: String
         get() = TODO("Not yet implemented")
@@ -114,10 +113,6 @@ actual open class KxFile {
         TODO("Not yet implemented")
     }
 
-    actual fun source(): RawSource {
-        TODO("Not yet implemented")
-    }
-
     actual override fun toString(): String {
         TODO("Not yet implemented")
     }
@@ -165,6 +160,10 @@ actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
     }
 
     return access(absolutePath, mode) != 0
+}
+
+actual fun KxFile.source(): RawSource {
+    TODO("Not yet implemented")
 }
 
 actual fun KxFile.sink(): RawSink {

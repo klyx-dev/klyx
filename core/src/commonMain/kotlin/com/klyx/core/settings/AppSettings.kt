@@ -132,4 +132,4 @@ data class AppSettings(
             }
         )
     )
-)
+) : KlyxSettings

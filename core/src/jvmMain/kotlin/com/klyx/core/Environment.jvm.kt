@@ -19,4 +19,6 @@ actual object Environment {
     }
 
     actual val LogsDir by lazy { Paths.get(HomeDir, "logs").toString() }
+
+    actual fun init() {}
 }

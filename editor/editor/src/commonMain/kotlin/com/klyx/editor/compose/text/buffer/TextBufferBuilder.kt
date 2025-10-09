@@ -1,6 +1,14 @@
 package com.klyx.editor.compose.text.buffer
 
+import com.klyx.core.file.KxFile
+import com.klyx.core.file.source
 import com.klyx.editor.compose.text.LineBreak
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
+import kotlinx.io.Buffer
+import kotlinx.io.buffered
+import kotlinx.io.readString
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -28,6 +36,25 @@ fun CharSequence.toTextBuffer(
 ) = buildTextBuffer(this, lineBreak, normalizeLineBreaks)
 
 val EmptyTextBuffer = PieceTreeTextBufferBuilder().build()
+
+suspend fun KxFile.toTextBuffer(
+    lineBreak: LineBreak = LineBreak.LF,
+    normalizeLineBreaks: Boolean = true
+) = withContext(Dispatchers.IO) {
+    val pieceBuilder = PieceTreeTextBufferBuilder()
+
+    source().buffered().use { source ->
+        val buffer = Buffer()
+
+        while (true) {
+            val bytesRead = source.readAtMostTo(buffer, 64 * 1024) // 64 KB chunks
+            if (bytesRead <= 0) break
+            pieceBuilder.acceptChunk(buffer.readString())
+        }
+    }
+
+    pieceBuilder.build(lineBreak, normalizeLineBreaks)
+}
 
 @DslMarker
 private annotation class TextBufferDsl
