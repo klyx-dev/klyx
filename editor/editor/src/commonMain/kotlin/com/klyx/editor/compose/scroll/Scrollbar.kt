@@ -29,6 +29,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.abs
 
 @Stable
 internal fun Modifier.drawHorizontalScrollbar(
@@ -57,11 +58,11 @@ private fun Modifier.drawScrollbar(
     val value = if (orientation.isHorizontal) state.scrollX else state.scrollY
     val leftOffset = if (orientation.isHorizontal) state.getContentLeftOffset() else 0f
 
-    val showScrollbar = maxValue > 0
+    val showScrollbar = abs(maxValue) > 0
     val canvasSize = if (orientation.isHorizontal) size.width else size.height
-    val totalSize = canvasSize + maxValue
+    val totalSize = canvasSize + abs(maxValue)
     val thumbSize = (canvasSize / totalSize * canvasSize) - leftOffset
-    val startOffset = (value / totalSize * canvasSize) + leftOffset
+    val startOffset = (abs(value) / totalSize * canvasSize) + leftOffset
     val drawScrollbar = onDrawScrollbar(
         orientation, reverseDirection, atEnd, showScrollbar,
         thickness, color, cornerRadius, alpha, thumbSize, startOffset
