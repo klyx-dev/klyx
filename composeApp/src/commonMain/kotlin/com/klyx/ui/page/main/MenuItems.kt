@@ -18,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.Key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.core.LocalPlatformContext
+import com.klyx.core.PlatformContext
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.icon.BackToTab
@@ -27,10 +29,6 @@ import com.klyx.core.icon.Pip
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.extension.api.Project
-import com.klyx.menu.closeCurrentWindow
-import com.klyx.menu.openNewWindow
-import com.klyx.menu.openSystemTerminal
-import com.klyx.menu.quitApp
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openExtensionScreen
@@ -45,11 +43,12 @@ fun ColumnScope.DropdownMenuItems(
     onShowHelpMenu: () -> Unit,
     onShowKlyxMenu: () -> Unit,
 ) {
+    val context = LocalPlatformContext.current
     val isTabOpen by editorViewModel.isTabOpen.collectAsStateWithLifecycle()
 
     DropdownMenuItem(
         text = "New Window",
-        onClick = { openNewWindow() },
+        onClick = { openNewWindow(context) },
         icon = {
             Icon(
                 KlyxIcons.BackToTab,
@@ -80,7 +79,7 @@ fun ColumnScope.DropdownMenuItems(
 
     DropdownMenuItem(
         text = { Text("Terminal") },
-        onClick = { openSystemTerminal(editorViewModel) },
+        onClick = { editorViewModel.openSystemTerminal(context) },
         leadingIcon = {
             Icon(
                 Icons.Outlined.Terminal,
@@ -145,7 +144,7 @@ fun ColumnScope.DropdownMenuItems(
 
     DropdownMenuItem(
         text = "Close Window",
-        onClick = { closeCurrentWindow() },
+        onClick = { closeCurrentWindow(context) },
         icon = {
             Icon(
                 KlyxIcons.Pip,
@@ -205,3 +204,9 @@ fun ColumnScope.DropdownMenuItems(
 
     DropdownMenuDivider()
 }
+
+internal expect fun openNewWindow(context: PlatformContext)
+internal expect fun closeCurrentWindow(context: PlatformContext)
+internal expect fun EditorViewModel.openSystemTerminal(context: PlatformContext, openAsTab: Boolean = false)
+
+internal expect fun quitApp(): Nothing

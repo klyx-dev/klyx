@@ -13,12 +13,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.DialogProperties
 import com.klyx.core.ui.component.KlyxDialog
-import com.klyx.menu.quitApp
 import com.klyx.res.Res
 import com.klyx.res.disclaimer
 import com.klyx.res.exit
 import com.klyx.res.i_agree
 import com.klyx.res.important_notice
+import com.klyx.ui.page.main.quitApp
 import org.jetbrains.compose.resources.stringResource
 
 @Composable

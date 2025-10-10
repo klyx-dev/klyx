@@ -14,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.klyx.core.ui.component.DropdownMenuDivider
-import com.klyx.menu.restartApp
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openLogViewer
@@ -81,3 +80,4 @@ fun KlyxMenu(
     }
 }
 
+internal expect fun restartApp(isKillProcess: Boolean = true)
