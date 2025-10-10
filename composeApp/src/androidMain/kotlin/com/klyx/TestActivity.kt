@@ -5,11 +5,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.activities.KlyxActivity
+import com.klyx.core.FpsTracker
 import com.klyx.editor.compose.CodeEditor
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
@@ -38,9 +45,20 @@ class TestActivity : KlyxActivity() {
                             fontFamily = rememberFontFamily("JetBrains Mono"),
                             state = remember { CodeEditorState("Yyoyooyooyoyoyoyo\nyoyoyoy\nyoyoyoyoyo\n".repeat(200)) }
                         )
-//                        ComposeEditorView(
-//                            text = "Yyoyooyooyoyoyoyo\nyoyoyoy\nyoyoyoyoyo\n".repeat(20000)
-//                        )
+
+                        Box(
+                            Modifier.size(100.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            val fpsTracker = remember { FpsTracker() }
+                            val fps by fpsTracker.fps
+
+                            LaunchedEffect(Unit) {
+                                fpsTracker.start()
+                            }
+
+                            Text("FPS $fps")
+                        }
                     }
                 }
             }

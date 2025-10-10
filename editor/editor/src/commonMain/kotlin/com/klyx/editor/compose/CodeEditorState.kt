@@ -68,7 +68,7 @@ class CodeEditorState internal constructor(
     private val mutex = Mutex()
     private val charBreakIterator = BreakIterator.makeCharacterInstance()
 
-    internal var fontSize = TextUnit.Unspecified
+    internal var fontSize: TextUnit = TextUnit.Unspecified
         set(value) {
             val newValue = maxOf(minOf(value.value, 40f), 7f)
             field = newValue.sp
@@ -127,11 +127,13 @@ class CodeEditorState internal constructor(
             val estimatedWidth = maxLineLength * avgCharWidth
 
             return (estimatedWidth + getStartSpacing() + getEndSpacing() - viewportSize.width)
-                .coerceAtLeast(0f)
+                .coerceAtLeast(0f).unaryMinus()
         }
 
     internal val maxScrollY: Float
-        get() = ((lineCount * lineHeight) - viewportSize.height / 2f).coerceAtLeast(0f)
+        get() = ((lineCount * lineHeight) - viewportSize.height / 2f).coerceAtLeast(0f).unaryMinus()
+
+    internal val maxScrollOffset get() = Offset(maxScrollX, maxScrollY)
 
     internal fun insert(text: String, range: Range) {
         if (editable) {
@@ -184,8 +186,8 @@ class CodeEditorState internal constructor(
         val c = column.coerceAtMost(getLineLength(l))
         cursor = Cursor(l, c)
         if (select) select() else collapseSelection()
-        invalidateDraw()
         scope.launch { ensureCursorVisible() }
+        invalidateDraw()
     }
 
     fun moveCursor(newCursor: Cursor, select: Boolean = false) {
@@ -276,13 +278,13 @@ class CodeEditorState internal constructor(
 
         val cursorY = (cursorLine - 1) * lineHeight
 
-        val visibleXStart = scrollX
-        val visibleYStart = scrollY
+        val visibleXStart = -scrollX
+        val visibleYStart = -scrollY
         val visibleXEnd = visibleXStart + viewportSize.width - leftOffset
         val visibleYEnd = visibleYStart + viewportSize.height
 
-        var targetX = scrollX
-        var targetY = scrollY
+        var targetX = -scrollX
+        var targetY = -scrollY
 
         // check if cursor is outside visible X range
         if (cursorX < visibleXStart + padding) {
@@ -299,9 +301,9 @@ class CodeEditorState internal constructor(
         }
 
         if (smooth) {
-            smoothScrollTo(targetX, targetY, duration = 180)
+            smoothScrollTo(-targetX, -targetY, duration = 180)
         } else {
-            scrollTo(targetX, targetY)
+            scrollTo(-targetX, -targetY)
         }
     }
 
@@ -311,11 +313,11 @@ class CodeEditorState internal constructor(
     }
 
     internal fun calculateCursorPositionFromScreenOffset(offset: Offset): Cursor {
-        val lineNumber = ((offset.y + scrollState.offsetY) / lineHeight).toInt() + 1
+        val lineNumber = ((offset.y - scrollState.offsetY) / lineHeight).toInt() + 1
         val clampedLine = lineNumber.coerceIn(1, lineCount)
         val leftOffset = getContentLeftOffset()
 
-        val adjustedX = (offset.x - leftOffset + scrollState.offsetX).coerceAtLeast(0f)
+        val adjustedX = (offset.x - leftOffset - scrollState.offsetX).coerceAtLeast(0f)
 
         val line = getLine(clampedLine)
         if (line.isEmpty()) return Cursor(clampedLine, 0)
@@ -496,15 +498,15 @@ class CodeEditorState internal constructor(
     fun scrollBy(offset: Offset) = scrollBy(offset.x, offset.y)
 
     fun scrollBy(dx: Float, dy: Float) {
-        val newX = (scrollState.offsetX + dx).coerceIn(0f, maxScrollX)
-        val newY = (scrollState.offsetY + dy).coerceIn(0f, maxScrollY)
+        val newX = maxOf(maxScrollX, (scrollState.offsetX + dx).coerceAtMost(0f))
+        val newY = maxOf(maxScrollY, (scrollState.offsetY + dy).coerceAtMost(0f))
         scrollState.scrollTo(newX, newY)
     }
 
     fun scrollTo(x: Float, y: Float) {
         scrollState.scrollTo(
-            x.coerceIn(0f, maxScrollX),
-            y.coerceIn(0f, maxScrollY)
+            maxOf(maxScrollX, x.coerceAtMost(0f)),
+            maxOf(maxScrollY, y.coerceAtMost(0f)),
         )
     }
 
@@ -512,15 +514,15 @@ class CodeEditorState internal constructor(
 
     suspend fun smoothScrollTo(x: Float, y: Float, duration: Int = 300) {
         scrollState.smoothScrollTo(
-            x.coerceIn(0f, maxScrollX),
-            y.coerceIn(0f, maxScrollY),
+            maxOf(maxScrollX, x.coerceAtMost(0f)),
+            maxOf(maxScrollY, y.coerceAtMost(0f)),
             duration
         )
     }
 
     suspend fun smoothScrollBy(dx: Float, dy: Float, duration: Int = 300) {
-        val newX = (scrollState.offsetX + dx).coerceIn(0f, maxScrollX)
-        val newY = (scrollState.offsetY + dy).coerceIn(0f, maxScrollY)
+        val newX = maxOf(maxScrollX, (scrollState.offsetX + dx).coerceAtMost(0f))
+        val newY = maxOf(maxScrollY, (scrollState.offsetY + dy).coerceAtMost(0f))
         scrollState.smoothScrollTo(newX, newY, duration)
     }
 

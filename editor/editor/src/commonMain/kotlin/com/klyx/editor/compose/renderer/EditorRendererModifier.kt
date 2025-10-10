@@ -74,7 +74,7 @@ private class EditorRendererModifierNode(
     private fun DrawScope.drawEditor() {
         val colorScheme = currentValueOf(LocalEditorColorScheme)
         val lineHeight = state.lineHeight
-        val scrollY = state.scrollY
+        val scrollY = -state.scrollY
         val maxLine = state.lineCount
         val cursor = state.cursor
         val selection = state.selection
@@ -101,7 +101,7 @@ private class EditorRendererModifierNode(
         visibleRange: IntRange
     ) {
         if (cursor.line in visibleRange && cursor.line <= state.lineCount) {
-            val y = (cursor.line - 1) * lineHeight - state.scrollY + CurrentLineVerticalOffset
+            val y = (cursor.line - 1) * lineHeight + state.scrollY + CurrentLineVerticalOffset
             drawRect(
                 colorScheme.currentLineBackground,
                 topLeft = Offset(0f, y),
@@ -137,7 +137,7 @@ private class EditorRendererModifierNode(
             val lineNum = lineIndex + 1
             if (lineNum > state.lineCount) return@forEach
 
-            val y = lineIndex * state.lineHeight - state.scrollY
+            val y = lineIndex * state.lineHeight + state.scrollY
             val line = state.getLine(lineNum)
 
             if (showLineNumber) {
@@ -162,7 +162,7 @@ private class EditorRendererModifierNode(
 
             withTransform({
                 if (pinLineNumber) clipRect(left = leftOffset)
-                translate(left = leftOffset - state.scrollX + SpacingAfterLineBackground)
+                translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground)
             }) {
                 drawText(result, topLeft = Offset(0f, y))
             }
@@ -183,11 +183,11 @@ private class EditorRendererModifierNode(
             style = state.textStyle
         ).getCursorRect(cursor.column.coerceAtMost(line.length))
 
-        val y = (cursor.line - 1) * lineHeight - state.scrollY + CurrentLineVerticalOffset
+        val y = (cursor.line - 1) * lineHeight + state.scrollY + CurrentLineVerticalOffset
 
         withTransform({
             if (pinLineNumber) clipRect(left = leftOffset)
-            translate(left = leftOffset - state.scrollX + SpacingAfterLineBackground, top = y)
+            translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground, top = y)
         }) {
             drawRoundRect(
                 color = colorScheme.cursor.copy(alpha = cursorAlpha),
@@ -222,7 +222,7 @@ private class EditorRendererModifierNode(
 
             withTransform({
                 if (pinLineNumber) clipRect(left = leftOffset)
-                translate(left = leftOffset - state.scrollX + SpacingAfterLineBackground, top = y - state.scrollY)
+                translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground, top = y + state.scrollY)
             }) {
                 drawPath(result.getPathForRange(startIndex, endIndex), colorScheme.selectionBackground)
             }
@@ -237,7 +237,7 @@ private class EditorRendererModifierNode(
     )
 
     private inline fun DrawScope.translateLineNumberIfRequired(block: DrawScope.() -> Unit) {
-        translate(left = if (!pinLineNumber) -state.scrollX else 0f, top = 0f, block = block)
+        translate(left = if (!pinLineNumber) state.scrollX else 0f, top = 0f, block = block)
     }
 
     override fun onAttach() {

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
@@ -22,21 +23,23 @@ class ScrollState(
     var offsetY by mutableStateOf(initialY)
         private set
 
-    fun scroll(dx: Float, dy: Float) {
-        offsetX = (offsetX + dx).coerceAtLeast(0f)
-        offsetY = (offsetY + dy).coerceAtLeast(0f)
+    val offset get() = Offset(offsetX, offsetY)
+
+    fun scrollBy(dx: Float, dy: Float) {
+        offsetX = minOf(offsetX + dx, 0f)
+        offsetY = minOf(offsetY + dy, 0f)
     }
 
     fun scrollTo(x: Float, y: Float) {
-        offsetX = x.coerceAtLeast(0f)
-        offsetY = y.coerceAtLeast(0f)
+        offsetX = minOf(0f, x)
+        offsetY = minOf(0f, y)
     }
 
     suspend fun smoothScrollBy(dx: Float, dy: Float, duration: Int = 300): Unit = coroutineScope {
         launch {
             animX.snapTo(offsetX)
             animX.animateTo(
-                targetValue = maxOf(0f, offsetX + dx),
+                targetValue = minOf(0f, offsetX + dx),
                 animationSpec = tween(durationMillis = duration)
             ) {
                 offsetX = value
@@ -46,7 +49,7 @@ class ScrollState(
         launch {
             animY.snapTo(offsetY)
             animY.animateTo(
-                targetValue = maxOf(0f, offsetY + dy),
+                targetValue = minOf(0f, offsetY + dy),
                 animationSpec = tween(durationMillis = duration)
             ) {
                 offsetY = value
@@ -57,13 +60,13 @@ class ScrollState(
     suspend fun smoothScrollTo(x: Float, y: Float, duration: Int = 300): Unit = coroutineScope {
         launch {
             animX.snapTo(offsetX)
-            animX.animateTo(maxOf(0f, x), animationSpec = tween(durationMillis = duration)) {
+            animX.animateTo(minOf(0f, x), animationSpec = tween(durationMillis = duration)) {
                 offsetX = value
             }
         }
         launch {
             animY.snapTo(offsetY)
-            animY.animateTo(maxOf(0f, y), animationSpec = tween(durationMillis = duration)) {
+            animY.animateTo(minOf(0f, y), animationSpec = tween(durationMillis = duration)) {
                 offsetY = value
             }
         }
