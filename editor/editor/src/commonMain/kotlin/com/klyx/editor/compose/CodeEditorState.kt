@@ -68,12 +68,23 @@ class CodeEditorState internal constructor(
     private val mutex = Mutex()
     private val charBreakIterator = BreakIterator.makeCharacterInstance()
 
-    internal var fontSize: TextUnit = TextUnit.Unspecified
+    internal var _fontSize by mutableStateOf(TextUnit.Unspecified)
+    internal var _fontFamily: FontFamily by mutableStateOf(FontFamily.Monospace)
+
+    var fontSize: TextUnit
+        get() = _fontSize
         set(value) {
             val newValue = maxOf(minOf(value.value, 40f), 7f)
-            field = newValue.sp
+            _fontSize = newValue.sp
         }
-    internal var fontFamily: FontFamily = FontFamily.Monospace
+
+    var fontFamily
+        get() = _fontFamily
+        set(value) {
+            _fontFamily = value
+            invalidateCache()
+            invalidateDraw()
+        }
 
     internal var colorScheme = DefaultEditorColorScheme
     internal var textMeasurer: Option<TextMeasurer> = none()
@@ -308,7 +319,10 @@ class CodeEditorState internal constructor(
     }
 
     internal fun getContentLeftOffset(): Float {
-        val lineNumberWidth = if (showLineNumber) getLineNumberWidth().toFloat() else 0f
+        val maxLineWidth = LineWidthCache[lineCount] ?: textWidth(lineCount.toString()).also {
+            LineWidthCache.put(lineCount, it)
+        }
+        val lineNumberWidth = if (showLineNumber) maxLineWidth else 0
         return lineNumberWidth + LinePadding + LineDividerWidth + SpacingAfterLineBackground
     }
 
@@ -586,7 +600,9 @@ class CodeEditorState internal constructor(
         return TextMeasurer(fontFamilyResolver, density, layoutDirection, cacheSize)
     }
 
-    internal fun invalidateDraw() = invalidateDrawCallback.invoke()
+    internal fun invalidateDraw() {
+        invalidateDrawCallback.invoke()
+    }
 
     fun copy(
         buffer: PieceTreeTextBuffer = this.buffer,

@@ -6,12 +6,18 @@ import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
+import androidx.compose.ui.draw.CacheDrawScope
+import androidx.compose.ui.draw.DrawResult
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.dp
 import com.klyx.editor.compose.draw.buildPath
+import com.klyx.editor.compose.renderer.CurrentLineVerticalOffset
 
 @Stable
 object EditorDefaults {
@@ -97,6 +103,37 @@ object EditorDefaults {
                 },
                 color = color
             )
+        }
+    }
+
+    internal fun CacheDrawScope.drawCursor(state: CodeEditorState, pinLineNumber: Boolean): DrawResult {
+        val noOp = onDrawBehind { }
+        val cursor = state.cursor
+        if (cursor.line !in 1..state.lineCount) return noOp
+
+        val line = state.getLine(cursor.line)
+        val result = TextLineCache.getOrPut(line) {
+            state.measureText(line).getOrNull() ?: return noOp
+        }
+        val cursorRect = result.getCursorRect(cursor.column.coerceAtMost(line.length))
+
+        val leftOffset = state.getContentLeftOffset()
+        val y = (cursor.line - 1) * state.lineHeight + state.scrollY + CurrentLineVerticalOffset
+
+        return onDrawWithContent {
+            drawContent()
+
+            withTransform({
+                if (pinLineNumber) clipRect(left = leftOffset)
+                translate(left = leftOffset + state.scrollX, top = y)
+            }) {
+                drawRoundRect(
+                    color = state.colorScheme.cursor.copy(alpha = state.cursorAlpha),
+                    topLeft = cursorRect.topLeft,
+                    size = Size(2f, cursorRect.height),
+                    cornerRadius = CornerRadius(4f)
+                )
+            }
         }
     }
 }

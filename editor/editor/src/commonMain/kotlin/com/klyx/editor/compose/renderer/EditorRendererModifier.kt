@@ -6,6 +6,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
@@ -22,14 +23,21 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.GenericFontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import arrow.core.Some
 import arrow.core.none
+import com.klyx.core.identityHashCode
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.EditorColorScheme
+import com.klyx.editor.compose.LineNumberCache
+import com.klyx.editor.compose.LineWidthCache
 import com.klyx.editor.compose.LocalEditorColorScheme
+import com.klyx.editor.compose.TextLineCache
+import com.klyx.editor.compose.getOrPut
+import com.klyx.editor.compose.invalidateCache
 import com.klyx.editor.compose.text.Cursor
 import com.klyx.editor.compose.text.Selection
 
@@ -50,7 +58,6 @@ private class EditorRendererModifierNode(
 ) : Modifier.Node(), DrawModifierNode, CompositionLocalConsumerModifierNode, ObserverModifierNode {
 
     private val textMeasurer by lazy { with(state) { createTextMeasurer() } }
-    private var cursorAlpha = state.cursorAlpha
 
     private val textStyle: TextStyle
         get() = state.textStyle.copy(
@@ -62,14 +69,25 @@ private class EditorRendererModifierNode(
         state.viewportSize = size
         clipRect { drawEditor() }
         onDraw()
+        drawContent()
     }
 
     private fun updateEditorState() {
+        observeReads { state._fontSize }
+        observeReads { state._fontFamily }
+        observeReads { fontFamily }
+        observeReads { fontSize }
+
         state.fontFamily = fontFamily
         state.fontSize = fontSize
         state.showLineNumber = showLineNumber
         state.pinLineNumber = pinLineNumber
     }
+
+    private val maxLineWidth: Int
+        get() = LineWidthCache.getOrPut(state.lineCount) {
+            state.textWidth(state.lineCount.toString())
+        }
 
     private fun DrawScope.drawEditor() {
         val colorScheme = currentValueOf(LocalEditorColorScheme)
@@ -79,7 +97,7 @@ private class EditorRendererModifierNode(
         val cursor = state.cursor
         val selection = state.selection
 
-        val lineNumberWidth = if (showLineNumber) state.textWidth(maxLine.toString()).toFloat() else 0f
+        val lineNumberWidth = if (showLineNumber) maxLineWidth else 0
         val leftOffset = lineNumberWidth + LinePadding + LineDividerWidth
 
         val visibleStart = maxOf(0, (scrollY / lineHeight).toInt())
@@ -91,7 +109,6 @@ private class EditorRendererModifierNode(
         if (showLineNumber) drawLineNumbersBackground(lineNumberWidth + LinePadding, colorScheme)
 
         drawVisibleLines(visibleRange, leftOffset, lineNumberWidth, colorScheme)
-        drawCursor(cursor, leftOffset, colorScheme, lineHeight)
     }
 
     private fun DrawScope.drawCurrentLineBackground(
@@ -130,7 +147,7 @@ private class EditorRendererModifierNode(
     private fun DrawScope.drawVisibleLines(
         range: IntRange,
         leftOffset: Float,
-        lineNumberWidth: Float,
+        lineNumberWidth: Int,
         colorScheme: EditorColorScheme
     ) {
         range.forEach { lineIndex ->
@@ -141,14 +158,17 @@ private class EditorRendererModifierNode(
             val line = state.getLine(lineNum)
 
             if (showLineNumber) {
-                val lineResult = textMeasurer.measure(
-                    text = lineNum.toString(),
-                    style = state.textStyle.copy(
-                        textAlign = TextAlign.Right,
-                        color = colorScheme.lineNumber
-                    ),
-                    constraints = Constraints(minWidth = lineNumberWidth.toInt() + 5)
-                )
+                val lineResult =
+                    LineNumberCache.getOrPut("$lineNum-${fontSize.value}-${fontFamily.identityHashCode()}") {
+                        textMeasurer.measure(
+                            text = lineNum.toString(),
+                            style = state.textStyle.copy(
+                                textAlign = TextAlign.Right,
+                                color = colorScheme.lineNumber
+                            ),
+                            constraints = Constraints(minWidth = lineNumberWidth + 5)
+                        )
+                    }
 
                 translateLineNumberIfRequired {
                     drawText(
@@ -166,35 +186,6 @@ private class EditorRendererModifierNode(
             }) {
                 drawText(result, topLeft = Offset(0f, y))
             }
-        }
-    }
-
-    private fun DrawScope.drawCursor(
-        cursor: Cursor,
-        leftOffset: Float,
-        colorScheme: EditorColorScheme,
-        lineHeight: Int
-    ) {
-        if (cursor.line !in 1..state.lineCount) return
-
-        val line = state.getLine(cursor.line)
-        val cursorRect = textMeasurer.measure(
-            text = line,
-            style = state.textStyle
-        ).getCursorRect(cursor.column.coerceAtMost(line.length))
-
-        val y = (cursor.line - 1) * lineHeight + state.scrollY + CurrentLineVerticalOffset
-
-        withTransform({
-            if (pinLineNumber) clipRect(left = leftOffset)
-            translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground, top = y)
-        }) {
-            drawRoundRect(
-                color = colorScheme.cursor.copy(alpha = cursorAlpha),
-                topLeft = cursorRect.topLeft,
-                size = Size(2f, cursorRect.height),
-                cornerRadius = CornerRadius(4f)
-            )
         }
     }
 
@@ -218,23 +209,41 @@ private class EditorRendererModifierNode(
             val endIndex = if (lineNum == endLine) endCol else line.length
             if (startIndex >= endIndex) continue
 
-            val result = measureLineText(line, textStyle.copy(color = colorScheme.foreground))
+            val result = measureLineText(line, textStyle.copy(color = colorScheme.selectionForeground))
 
             withTransform({
                 if (pinLineNumber) clipRect(left = leftOffset)
                 translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground, top = y + state.scrollY)
             }) {
-                drawPath(result.getPathForRange(startIndex, endIndex), colorScheme.selectionBackground)
+                drawPath(
+                    path = result.getPathForRange(startIndex, endIndex),
+                    color = colorScheme.selectionBackground,
+                    style = Fill
+                )
             }
         }
     }
 
-    private fun measureLineText(line: String, style: TextStyle = textStyle): TextLayoutResult = textMeasurer.measure(
-        text = line,
-        softWrap = false,
-        constraints = Constraints(maxWidth = Constraints.Infinity),
-        style = style
-    )
+    private fun measureLineText(line: String, style: TextStyle = textStyle): TextLayoutResult {
+        val key = buildString {
+            append(line)
+            append(line.identityHashCode())
+            append("${style.fontSize.value}sp")
+            if (style.fontFamily is GenericFontFamily) {
+                append((style.fontFamily as GenericFontFamily).name)
+            }
+            append(style.fontFamily?.identityHashCode())
+        }
+
+        return TextLineCache.getOrPut(key) {
+            textMeasurer.measure(
+                text = line,
+                softWrap = false,
+                constraints = Constraints(maxWidth = Constraints.Infinity),
+                style = style
+            )
+        }
+    }
 
     private inline fun DrawScope.translateLineNumberIfRequired(block: DrawScope.() -> Unit) {
         translate(left = if (!pinLineNumber) state.scrollX else 0f, top = 0f, block = block)
@@ -246,7 +255,6 @@ private class EditorRendererModifierNode(
             invalidateDrawCallback = this@EditorRendererModifierNode::invalidateDraw
         }
         updateEditorState()
-
         onObservedReadsChanged()
     }
 
@@ -255,9 +263,7 @@ private class EditorRendererModifierNode(
     }
 
     override fun onObservedReadsChanged() {
-        observeReads {
-            cursorAlpha = state.cursorAlpha
-        }
+        invalidateCache()
         invalidateDraw()
     }
 }

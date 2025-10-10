@@ -1,14 +1,8 @@
 package com.klyx.editor.compose
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.currentRecomposeScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.PointerIcon
@@ -16,10 +10,6 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.TextUnit
 import com.klyx.editor.compose.draw.EditorLayout
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 @Composable
 fun CodeEditor(
@@ -57,35 +47,11 @@ private fun CodeEditorImpl(
     fontFamily: FontFamily,
     fontSize: TextUnit
 ) {
-    val cursorAlpha = remember { Animatable(1f) }
-    var cursorJob: Job? = null
+    val scope = currentRecomposeScope
 
-    var isTyping by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        snapshotFlow { state.cursor }.collect {
-            isTyping = true
-            delay(400)
-            isTyping = false
-        }
-    }
-
-    LaunchedEffect(state.editable, state.cursor) {
-        cursorJob?.cancel()
-
-        if (state.editable) {
-            cursorJob = launch(Dispatchers.Default) {
-                while (true) {
-                    if (!isTyping) {
-                        cursorAlpha.animateTo(0f, tween(500)) { state.cursorAlpha = value }
-                        cursorAlpha.animateTo(1f, tween(500)) { state.cursorAlpha = value }
-                    } else {
-                        state.cursorAlpha = 1f
-                        delay(500)
-                    }
-                }
-            }
-        }
+    LaunchedEffect(fontFamily) {
+        state.invalidateDraw()
+        scope.invalidate()
     }
 
     EditorLayout(

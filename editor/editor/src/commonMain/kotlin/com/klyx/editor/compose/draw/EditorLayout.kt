@@ -1,21 +1,25 @@
 package com.klyx.editor.compose.draw
 
-import androidx.compose.foundation.OverscrollEffect
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberScrollable2DState
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.gestures.scrollable2D
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.overscroll
 import androidx.compose.foundation.rememberOverscrollEffect
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -32,13 +36,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import com.klyx.editor.compose.CodeEditorState
+import com.klyx.editor.compose.EditorDefaults.drawCursor
 import com.klyx.editor.compose.input.editorInput
 import com.klyx.editor.compose.renderer.OnDraw
 import com.klyx.editor.compose.renderer.renderEditor
 import com.klyx.editor.compose.scroll.drawHorizontalScrollbar
 import com.klyx.editor.compose.scroll.drawVerticalScrollbar
 import com.klyx.editor.compose.text.Cursor
-import kotlin.math.absoluteValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun EditorLayout(
@@ -55,7 +63,48 @@ internal fun EditorLayout(
     val focusRequester = remember { FocusRequester() }
 
     val overscrollEffect = rememberOverscrollEffect()
-    val scrollModifier = editorScrollModifier(state, overscrollEffect)
+    val scrollModifier = Modifier.scrollable2D(
+        state = rememberScrollable2DState { delta ->
+            val oldValue = state.scrollState.offset
+            state.scrollBy(delta)
+
+            with(state.scrollState.offset - oldValue) {
+                if (getDistanceSquared() == 0f) this else delta
+            }
+        },
+        overscrollEffect = overscrollEffect
+    )
+
+    val cursorAlpha = remember { Animatable(1f) }
+    var cursorJob: Job? = null
+
+    var isTyping by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        snapshotFlow { state.cursor }.collect {
+            isTyping = true
+            delay(400)
+            isTyping = false
+        }
+    }
+
+    LaunchedEffect(state.editable, state.cursor) {
+        cursorJob?.cancel()
+
+        if (state.editable) {
+            cursorJob = launch(Dispatchers.Default) {
+                while (true) {
+                    if (!isTyping) {
+                        cursorAlpha.animateTo(0f, tween(500)) { state.cursorAlpha = value }
+                        cursorAlpha.animateTo(1f, tween(500)) { state.cursorAlpha = value }
+                    } else {
+                        state.cursorAlpha = 1f
+                        delay(500)
+                    }
+                }
+            }
+        }
+    }
 
     Box(modifier = modifier.overscroll(overscrollEffect)) {
         Layout(
@@ -93,6 +142,7 @@ internal fun EditorLayout(
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                 .drawVerticalScrollbar(editorState = state)
                 .drawHorizontalScrollbar(editorState = state)
+                .drawWithCache { drawCursor(state, pinLineNumber) }
                 .renderEditor(
                     state = state,
                     showLineNumber = showLineNumber,
@@ -114,34 +164,6 @@ private fun selectText(state: CodeEditorState, cursor: Cursor) {
         val end = state.offsetAt(cursor.line, range.end)
         state.moveCursor(state.cursorAt(end))
         state.select(start, end)
-    }
-}
-
-@Composable
-private fun editorScrollModifier(state: CodeEditorState, overscrollEffect: OverscrollEffect?): Modifier {
-    return if (state.maxScrollX.absoluteValue < state.viewportSize.width / 2.5f) {
-        Modifier.scrollable(
-            state = rememberScrollableState { delta ->
-                val oldValue = state.scrollY
-                state.scrollByY(delta)
-
-                with(state.scrollY - oldValue) { if (this == 0f) this else delta }
-            },
-            orientation = Orientation.Vertical,
-            overscrollEffect = overscrollEffect
-        )
-    } else {
-        Modifier.scrollable2D(
-            state = rememberScrollable2DState { delta ->
-                val oldValue = state.scrollState.offset
-                state.scrollBy(delta)
-
-                with(state.scrollState.offset - oldValue) {
-                    if (getDistanceSquared() == 0f) this else delta
-                }
-            },
-            overscrollEffect = overscrollEffect
-        )
     }
 }
 
