@@ -53,6 +53,8 @@ kotlin {
 
                 implementation(kotlin("reflect"))
 
+                implementation(libs.androidx.collection)
+
                 implementation(projects.core)
                 implementation(projects.shared)
                 implementation(projects.terminal.terminal)

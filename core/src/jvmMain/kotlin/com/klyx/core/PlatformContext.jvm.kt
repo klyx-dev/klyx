@@ -2,6 +2,7 @@ package com.klyx.core
 
 import androidx.compose.runtime.staticCompositionLocalOf
 
+@Suppress("UnnecessaryAbstractClass")
 actual abstract class PlatformContext private constructor() {
     companion object {
         @JvmField

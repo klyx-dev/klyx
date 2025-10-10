@@ -6,6 +6,7 @@ androidx-lifecycle = "2.9.4"
 annotation = "1.9.1"
 chasm = "1.1.0"
 coil = "3.3.0"
+collection = "1.5.0"
 fuzzywuzzyKotlin = "0.1.1"
 kfswatch = "1.3.1"
 kotlinResult = "2.1.0"
@@ -49,6 +50,7 @@ arrow = "2.1.2"
 
 [libraries]
 androidx-annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+androidx-collection = { module = "androidx.collection:collection", version.ref = "collection" }
 androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
 bindings-chasm-wasip1 = { module = "at.released.weh:bindings-chasm-wasip1", version.ref = "wasip1Bindings" }

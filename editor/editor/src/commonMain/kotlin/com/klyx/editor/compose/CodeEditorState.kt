@@ -60,6 +60,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.math.log10
 
 @Stable
+@Suppress("VariableNaming", "PropertyName")
 class CodeEditorState internal constructor(
     val buffer: PieceTreeTextBuffer = EmptyTextBuffer,
     internal val editable: Boolean,
