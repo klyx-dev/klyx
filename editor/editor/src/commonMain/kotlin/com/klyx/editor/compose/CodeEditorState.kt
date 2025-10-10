@@ -68,7 +68,10 @@ class CodeEditorState internal constructor(
     private val mutex = Mutex()
     private val charBreakIterator = BreakIterator.makeCharacterInstance()
 
+    @Stable
     internal var _fontSize by mutableStateOf(TextUnit.Unspecified)
+
+    @Stable
     internal var _fontFamily: FontFamily by mutableStateOf(FontFamily.Monospace)
 
     var fontSize: TextUnit

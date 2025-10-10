@@ -2,10 +2,14 @@ package com.klyx.editor.compose.draw
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberScrollable2DState
+import androidx.compose.foundation.gestures.rememberScrollableState
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.gestures.scrollable2D
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -15,10 +19,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,6 +43,8 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.EditorDefaults.drawCursor
+import com.klyx.editor.compose.input.InputEnvironment
+import com.klyx.editor.compose.input.InputEnvironmentDetector
 import com.klyx.editor.compose.input.editorInput
 import com.klyx.editor.compose.renderer.OnDraw
 import com.klyx.editor.compose.renderer.renderEditor
@@ -61,19 +69,13 @@ internal fun EditorLayout(
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val focusRequester = remember { FocusRequester() }
-
     val overscrollEffect = rememberOverscrollEffect()
-    val scrollModifier = Modifier.scrollable2D(
-        state = rememberScrollable2DState { delta ->
-            val oldValue = state.scrollState.offset
-            state.scrollBy(delta)
 
-            with(state.scrollState.offset - oldValue) {
-                if (getDistanceSquared() == 0f) this else delta
-            }
-        },
-        overscrollEffect = overscrollEffect
-    )
+    val inputEnvironmentDetector = remember { InputEnvironmentDetector() }
+
+    val environment: InputEnvironment? by produceState(initialValue = null, key1 = inputEnvironmentDetector) {
+        value = inputEnvironmentDetector.detect()
+    }
 
     val cursorAlpha = remember { Animatable(1f) }
     var cursorJob: Job? = null
@@ -111,7 +113,11 @@ internal fun EditorLayout(
             modifier = Modifier
                 .matchParentSize()
                 .focusRequester(focusRequester)
-                .editorInput(state = state, editable = editable)
+                .editorInput(
+                    state = state,
+                    hasHardwareKeyboard = environment?.hasHardwareKeyboard ?: false,
+                    editable = editable
+                )
                 .focusable(interactionSource = remember { MutableInteractionSource() })
                 .pointerInput(Unit) {
                     detectTransformGestures { _, _, zoom, _ ->
@@ -151,8 +157,46 @@ internal fun EditorLayout(
                     fontSize = fontSize,
                     onDraw = onDraw
                 )
-                .then(scrollModifier),
+                .editorScroll(state, environment, overscrollEffect),
             measurePolicy = EditorMeasurePolicy
+        )
+    }
+}
+
+private fun Modifier.editorScroll(
+    state: CodeEditorState,
+    inputEnvironment: InputEnvironment?,
+    overscrollEffect: OverscrollEffect? = null
+): Modifier = composed {
+    if (inputEnvironment != null && inputEnvironment.hasMouse) {
+        Modifier.scrollable(
+            orientation = Orientation.Vertical,
+            state = rememberScrollableState {
+                val oldValue = state.scrollY
+                state.scrollByY(it)
+                with(state.scrollY - oldValue) { if (this == 0f) this else it }
+            },
+            overscrollEffect = overscrollEffect
+        ).scrollable(
+            orientation = Orientation.Horizontal,
+            state = rememberScrollableState {
+                val oldValue = state.scrollX
+                state.scrollByX(it)
+                with(state.scrollX - oldValue) { if (this == 0f) this else it }
+            },
+            overscrollEffect = overscrollEffect
+        )
+    } else {
+        Modifier.scrollable2D(
+            state = rememberScrollable2DState { delta ->
+                val oldValue = state.scrollState.offset
+                state.scrollBy(delta)
+
+                with(state.scrollState.offset - oldValue) {
+                    if (getDistanceSquared() == 0f) this else delta
+                }
+            },
+            overscrollEffect = overscrollEffect
         )
     }
 }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 
 private class EditorInputModifierNode(
     var state: CodeEditorState,
+    var hasHardwareKeyboard: Boolean,
     var editable: Boolean
 ) : Modifier.Node(), FocusEventModifierNode, PlatformTextInputModifierNode, CompositionLocalConsumerModifierNode,
     KeyInputModifierNode {
@@ -60,24 +61,28 @@ private class EditorInputModifierNode(
 
 private data class EditorInputModifierNodeElement(
     private val state: CodeEditorState,
+    private val hasHardwareKeyboard: Boolean,
     private val editable: Boolean
 ) : ModifierNodeElement<EditorInputModifierNode>() {
 
     override fun InspectorInfo.inspectableProperties() {
         name = "editorInput"
         properties["state"] = state
+        properties["hasHardwareKeyboard"] = hasHardwareKeyboard
         properties["editable"] = editable
     }
 
-    override fun create() = EditorInputModifierNode(state, editable)
+    override fun create() = EditorInputModifierNode(state, hasHardwareKeyboard, editable)
 
     override fun update(node: EditorInputModifierNode) {
         node.state = state
+        node.hasHardwareKeyboard = hasHardwareKeyboard
         node.editable = editable
     }
 }
 
 internal fun Modifier.editorInput(
     state: CodeEditorState,
-    editable: Boolean = true
-) = this then EditorInputModifierNodeElement(state, editable)
+    hasHardwareKeyboard: Boolean = false,
+    editable: Boolean = true,
+) = this then EditorInputModifierNodeElement(state, hasHardwareKeyboard, editable)
