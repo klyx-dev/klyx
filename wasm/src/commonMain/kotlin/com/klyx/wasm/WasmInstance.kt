@@ -11,6 +11,7 @@ import io.github.charlietap.chasm.embedding.error.ChasmError
 import io.github.charlietap.chasm.embedding.invoke
 import io.github.charlietap.chasm.embedding.shapes.ChasmResult
 import io.github.charlietap.chasm.embedding.shapes.Instance
+import io.github.charlietap.chasm.embedding.shapes.Memory
 import io.github.charlietap.chasm.embedding.shapes.Store
 import io.github.charlietap.chasm.embedding.shapes.onError
 
@@ -19,11 +20,7 @@ class WasmInstance internal constructor(
     private val instance: Instance,
     private val store: Store
 ) {
-    val memory by lazy {
-        val export = instance.exports.find { it.name == "memory" }
-        requireNotNull(export) { "Export 'memory' not found" }
-        export.asMemory(store, this)
-    }
+    val memory by lazy { instance.findFirstMemory() }
 
     fun call(functionName: String, args: List<WasmValue> = emptyList()) = run {
         invoke(store, instance, functionName, args.asExecutionValues()).onError {
@@ -79,6 +76,11 @@ fun WasmInstance.free(pointer: Int, oldSize: Int, align: Int = 1) {
 
 @OptIn(ExperimentalWasmApi::class)
 internal fun Instance.asWasmInstance(store: Store) = WasmInstance(this, store)
+
+internal fun Instance.findFirstMemory(): Memory {
+    return exports.firstNotNullOfOrNull { it.value as? Memory }
+        ?: throw NoMemoryException("Instance has no memory export.")
+}
 
 @OptIn(ExperimentalWasmApi::class)
 internal fun ChasmResult<Instance, ChasmError.ExecutionError>.asWasmInstance(store: Store) = run {

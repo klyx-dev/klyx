@@ -1,6 +1,6 @@
 package com.klyx.wasm
 
-class WasmException(
+open class WasmException(
     override val message: String,
     override val cause: Throwable? = null
 ) : Exception()
