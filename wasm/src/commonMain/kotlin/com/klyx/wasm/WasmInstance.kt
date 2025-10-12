@@ -20,7 +20,10 @@ class WasmInstance internal constructor(
     private val instance: Instance,
     private val store: Store
 ) {
-    val memory by lazy { instance.findFirstMemory() }
+    val memory by lazy {
+        val memory = instance.findFirstMemory()
+        WasmMemory(this, memory, store)
+    }
 
     fun call(functionName: String, args: List<WasmValue> = emptyList()) = run {
         invoke(store, instance, functionName, args.asExecutionValues()).onError {
