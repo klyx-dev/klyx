@@ -3,6 +3,7 @@ package com.klyx.editor.compose
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DefaultMonotonicFrameClock
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.annotation.RememberInComposition
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -61,7 +62,7 @@ import kotlin.math.log10
 
 @Stable
 @Suppress("VariableNaming", "PropertyName")
-class CodeEditorState internal constructor(
+class CodeEditorState @RememberInComposition internal constructor(
     val buffer: PieceTreeTextBuffer = EmptyTextBuffer,
     internal val editable: Boolean,
     private val scope: CoroutineScope
@@ -637,7 +638,7 @@ fun rememberCodeEditorState(
         value = file.toTextBuffer()
     }
 
-    return remember(buffer, editable, scope) {
+    return remember(buffer, editable) {
         CodeEditorState(buffer, editable, scope)
     }
 }
@@ -645,6 +646,7 @@ fun rememberCodeEditorState(
 @Suppress("DEPRECATION")
 @ExperimentalComposeCodeEditorApi
 @Stable
+@RememberInComposition
 // TODO deprecate
 //@Deprecated(
 //    level = DeprecationLevel.WARNING,
@@ -662,6 +664,7 @@ suspend fun CodeEditorState(file: KxFile): CodeEditorState {
 @Suppress("DEPRECATION")
 @ExperimentalComposeCodeEditorApi
 @Stable
+@RememberInComposition
 // TODO deprecate
 //@Deprecated(
 //    level = DeprecationLevel.WARNING,
