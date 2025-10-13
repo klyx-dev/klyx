@@ -18,7 +18,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.watchAndReload
 import com.klyx.core.notification.LocalNotificationManager
-import com.klyx.core.settings.AppSettings
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.SettingsManager
 import com.klyx.core.settings.paletteStyles
 import com.klyx.core.theme.Appearance
@@ -97,10 +97,6 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
 
 @Composable
 expect fun dynamicDarkColorScheme(): ColorScheme
-
-val LocalAppSettings = compositionLocalOf<AppSettings> {
-    noLocalProvidedFor<AppSettings>()
-}
 
 val LocalBuildVariant = staticCompositionLocalOf<BuildVariant> {
     noLocalProvidedFor<BuildVariant>()

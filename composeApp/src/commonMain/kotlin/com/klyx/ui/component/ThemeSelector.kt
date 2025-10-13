@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
-import com.klyx.core.LocalAppSettings
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.update
 import com.klyx.core.theme.ThemeManager
 import com.klyx.ui.theme.DefaultKlyxShape

@@ -13,7 +13,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import com.klyx.core.LocalAppSettings
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceSubtitle

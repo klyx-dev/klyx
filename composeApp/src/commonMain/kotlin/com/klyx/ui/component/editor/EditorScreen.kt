@@ -20,12 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
-import com.klyx.core.LocalAppSettings
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.command
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
+import com.klyx.core.settings.currentEditorSettings
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.compose.CodeEditor
 import com.klyx.tab.Tab
@@ -42,7 +42,7 @@ fun EditorScreen(
     editorViewModel: EditorViewModel = koinViewModel(),
     klyxViewModel: KlyxViewModel = koinViewModel(),
 ) {
-    val editorSettings = LocalAppSettings.current.editor
+    val editorSettings = currentEditorSettings
     val keyboardController = LocalSoftwareKeyboardController.current
 
     val state by editorViewModel.state.collectAsState()

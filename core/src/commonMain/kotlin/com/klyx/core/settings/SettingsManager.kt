@@ -71,7 +71,10 @@ object SettingsManager {
 
 @OptIn(ExperimentalTypeInference::class)
 @JvmName("updateSettings")
-inline fun <S : KlyxSettings> S.update(@BuilderInference crossinline function: (S) -> S) {
+inline fun <Settings : KlyxSettings> Settings.update(
+    @BuilderInference
+    crossinline function: (Settings) -> Settings
+) {
     SettingsManager.updateSettings {
         when (val settings = function(this)) {
             is AppSettings -> settings

@@ -48,9 +48,9 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
-import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalPaletteStyleIndex
 import com.klyx.core.LocalSeedColor
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.STYLE_MONOCHROME
 import com.klyx.core.settings.STYLE_TONAL_SPOT
 import com.klyx.core.settings.paletteStyles

@@ -35,9 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.core.FpsTracker
-import com.klyx.core.LocalAppSettings
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.toKxFile
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.toFixed
 import com.klyx.core.ui.Route
 import com.klyx.extension.api.Project

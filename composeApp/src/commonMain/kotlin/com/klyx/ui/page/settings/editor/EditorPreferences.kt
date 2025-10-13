@@ -38,9 +38,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
-import com.klyx.core.LocalAppSettings
 import com.klyx.core.icon.BrandFamily
 import com.klyx.core.icon.KlyxIcons
+import com.klyx.core.settings.LocalEditorSettings
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.ConfirmButton
@@ -66,7 +66,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun EditorPreferences(onNavigateBack: () -> Unit) {
     val uriHandler = LocalUriHandler.current
-    val settings = LocalAppSettings.current.editor
+    val settings = LocalEditorSettings.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(

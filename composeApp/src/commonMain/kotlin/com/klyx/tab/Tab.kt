@@ -49,5 +49,3 @@ sealed class Tab(
         }
     }
 }
-
-inline fun Tab.isFileTab() = this is Tab.FileTab

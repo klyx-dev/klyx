@@ -23,9 +23,9 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.unit.dp
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
-import com.klyx.core.LocalAppSettings
 import com.klyx.core.icon.Klyx
 import com.klyx.core.icon.KlyxIcons
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.extension.ExtensionManager
 
 @Composable

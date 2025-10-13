@@ -8,12 +8,10 @@ import com.klyx.core.SharedLocalProvider
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.EventBus
 import com.klyx.di.commonModule
-import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.res.Res
 import com.klyx.res.klyx_logo
 import org.jetbrains.compose.resources.painterResource
 
-@OptIn(ExperimentalCodeEditorApi::class)
 fun main() {
     initKoin(commonModule)
 
