@@ -4,7 +4,7 @@ import android.content.Context
 import android.hardware.input.InputManager
 import android.view.InputDevice
 import android.view.inputmethod.InputMethodManager
-import com.klyx.core.ContextHolder
+import com.klyx.core.PlatformContext
 
 class AndroidInputEnvironmentDetector(private val context: Context) : InputEnvironmentDetector {
     override suspend fun detect(): InputEnvironment {
@@ -20,6 +20,6 @@ class AndroidInputEnvironmentDetector(private val context: Context) : InputEnvir
     }
 }
 
-actual fun InputEnvironmentDetector(): InputEnvironmentDetector {
-    return AndroidInputEnvironmentDetector(ContextHolder.context)
+actual fun InputEnvironmentDetector(context: PlatformContext): InputEnvironmentDetector {
+    return AndroidInputEnvironmentDetector(context)
 }

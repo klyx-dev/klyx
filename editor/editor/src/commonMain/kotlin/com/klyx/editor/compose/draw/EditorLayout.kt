@@ -44,8 +44,8 @@ import androidx.compose.ui.unit.TextUnit
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.EditorDefaults.drawCursor
 import com.klyx.editor.compose.input.InputEnvironment
-import com.klyx.editor.compose.input.InputEnvironmentDetector
 import com.klyx.editor.compose.input.editorInput
+import com.klyx.editor.compose.input.rememberInputEnvironmentDetector
 import com.klyx.editor.compose.renderer.OnDraw
 import com.klyx.editor.compose.renderer.renderEditor
 import com.klyx.editor.compose.scroll.drawHorizontalScrollbar
@@ -71,7 +71,7 @@ internal fun EditorLayout(
     val focusRequester = remember { FocusRequester() }
     val overscrollEffect = rememberOverscrollEffect()
 
-    val inputEnvironmentDetector = remember { InputEnvironmentDetector() }
+    val inputEnvironmentDetector = rememberInputEnvironmentDetector()
 
     val environment: InputEnvironment? by produceState(initialValue = null, key1 = inputEnvironmentDetector) {
         value = inputEnvironmentDetector.detect()
@@ -169,20 +169,31 @@ private fun Modifier.editorScroll(
     overscrollEffect: OverscrollEffect? = null
 ): Modifier = composed {
     if (inputEnvironment != null && inputEnvironment.hasMouse) {
-        Modifier.scrollable(
-            orientation = Orientation.Vertical,
-            state = rememberScrollableState {
-                val oldValue = state.scrollY
-                state.scrollByY(it)
-                with(state.scrollY - oldValue) { if (this == 0f) this else it }
-            },
-            overscrollEffect = overscrollEffect
-        ).scrollable(
-            orientation = Orientation.Horizontal,
-            state = rememberScrollableState {
-                val oldValue = state.scrollX
-                state.scrollByX(it)
-                with(state.scrollX - oldValue) { if (this == 0f) this else it }
+//        Modifier.scrollable(
+//            orientation = Orientation.Vertical,
+//            state = rememberScrollableState {
+//                val oldValue = state.scrollY
+//                state.scrollByY(it)
+//                with(state.scrollY - oldValue) { if (this == 0f) this else it }
+//            },
+//            overscrollEffect = overscrollEffect
+//        ).scrollable(
+//            orientation = Orientation.Horizontal,
+//            state = rememberScrollableState {
+//                val oldValue = state.scrollX
+//                state.scrollByX(it)
+//                with(state.scrollX - oldValue) { if (this == 0f) this else it }
+//            },
+//            overscrollEffect = overscrollEffect
+//        )
+        Modifier.scrollable2D(
+            state = rememberScrollable2DState { delta ->
+                val oldValue = state.scrollState.offset
+                state.scrollBy(delta)
+
+                with(state.scrollState.offset - oldValue) {
+                    if (getDistanceSquared() == 0f) this else delta
+                }
             },
             overscrollEffect = overscrollEffect
         )

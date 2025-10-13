@@ -1,6 +1,8 @@
 package com.klyx.editor.compose.input
 
-actual fun InputEnvironmentDetector(): InputEnvironmentDetector {
+import com.klyx.core.PlatformContext
+
+actual fun InputEnvironmentDetector(context: PlatformContext): InputEnvironmentDetector {
     return object : InputEnvironmentDetector {
         override suspend fun detect(): InputEnvironment {
             return InputEnvironment(

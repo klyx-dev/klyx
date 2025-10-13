@@ -1,5 +1,6 @@
 package com.klyx.editor.compose.input
 
+import com.klyx.core.PlatformContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.UIKit.UITextInputMode
@@ -18,6 +19,6 @@ class IOSInputEnvironmentDetector : InputEnvironmentDetector {
     }
 }
 
-actual fun InputEnvironmentDetector(): InputEnvironmentDetector {
+actual fun InputEnvironmentDetector(context: PlatformContext): InputEnvironmentDetector {
     return IOSInputEnvironmentDetector()
 }
