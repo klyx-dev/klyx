@@ -68,6 +68,7 @@ fun FileMenu(
         if (file != null) {
             editorViewModel.openFile(file.toKxFile())
         }
+        onDismissRequest()
     }
 
     val fileSaver = rememberFileSaverLauncher { file ->
@@ -75,6 +76,7 @@ fun FileMenu(
             val saved = editorViewModel.saveCurrentAs(file.toKxFile())
             if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
         }
+        onDismissRequest()
     }
 
     val directoryPicker = rememberDirectoryPickerLauncher { file ->
@@ -88,6 +90,7 @@ fun FileMenu(
                 openDrawerIfClosed()
             }
         }
+        onDismissRequest()
     }
 
     val addFolderPicker = rememberDirectoryPickerLauncher { file ->
@@ -103,6 +106,7 @@ fun FileMenu(
                 openDrawerIfClosed()
             }
         }
+        onDismissRequest()
     }
 
     val activeFile by editorViewModel.activeFile.collectAsStateWithLifecycle()
@@ -116,7 +120,10 @@ fun FileMenu(
     ) {
         DropdownMenuItem(
             text = "New",
-            onClick = { editorViewModel.openFile(KxFile("untitled")) },
+            onClick = {
+                editorViewModel.openFile(KxFile("untitled"))
+                onDismissRequest()
+            },
             icon = {
                 Icon(
                     Icons.Outlined.Add,
@@ -183,6 +190,7 @@ fun FileMenu(
                             val saved = editorViewModel.saveCurrent()
                             if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
                         }
+                        onDismissRequest()
                     },
                     enabled = tab.isModified,
                     icon = {
@@ -200,6 +208,7 @@ fun FileMenu(
                         val file = activeFile
                         if (file == null) {
                             notifier.notify(com.klyx.core.string(string.notification_no_active_file))
+                            onDismissRequest()
                             return@DropdownMenuItem
                         }
                         fileSaver.launch(file.name)
@@ -232,6 +241,7 @@ fun FileMenu(
                                 )
                             }
                         }
+                        onDismissRequest()
                     },
                     icon = {
                         Icon(

@@ -192,7 +192,8 @@ private fun OverflowMenu(
                 onShowKlyxMenu = {
                     expanded = false
                     showKlyxMenu = !showKlyxMenu
-                }
+                },
+                onDismissRequest = { expanded = false }
             )
         }
 

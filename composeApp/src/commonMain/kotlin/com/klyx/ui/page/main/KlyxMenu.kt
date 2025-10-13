@@ -34,7 +34,10 @@ fun KlyxMenu(
     ) {
         DropdownMenuItem(
             text = { Text("Open Settings File") },
-            onClick = { editorViewModel.openSettings() },
+            onClick = {
+                editorViewModel.openSettings()
+                onDismissRequest()
+            },
             leadingIcon = {
                 Icon(
                     Icons.Outlined.Settings,
@@ -47,7 +50,10 @@ fun KlyxMenu(
 
         DropdownMenuItem(
             text = { Text("Logs") },
-            onClick = { editorViewModel.openLogViewer() },
+            onClick = {
+                editorViewModel.openLogViewer()
+                onDismissRequest()
+            },
             leadingIcon = {
                 Icon(
                     Icons.AutoMirrored.Outlined.FormatListBulleted,
@@ -68,7 +74,10 @@ fun KlyxMenu(
         )
 
         DropdownMenuItem(
-            text = { Text("Info") },
+            text = {
+                Text("Info")
+                onDismissRequest()
+            },
             onClick = { klyxViewModel.showAboutDialog() },
             leadingIcon = {
                 Icon(

@@ -42,6 +42,7 @@ fun ColumnScope.DropdownMenuItems(
     onShowFileMenu: () -> Unit,
     onShowHelpMenu: () -> Unit,
     onShowKlyxMenu: () -> Unit,
+    onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalPlatformContext.current
     val isTabOpen by editorViewModel.isTabOpen.collectAsStateWithLifecycle()
@@ -92,7 +93,10 @@ fun ColumnScope.DropdownMenuItems(
 
     DropdownMenuItem(
         text = "Command Palette",
-        onClick = { CommandManager.showPalette() },
+        onClick = {
+            CommandManager.showPalette()
+            onDismissRequest()
+        },
         icon = {
             Icon(
                 Icons.Outlined.KeyboardCommandKey,
@@ -104,7 +108,10 @@ fun ColumnScope.DropdownMenuItems(
 
     DropdownMenuItem(
         text = "Extensions",
-        onClick = { editorViewModel.openExtensionScreen() },
+        onClick = {
+            editorViewModel.openExtensionScreen()
+            onDismissRequest()
+        },
         icon = {
             Icon(
                 Icons.Outlined.Extension,
@@ -119,7 +126,10 @@ fun ColumnScope.DropdownMenuItems(
     if (project.isNotEmpty()) {
         DropdownMenuItem(
             text = { Text("Close Project") },
-            onClick = { klyxViewModel.closeProject() },
+            onClick = {
+                klyxViewModel.closeProject()
+                onDismissRequest()
+            },
             leadingIcon = {
                 Icon(
                     Icons.Outlined.Cancel,
@@ -132,7 +142,10 @@ fun ColumnScope.DropdownMenuItems(
     if (isTabOpen) {
         DropdownMenuItem(
             text = { Text("Close Editor") },
-            onClick = { editorViewModel.closeAllTabs() },
+            onClick = {
+                editorViewModel.closeAllTabs()
+                onDismissRequest()
+            },
             leadingIcon = {
                 Icon(
                     Icons.Default.Close,
