@@ -37,10 +37,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.klyx.core.LocalAppSettings
-import com.klyx.core.LocalNotifier
 import com.klyx.core.language
 import com.klyx.core.logging.logger
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.EditorLanguageServerClient
@@ -119,7 +118,6 @@ actual fun CodeEditor(
 ) {
     val isDarkMode = LocalIsDarkMode.current
     val fontFamilyResolver = LocalFontFamilyResolver.current
-    val notifier = LocalNotifier.current
     val appSettings = LocalAppSettings.current
 
     val style by remember {
@@ -135,7 +133,6 @@ actual fun CodeEditor(
 
     val context = LocalContext.current
     val view = LocalView.current
-    val density = LocalDensity.current
     val compositionContext = rememberCompositionContext()
 
     val editor = remember(state) {

@@ -9,7 +9,7 @@ class AtomicMap<K, V>(
     private val _map = atomic(initial.toMutableMap())
     private val map by _map
 
-    constructor() : this(mapOf())
+    constructor() : this(emptyMap())
 
     override val keys = map.keys
     override val values = map.values

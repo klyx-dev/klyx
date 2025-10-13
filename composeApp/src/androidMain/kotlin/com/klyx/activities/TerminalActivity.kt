@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
-import com.klyx.core.LocalAppSettings
 import com.klyx.ui.component.terminal.Terminal
 import com.klyx.ui.theme.KlyxTheme
 import kotlinx.coroutines.CoroutineScope
@@ -16,7 +15,7 @@ class TerminalActivity : KlyxActivity(), CoroutineScope by MainScope() {
         enableEdgeToEdge()
 
         setContent {
-            KlyxTheme(LocalAppSettings.current.theme) {
+            KlyxTheme {
                 Terminal(
                     modifier = Modifier.fillMaxSize(),
                     onSessionFinish = {

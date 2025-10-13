@@ -16,12 +16,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
 import com.klyx.activities.KlyxActivity
-import com.klyx.core.LocalAppSettings
-import com.klyx.core.LocalNotifier
+import com.klyx.core.Notifier
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
+import com.klyx.core.event.Subscriber
 import com.klyx.core.event.asComposeKeyEvent
-import com.klyx.core.event.subscribeToEvent
+import com.klyx.core.event.subscribe
 import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
@@ -29,17 +29,21 @@ import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
 import kotlinx.coroutines.launch
+import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
-class MainActivity : KlyxActivity() {
+class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
+
+    private val notifier by inject<Notifier>()
+
     private val editorViewModel by viewModel<EditorViewModel>()
     private val fileTreeViewModel by viewModel<FileTreeViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        subscribe()
 
         setContent {
-            val notifier = LocalNotifier.current
             val projects by fileTreeViewModel.rootNodes.collectAsState()
 
             LaunchedEffect(projects) {
@@ -54,25 +58,7 @@ class MainActivity : KlyxActivity() {
                 )
             }
 
-            LaunchedEffect(Unit) {
-                subscribeToEvent<CrashEvent> { event ->
-                    val isLogFileSaved = event.logFile != null
-
-                    notifier.error(
-                        title = "Unexpected error",
-                        message = if (isLogFileSaved) "A crash report was saved.\nTap to open." else "Failed to save crash report.",
-                        durationMillis = 6000L
-                    ) {
-                        if (isLogFileSaved) openFile(event.logFile!!)
-                    }
-                }
-
-                //openActivity(RustLspActivity::class)
-            }
-
-            val settings = LocalAppSettings.current
             val darkMode = LocalIsDarkMode.current
-
             val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
 
             enableEdgeToEdge(
@@ -141,6 +127,18 @@ class MainActivity : KlyxActivity() {
 
         appendLine("Memory: ${memoryInfo.totalMem.humanBytes()}")
         append("CPU Count: ${Runtime.getRuntime().availableProcessors()}")
+    }
+
+    override suspend fun onEvent(event: CrashEvent) {
+        val isLogFileSaved = event.logFile != null
+
+        notifier.error(
+            title = "Unexpected error",
+            message = if (isLogFileSaved) "A crash report was saved.\nTap to open." else "Failed to save crash report.",
+            durationMillis = 6000L
+        ) {
+            if (isLogFileSaved) openFile(event.logFile!!)
+        }
     }
 
 //    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
