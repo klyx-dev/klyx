@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
 import com.klyx.core.ContextHolder
+import com.klyx.core.PlatformContext
 import com.klyx.core.io.MANAGE_ALL_FILES
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
@@ -120,5 +121,19 @@ actual fun openFile(file: KxFile) {
 
     context.startActivity(
         Intent.createChooser(intent, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    )
+}
+
+actual fun PlatformContext.shareFile(file: KxFile) {
+    val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file.rawFile())
+
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        setDataAndType(uri, "text/plain")
+        putExtra(Intent.EXTRA_STREAM, uri)
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    startActivity(
+        Intent.createChooser(intent, "Share file via...").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     )
 }

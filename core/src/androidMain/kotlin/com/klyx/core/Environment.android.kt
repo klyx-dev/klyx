@@ -12,9 +12,9 @@ actual object Environment {
         get() = "Klyx"
 
     actual val HomeDir: String
-        get() = "${PathUtils.getInternalAppFilesPath()}/$AppName"
+        get() = "${PathUtils.getExternalAppFilesPath()}/$AppName"
 
-    actual val InternalHomeDir = "$HomeDir/internal"
+    actual val InternalHomeDir = "${PathUtils.getInternalAppFilesPath()}/$AppName"
 
     actual val ExtensionsDir: String
         get() = "$HomeDir/extensions"

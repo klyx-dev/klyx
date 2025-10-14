@@ -1,5 +1,6 @@
 package com.klyx.core.file
 
+import com.klyx.core.PlatformContext
 import com.klyx.core.format
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.readBytes
@@ -69,6 +70,7 @@ fun KxFile.isMetaEqualTo(other: KxFile): Boolean {
  * Launch system file opener
  */
 expect fun openFile(file: KxFile)
+expect fun PlatformContext.shareFile(file: KxFile)
 
 expect fun ByteArray.isValidUtf8(): Boolean
 

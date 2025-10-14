@@ -6,6 +6,7 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
+import com.blankj.utilcode.util.PathUtils
 import com.klyx.activities.CrashActivity
 import com.klyx.core.Environment
 import com.klyx.core.di.initKoin
@@ -31,7 +32,11 @@ import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import java.io.File
+import java.io.FileOutputStream
+import java.io.PrintStream
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
@@ -55,6 +60,15 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         } catch (e: Exception) {
             Log.e("Klyx", "Failed to initialize environment", e)
             handleUncaughtException(Thread.currentThread(), e)
+        }
+
+        launch {
+            val externalFile = android.os.Environment.getExternalStorageDirectory().resolve("klyx/app_logs.txt")
+            if (externalFile.canWrite()) {
+                redirectPrintlnToFile(externalFile)
+            } else {
+                redirectPrintlnToFile(File(Environment.HomeDir, "app_logs.txt"))
+            }
         }
 
         @Suppress("SimplifyBooleanWithConstants")
@@ -164,4 +178,22 @@ private fun buildLogString(thread: Thread, throwable: Throwable): String = build
     throwable.stackTrace.forEach { trace ->
         appendLine("\tat $trace")
     }
+}
+
+private fun redirectPrintlnToFile(logFile: File) {
+    val originalOut = System.out
+    val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
+
+    val fileStream = FileOutputStream(logFile, true)
+    val printStream = object : PrintStream(fileStream, true) {
+        override fun println(x: String?) {
+            val timestamp = timestampFormat.format(Date())
+            val line = "[$timestamp] $x"
+            super.println(line)
+            originalOut.println(line)
+        }
+    }
+
+    System.setOut(printStream)
+    System.setErr(printStream)
 }

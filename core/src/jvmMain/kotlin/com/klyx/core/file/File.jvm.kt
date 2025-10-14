@@ -1,5 +1,6 @@
 package com.klyx.core.file
 
+import com.klyx.core.PlatformContext
 import java.awt.Desktop
 import java.security.MessageDigest
 
@@ -41,4 +42,9 @@ actual fun KxFile.hash(algorithm: String): String {
  */
 actual fun openFile(file: KxFile) {
     Desktop.getDesktop().open(file.rawFile())
+}
+
+actual fun PlatformContext.shareFile(file: KxFile) {
+    if (Desktop.isDesktopSupported()) openFile(file)
+    else println("Desktop sharing not supported")
 }
