@@ -2,6 +2,7 @@
 
 package com.klyx.ui.page.main
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
@@ -31,11 +32,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.core.LocalNotifier
+import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.Route
@@ -68,7 +71,6 @@ fun MainTopBar(
 ) {
     val notifier = LocalNotifier.current
 
-    val activeTab by editorViewModel.activeTab.collectAsStateWithLifecycle()
     val activeFile by editorViewModel.activeFile.collectAsStateWithLifecycle()
 
     val fileSaver = rememberFileSaverLauncher { file ->
@@ -98,7 +100,7 @@ fun MainTopBar(
                             if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
                         }
                     },
-                    enabled = tab.isModified,
+                    enabled = tab.isModified || tab.file.isKlyxTempFile(),
                     shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(Icons.Outlined.Save, contentDescription = "Save")
@@ -111,7 +113,16 @@ fun MainTopBar(
 
     if (isTabOpen) {
         TopAppBar(
-            title = { activeTab?.let { Text(it.name) } },
+            title = {
+                activeTab?.let {
+                    Text(
+                        text = it.name,
+                        modifier = Modifier.basicMarquee(),
+                        maxLines = 1,
+                        overflow = TextOverflow.MiddleEllipsis
+                    )
+                }
+            },
             subtitle = { if (currentAppSettings.showFps) FpsText() },
             navigationIcon = { FileTreeButton() },
             actions = commonActions
