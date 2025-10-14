@@ -25,11 +25,15 @@ object AppVersioning {
             val minor = version.minor
             val patch = version.patch
 
-            val preParts = version.preRelease?.split(".") ?: emptyList()
-            val preType = preParts.getOrNull(0) ?: ""
-            val preNum = preParts.getOrNull(1)?.toIntOrNull() ?: 0
+            val preRelease = version.preRelease ?: ""
 
-            val preOffset = when (preType) {
+            val regex = Regex("""([a-zA-Z]+)(\d+)?""")
+            val match = regex.matchEntire(preRelease)
+
+            val preType = match?.groups?.get(1)?.value ?: ""
+            val preNum = match?.groups?.get(2)?.value?.toIntOrNull() ?: 0
+
+            val preOffset = when (preType.lowercase()) {
                 "" -> 3_000
                 "rc" -> 2_000
                 "beta" -> 1_000
