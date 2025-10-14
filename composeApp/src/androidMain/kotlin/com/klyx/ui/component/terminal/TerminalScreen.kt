@@ -41,6 +41,7 @@ import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
 import kotlinx.coroutines.launch
 
+@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
 @Composable
 fun TerminalScreen(
     user: String,
@@ -103,9 +104,7 @@ fun TerminalScreen(
                             }
                         }
                     },
-                    placeholder = {
-                        Text("Type something...")
-                    },
+                    placeholder = { Text("Type something...") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions.Default.copy(

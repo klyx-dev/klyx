@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerState
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -70,6 +72,7 @@ fun WorktreeDrawer(
             drawerContent = {
                 ModalDrawerSheet(
                     drawerState = drawerState,
+                    drawerContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
                     modifier = modifier.width(WorktreeDrawerWidth).fillMaxHeight()
                 ) {
                     if (project.isEmpty()) {
