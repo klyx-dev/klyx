@@ -58,7 +58,7 @@ object SettingsManager {
 
     fun save() {
         runCatching {
-            if (!settingsFile.delete()) error("Failed to delete settings file")
+            settingsFile.delete()
             settingsFile.writeText(json.encodeToString(settings.value))
         }.onFailure { it.printStackTrace() }
     }

@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProvideTextStyle
@@ -140,6 +142,7 @@ fun Terminal(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 context(context: Context)
 private fun SetupScreen(
@@ -199,11 +202,11 @@ private fun SetupScreen(
             ) {
                 if (error == null && networkState.isConnected) {
                     if (progressValue != null) {
-                        CircularProgressIndicator(
+                        CircularWavyProgressIndicator(
                             progress = { progressValue },
                         )
                     } else {
-                        CircularProgressIndicator()
+                        ContainedLoadingIndicator()
                         Spacer(modifier = Modifier.height(2.dp))
                     }
                 }

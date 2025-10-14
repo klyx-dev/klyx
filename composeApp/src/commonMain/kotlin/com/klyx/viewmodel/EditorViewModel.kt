@@ -14,6 +14,7 @@ import com.klyx.core.event.io.FileSaveEvent
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.id
+import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.isValidUtf8
 import com.klyx.core.file.okioSink
@@ -123,7 +124,7 @@ class EditorViewModel(
                 _state.update { it.copy(pendingFiles = it.pendingFiles + file) }
             }
 
-            if (file.absolutePath != "/untitled" && !permissionRequired && !file.isValidUtf8()) {
+            if (!file.isKlyxTempFile() && !permissionRequired && !file.isValidUtf8()) {
                 notifier.error("(${file.name}) stream did not contain valid UTF-8")
                 return@launch
             }

@@ -1,6 +1,7 @@
 package com.klyx.editor.compose.text.buffer
 
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.source
 import com.klyx.editor.compose.text.LineBreak
 import kotlinx.coroutines.Dispatchers
@@ -43,13 +44,15 @@ suspend fun KxFile.toTextBuffer(
 ) = withContext(Dispatchers.IO) {
     val pieceBuilder = PieceTreeTextBufferBuilder()
 
-    source().buffered().use { source ->
-        val buffer = Buffer()
+    if (!isKlyxTempFile()) {
+        source().buffered().use { source ->
+            val buffer = Buffer()
 
-        while (true) {
-            val bytesRead = source.readAtMostTo(buffer, 64 * 1024) // 64 KB chunks
-            if (bytesRead <= 0) break
-            pieceBuilder.acceptChunk(buffer.readString())
+            while (true) {
+                val bytesRead = source.readAtMostTo(buffer, 64 * 1024) // 64 KB chunks
+                if (bytesRead <= 0) break
+                pieceBuilder.acceptChunk(buffer.readString())
+            }
         }
     }
 

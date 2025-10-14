@@ -212,7 +212,7 @@ fun KlyxDialogVariant(
     tonalElevation: Dp = AlertDialogDefaults.TonalElevation,
     properties: DialogProperties = DialogProperties(),
 ) {
-    AlertDialog(onDismissRequest = onDismissRequest, modifier = modifier, properties = properties) {
+    BasicAlertDialog(onDismissRequest = onDismissRequest, modifier = modifier, properties = properties, content = {
         Surface(
             modifier = modifier,
             shape = shape,
@@ -274,7 +274,7 @@ fun KlyxDialogVariant(
                 }
             }
         }
-    }
+    })
 }
 
 @Composable

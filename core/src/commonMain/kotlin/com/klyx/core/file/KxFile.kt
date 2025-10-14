@@ -66,6 +66,8 @@ expect open class KxFile {
 expect fun KxFile.source(): RawSource
 expect fun KxFile.sink(): RawSink
 
+fun KxFile.isKlyxTempFile() = absolutePath == "/untitled" && name == "untitled"
+
 fun KxFile.toKotlinxIoPath() = Path(absolutePath)
 fun KxFile.toOkioPath() = absolutePath.toPath(true)
 
@@ -75,7 +77,7 @@ fun KxFile.okioSink() = sink().asOkioSink()
 fun okio.Path.toKxFile() = KxFile(toString())
 fun Path.toKxFile() = KxFile(toString())
 
-val KxFile.size get() = SystemFileSystem.metadataOrNull(Path(absolutePath))?.size
+val KxFile.size get() = SystemFileSystem.metadataOrNull(this.toKotlinxIoPath())?.size
 
 expect fun KxFile(path: String): KxFile
 expect fun KxFile(parent: KxFile, child: String): KxFile
@@ -95,7 +97,8 @@ fun KxFile.resolve(relative: KxFile): KxFile {
     }
 }
 
-fun KxFile.resolve(relative: String): KxFile = resolve(KxFile(relative))
+@Suppress("NOTHING_TO_INLINE")
+inline fun KxFile.resolve(relative: String): KxFile = resolve(KxFile(relative))
 
 fun PlatformFile.toKxFile() = KxFile(absolutePath())
 fun KxFile.toPlatformFile() = PlatformFile(absolutePath)

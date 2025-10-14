@@ -1,30 +1,31 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.klyx.ui.page.main
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.DriveFileMove
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -34,17 +35,15 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
-import com.klyx.core.FpsTracker
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.toKxFile
-import com.klyx.core.settings.LocalAppSettings
-import com.klyx.core.toFixed
+import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.Route
+import com.klyx.core.ui.component.FpsText
 import com.klyx.extension.api.Project
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.res.Res
 import com.klyx.res.Res.string
-import com.klyx.res.label_fps
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved
 import com.klyx.res.settings
@@ -52,7 +51,6 @@ import com.klyx.tab.Tab
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -98,7 +96,8 @@ fun MainTopBar(
                             if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
                         }
                     },
-                    enabled = tab.isModified
+                    enabled = tab.isModified,
+                    shapes = IconButtonDefaults.shapes(),
                 ) {
                     Icon(Icons.Outlined.Save, contentDescription = "Save")
                 }
@@ -108,47 +107,25 @@ fun MainTopBar(
         OverflowMenu(project, editorViewModel, klyxViewModel, fileTreeViewModel)
     }
 
-    val fpsTracker = remember { FpsTracker() }
-    val fps by fpsTracker.fps
-
-    LaunchedEffect(Unit) {
-        launch(Dispatchers.Default) {
-            fpsTracker.start()
-        }
-    }
-
     if (isTabOpen) {
         TopAppBar(
             title = {
-                if (LocalAppSettings.current.showFps) {
-                    Text(
-                        text = stringResource(Res.string.label_fps, fps.toFixed(1)),
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                activeFile?.let { file ->
+                    Text(file.name)
                 }
             },
+            subtitle = { if (currentAppSettings.showFps) FpsText() },
             navigationIcon = { FileTreeButton() },
             actions = commonActions
         )
     } else {
-        LargeTopAppBar(
-            title = {
-                Row {
-                    Text("Klyx")
-
-                    if (LocalAppSettings.current.showFps) {
-                        Spacer(modifier = Modifier.width(12.dp))
-
-                        Text(
-                            text = stringResource(Res.string.label_fps, fps.toFixed(1)),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.align(Alignment.Bottom)
-                        )
-                    }
-                }
-            },
-            navigationIcon = { FileTreeButton() },
+        LargeFlexibleTopAppBar(
+            title = { Text("Klyx") },
+            subtitle = if (currentAppSettings.showFps) {
+                { FpsText() }
+            } else null,
             scrollBehavior = scrollBehavior,
+            navigationIcon = { FileTreeButton() },
             actions = commonActions
         )
     }
@@ -167,7 +144,10 @@ private fun OverflowMenu(
     var showKlyxMenu by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-        IconButton(onClick = { expanded = !expanded }) {
+        IconButton(
+            shapes = IconButtonDefaults.shapes(),
+            onClick = { expanded = !expanded }
+        ) {
             Icon(Icons.Rounded.MoreVert, contentDescription = "Menu")
         }
 
@@ -224,9 +204,16 @@ private fun FileTreeButton() {
     val drawerState = LocalDrawerState.current
     val scope = rememberCoroutineScope()
 
-    IconButton(onClick = { scope.launch { drawerState.open() } }) {
+    FilledIconButton(
+        onClick = { scope.launch { drawerState.open() } },
+        shapes = IconButtonDefaults.shapes(
+            shape = IconButtonDefaults.mediumSquareShape,
+            pressedShape = IconButtonDefaults.mediumPressedShape
+        ),
+        modifier = Modifier.padding(horizontal = 6.dp)
+    ) {
         Icon(
-            Icons.Rounded.Menu,
+            Icons.AutoMirrored.Rounded.DriveFileMove,
             contentDescription = "Open file tree"
         )
     }
@@ -235,7 +222,8 @@ private fun FileTreeButton() {
 @Composable
 private fun SettingsButton(onNavigate: (String) -> Unit) {
     IconButton(
-        onClick = { onNavigate(Route.SETTINGS_PAGE) }
+        onClick = { onNavigate(Route.SETTINGS_PAGE) },
+        shapes = IconButtonDefaults.shapes()
     ) {
         Icon(
             Icons.Outlined.Settings,

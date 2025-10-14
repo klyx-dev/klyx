@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.klyx.core.ui.component
 
 import androidx.compose.foundation.BorderStroke
@@ -16,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -37,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.GitHub
 import com.klyx.core.res.Res
 import com.klyx.core.res.confirm
-import com.klyx.core.res.dismiss
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -51,6 +53,7 @@ fun OutlinedButtonWithIcon(
     OutlinedButton(
         modifier = modifier,
         onClick = onClick,
+        shapes = ButtonDefaults.shapes(),
         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
         colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor),
     ) {
@@ -74,6 +77,7 @@ fun TextButtonWithIcon(
     TextButton(
         modifier = modifier,
         onClick = onClick,
+        shapes = ButtonDefaults.shapes(),
         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
         colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
     ) {
@@ -95,6 +99,7 @@ fun FilledTonalButtonWithIcon(
     FilledTonalButton(
         modifier = modifier,
         onClick = onClick,
+        shapes = ButtonDefaults.shapes(),
         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
         colors = colors,
     ) {
@@ -114,6 +119,7 @@ fun FilledButtonWithIcon(
     Button(
         modifier = modifier,
         onClick = onClick,
+        shapes = ButtonDefaults.shapes(),
         contentPadding = ButtonDefaults.ButtonWithIconContentPadding,
         enabled = enabled,
     ) {
@@ -128,17 +134,17 @@ fun ConfirmButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    TextButton(onClick = onClick, enabled = enabled) { Text(text) }
+    TextButton(onClick = onClick, enabled = enabled, shapes = ButtonDefaults.shapes()) { Text(text) }
 }
 
 @Composable
 fun DismissButton(text: String = "Cancel", onClick: () -> Unit) {
-    TextButton(onClick = onClick) { Text(text) }
+    TextButton(onClick = onClick, shapes = ButtonDefaults.shapes()) { Text(text) }
 }
 
 @Composable
 fun OutlinedDismissButton(text: String = "Cancel", onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick) { Text(text) }
+    OutlinedButton(onClick = onClick, shapes = ButtonDefaults.shapes()) { Text(text) }
 }
 
 @Composable
@@ -147,7 +153,7 @@ fun FilledConfirmButton(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, enabled = enabled) { Text(text) }
+    Button(onClick = onClick, enabled = enabled, shapes = ButtonDefaults.shapes()) { Text(text) }
 }
 
 @Composable

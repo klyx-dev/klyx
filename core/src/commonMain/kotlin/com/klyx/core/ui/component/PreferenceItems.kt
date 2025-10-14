@@ -1,6 +1,5 @@
 package com.klyx.core.ui.component
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -22,7 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Translate
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -32,6 +30,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import com.klyx.core.LocalFixedColorRoles
 import com.klyx.core.theme.applyOpacity
 import com.klyx.core.theme.harmonizeWithPrimary
-import org.jetbrains.compose.ui.tooling.preview.Preview
 
 private const val horizontal = 8
 private const val vertical = 12
@@ -265,7 +263,7 @@ fun rememberThumbContent(
 ): (@Composable () -> Unit)? =
     remember(isChecked, checkedIcon) {
         if (isChecked) {
-            {
+            movableContentOf {
                 Icon(
                     imageVector = checkedIcon,
                     contentDescription = null,
@@ -629,90 +627,6 @@ fun CreditItem(
                             style = typography.bodyMedium,
                         )
                     }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-@Preview
-fun TemplateItem(
-    label: String = "",
-    template: String? = null,
-    selected: Boolean = false,
-    isMultiSelectEnabled: Boolean = false,
-    checked: Boolean = false,
-    onClick: () -> Unit = {},
-    onSelect: () -> Unit = {},
-    onCheckedChange: (Boolean) -> Unit = {},
-    onLongClick: () -> Unit = {},
-) {
-    Surface(
-        modifier =
-            Modifier.run {
-                if (!isMultiSelectEnabled)
-                    then(
-                        this.combinedClickable(
-                            onClick = onClick,
-                            onClickLabel = "Edit",
-                            onLongClick = onLongClick,
-                            onLongClickLabel = "Multiselect Mode",
-                        )
-                    )
-                else {
-                    then(this.toggleable(value = checked, onValueChange = onCheckedChange))
-                }
-            }
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp, 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            AnimatedVisibility(visible = isMultiSelectEnabled) {
-                Checkbox(
-                    modifier = Modifier.clearAndSetSemantics {},
-                    checked = checked,
-                    onCheckedChange = onCheckedChange,
-                )
-            }
-
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                with(MaterialTheme) {
-                    Text(
-                        text = label,
-                        maxLines = 1,
-                        style = typography.titleMedium,
-                        color = colorScheme.onSurface,
-                    )
-                    template?.let {
-                        Text(
-                            text = it,
-                            color = colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            style = typography.bodyMedium,
-                        )
-                    }
-                }
-            }
-
-            AnimatedVisibility(!isMultiSelectEnabled) {
-                Row {
-                    VerticalDivider(
-                        modifier =
-                            Modifier.height(32.dp)
-                                .padding(horizontal = 12.dp)
-                                .align(Alignment.CenterVertically),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                        thickness = 1.dp,
-                    )
-                    RadioButton(
-                        modifier = Modifier.semantics { contentDescription = label },
-                        selected = selected,
-                        onClick = onSelect,
-                    )
                 }
             }
         }

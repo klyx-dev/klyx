@@ -7,6 +7,7 @@ import androidx.compose.material.icons.outlined.RestartAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -19,6 +20,7 @@ import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openLogViewer
 import com.klyx.viewmodel.openSettings
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun KlyxMenu(
     expanded: Boolean,
@@ -74,11 +76,11 @@ fun KlyxMenu(
         )
 
         DropdownMenuItem(
-            text = {
-                Text("Info")
+            text = { Text("Info") },
+            onClick = {
+                klyxViewModel.showAboutDialog()
                 onDismissRequest()
             },
-            onClick = { klyxViewModel.showAboutDialog() },
             leadingIcon = {
                 Icon(
                     Icons.Outlined.Info,

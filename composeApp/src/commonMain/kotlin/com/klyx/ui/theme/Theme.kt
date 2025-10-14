@@ -1,7 +1,10 @@
 package com.klyx.ui.theme
 
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
@@ -15,6 +18,7 @@ import com.klyx.core.theme.LocalIsDarkMode
 import com.kyant.monet.LocalTonalPalettes
 import com.kyant.monet.dynamicColorScheme
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun KlyxTheme(
     darkTheme: Boolean = LocalIsDarkMode.current,
@@ -51,6 +55,7 @@ fun KlyxTheme(
             colorScheme = colorScheme,
             typography = Typography,
             shapes = Shapes,
+            motionScheme = MotionScheme.expressive(),
             content = content,
         )
     }

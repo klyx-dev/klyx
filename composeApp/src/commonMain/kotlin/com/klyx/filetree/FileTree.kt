@@ -39,12 +39,16 @@ import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -102,7 +106,7 @@ private val SvgImageLoader
         .components { add(SvgDecoder.Factory()) }
         .build()
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FileTree(
     rootNodes: Map<Worktree, FileTreeNode> = emptyMap(),
@@ -122,9 +126,22 @@ fun FileTree(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surface,
     ) {
+        val ptrState = rememberPullToRefreshState()
+
         PullToRefreshBox(
+            state = ptrState,
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.refreshTree() },
+            indicator = {
+                PullToRefreshDefaults.IndicatorBox(
+                    state = ptrState,
+                    modifier = Modifier.align(Alignment.TopCenter),
+                    isRefreshing = isRefreshing,
+                    maxDistance = PullToRefreshDefaults.IndicatorMaxDistance
+                ) {
+                    ContainedLoadingIndicator()
+                }
+            },
             modifier = Modifier.fillMaxSize()
         ) {
             Box(
