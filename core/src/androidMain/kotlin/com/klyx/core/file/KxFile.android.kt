@@ -13,7 +13,6 @@ import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
 import com.klyx.core.terminal.SAFUtils
-import com.klyx.ifNull
 import com.klyx.runtimeError
 import com.klyx.unimplemented
 import com.klyx.unsupported
@@ -25,7 +24,6 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 import kotlinx.io.readString
-import kotlinx.io.writeString
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.BufferedInputStream
@@ -43,9 +41,9 @@ actual open class KxFile(
     private val context: Context by inject()
     private val file = runCatching { raw.uri.toFile() }.getOrNull()
 
-    actual val name: String get() = file?.name ?: raw.name.ifNull { "(unknown)" }
+    actual val name: String get() = file?.name ?: raw.name ?: "(unknown)"
     actual val path: String
-        get() = file?.path ?: raw.uri.path.ifNull { unsupported("KxFile.path is not supported.") }
+        get() = file?.path ?: raw.uri.path ?: unsupported("KxFile.path is not supported.")
     actual val absolutePath: String get() = file?.absolutePath ?: path
     actual val parent: String? get() = file?.parent ?: raw.parentFile?.uri?.toString()
     actual val parentFile: KxFile?

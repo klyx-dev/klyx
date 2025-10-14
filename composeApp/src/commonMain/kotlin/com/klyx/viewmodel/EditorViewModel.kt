@@ -17,7 +17,6 @@ import com.klyx.core.file.id
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.isValidUtf8
-import com.klyx.core.file.okioSink
 import com.klyx.core.file.sink
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
@@ -27,7 +26,6 @@ import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
 import com.klyx.editor.compose.text.buffer.writeToSink
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.parentAsWorktree
-import com.klyx.ifNull
 import com.klyx.res.Res.string
 import com.klyx.res.tab_title_default_settings
 import com.klyx.res.tab_title_extensions
@@ -45,8 +43,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okio.buffer
-import okio.use
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
@@ -97,7 +93,7 @@ class EditorViewModel(
         content: @Composable () -> Unit,
     ) {
         val tab = Tab.AnyTab(
-            id = id.ifNull { name },
+            id = id ?: name,
             name = name,
             data = data,
             content = content
@@ -304,11 +300,7 @@ class EditorViewModel(
 
                 if (file.path != "untitled") {
                     val saved = try {
-                        buffer.readPiecesContent { content ->
-                            file.okioSink().buffer().use { sink ->
-                                sink.write(content.encodeToByteArray())
-                            }
-                        }
+                        buffer.writeToSink(file.sink())
                         true
                     } catch (e: Exception) {
                         notifier.error(e.message.orEmpty())
