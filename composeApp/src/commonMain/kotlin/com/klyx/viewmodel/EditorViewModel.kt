@@ -18,11 +18,13 @@ import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.isValidUtf8
 import com.klyx.core.file.okioSink
+import com.klyx.core.file.sink
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.string
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
+import com.klyx.editor.compose.text.buffer.writeToSink
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.parentAsWorktree
 import com.klyx.ifNull
@@ -242,12 +244,7 @@ class EditorViewModel(
             if (file.path == "untitled") return false
 
             if (file.canWrite) {
-                buffer.readPiecesContent { content ->
-                    file.okioSink().buffer().use { sink ->
-                        sink.write(content.encodeToByteArray())
-                    }
-                }
-
+                buffer.writeToSink(file.sink())
                 tab.markAsSaved()
 
                 viewModelScope.launch(Dispatchers.Default) {
@@ -272,12 +269,7 @@ class EditorViewModel(
             val editorState = tab.editorState
 
             try {
-                val buffer = editorState.buffer
-                buffer.readPiecesContent { content ->
-                    newFile.okioSink().buffer().use { sink ->
-                        sink.write(content.encodeToByteArray())
-                    }
-                }
+                editorState.buffer.writeToSink(newFile.sink())
             } catch (e: Exception) {
                 notifier.error(e.message.orEmpty())
                 return false

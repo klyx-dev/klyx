@@ -4,9 +4,9 @@ import kotlinx.io.RawSink
 import kotlinx.io.buffered
 
 fun PieceTreeTextBuffer.writeToSink(sink: RawSink) {
-    readPiecesContent { content ->
-        sink.buffered().use {
-            it.write(content.encodeToByteArray())
+    sink.buffered().use {
+        readPiecesContent { text ->
+            it.write(text.encodeToByteArray())
         }
     }
 }

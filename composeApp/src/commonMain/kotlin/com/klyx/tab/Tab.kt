@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import com.klyx.core.file.KxFile
 import com.klyx.core.generateId
 import com.klyx.editor.compose.CodeEditorState
+import com.klyx.editor.compose.event.TextChangeEvent
 import com.klyx.extension.api.Worktree
 
 typealias TabId = String
@@ -39,9 +40,9 @@ sealed class Tab(
         var isModified by mutableStateOf(false)
 
         init {
-//            editorState.subscribeEvent<ContentChangeEvent> {
-//                isModified = true
-//            }
+            editorState.subscribeEvent<TextChangeEvent> {
+                isModified = true
+            }
         }
 
         fun markAsSaved() {

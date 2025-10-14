@@ -30,6 +30,9 @@ import arrow.core.getOrElse
 import arrow.core.none
 import com.klyx.core.file.KxFile
 import com.klyx.core.getOrThrow
+import com.klyx.editor.compose.event.EditorEvent
+import com.klyx.editor.compose.event.EditorEventManager
+import com.klyx.editor.compose.event.TextChangeEvent
 import com.klyx.editor.compose.renderer.LineDividerWidth
 import com.klyx.editor.compose.renderer.LinePadding
 import com.klyx.editor.compose.renderer.SpacingAfterLineBackground
@@ -49,6 +52,7 @@ import com.klyx.editor.compose.text.buffer.PieceTreeTextBuffer
 import com.klyx.editor.compose.text.buffer.toTextBuffer
 import com.klyx.editor.compose.text.toPosition
 import com.klyx.editor.compose.text.toSelection
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -151,6 +155,15 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     internal val maxScrollOffset get() = Offset(maxScrollX, maxScrollY)
 
+    val eventManager by lazy { EditorEventManager(scope) }
+
+    inline fun <reified E : EditorEvent> subscribeEvent(
+        dispatcher: CoroutineDispatcher = Dispatchers.Default,
+        crossinline onEvent: suspend (E) -> Unit
+    ): Job {
+        return eventManager.subscribe(dispatcher, onEvent)
+    }
+
     internal fun insert(text: String, range: Range) {
         if (editable) {
             applyEdits(listOf(SingleEditOperation(range, text)))
@@ -182,6 +195,7 @@ class CodeEditorState @RememberInComposition internal constructor(
     }
 
     internal fun Selection.asRange() = Range(startCursor().toPosition(), endCursor().toPosition())
+    internal fun Range.asSelection() = Selection(offsetAt(startPosition.asCursor()), offsetAt(endPosition.asCursor()))
     internal fun Selection.startCursor() = cursorAt(start)
     internal fun Selection.endCursor() = cursorAt(end)
 
@@ -490,7 +504,13 @@ class CodeEditorState @RememberInComposition internal constructor(
         finalLineNumber: Int,
         finalColumn: Int
     ) {
-
+        eventManager.postSync(
+            event = TextChangeEvent(
+                range = range.asSelection(),
+                cursor = cursor,
+                changedText = getTextInRange(range)
+            )
+        )
     }
 
     internal fun textWidth(text: String, style: TextStyle = textStyle) = textMeasurer.map {

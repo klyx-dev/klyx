@@ -11,6 +11,20 @@ import kotlin.jvm.JvmInline
 @Stable
 fun Cursor(line: Int, column: Int = 0) = Cursor(packWithCheck(line, column))
 
+/**
+ * Represents the position of a cursor within a text editor.
+ *
+ * This value class efficiently stores the line and column number of the cursor.
+ * The line number is 1-based, while the column number is 0-based.
+ * For example, the very beginning of the document is at `Cursor(line = 1, column = 0)`.
+ *
+ * `Cursor` is an immutable data structure.
+ *
+ * @param line The 1-based line number of the cursor position.
+ * @param column The 0-based column number (character offset) from the start of the line.
+ * @property line The 1-based line number.
+ * @property column The 0-based column number.
+ */
 @Immutable
 @JvmInline
 value class Cursor internal constructor(private val packedValue: Long) : Comparable<Cursor> {
