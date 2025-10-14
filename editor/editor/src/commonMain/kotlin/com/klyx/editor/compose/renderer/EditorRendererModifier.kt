@@ -1,7 +1,6 @@
 package com.klyx.editor.compose.renderer
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -23,7 +22,6 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.GenericFontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
@@ -68,7 +66,6 @@ private class EditorRendererModifierNode(
     override fun ContentDrawScope.draw() {
         state.viewportSize = size
         clipRect { drawEditor() }
-        onDraw()
         drawContent()
     }
 
@@ -178,7 +175,7 @@ private class EditorRendererModifierNode(
                 }
             }
 
-            val result = measureLineText(line, textStyle.copy(color = colorScheme.foreground))
+            val result = measureLineText(line, state.textStyle.copy(color = colorScheme.foreground))
 
             withTransform({
                 if (pinLineNumber) clipRect(left = leftOffset)
@@ -225,17 +222,7 @@ private class EditorRendererModifierNode(
     }
 
     private fun measureLineText(line: String, style: TextStyle = textStyle): TextLayoutResult {
-        val key = buildString {
-            append(line)
-            append(line.identityHashCode())
-            append("${style.fontSize.value}sp")
-            if (style.fontFamily is GenericFontFamily) {
-                append((style.fontFamily as GenericFontFamily).name)
-            }
-            append(style.fontFamily?.identityHashCode())
-        }
-
-        return TextLineCache.getOrPut(key) {
+        return TextLineCache.getOrPut("$line-${fontSize.value}-$fontFamily") {
             textMeasurer.measure(
                 text = line,
                 softWrap = false,

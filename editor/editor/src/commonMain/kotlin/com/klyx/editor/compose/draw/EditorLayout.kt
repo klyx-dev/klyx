@@ -4,12 +4,9 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.OverscrollEffect
 import androidx.compose.foundation.focusable
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.gestures.rememberScrollable2DState
-import androidx.compose.foundation.gestures.rememberScrollableState
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.gestures.scrollable2D
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -46,7 +43,6 @@ import com.klyx.editor.compose.EditorDefaults.drawCursor
 import com.klyx.editor.compose.input.InputEnvironment
 import com.klyx.editor.compose.input.editorInput
 import com.klyx.editor.compose.input.rememberInputEnvironmentDetector
-import com.klyx.editor.compose.renderer.OnDraw
 import com.klyx.editor.compose.renderer.renderEditor
 import com.klyx.editor.compose.scroll.drawHorizontalScrollbar
 import com.klyx.editor.compose.scroll.drawVerticalScrollbar
@@ -64,8 +60,7 @@ internal fun EditorLayout(
     showLineNumber: Boolean,
     pinLineNumber: Boolean,
     fontFamily: FontFamily,
-    fontSize: TextUnit,
-    onDraw: OnDraw = {}
+    fontSize: TextUnit
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val focusRequester = remember { FocusRequester() }
@@ -139,7 +134,6 @@ internal fun EditorLayout(
                             selectText(state, cursor)
                         },
                         onDoubleTap = { offset ->
-                            hapticFeedback.performHapticFeedback(HapticFeedbackType.ContextClick)
                             val cursor = state.calculateCursorPositionFromScreenOffset(offset)
                             selectText(state, cursor)
                         }
@@ -154,8 +148,7 @@ internal fun EditorLayout(
                     showLineNumber = showLineNumber,
                     pinLineNumber = pinLineNumber,
                     fontFamily = fontFamily,
-                    fontSize = fontSize,
-                    onDraw = onDraw
+                    fontSize = fontSize
                 )
                 .editorScroll(state, environment, overscrollEffect),
             measurePolicy = EditorMeasurePolicy
