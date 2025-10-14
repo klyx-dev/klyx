@@ -78,7 +78,7 @@ fun KlyxMenu(
         DropdownMenuItem(
             text = { Text("Info") },
             onClick = {
-                klyxViewModel.showAboutDialog()
+                klyxViewModel.showInfoDialog()
                 onDismissRequest()
             },
             leadingIcon = {

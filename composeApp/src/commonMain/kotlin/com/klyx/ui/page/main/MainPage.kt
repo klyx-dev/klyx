@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.DriveFolderUpload
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.rounded.Add
@@ -57,7 +56,6 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.tab.Tab
-import com.klyx.ui.component.AboutDialog
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
@@ -247,9 +245,9 @@ fun MainPage(
 
             val klyxMenuState by klyxViewModel.klyxMenuState.collectAsStateWithLifecycle()
 
-            if (klyxMenuState.showAboutDialog) {
-                AboutDialog(
-                    onDismissRequest = { klyxViewModel.dismissAboutDialog() }
+            if (klyxMenuState.showInfoDialog) {
+                InfoDialog(
+                    onDismissRequest = { klyxViewModel.dismissInfoDialog() }
                 )
             }
 

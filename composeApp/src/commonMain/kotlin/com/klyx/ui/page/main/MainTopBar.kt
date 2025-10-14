@@ -67,6 +67,8 @@ fun MainTopBar(
     scrollBehavior: TopAppBarScrollBehavior
 ) {
     val notifier = LocalNotifier.current
+
+    val activeTab by editorViewModel.activeTab.collectAsStateWithLifecycle()
     val activeFile by editorViewModel.activeFile.collectAsStateWithLifecycle()
 
     val fileSaver = rememberFileSaverLauncher { file ->
@@ -109,11 +111,7 @@ fun MainTopBar(
 
     if (isTabOpen) {
         TopAppBar(
-            title = {
-                activeFile?.let { file ->
-                    Text(file.name)
-                }
-            },
+            title = { activeTab?.let { Text(it.name) } },
             subtitle = { if (currentAppSettings.showFps) FpsText() },
             navigationIcon = { FileTreeButton() },
             actions = commonActions
