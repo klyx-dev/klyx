@@ -77,6 +77,7 @@ internal class CodeEditorInputConnection(
     }
 
     override fun finishComposingText(): Boolean {
+        state.clearComposingRegion()
         return true
     }
 
@@ -150,11 +151,9 @@ internal class CodeEditorInputConnection(
         if (text == null) return false
 
         val composingText = text.toString()
-        val cursorOffset = state.cursorOffset
 
-        state.clearComposingRegion()
         state.insertComposingText(composingText)
-        state.setComposingRegion(cursorOffset, cursorOffset + composingText.length)
+        state.increaseComposingRegionBy(newCursorPosition)
         return true
     }
 

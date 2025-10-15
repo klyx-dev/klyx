@@ -210,6 +210,14 @@ class CodeEditorState @RememberInComposition internal constructor(
         composingRegion = TextRange(start, end)
     }
 
+    internal fun increaseComposingRegionBy(offset: Int) {
+        composingRegion?.let { range ->
+            setComposingRegion(range.start, range.end + offset)
+        } ?: run {
+            setComposingRegion(cursorOffset, cursorOffset + offset)
+        }
+    }
+
     internal fun clearComposingRegion() {
         composingRegion = null
     }
