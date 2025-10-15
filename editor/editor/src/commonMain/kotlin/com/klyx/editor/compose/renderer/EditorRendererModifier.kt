@@ -21,7 +21,6 @@ import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.node.requireDensity
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -69,15 +68,8 @@ private class EditorRendererModifierNode(
         TextRenderer(context = currentValueOf(LocalPlatformContext), density = requireDensity())
     }
 
-    // Cached line number width - only recalculate when line count digits change
     private var cachedMaxLineWidth: Float = 0f
     private var cachedLineCountDigits: Int = 0
-
-    private val textStyle: TextStyle
-        get() = state.textStyle.copy(
-            fontFamily = fontFamily,
-            fontSize = fontSize
-        )
 
     override fun ContentDrawScope.draw() {
         state.viewportSize = size
@@ -125,12 +117,12 @@ private class EditorRendererModifierNode(
         val visibleRange = visibleStart..visibleEnd
 
         if (selection.collapsed) drawCurrentLineBackground(colorScheme, lineHeight, cursor, visibleRange)
-        if (!selection.collapsed) drawSelectionOptimized(
-            state.selection,
-            colorScheme,
-            lineHeight,
-            leftOffset,
-            visibleRange
+        if (!selection.collapsed) drawSelection(
+            selection = state.selection,
+            colorScheme = colorScheme,
+            lineHeight = lineHeight,
+            leftOffset = leftOffset,
+            visibleRange = visibleRange
         )
         if (showLineNumber) drawLineNumbersBackground(lineNumberWidth + LinePadding, colorScheme)
 
@@ -224,7 +216,7 @@ private class EditorRendererModifierNode(
         }
     }
 
-    private fun DrawScope.drawSelectionOptimized(
+    private fun DrawScope.drawSelection(
         selection: Selection,
         colorScheme: EditorColorScheme,
         lineHeight: Float,

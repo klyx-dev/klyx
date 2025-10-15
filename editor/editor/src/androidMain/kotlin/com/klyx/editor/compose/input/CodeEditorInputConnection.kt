@@ -14,6 +14,8 @@ import android.view.inputmethod.InputContentInfo
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.editor.compose.CodeEditorState
+import com.klyx.editor.compose.text.Range
+import com.klyx.editor.compose.text.toPosition
 
 internal class CodeEditorInputConnection(
     private val view: View, private val state: CodeEditorState
@@ -57,7 +59,13 @@ internal class CodeEditorInputConnection(
 
     override fun commitText(text: CharSequence, newCursorPosition: Int): Boolean {
         println("commitText: $text, newCursorPosition: $newCursorPosition")
+        finishComposingText()
+
         state.insert(text.toString())
+
+        val newOffset = state.cursorOffset + newCursorPosition.coerceAtLeast(0)
+        state.moveCursorTo(newOffset)
+
         return true
     }
 
@@ -98,14 +106,38 @@ internal class CodeEditorInputConnection(
         return null
     }
 
-    override fun getTextAfterCursor(n: Int, flags: Int): CharSequence? {
+    override fun getTextAfterCursor(n: Int, flags: Int): CharSequence {
         println("getTextAfterCursor: n=$n, flags=$flags")
-        return null
+        val offset = state.cursorOffset
+
+        val startOffset = (offset + n).coerceAtLeast(0)
+        val range = with(state) {
+            getTextInRange(
+                Range(
+                    cursorAt(startOffset).toPosition(),
+                    cursorAt(offset).toPosition()
+                )
+            )
+        }
+
+        return range
     }
 
-    override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence? {
+    override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence {
         println("getTextBeforeCursor: n=$n, flags=$flags")
-        return null
+        val offset = state.cursorOffset
+
+        val startOffset = (offset - n).coerceAtLeast(0)
+        val range = with(state) {
+            getTextInRange(
+                Range(
+                    cursorAt(startOffset).toPosition(),
+                    cursorAt(offset).toPosition()
+                )
+            )
+        }
+
+        return range
     }
 
     override fun performContextMenuAction(id: Int): Boolean {
@@ -148,12 +180,21 @@ internal class CodeEditorInputConnection(
 
     override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
         println("setComposingText: text=$text, newCursorPosition=$newCursorPosition")
-        if (text == null) return false
+        if (text == null) return finishComposingText()
 
         val composingText = text.toString()
-
         state.insertComposingText(composingText)
-        state.increaseComposingRegionBy(newCursorPosition)
+
+        val cursorOffset = state.cursorOffset
+
+        state.composingRegion?.let { region ->
+            val newAbsoluteCursorOffset = region.start + newCursorPosition.coerceIn(0, region.length)
+            state.moveCursorTo(newAbsoluteCursorOffset)
+        } ?: run {
+            // should not happen if insertComposingText worked, but as a fallback
+            state.moveCursorTo(cursorOffset + newCursorPosition)
+        }
+
         return true
     }
 

@@ -267,23 +267,22 @@ class CodeEditorState @RememberInComposition internal constructor(
     }
 
     internal fun insertComposingText(composing: String) {
-        composingRegion?.let { range ->
-            insert(composing, range.asSelection())
-        } ?: run {
-            insert(composing)
-        }
+        val currentRange = composingRegion
+
+        val replaceRange = currentRange?.asSelection()?.asRange()
+            ?: (if (!selection.collapsed) selection.asRange() else Range(cursor.toPosition()))
+
+        insert(composing, replaceRange)
+
+        val newStartOffset = offsetAt(replaceRange.startPosition.asCursor())
+        val newEndOffset = newStartOffset + composing.length
+
+        composingRegion = TextRange(newStartOffset, newEndOffset)
+        moveCursorTo(newEndOffset)
     }
 
     internal fun setComposingRegion(start: Int, end: Int) {
         composingRegion = TextRange(start, end)
-    }
-
-    internal fun increaseComposingRegionBy(offset: Int) {
-        composingRegion?.let { range ->
-            setComposingRegion(range.start, range.end + offset)
-        } ?: run {
-            setComposingRegion(cursorOffset, cursorOffset + offset)
-        }
     }
 
     internal fun clearComposingRegion() {
@@ -318,8 +317,11 @@ class CodeEditorState @RememberInComposition internal constructor(
     }
 
     fun moveCursor(newCursor: Cursor, select: Boolean = false) {
+        if (newCursor == cursor) return
         moveCursor(newCursor.line, newCursor.column, select = select)
     }
+
+    fun moveCursorTo(offset: Int) = moveCursor(cursorAt(offset))
 
     fun moveCursor(direction: Direction, select: Boolean = false) {
         val line = cursor.line
@@ -458,6 +460,7 @@ class CodeEditorState @RememberInComposition internal constructor(
     }
 
     internal fun getTextInRange(range: Range) = buffer.getValueInRange(range)
+    fun substring(range: TextRange) = getTextInRange(range.asSelection().asRange())
 
     private fun TextAction.range() = when (this) {
         TextAction.Insert -> Range(cursor.toPosition())
