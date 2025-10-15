@@ -6,13 +6,14 @@ import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
-import com.blankj.utilcode.util.PathUtils
 import com.klyx.activities.CrashActivity
 import com.klyx.core.Environment
+import com.klyx.core.defaultLogsFile
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.rawFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
@@ -62,14 +63,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             handleUncaughtException(Thread.currentThread(), e)
         }
 
-        launch {
-            val externalFile = android.os.Environment.getExternalStorageDirectory().resolve("klyx/app_logs.txt")
-            if (externalFile.canWrite()) {
-                redirectPrintlnToFile(externalFile)
-            } else {
-                redirectPrintlnToFile(File(Environment.HomeDir, "app_logs.txt"))
-            }
-        }
+        launch { redirectPrintlnToFile(Environment.defaultLogsFile()) }
 
         @Suppress("SimplifyBooleanWithConstants")
         if (BuildConfig.BUILD_TYPE == "release") {
@@ -180,11 +174,11 @@ private fun buildLogString(thread: Thread, throwable: Throwable): String = build
     }
 }
 
-private fun redirectPrintlnToFile(logFile: File) {
+private fun redirectPrintlnToFile(logFile: KxFile) {
     val originalOut = System.out
     val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
 
-    val fileStream = FileOutputStream(logFile, true)
+    val fileStream = FileOutputStream(logFile.rawFile(), true)
     val printStream = object : PrintStream(fileStream, true) {
         override fun println(x: String?) {
             val timestamp = timestampFormat.format(Date())

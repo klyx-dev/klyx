@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.Environment
 import com.klyx.core.LocalBuildVariant
 import com.klyx.core.LocalPlatformContext
-import com.klyx.core.file.KxFile
+import com.klyx.core.defaultLogsFile
 import com.klyx.core.file.shareFile
 import com.klyx.core.isDebug
 import com.klyx.core.ui.component.DropdownMenuDivider
@@ -75,13 +75,11 @@ fun KlyxMenu(
 
         if (buildVariant.isDebug) {
             val context = LocalPlatformContext.current
-            val file1 = KxFile(Environment.DeviceHomeDir, "klyx/app_logs.txt")
-            val file2 = KxFile(Environment.HomeDir, "app_logs.txt")
 
             DropdownMenuItem(
                 text = { Text("Share Logs File") },
                 onClick = {
-                    context.shareFile(if (file1.exists) file1 else file2)
+                    context.shareFile(Environment.defaultLogsFile())
                     onDismissRequest()
                 },
                 leadingIcon = {

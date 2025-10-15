@@ -1,5 +1,6 @@
 package com.klyx.core
 
+import com.klyx.core.file.KxFile
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
@@ -18,6 +19,12 @@ expect object Environment {
     val LogsDir: String
 
     fun init()
+}
+
+fun Environment.defaultLogsFile(): KxFile {
+    val file1 = KxFile(DeviceHomeDir, "klyx/app_logs.txt").also { runCatching { it.createNewFile() } }
+    val file2 = KxFile(HomeDir, "app_logs.txt")
+    return if (file1.canWrite) file1 else file2
 }
 
 private val SimpleStringFormatRegex = Regex("""%(\d+)\$[ds]""")
