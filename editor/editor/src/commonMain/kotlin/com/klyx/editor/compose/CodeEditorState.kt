@@ -1,12 +1,12 @@
 package com.klyx.editor.compose
 
+import androidx.collection.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DefaultMonotonicFrameClock
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.annotation.RememberInComposition
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -36,7 +36,10 @@ import com.klyx.editor.compose.event.EditorEventManager
 import com.klyx.editor.compose.event.TextChangeEvent
 import com.klyx.editor.compose.renderer.LineDividerWidth
 import com.klyx.editor.compose.renderer.LinePadding
+import com.klyx.editor.compose.renderer.LineWidthCache
 import com.klyx.editor.compose.renderer.SpacingAfterLineBackground
+import com.klyx.editor.compose.renderer.TextRenderer
+import com.klyx.editor.compose.renderer.invalidateCache
 import com.klyx.editor.compose.scroll.ScrollState
 import com.klyx.editor.compose.text.ContentChange
 import com.klyx.editor.compose.text.Cursor
@@ -58,6 +61,7 @@ import com.klyx.editor.compose.text.toSelection
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -70,12 +74,14 @@ import kotlin.math.log10
 @Stable
 @Suppress("VariableNaming", "PropertyName")
 class CodeEditorState @RememberInComposition internal constructor(
-    val buffer: PieceTreeTextBuffer = EmptyTextBuffer,
+    var buffer: PieceTreeTextBuffer = EmptyTextBuffer,
     internal val editable: Boolean,
     private val scope: CoroutineScope
 ) {
     private val mutex = Mutex()
     private val charBreakIterator = BreakIterator.makeCharacterInstance()
+
+    internal var isBufferLoading by mutableStateOf(true)
 
     @Stable
     internal var _fontSize by mutableStateOf(TextUnit.Unspecified)
@@ -100,6 +106,8 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     internal var colorScheme = DefaultEditorColorScheme
     internal var textMeasurer: Option<TextMeasurer> = none()
+    internal var textRenderer: Option<TextRenderer> = none()
+
     internal val textStyle
         get() = TextStyle.Default.copy(
             fontFamily = fontFamily,
@@ -121,7 +129,9 @@ class CodeEditorState @RememberInComposition internal constructor(
     private val Int.count get() = log10(this.toDouble()).toInt() + 1
 
     internal val tabWidth get() = textWidth("\t")
-    internal val lineHeight get() = measureText("W").map { it.size.height }.getOrThrow()
+
+    internal val lineHeight: Float
+        get() = textRenderer.map { it.getFontMetrics(textStyle.fontSize, fontFamily).height }.getOrElse { 0f }
 
     internal var invalidateDrawCallback: InvalidateDrawCallback = {}
     internal var cursorAlpha by mutableStateOf(1f)
@@ -135,6 +145,12 @@ class CodeEditorState @RememberInComposition internal constructor(
     private val mergeTextChanges = mutableListOf<TextChange>()
     private var mergeJob: Job? = null
 
+    private var cachedMaxLineLength: Int = 0
+    private var maxLineLengthDirty: Boolean = true
+    private val lineLengthCache = mutableMapOf<Int, Int>()
+
+    private val textWidthCache = LruCache<String, Float>(1000)
+
     var scrollX: Float
         get() = scrollState.offsetX
         set(value) = scrollTo(value, scrollState.offsetY)
@@ -145,9 +161,12 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     internal val maxScrollX: Float
         get() {
-            val avgCharWidth = textWidth("W").toFloat()
-            val maxLineLength = (1..lineCount).maxOfOrNull { getLineLength(it) } ?: 0
-            val estimatedWidth = maxLineLength * avgCharWidth
+            if (maxLineLengthDirty) {
+                recalculateMaxLineLength()
+            }
+
+            val avgCharWidth = textWidth("W")
+            val estimatedWidth = cachedMaxLineLength * avgCharWidth
 
             return (estimatedWidth + getStartSpacing() + getEndSpacing() - viewportSize.width)
                 .coerceAtLeast(0f).unaryMinus()
@@ -160,6 +179,55 @@ class CodeEditorState @RememberInComposition internal constructor(
     internal var composingRegion: TextRange? = null
 
     val eventManager by lazy { EditorEventManager(scope) }
+
+    internal constructor(file: KxFile, scope: CoroutineScope) : this(EmptyTextBuffer, true, scope) {
+        scope.launch(Dispatchers.IO) {
+            buffer = file.toTextBuffer()
+            isBufferLoading = false
+            maxLineLengthDirty = true
+        }
+    }
+
+    private fun recalculateMaxLineLength() {
+        if (lineCount == 0) {
+            cachedMaxLineLength = 0
+            maxLineLengthDirty = false
+            return
+        }
+
+        cachedMaxLineLength = if (lineCount > 1000) {
+            val samples = mutableListOf<Int>()
+
+            // first 100 lines
+            for (i in 1..minOf(100, lineCount)) {
+                samples.add(getLineLengthCached(i))
+            }
+
+            // last 100 lines
+            for (i in maxOf(1, lineCount - 100)..lineCount) {
+                samples.add(getLineLengthCached(i))
+            }
+
+            // every 100th line in between
+            var i = 100
+            while (i < lineCount - 100) {
+                samples.add(getLineLengthCached(i))
+                i += 100
+            }
+
+            samples.maxOrNull() ?: 0
+        } else {
+            (1..lineCount).maxOfOrNull { getLineLengthCached(it) } ?: 0
+        }
+
+        maxLineLengthDirty = false
+    }
+
+    private fun getLineLengthCached(lineNumber: Int): Int {
+        return lineLengthCache.getOrPut(lineNumber) {
+            getLineLength(lineNumber)
+        }
+    }
 
     inline fun <reified E : EditorEvent> subscribeEvent(
         dispatcher: CoroutineDispatcher = Dispatchers.Default,
@@ -260,13 +328,11 @@ class CodeEditorState @RememberInComposition internal constructor(
         when (direction) {
             Direction.Left -> {
                 if (column > 0) {
-                    // Move one character left, accounting for grapheme clusters
                     val text = getLine(line)
                     val prevEnd = column - 1
                     val prevStart = getCharStart(text, prevEnd)
                     cursor = Cursor(line, prevStart)
                 } else if (line > 1) {
-                    // Move to end of previous line
                     val prevLineLength = getLineLength(line - 1)
                     cursor = Cursor(line - 1, prevLineLength)
                 }
@@ -275,11 +341,9 @@ class CodeEditorState @RememberInComposition internal constructor(
             Direction.Right -> {
                 val lineText = getLine(line)
                 if (column < lineText.length) {
-                    // Move one character right, respecting multibyte chars
                     val nextStart = getCharEnd(lineText, column)
                     cursor = Cursor(line, nextStart)
                 } else if (line < lineCount) {
-                    // Move to start of next line
                     cursor = Cursor(line + 1, 0)
                 }
             }
@@ -318,8 +382,6 @@ class CodeEditorState @RememberInComposition internal constructor(
     fun getCharEnd(text: String, startOffset: Int): Int {
         return with(charBreakIterator) {
             setText(text)
-            // requires startOffset < text.length
-            // end boundary
             following(startOffset)
         }
     }
@@ -330,8 +392,7 @@ class CodeEditorState @RememberInComposition internal constructor(
 
         val leftOffset = getContentLeftOffset()
 
-        // cursor X position relative to content area (not viewport)
-        val cursorX = getTextWidths(getLine(cursorLine))
+        val cursorX = getTextWidthsCached(getLine(cursorLine))
             .take(maxOf(0, cursorColumn))
             .sum()
 
@@ -345,14 +406,12 @@ class CodeEditorState @RememberInComposition internal constructor(
         var targetX = -scrollX
         var targetY = -scrollY
 
-        // check if cursor is outside visible X range
         if (cursorX < visibleXStart + padding) {
             targetX = (cursorX - padding).coerceAtLeast(0f)
         } else if (cursorX > visibleXEnd - padding) {
             targetX = (cursorX - (viewportSize.width - leftOffset) + padding).coerceAtLeast(0f)
         }
 
-        // check if cursor is outside visible Y range
         if (cursorY < visibleYStart + padding) {
             targetY = (cursorY - padding).coerceAtLeast(0f)
         } else if (cursorY + lineHeight > visibleYEnd - padding) {
@@ -367,10 +426,8 @@ class CodeEditorState @RememberInComposition internal constructor(
     }
 
     internal fun getContentLeftOffset(): Float {
-        val maxLineWidth = LineWidthCache[lineCount] ?: textWidth(lineCount.toString()).also {
-            LineWidthCache.put(lineCount, it)
-        }
-        val lineNumberWidth = if (showLineNumber) maxLineWidth else 0
+        val maxLineWidth = LineWidthCache.getOrPut(lineCount) { textWidth(lineCount.toString()) }
+        val lineNumberWidth = if (showLineNumber) maxLineWidth else 0f
         return lineNumberWidth + LinePadding + LineDividerWidth + SpacingAfterLineBackground
     }
 
@@ -384,13 +441,12 @@ class CodeEditorState @RememberInComposition internal constructor(
         val line = getLine(clampedLine)
         if (line.isEmpty()) return Cursor(clampedLine, 0)
 
-        val widths = getTextWidths(line)
+        val widths = getTextWidthsCached(line)
         var currentWidth = 0f
         var column = 0
 
         for (i in widths.indices) {
             val charWidth = widths[i]
-            // check if click is in the first half or second half of character
             if (adjustedX < currentWidth + charWidth / 2) {
                 break
             }
@@ -409,7 +465,6 @@ class CodeEditorState @RememberInComposition internal constructor(
             if (cursor.line == 1 && cursor.column == 0) {
                 Range(cursor.toPosition())
             } else if (cursor.column == 0 && cursor.line > 1) {
-                // delete the line feed (\n)
                 Range(
                     startLine = cursor.line - 1,
                     startColumn = buffer.getLineMaxColumn(cursor.line - 1),
@@ -418,7 +473,6 @@ class CodeEditorState @RememberInComposition internal constructor(
                 )
             } else {
                 Range(cursor.line, 1, cursor.line, cursor.column + 1).apply {
-                    // reset range start column, may contains unicode characters
                     startColumn = getCharStart(getTextInRange(this), endColumn) + 1
                 }
             }
@@ -436,7 +490,6 @@ class CodeEditorState @RememberInComposition internal constructor(
         var lastColumn = 0
 
         result.changes.forEachIndexed { index, change ->
-            // compute the changed lines
             val (insertingLinesCnt, _, lastLineLength, _) = Strings.countLineBreaks(change.text!!)
             val deletingLinesCnt = change.range.endLine - change.range.startLine
 
@@ -444,17 +497,14 @@ class CodeEditorState @RememberInComposition internal constructor(
             var finalColumn = change.range.endColumn
 
             finalColumn = if (change.text.isNotEmpty()) {
-                // insert or replace text (insert lines 0)
                 when (insertingLinesCnt) {
                     0 -> change.range.startColumn + lastLineLength
                     else -> lastLineLength + 1
                 }
             } else {
-                // delete text
                 change.range.startColumn
             }
 
-            // batch edits
             if (index == 0) {
                 lastLineNumber = finalLineNumber
                 lastColumn = finalColumn
@@ -475,6 +525,10 @@ class CodeEditorState @RememberInComposition internal constructor(
         if (computeUndoEdits) {
             scope.launch { pushEdits(result.reverseEdits) }
         }
+
+        maxLineLengthDirty = true
+        lineLengthCache.clear()
+        textWidthCache.evictAll()
 
         afterTextChanged(result.changes, lastLineNumber, lastColumn)
     }
@@ -542,9 +596,12 @@ class CodeEditorState @RememberInComposition internal constructor(
         )
     }
 
-    internal fun textWidth(text: String, style: TextStyle = textStyle) = textMeasurer.map {
-        it.measure(text, style = style, softWrap = false).size.width
-    }.getOrElse { 0 }
+    internal fun textWidth(text: String, style: TextStyle = textStyle): Float {
+        val cacheKey = "$text-${style.fontSize.value}-${style.fontFamily.hashCode()}"
+        return textWidthCache.getOrPut(cacheKey) {
+            textRenderer.map { it.measureText(text, style) }.getOrElse { 0f }
+        }
+    }
 
     fun getLineLength(lineNumber: Int) = buffer.getLineLength(lineNumber)
     internal fun getRangeLength(range: Range) = buffer.getValueLengthInRange(range)
@@ -597,6 +654,8 @@ class CodeEditorState @RememberInComposition internal constructor(
     suspend fun smoothScrollTo(offset: Offset, duration: Int = 300) = smoothScrollTo(offset.x, offset.y, duration)
     suspend fun smoothScrollBy(offset: Offset, duration: Int = 300) = smoothScrollBy(offset.x, offset.y, duration)
 
+    private val textWidthsCache = LruCache<String, FloatArray>(500)
+
     fun getTextWidths(text: String, style: TextStyle = textStyle): FloatArray {
         val result = textMeasurer.map { it.measure(text, style = style) }.getOrThrow()
         val widths = mutableListOf<Float>()
@@ -609,10 +668,15 @@ class CodeEditorState @RememberInComposition internal constructor(
         return widths.toFloatArray()
     }
 
-    // text start indent
+    private fun getTextWidthsCached(text: String, style: TextStyle = textStyle): FloatArray {
+        val cacheKey = "${text.hashCode()}-${style.fontSize.value}-${style.fontFamily.hashCode()}"
+        return textWidthsCache.getOrPut(cacheKey) {
+            getTextWidths(text, style)
+        }
+    }
+
     fun getStartSpacing() = lineCount.count * textWidth("W") + tabWidth * 4
 
-    // text start indent
     fun getEndSpacing() = tabWidth * 4
 
     internal fun measureText(
@@ -635,17 +699,6 @@ class CodeEditorState @RememberInComposition internal constructor(
         )
     }
 
-    /**
-     * Create [TextMeasurer]
-     *
-     * @param cacheSize Capacity of internal cache inside TextMeasurer.
-     * Size unit is the number of unique text layout inputs that are
-     * measured. Value of this parameter highly depends on the consumer
-     * use case. Provide a cache size that is in line with how many distinct
-     * text layouts are going to be calculated by this measurer repeatedly.
-     * If you are animating font attributes, or any other layout affecting input,
-     * cache can be skipped because most repeated measure calls would miss the cache.
-     */
     internal fun <T> T.createTextMeasurer(cacheSize: Int = 8): TextMeasurer where T : DelegatableNode, T : CompositionLocalConsumerModifierNode {
         val fontFamilyResolver = currentValueOf(LocalFontFamilyResolver)
         val density = requireDensity()
@@ -677,35 +730,18 @@ fun rememberCodeEditorState(
 }
 
 @Composable
-fun rememberCodeEditorState(
-    file: KxFile,
-    editable: Boolean = true
-): CodeEditorState {
+fun rememberCodeEditorState(file: KxFile): CodeEditorState {
     val scope = rememberCoroutineScope { Dispatchers.Default }
-
-    val buffer by produceState(EmptyTextBuffer, key1 = file) {
-        value = file.toTextBuffer()
-    }
-
-    return remember(buffer, editable) {
-        CodeEditorState(buffer, editable, scope)
-    }
+    return remember(file) { CodeEditorState(file, scope) }
 }
 
 @Suppress("DEPRECATION")
 @ExperimentalComposeCodeEditorApi
 @Stable
 @RememberInComposition
-// TODO deprecate
-//@Deprecated(
-//    level = DeprecationLevel.WARNING,
-//    message = "It is recommended to use rememberCodeEditorState",
-//    replaceWith = ReplaceWith("rememberCodeEditorState(file)", "com.klyx.editor.compose.rememberCodeEditorState")
-//)
-suspend fun CodeEditorState(file: KxFile): CodeEditorState {
+fun CodeEditorState(file: KxFile): CodeEditorState {
     return CodeEditorState(
-        buffer = file.toTextBuffer(),
-        editable = true,
+        file = file,
         scope = CoroutineScope(Dispatchers.Default) + DefaultMonotonicFrameClock
     )
 }
@@ -714,12 +750,6 @@ suspend fun CodeEditorState(file: KxFile): CodeEditorState {
 @ExperimentalComposeCodeEditorApi
 @Stable
 @RememberInComposition
-// TODO deprecate
-//@Deprecated(
-//    level = DeprecationLevel.WARNING,
-//    message = "It is recommended to use rememberCodeEditorState",
-//    replaceWith = ReplaceWith("rememberCodeEditorState(initialText)", "com.klyx.editor.compose.rememberCodeEditorState")
-//)
 fun CodeEditorState(initialText: String): CodeEditorState {
     return CodeEditorState(
         buffer = initialText.toTextBuffer(),

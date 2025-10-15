@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.dp
 import com.klyx.editor.compose.draw.buildPath
 import com.klyx.editor.compose.renderer.CurrentLineVerticalOffset
+import com.klyx.editor.compose.renderer.TextLineCache
 
 @Stable
 object EditorDefaults {
