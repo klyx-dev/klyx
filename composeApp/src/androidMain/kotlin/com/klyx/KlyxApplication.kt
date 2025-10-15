@@ -53,8 +53,12 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
     @Suppress("KotlinConstantConditions")
     override fun onCreate() {
         super.onCreate()
-        Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
         instance = this
+        Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
+        initKoin(commonModule) {
+            androidLogger()
+            androidContext(this@KlyxApplication)
+        }
 
         try {
             Environment.init()
@@ -70,11 +74,6 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             LoggerConfig.Default = LoggerConfig(
                 minimumLevel = Level.Info
             )
-        }
-
-        initKoin(commonModule) {
-            androidLogger()
-            androidContext(this@KlyxApplication)
         }
 
         FileProviderRegistry.getInstance().addFileProvider(

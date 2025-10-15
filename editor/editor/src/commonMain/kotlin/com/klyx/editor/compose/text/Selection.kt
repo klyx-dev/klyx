@@ -109,7 +109,9 @@ fun Selection.coerceIn(minimumValue: Int, maximumValue: Int): Selection {
     return this
 }
 
-fun TextRange.toSelection() = Selection(start, end)
+fun TextRange.asSelection() = Selection(start, end)
+fun Selection.asTextRange() = TextRange(start, end)
+
 fun IntRange.toSelection() = Selection(first.coerceAtLeast(0), last.coerceAtLeast(0))
 
 private fun packWithCheck(start: Int, end: Int): Long {

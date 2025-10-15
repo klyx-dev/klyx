@@ -19,6 +19,7 @@ import androidx.compose.ui.node.requireDensity
 import androidx.compose.ui.node.requireLayoutDirection
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,6 +48,8 @@ import com.klyx.editor.compose.text.Strings
 import com.klyx.editor.compose.text.TextAction
 import com.klyx.editor.compose.text.TextChange
 import com.klyx.editor.compose.text.asCursor
+import com.klyx.editor.compose.text.asSelection
+import com.klyx.editor.compose.text.asTextRange
 import com.klyx.editor.compose.text.buffer.EmptyTextBuffer
 import com.klyx.editor.compose.text.buffer.PieceTreeTextBuffer
 import com.klyx.editor.compose.text.buffer.toTextBuffer
@@ -154,6 +157,7 @@ class CodeEditorState @RememberInComposition internal constructor(
         get() = ((lineCount * lineHeight) - viewportSize.height / 2f).coerceAtLeast(0f).unaryMinus()
 
     internal val maxScrollOffset get() = Offset(maxScrollX, maxScrollY)
+    internal var composingRegion: TextRange? = null
 
     val eventManager by lazy { EditorEventManager(scope) }
 
@@ -194,8 +198,25 @@ class CodeEditorState @RememberInComposition internal constructor(
         }
     }
 
+    internal fun insertComposingText(composing: String) {
+        composingRegion?.let { range ->
+            insert(composing, range.asSelection())
+        } ?: run {
+            insert(composing)
+        }
+    }
+
+    internal fun setComposingRegion(start: Int, end: Int) {
+        composingRegion = TextRange(start, end)
+    }
+
+    internal fun clearComposingRegion() {
+        composingRegion = null
+    }
+
     internal fun Selection.asRange() = Range(startCursor().toPosition(), endCursor().toPosition())
     internal fun Range.asSelection() = Selection(offsetAt(startPosition.asCursor()), offsetAt(endPosition.asCursor()))
+    internal fun Range.toTextRange() = this.asSelection().asTextRange()
     internal fun Selection.startCursor() = cursorAt(start)
     internal fun Selection.endCursor() = cursorAt(end)
 

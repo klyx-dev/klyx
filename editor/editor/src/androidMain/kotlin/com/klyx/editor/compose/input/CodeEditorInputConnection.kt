@@ -141,12 +141,21 @@ internal class CodeEditorInputConnection(
 
     override fun setComposingRegion(start: Int, end: Int): Boolean {
         println("setComposingRegion: start=$start, end=$end")
-        return false
+        state.setComposingRegion(start, end)
+        return true
     }
 
     override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean {
         println("setComposingText: text=$text, newCursorPosition=$newCursorPosition")
-        return false
+        if (text == null) return false
+
+        val composingText = text.toString()
+        val cursorOffset = state.cursorOffset
+
+        state.clearComposingRegion()
+        state.insertComposingText(composingText)
+        state.setComposingRegion(cursorOffset, cursorOffset + composingText.length)
+        return true
     }
 
     override fun setSelection(start: Int, end: Int): Boolean {
