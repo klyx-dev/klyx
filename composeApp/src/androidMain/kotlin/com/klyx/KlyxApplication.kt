@@ -67,7 +67,10 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             handleUncaughtException(Thread.currentThread(), e)
         }
 
-        launch { redirectPrintlnToFile(Environment.defaultLogsFile()) }
+        launch {
+            Environment.defaultLogsFile().delete()
+            redirectPrintlnToFile(Environment.defaultLogsFile())
+        }
 
         @Suppress("SimplifyBooleanWithConstants")
         if (BuildConfig.BUILD_TYPE == "release") {
