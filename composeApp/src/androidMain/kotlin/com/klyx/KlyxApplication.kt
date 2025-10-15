@@ -179,7 +179,7 @@ private fun redirectPrintlnToFile(logFile: KxFile) {
 
     val fileStream = FileOutputStream(logFile.rawFile(), true)
     val printStream = object : PrintStream(fileStream, true) {
-        override fun println(x: String?) {
+        override fun println(x: Any?) {
             val timestamp = timestampFormat.format(Date())
             val line = "[$timestamp] $x"
             super.println(line)
