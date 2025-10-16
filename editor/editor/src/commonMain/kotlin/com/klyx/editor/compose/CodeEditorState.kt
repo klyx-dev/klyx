@@ -94,6 +94,9 @@ class CodeEditorState @RememberInComposition internal constructor(
         set(value) {
             val newValue = maxOf(minOf(value.value, 40f), 7f)
             _fontSize = newValue.sp
+            invalidateCache()
+            lineLengthCache.clear()
+            invalidateDraw()
         }
 
     var fontFamily
@@ -101,6 +104,7 @@ class CodeEditorState @RememberInComposition internal constructor(
         set(value) {
             _fontFamily = value
             invalidateCache()
+            lineLengthCache.clear()
             invalidateDraw()
         }
 

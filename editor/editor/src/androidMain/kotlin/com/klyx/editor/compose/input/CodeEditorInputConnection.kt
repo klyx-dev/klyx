@@ -94,7 +94,17 @@ internal class CodeEditorInputConnection(
     }
 
     override fun getExtractedText(request: ExtractedTextRequest?, flags: Int): ExtractedText? {
-        println("getExtractedText: request=$request, flags=$flags")
+        println(
+            "getExtractedText: request=${
+                buildString {
+                    appendLine("token=${request?.token}")
+                    appendLine("flags=${request?.flags}")
+                    appendLine("hintMaxLines=${request?.hintMaxLines}")
+                    appendLine("hintMaxChars=${request?.hintMaxChars}")
+                }
+            }, flags=$flags"
+        )
+        if (request == null) return null
         return null
     }
 
