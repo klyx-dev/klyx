@@ -62,8 +62,8 @@ internal class CodeEditorInputConnection(
 
         state.insert(text.toString())
 
-        val newOffset = state.cursorOffset + newCursorPosition.coerceAtLeast(0)
-        state.moveCursorTo(newOffset)
+//        val newOffset = state.cursorOffset + newCursorPosition.coerceAtLeast(0)
+//        state.moveCursorTo(newOffset)
 
         return true
     }
@@ -118,9 +118,9 @@ internal class CodeEditorInputConnection(
     }
 
     override fun getTextAfterCursor(n: Int, flags: Int): CharSequence {
-        val offset = state.cursorOffset
+        val startOffset = state.cursorOffset
 
-        val startOffset = (offset + n).coerceAtLeast(0)
+        val offset = (startOffset + n).coerceAtLeast(0)
         val range = with(state) {
             getTextInRange(
                 Range(
@@ -210,11 +210,11 @@ internal class CodeEditorInputConnection(
 
     override fun setSelection(start: Int, end: Int): Boolean {
         println("setSelection: start=$start, end=$end")
-        if (start == end) {
-            state.collapseSelection()
-        } else {
-            state.select(start, end)
-        }
-        return true
+//        if (start == end) {
+//            state.collapseSelection()
+//        } else {
+//            state.select(start, end)
+//        }
+        return false
     }
 }
