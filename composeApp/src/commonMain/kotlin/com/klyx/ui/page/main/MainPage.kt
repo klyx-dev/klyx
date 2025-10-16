@@ -138,7 +138,7 @@ fun MainPage(
             }
 
             FloatingActionButtonMenu(
-                expanded = fabMenuExpanded,
+                expanded = fabMenuExpanded && !isTabOpen,
                 button = {
                     ToggleFloatingActionButton(
                         modifier = Modifier
