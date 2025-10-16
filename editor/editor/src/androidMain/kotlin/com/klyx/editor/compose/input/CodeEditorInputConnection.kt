@@ -15,7 +15,6 @@ import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.text.Range
-import com.klyx.editor.compose.text.toPosition
 
 internal class CodeEditorInputConnection(
     private val view: View, private val state: CodeEditorState
@@ -102,41 +101,43 @@ internal class CodeEditorInputConnection(
     override fun getHandler(): Handler? = null
 
     override fun getSelectedText(flags: Int): CharSequence? {
-        println("getSelectedText: flags=$flags")
-        return null
+        if (state.selection.collapsed) return null
+        val text = with(state) { getTextInRange(selection.asRange()) }
+        println("getSelectedText: flags=$flags, text=$text")
+        return text
     }
 
     override fun getTextAfterCursor(n: Int, flags: Int): CharSequence {
-        println("getTextAfterCursor: n=$n, flags=$flags")
         val offset = state.cursorOffset
 
         val startOffset = (offset + n).coerceAtLeast(0)
         val range = with(state) {
             getTextInRange(
                 Range(
-                    cursorAt(startOffset).toPosition(),
-                    cursorAt(offset).toPosition()
+                    buffer.positionAt(startOffset),
+                    buffer.positionAt(offset)
                 )
             )
         }
 
+        println("getTextAfterCursor: n=$n, flags=$flags, text=$range")
         return range
     }
 
     override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence {
-        println("getTextBeforeCursor: n=$n, flags=$flags")
         val offset = state.cursorOffset
 
         val startOffset = (offset - n).coerceAtLeast(0)
         val range = with(state) {
             getTextInRange(
                 Range(
-                    cursorAt(startOffset).toPosition(),
-                    cursorAt(offset).toPosition()
+                    buffer.positionAt(startOffset),
+                    buffer.positionAt(offset)
                 )
             )
         }
 
+        println("getTextBeforeCursor: n=$n, flags=$flags, text=$range")
         return range
     }
 
@@ -182,8 +183,7 @@ internal class CodeEditorInputConnection(
         println("setComposingText: text=$text, newCursorPosition=$newCursorPosition")
         if (text == null) return finishComposingText()
 
-        val composingText = text.toString()
-        state.insertComposingText(composingText)
+        state.insertComposingText(text.toString())
 
         val cursorOffset = state.cursorOffset
 
@@ -200,6 +200,11 @@ internal class CodeEditorInputConnection(
 
     override fun setSelection(start: Int, end: Int): Boolean {
         println("setSelection: start=$start, end=$end")
-        return false
+        if (start == end) {
+            state.collapseSelection()
+        } else {
+            state.select(start, end)
+        }
+        return true
     }
 }
