@@ -36,6 +36,7 @@ import arrow.core.getOrElse
 import arrow.core.none
 import com.klyx.core.file.KxFile
 import com.klyx.core.getOrThrow
+import com.klyx.editor.EditorState
 import com.klyx.editor.compose.event.CursorChangeEvent
 import com.klyx.editor.compose.event.EditorEvent
 import com.klyx.editor.compose.event.EditorEventManager

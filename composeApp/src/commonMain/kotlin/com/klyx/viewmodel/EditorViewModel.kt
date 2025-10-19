@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalCodeEditorApi::class)
+
 package com.klyx.viewmodel
 
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +22,11 @@ import com.klyx.core.file.isValidUtf8
 import com.klyx.core.file.sink
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
+import com.klyx.core.settings.SettingsManager
 import com.klyx.core.string
+import com.klyx.editor.ComposeEditorState
+import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
 import com.klyx.extension.api.Worktree
@@ -132,7 +138,11 @@ class EditorViewModel(
                 worktree = worktree,
                 isInternal = isInternal,
                 file = file,
-                editorState = CodeEditorState(file)
+                editorState = if (SettingsManager.settings.value.useComposeEditorInsteadOfSoraEditor) {
+                    ComposeEditorState(CodeEditorState(file))
+                } else {
+                    SoraEditorState(com.klyx.editor.CodeEditorState(file))
+                }
             )
 
             withContext(Dispatchers.Main) {
@@ -233,13 +243,22 @@ class EditorViewModel(
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
 
         return if (tab is Tab.FileTab) {
-            val buffer = tab.editorState.content
+            val state = tab.editorState
             val file = tab.file
 
             if (file.path == "untitled") return false
 
             if (file.canWrite) {
-                buffer.writeToSink(file.sink())
+                when (state) {
+                    is ComposeEditorState -> {
+                        state.state.content.writeToSink(file.sink())
+                    }
+
+                    is SoraEditorState -> {
+                        val content by state.state
+                        file.writeText(content)
+                    }
+                }
                 tab.markAsSaved()
 
                 viewModelScope.launch(Dispatchers.Default) {
@@ -264,7 +283,16 @@ class EditorViewModel(
             val editorState = tab.editorState
 
             try {
-                editorState.content.writeToSink(newFile.sink())
+                when (editorState) {
+                    is ComposeEditorState -> {
+                        editorState.state.content.writeToSink(newFile.sink())
+                    }
+
+                    is SoraEditorState -> {
+                        val text by editorState.state
+                        newFile.writeText(text)
+                    }
+                }
             } catch (e: Exception) {
                 notifier.error(e.message.orEmpty())
                 return false
@@ -295,12 +323,22 @@ class EditorViewModel(
         _state.value.openTabs.forEach { tab ->
             if (tab is Tab.FileTab) {
                 val file = tab.file
-                val buffer = tab.editorState.content
+                val state = tab.editorState
 
                 if (file.path != "untitled") {
                     val saved = try {
-                        buffer.writeToSink(file.sink())
-                        true
+                        when (state) {
+                            is ComposeEditorState -> {
+                                state.state.content.writeToSink(file.sink())
+                                true
+                            }
+
+                            is SoraEditorState -> {
+                                val text by state.state
+                                file.writeText(text)
+                                true
+                            }
+                        }
                     } catch (e: Exception) {
                         notifier.error(e.message.orEmpty())
                         false

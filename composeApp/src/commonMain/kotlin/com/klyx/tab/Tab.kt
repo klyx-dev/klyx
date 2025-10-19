@@ -1,4 +1,5 @@
 @file:Suppress("NOTHING_TO_INLINE")
+@file:OptIn(ExperimentalCodeEditorApi::class)
 
 package com.klyx.tab
 
@@ -9,8 +10,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.klyx.core.file.KxFile
 import com.klyx.core.generateId
-import com.klyx.editor.compose.CodeEditorState
+import com.klyx.editor.ComposeEditorState
+import com.klyx.editor.EditorState
+import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.event.TextChangeEvent
+import com.klyx.editor.event.ContentChangeEvent
 import com.klyx.extension.api.Worktree
 
 typealias TabId = String
@@ -31,7 +36,7 @@ sealed class Tab(
     data class FileTab(
         override val name: String,
         val file: KxFile,
-        val editorState: CodeEditorState,
+        val editorState: EditorState,
         val worktree: Worktree? = null,
         val isInternal: Boolean = false,
         override val id: TabId = generateId()
@@ -40,8 +45,18 @@ sealed class Tab(
         var isModified by mutableStateOf(false)
 
         init {
-            editorState.subscribeEvent<TextChangeEvent> {
-                isModified = true
+            when (editorState) {
+                is ComposeEditorState -> {
+                    editorState.state.subscribeEvent<TextChangeEvent> {
+                        isModified = true
+                    }
+                }
+
+                is SoraEditorState -> {
+                    editorState.state.subscribeEvent<ContentChangeEvent> {
+                        isModified = true
+                    }
+                }
             }
         }
 

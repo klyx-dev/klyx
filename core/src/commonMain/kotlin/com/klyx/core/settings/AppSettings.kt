@@ -69,6 +69,9 @@ data class AppSettings(
     @SerialComment("Whether to show the FPS counter in the UI")
     val showFps: Boolean = false,
 
+    @SerialComment("Use the Compose editor (unstable) instead of the Sora editor")
+    val useComposeEditorInsteadOfSoraEditor: Boolean = false,
+
     @SerialComment(
         """
         Whether to load extensions on app startup or at runtime.

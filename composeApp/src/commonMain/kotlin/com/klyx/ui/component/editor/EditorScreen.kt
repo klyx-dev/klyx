@@ -25,8 +25,11 @@ import com.klyx.core.cmd.command
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
+import com.klyx.core.language
 import com.klyx.core.settings.currentEditorSettings
+import com.klyx.editor.ComposeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.CodeEditor
 import com.klyx.tab.Tab
 import com.klyx.ui.theme.rememberFontFamily
@@ -133,14 +136,31 @@ fun EditorScreen(
                         }
 
                         //key(tab.file.absolutePath) {
-                        CodeEditor(
-                            modifier = Modifier.fillMaxSize(),
-                            state = tab.editorState,
-                            fontFamily = fontFamily,
-                            fontSize = editorSettings.fontSize.sp,
-                            editable = !tab.isInternal,
-                            pinLineNumber = editorSettings.pinLineNumbers
-                        )
+                        when (tab.editorState) {
+                            is ComposeEditorState -> {
+                                CodeEditor(
+                                    modifier = Modifier.fillMaxSize(),
+                                    state = tab.editorState.state,
+                                    fontFamily = fontFamily,
+                                    fontSize = editorSettings.fontSize.sp,
+                                    editable = !tab.isInternal,
+                                    pinLineNumber = editorSettings.pinLineNumbers
+                                )
+                            }
+
+                            is SoraEditorState -> {
+                                com.klyx.editor.CodeEditor(
+                                    modifier = Modifier.fillMaxSize(),
+                                    state = tab.editorState.state,
+                                    worktree = tab.worktree,
+                                    fontFamily = fontFamily,
+                                    fontSize = editorSettings.fontSize.sp,
+                                    editable = !tab.isInternal,
+                                    pinLineNumber = editorSettings.pinLineNumbers,
+                                    language = tab.file.language().lowercase()
+                                )
+                            }
+                        }
                         //}
                     }
 
