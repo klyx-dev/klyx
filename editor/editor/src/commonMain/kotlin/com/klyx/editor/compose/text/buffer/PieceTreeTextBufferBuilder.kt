@@ -5,7 +5,7 @@ import com.klyx.editor.compose.text.LineBreak
 import com.klyx.editor.compose.text.Strings
 import com.klyx.editor.compose.text.codePointAt
 
-class PieceTreeTextBufferBuilder(sequence: CharSequence? = null) {
+internal class PieceTreeTextBufferBuilder(sequence: CharSequence? = null) {
     private val chunks = mutableListOf<TextBuffer>()
 
     private var byteOrderMark = ""

@@ -6,6 +6,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -41,6 +44,10 @@ class TestActivity : KlyxActivity() {
                             fontFamily = rememberFontFamily("JetBrains Mono"),
                             state = remember { CodeEditorState("Yyoyooyooyoyoyoyo\nyoyoyoy\nyoyoyoyoyo\n".repeat(200)) }
                         )
+
+                        BasicText("")
+                        BasicTextField("", onValueChange = {})
+                        SelectionContainer() { }
 
                         Box(
                             Modifier.fillMaxWidth(),

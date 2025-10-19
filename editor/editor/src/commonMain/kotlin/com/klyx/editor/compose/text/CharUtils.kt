@@ -1,4 +1,4 @@
-@file:JvmName("CharUtils")
+@file:JvmName("CharUtilsKt")
 
 package com.klyx.editor.compose.text
 
@@ -83,8 +83,7 @@ private fun codePointAt1(seq: CharSequence, index: Int): Int {
     return c1.code
 }
 
-@JvmName("getCodePointAt")
-fun CharSequence.codePointAt(index: Int) = codePointAt1(this, index)
+//fun CharSequence.codePointAt(index: Int) = codePointAt1(this, index)
 fun Char.Companion.codePointAt(seq: CharSequence, index: Int) = codePointAt1(seq, index)
 
 private fun codePointToChars(codePoint: Int): CharArray {

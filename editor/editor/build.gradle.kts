@@ -32,6 +32,13 @@ kotlin {
     applyDefaultHierarchyTemplate()
 
     sourceSets {
+        val nonAndroidMain by creating {
+            dependsOn(commonMain.get())
+        }
+
+        iosMain.get().dependsOn(nonAndroidMain)
+        jvmMain.get().dependsOn(nonAndroidMain)
+
         commonMain {
             dependencies {
                 implementation(libs.koin.core)
@@ -84,6 +91,8 @@ kotlin {
 
                 implementation(libs.lsp4j)
                 implementation(libs.lsp4j.jsonrpc)
+
+                implementation(libs.androidx.emoji2)
 
                 //implementation(libs.ktreesitter)
             }

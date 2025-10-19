@@ -1,25 +1,61 @@
 package com.klyx.editor.compose.input
 
+import android.content.Context
+import android.graphics.RectF
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.text.TextUtils
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.CompletionInfo
 import android.view.inputmethod.CorrectionInfo
+import android.view.inputmethod.CursorAnchorInfo
+import android.view.inputmethod.EditorBoundsInfo
 import android.view.inputmethod.ExtractedText
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
 import android.view.inputmethod.InputContentInfo
+import android.view.inputmethod.InputMethodManager
+import androidx.compose.ui.text.substring
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.editor.compose.CodeEditorState
-import com.klyx.editor.compose.text.Range
+import com.klyx.editor.compose.event.CursorChangeEvent
+import com.klyx.editor.compose.event.SelectionChangeEvent
 
 internal class CodeEditorInputConnection(
-    private val view: View, private val state: CodeEditorState
+    private val view: View,
+    private val state: CodeEditorState
 ) : InputConnection {
+
+    private val handler = EditorInputHandler("CodeEditorInputConnection")
     private val context = view.context
+    private val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+    init {
+        state.subscribeEvent<SelectionChangeEvent> { event ->
+            val (start, end) = event.selectionRange.start to event.selectionRange.end
+            val composingRange = state.composingRegion
+            imm.updateSelection(view, start, end, composingRange?.start ?: -1, composingRange?.end ?: -1)
+        }
+
+        state.subscribeEvent<CursorChangeEvent> { event ->
+            val info = CursorAnchorInfo.Builder().apply {
+                setSelectionRange(event.newCursorOffset, event.newCursorOffset)
+                state.composingRegion?.let { range ->
+                    setComposingText(range.start, state.content.substring(range))
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    setEditorBoundsInfo(EditorBoundsInfo.Builder().apply {
+                        val bounds = RectF(0f, 0f, state.viewportSize.width, state.viewportSize.height)
+                        setEditorBounds(bounds)
+                    }.build())
+                }
+            }.build()
+            imm.updateCursorAnchorInfo(view, info)
+        }
+    }
 
     override fun beginBatchEdit(): Boolean {
         return false
@@ -31,6 +67,7 @@ internal class CodeEditorInputConnection(
 
     override fun closeConnection() {
         finishComposingText()
+        endBatchEdit()
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             setImeConsumesInput(false)
@@ -90,65 +127,49 @@ internal class CodeEditorInputConnection(
 
     override fun getCursorCapsMode(reqModes: Int): Int {
         println("getCursorCapsMode: reqModes=$reqModes")
-        return 0
+        val (line, column) = state.cursor
+        val text = state.content.lineText(line)
+        return TextUtils.getCapsMode(text, column, reqModes)
     }
 
     override fun getExtractedText(request: ExtractedTextRequest?, flags: Int): ExtractedText? {
         println(
-            "getExtractedText: request=${
+            "getExtractedText: request=[${
                 buildString {
-                    appendLine("token=${request?.token}")
-                    appendLine("flags=${request?.flags}")
-                    appendLine("hintMaxLines=${request?.hintMaxLines}")
-                    appendLine("hintMaxChars=${request?.hintMaxChars}")
+                    append("token=${request?.token}, ")
+                    append("flags=${request?.flags}, ")
+                    append("hintMaxLines=${request?.hintMaxLines}, ")
+                    append("hintMaxChars=${request?.hintMaxChars}")
                 }
-            }, flags=$flags"
+            }], flags=$flags"
         )
         if (request == null) return null
         return null
     }
 
-    override fun getHandler(): Handler? = null
+    override fun getHandler(): Handler = handler
 
     override fun getSelectedText(flags: Int): CharSequence? {
         if (state.selection.collapsed) return null
-        val text = with(state) { getTextInRange(selection.asRange()) }
+        val text = state.getSelectedText()
         println("getSelectedText: flags=$flags, text=$text")
         return text
     }
 
     override fun getTextAfterCursor(n: Int, flags: Int): CharSequence {
         val startOffset = state.cursorOffset
-
-        val offset = (startOffset + n).coerceAtLeast(0)
-        val range = with(state) {
-            getTextInRange(
-                Range(
-                    buffer.positionAt(startOffset),
-                    buffer.positionAt(offset)
-                )
-            )
-        }
-
-        println("getTextAfterCursor: n=$n, flags=$flags, text=$range")
-        return range
+        val endOffset = (startOffset + n).coerceAtLeast(0).coerceAtMost(state.content.length)
+        val text = state.content.substring(startOffset, endOffset)
+        println("getTextAfterCursor: n=$n, flags=$flags, text=$text")
+        return text
     }
 
     override fun getTextBeforeCursor(n: Int, flags: Int): CharSequence {
-        val offset = state.cursorOffset
-
-        val startOffset = (offset - n).coerceAtLeast(0)
-        val range = with(state) {
-            getTextInRange(
-                Range(
-                    buffer.positionAt(startOffset),
-                    buffer.positionAt(offset)
-                )
-            )
-        }
-
-        println("getTextBeforeCursor: n=$n, flags=$flags, text=$range")
-        return range
+        val endOffset = state.cursorOffset
+        val startOffset = (endOffset - n).coerceAtLeast(0)
+        val text = state.content.substring(startOffset, endOffset)
+        println("getTextBeforeCursor: n=$n, flags=$flags, text=$text")
+        return text
     }
 
     override fun performContextMenuAction(id: Int): Boolean {

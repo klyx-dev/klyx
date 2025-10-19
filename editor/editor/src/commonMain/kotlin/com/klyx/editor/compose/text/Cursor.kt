@@ -56,6 +56,8 @@ value class Cursor internal constructor(private val packedValue: Long) : Compara
     }
 }
 
+inline val Cursor.isAtStart: Boolean get() = line == 1 && column == 0
+
 @Stable
 internal fun Cursor(position: Position) = Cursor(position.lineNumber, position.column - 1)
 
@@ -66,7 +68,7 @@ fun Cursor() = Cursor(1, 0)
 internal fun Cursor.toPosition() = Position(line, column + 1)
 
 @Stable
-internal fun Position.asCursor() = Cursor(this)
+internal fun Position.toCursor() = Cursor(this)
 
 private fun packWithCheck(line: Int, column: Int): Long {
     requirePrecondition(line >= 1 && column >= 0) {

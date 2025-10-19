@@ -3,6 +3,7 @@ package com.klyx.editor.compose.renderer
 import androidx.collection.LruCache
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -11,8 +12,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
+import androidx.compose.ui.node.DelegatingNode
 import androidx.compose.ui.node.DrawModifierNode
+import androidx.compose.ui.node.GlobalPositionAwareModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.ObserverModifierNode
 import androidx.compose.ui.node.currentValueOf
@@ -21,6 +26,7 @@ import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.node.requireDensity
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -32,11 +38,18 @@ import com.klyx.core.LocalPlatformContext
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.EditorColorScheme
 import com.klyx.editor.compose.LocalEditorColorScheme
+import com.klyx.editor.compose.checkPreconditionNotNull
 import com.klyx.editor.compose.getOrPut
+import com.klyx.editor.compose.selection.EditorSelectionState
+import com.klyx.editor.compose.selection.PlatformSelectionBehaviors
+import com.klyx.editor.compose.selection.contextmenu.modifier.TextContextMenuToolbarHandlerNode
+import com.klyx.editor.compose.selection.contextmenu.modifier.ToolbarRequester
+import com.klyx.editor.compose.selection.contextmenu.modifier.translateRootToDestination
 import com.klyx.editor.compose.text.Cursor
-import com.klyx.editor.compose.text.Selection
-
-internal typealias OnDraw = DrawScope.() -> Unit
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 internal const val CurrentLineVerticalOffset = 2f
 internal const val LineDividerWidth = Stroke.HairlineWidth
@@ -55,26 +68,159 @@ internal fun invalidateCache() {
 }
 
 private class EditorRendererModifierNode(
-    var state: CodeEditorState,
-    var onDraw: OnDraw,
-    var showLineNumber: Boolean,
-    var pinLineNumber: Boolean,
-    var fontFamily: FontFamily,
-    var fontSize: TextUnit,
-) : Modifier.Node(), DrawModifierNode, CompositionLocalConsumerModifierNode, ObserverModifierNode {
+    private var state: CodeEditorState,
+    private var showLineNumber: Boolean,
+    private var pinLineNumber: Boolean,
+    private var fontFamily: FontFamily,
+    private var fontSize: TextUnit,
+    private var selectionState: EditorSelectionState,
+    private var toolbarRequester: ToolbarRequester,
+    private var platformSelectionBehaviors: PlatformSelectionBehaviors?
+) : DelegatingNode(),
+    DrawModifierNode,
+    CompositionLocalConsumerModifierNode,
+    ObserverModifierNode,
+    GlobalPositionAwareModifierNode {
+
+    override val shouldAutoInvalidate: Boolean = false
 
     private val textMeasurer by lazy { with(state) { createTextMeasurer() } }
     private val textRenderer by lazy {
-        TextRenderer(context = currentValueOf(LocalPlatformContext), density = requireDensity())
+        PlatformTextRenderer(context = currentValueOf(LocalPlatformContext), density = requireDensity())
     }
 
     private var cachedMaxLineWidth: Float = 0f
     private var cachedLineCountDigits: Int = 0
+    private var cachedColorScheme: EditorColorScheme? = null
+
+    private val maxLineWidth: Float
+        get() {
+            val digits = state.lineCount.toString().length
+            if (digits != cachedLineCountDigits) {
+                cachedLineCountDigits = digits
+                cachedMaxLineWidth = LineWidthCache.getOrPut(state.lineCount) {
+                    textRenderer.measureText(state.lineCount.toString(), state.textStyle)
+                }
+            }
+            return cachedMaxLineWidth
+        }
+
+    private val textContextMenuToolbarHandlerNode = delegate(
+        TextContextMenuToolbarHandlerNode(
+            requester = toolbarRequester,
+            onShow = {
+                selectionState.updateClipboardEntry()
+                platformSelectionBehaviors?.onShowSelectionToolbar(
+                    text = state.content,
+                    selection = state.selection
+                )
+                selectionState.textToolbarShown = true
+            },
+            onHide = { selectionState.textToolbarShown = false },
+            computeContentBounds = { destinationCoordinates ->
+                val rootBounds = selectionState.derivedVisibleContentBounds ?: Rect.Zero
+                val localCoordinates = checkPreconditionNotNull(state.editorLayoutCoordinates)
+                translateRootToDestination(
+                    rootContentBounds = rootBounds,
+                    localCoordinates = localCoordinates,
+                    destinationCoordinates = destinationCoordinates,
+                )
+            }
+        )
+    )
+
+    private val pointerInputNode = delegate(
+        SuspendingPointerInputModifierNode {
+            coroutineScope {
+                with(selectionState) {
+                    launch(start = CoroutineStart.UNDISPATCHED) { detectTouchMode() }
+                    //launch(start = CoroutineStart.UNDISPATCHED) { detectTextFieldTapGestures() }
+                    launch(start = CoroutineStart.UNDISPATCHED) {
+                        textFieldSelectionGestures(requestFocus = {})
+                    }
+                }
+            }
+        }
+    )
+
+    private var toolbarAndHandlesVisibilityObserverJob: Job? = null
 
     override fun ContentDrawScope.draw() {
+        if (!isAttached) return
+
         state.viewportSize = size
         clipRect { drawEditor() }
         drawContent()
+    }
+
+    fun update(
+        state: CodeEditorState,
+        showLineNumber: Boolean,
+        pinLineNumber: Boolean,
+        fontFamily: FontFamily,
+        fontSize: TextUnit,
+        selectionState: EditorSelectionState,
+        toolbarRequester: ToolbarRequester,
+        platformSelectionBehaviors: PlatformSelectionBehaviors?
+    ) {
+        val previousSelectionState = this.selectionState
+
+        var changed = false
+        var fontChanged = false
+
+        if (this.state != state) {
+            this.state = state
+            changed = true
+        }
+
+        if (this.showLineNumber != showLineNumber) {
+            this.showLineNumber = showLineNumber
+            changed = true
+        }
+
+        if (this.pinLineNumber != pinLineNumber) {
+            this.pinLineNumber = pinLineNumber
+            changed = true
+        }
+
+        if (this.fontFamily != fontFamily) {
+            this.fontFamily = fontFamily
+            changed = true
+            fontChanged = true
+        }
+
+        if (this.fontSize != fontSize) {
+            this.fontSize = fontSize
+            changed = true
+            fontChanged = true
+        }
+
+        if (fontChanged) {
+            cachedLineCountDigits = 0
+            cachedMaxLineWidth = 0f
+        }
+
+        this.selectionState = selectionState
+        this.toolbarRequester = toolbarRequester
+        this.platformSelectionBehaviors = platformSelectionBehaviors
+        textContextMenuToolbarHandlerNode.update(toolbarRequester)
+
+        if (changed && isAttached) {
+            updateEditorState()
+            invalidateDraw()
+        }
+
+        if (selectionState != previousSelectionState) {
+            pointerInputNode.resetPointerInputHandler()
+
+            if (toolbarAndHandlesVisibilityObserverJob != null) {
+                toolbarAndHandlesVisibilityObserverJob?.cancel()
+                toolbarAndHandlesVisibilityObserverJob =
+                    coroutineScope.launch {
+                        selectionState.startToolbarAndHandlesVisibilityObserver()
+                    }
+            }
+        }
     }
 
     private fun updateEditorState() {
@@ -89,20 +235,14 @@ private class EditorRendererModifierNode(
         state.pinLineNumber = pinLineNumber
     }
 
-    private val maxLineWidth: Float
-        get() {
-            val digits = state.lineCount.toString().length
-            if (digits != cachedLineCountDigits) {
-                cachedLineCountDigits = digits
-                cachedMaxLineWidth = LineWidthCache.getOrPut(state.lineCount) {
-                    textRenderer.measureText(state.lineCount.toString(), state.textStyle)
-                }
-            }
-            return cachedMaxLineWidth
-        }
-
     private fun DrawScope.drawEditor() {
         val colorScheme = currentValueOf(LocalEditorColorScheme)
+
+        if (cachedColorScheme != colorScheme) {
+            cachedColorScheme = colorScheme
+            TextLineCache.evictAll()
+        }
+
         val lineHeight = state.lineHeight
         val scrollY = -state.scrollY
         val maxLine = state.lineCount
@@ -116,17 +256,25 @@ private class EditorRendererModifierNode(
         val visibleEnd = minOf(maxLine, ((scrollY + size.height) / lineHeight).toInt() + 1 + BUFFER_LINES)
         val visibleRange = visibleStart..visibleEnd
 
-        if (selection.collapsed) drawCurrentLineBackground(colorScheme, lineHeight, cursor, visibleRange)
-        if (!selection.collapsed) drawSelection(
-            selection = state.selection,
-            colorScheme = colorScheme,
-            lineHeight = lineHeight,
-            leftOffset = leftOffset,
-            visibleRange = visibleRange
-        )
-        if (showLineNumber) drawLineNumbersBackground(lineNumberWidth + LinePadding, colorScheme)
+        if (selection.collapsed) {
+            drawCurrentLineBackground(colorScheme, lineHeight, cursor, visibleRange)
+        }
 
-        drawVisibleLines(visibleRange, leftOffset, lineNumberWidth, colorScheme)
+        if (!selection.collapsed) {
+            drawSelection(
+                selection = selection,
+                colorScheme = colorScheme,
+                lineHeight = lineHeight,
+                leftOffset = leftOffset,
+                visibleRange = visibleRange
+            )
+        }
+
+        if (showLineNumber) {
+            drawLineNumbersBackground(lineNumberWidth + LinePadding, colorScheme)
+        }
+
+        drawTextLines(visibleRange, leftOffset, lineNumberWidth, colorScheme)
     }
 
     private fun DrawScope.drawCurrentLineBackground(
@@ -162,7 +310,7 @@ private class EditorRendererModifierNode(
         }
     }
 
-    private fun DrawScope.drawVisibleLines(
+    private fun DrawScope.drawTextLines(
         range: IntRange,
         leftOffset: Float,
         lineNumberWidth: Float,
@@ -217,7 +365,7 @@ private class EditorRendererModifierNode(
     }
 
     private fun DrawScope.drawSelection(
-        selection: Selection,
+        selection: TextRange,
         colorScheme: EditorColorScheme,
         lineHeight: Float,
         leftOffset: Float,
@@ -276,53 +424,80 @@ private class EditorRendererModifierNode(
         }
         updateEditorState()
         onObservedReadsChanged()
+
+        if (toolbarAndHandlesVisibilityObserverJob == null) {
+            toolbarAndHandlesVisibilityObserverJob =
+                coroutineScope.launch {
+                    selectionState.startToolbarAndHandlesVisibilityObserver()
+                }
+        }
     }
 
     override fun onDetach() {
         state.textMeasurer = none()
+        state.textRenderer = none()
+        state.invalidateDrawCallback = {}
     }
 
     override fun onObservedReadsChanged() {
-        invalidateCache()
+        if (!isAttached) return
+        invalidateCache().also {
+            cachedLineCountDigits = 0
+            cachedMaxLineWidth = 0f
+        }
         invalidateDraw()
+    }
+
+    override fun onGloballyPositioned(coordinates: LayoutCoordinates) {
+        state.editorLayoutCoordinates = coordinates
     }
 }
 
 private data class EditorRendererModifierNodeElement(
     private val state: CodeEditorState,
-    private val onDraw: OnDraw,
     private val showLineNumber: Boolean,
     private val pinLineNumber: Boolean,
     private val fontFamily: FontFamily,
-    private val fontSize: TextUnit
+    private val fontSize: TextUnit,
+    private val selectionState: EditorSelectionState,
+    private val toolbarRequester: ToolbarRequester,
+    private val platformSelectionBehaviors: PlatformSelectionBehaviors?
 ) : ModifierNodeElement<EditorRendererModifierNode>() {
 
     override fun InspectorInfo.inspectableProperties() {
         name = "renderEditor"
         properties["state"] = state
-        properties["onDraw"] = onDraw
         properties["showLineNumber"] = showLineNumber
         properties["pinLineNumber"] = pinLineNumber
         properties["fontFamily"] = fontFamily
         properties["fontSize"] = fontSize
+        properties["selectionState"] = selectionState
+        properties["toolbarRequester"] = toolbarRequester
+        properties["platformSelectionBehaviors"] = platformSelectionBehaviors
     }
 
     override fun create() = EditorRendererModifierNode(
         state = state,
-        onDraw = onDraw,
         showLineNumber = showLineNumber,
         pinLineNumber = pinLineNumber,
         fontFamily = fontFamily,
-        fontSize = fontSize
+        fontSize = fontSize,
+        selectionState = selectionState,
+        toolbarRequester = toolbarRequester,
+        platformSelectionBehaviors = platformSelectionBehaviors
     )
 
     override fun update(node: EditorRendererModifierNode) {
-        node.state = state
-        node.onDraw = onDraw
-        node.showLineNumber = showLineNumber
-        node.pinLineNumber = pinLineNumber
-        node.fontFamily = fontFamily
-        node.fontSize = fontSize
+        node.update(
+            state = state,
+            showLineNumber = showLineNumber,
+            pinLineNumber = pinLineNumber,
+            fontFamily = fontFamily,
+            fontSize = fontSize,
+            selectionState = selectionState,
+            toolbarRequester = toolbarRequester,
+            platformSelectionBehaviors = platformSelectionBehaviors
+        )
     }
 }
 
@@ -332,12 +507,16 @@ internal fun Modifier.renderEditor(
     pinLineNumber: Boolean,
     fontFamily: FontFamily,
     fontSize: TextUnit,
-    onDraw: OnDraw = {}
+    selectionState: EditorSelectionState,
+    toolbarRequester: ToolbarRequester,
+    platformSelectionBehaviors: PlatformSelectionBehaviors?
 ) = this then EditorRendererModifierNodeElement(
     state = state,
-    onDraw = onDraw,
     showLineNumber = showLineNumber,
     pinLineNumber = pinLineNumber,
     fontFamily = fontFamily,
-    fontSize = fontSize
+    fontSize = fontSize,
+    selectionState = selectionState,
+    toolbarRequester = toolbarRequester,
+    platformSelectionBehaviors = platformSelectionBehaviors
 )

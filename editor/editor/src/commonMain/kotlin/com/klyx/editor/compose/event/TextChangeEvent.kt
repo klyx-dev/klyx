@@ -1,10 +1,10 @@
 package com.klyx.editor.compose.event
 
+import androidx.compose.ui.text.TextRange
 import com.klyx.editor.compose.text.Cursor
-import com.klyx.editor.compose.text.Selection
 
 data class TextChangeEvent(
-    val range: Selection,
+    val range: TextRange,
     override val cursor: Cursor,
     val changedText: String
 ) : EditorEvent

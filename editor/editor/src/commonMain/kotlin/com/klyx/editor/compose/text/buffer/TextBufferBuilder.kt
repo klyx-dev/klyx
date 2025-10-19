@@ -15,7 +15,7 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 @OptIn(ExperimentalContracts::class)
-inline fun buildTextBuffer(
+internal inline fun buildTextBuffer(
     lineBreak: LineBreak = LineBreak.LF,
     normalizeLineBreaks: Boolean = true,
     builderAction: TextBufferBuilder.() -> Unit
@@ -25,20 +25,20 @@ inline fun buildTextBuffer(
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun buildTextBuffer(
+internal inline fun buildTextBuffer(
     sequence: CharSequence,
     lineBreak: LineBreak = LineBreak.LF,
     normalizeLineBreaks: Boolean = true
 ) = PieceTreeTextBufferBuilder(sequence).build(lineBreak, normalizeLineBreaks)
 
-fun CharSequence.toTextBuffer(
+internal fun CharSequence.toTextBuffer(
     lineBreak: LineBreak = LineBreak.LF,
     normalizeLineBreaks: Boolean = true
 ) = buildTextBuffer(this, lineBreak, normalizeLineBreaks)
 
-val EmptyTextBuffer = PieceTreeTextBufferBuilder().build()
+internal val EmptyTextBuffer = PieceTreeTextBufferBuilder().build()
 
-suspend fun KxFile.toTextBuffer(
+internal suspend fun KxFile.toTextBuffer(
     lineBreak: LineBreak = LineBreak.LF,
     normalizeLineBreaks: Boolean = true
 ) = withContext(Dispatchers.IO) {

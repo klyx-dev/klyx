@@ -23,7 +23,6 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.string
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
-import com.klyx.editor.compose.text.buffer.writeToSink
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.parentAsWorktree
 import com.klyx.res.Res.string
@@ -234,7 +233,7 @@ class EditorViewModel(
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
 
         return if (tab is Tab.FileTab) {
-            val buffer = tab.editorState.buffer
+            val buffer = tab.editorState.content
             val file = tab.file
 
             if (file.path == "untitled") return false
@@ -265,7 +264,7 @@ class EditorViewModel(
             val editorState = tab.editorState
 
             try {
-                editorState.buffer.writeToSink(newFile.sink())
+                editorState.content.writeToSink(newFile.sink())
             } catch (e: Exception) {
                 notifier.error(e.message.orEmpty())
                 return false
@@ -296,7 +295,7 @@ class EditorViewModel(
         _state.value.openTabs.forEach { tab ->
             if (tab is Tab.FileTab) {
                 val file = tab.file
-                val buffer = tab.editorState.buffer
+                val buffer = tab.editorState.content
 
                 if (file.path != "untitled") {
                     val saved = try {

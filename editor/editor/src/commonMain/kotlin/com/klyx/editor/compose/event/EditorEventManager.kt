@@ -1,8 +1,5 @@
 package com.klyx.editor.compose.event
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import com.klyx.core.atomic.atomicMapOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,12 +23,12 @@ class EditorEventManager internal constructor(
     private val eventChannels = atomicMapOf<KClass<out EditorEvent>, Channel<EditorEvent>>()
     private val eventFlows = atomicMapOf<KClass<out EditorEvent>, SharedFlow<EditorEvent>>()
 
-    suspend fun post(event: EditorEvent) {
+    suspend fun <E : EditorEvent> post(event: E) {
         val clazz = event::class
         getOrCreateChannel(clazz).send(event)
     }
 
-    fun postSync(event: EditorEvent) {
+    fun <E : EditorEvent> postSync(event: E) {
         scope.launch { post(event) }
     }
 

@@ -7,11 +7,14 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.annotation.RememberInComposition
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatableNode
 import androidx.compose.ui.node.currentValueOf
@@ -22,7 +25,9 @@ import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.ResolvedTextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.substring
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
@@ -31,53 +36,56 @@ import arrow.core.getOrElse
 import arrow.core.none
 import com.klyx.core.file.KxFile
 import com.klyx.core.getOrThrow
+import com.klyx.editor.compose.event.CursorChangeEvent
 import com.klyx.editor.compose.event.EditorEvent
 import com.klyx.editor.compose.event.EditorEventManager
+import com.klyx.editor.compose.event.SelectionChangeEvent
 import com.klyx.editor.compose.event.TextChangeEvent
 import com.klyx.editor.compose.renderer.LineDividerWidth
 import com.klyx.editor.compose.renderer.LinePadding
 import com.klyx.editor.compose.renderer.LineWidthCache
+import com.klyx.editor.compose.renderer.PlatformTextRenderer
 import com.klyx.editor.compose.renderer.SpacingAfterLineBackground
-import com.klyx.editor.compose.renderer.TextRenderer
 import com.klyx.editor.compose.renderer.invalidateCache
 import com.klyx.editor.compose.scroll.ScrollState
-import com.klyx.editor.compose.text.ContentChange
+import com.klyx.editor.compose.selection.isOffsetAnEmptyLine
+import com.klyx.editor.compose.text.CharUtils
+import com.klyx.editor.compose.text.Content
+import com.klyx.editor.compose.text.ContentChangeCallback
+import com.klyx.editor.compose.text.ContentChangeList
 import com.klyx.editor.compose.text.Cursor
-import com.klyx.editor.compose.text.Range
-import com.klyx.editor.compose.text.ReverseEditOperation
-import com.klyx.editor.compose.text.Selection
-import com.klyx.editor.compose.text.SingleEditOperation
-import com.klyx.editor.compose.text.Strings
-import com.klyx.editor.compose.text.TextAction
-import com.klyx.editor.compose.text.TextChange
-import com.klyx.editor.compose.text.asCursor
-import com.klyx.editor.compose.text.asSelection
-import com.klyx.editor.compose.text.asTextRange
-import com.klyx.editor.compose.text.buffer.EmptyTextBuffer
-import com.klyx.editor.compose.text.buffer.PieceTreeTextBuffer
 import com.klyx.editor.compose.text.buffer.toTextBuffer
-import com.klyx.editor.compose.text.toPosition
-import com.klyx.editor.compose.text.toSelection
+import com.klyx.editor.compose.text.emptyContent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlin.jvm.JvmName
 import kotlin.math.log10
 
 @Stable
 @Suppress("VariableNaming", "PropertyName")
 class CodeEditorState @RememberInComposition internal constructor(
-    var buffer: PieceTreeTextBuffer = EmptyTextBuffer,
+    content: Content,
+    @PublishedApi
     internal val editable: Boolean,
     private val scope: CoroutineScope
-) {
+) : ContentChangeCallback {
+
+    internal val undoRedoManager = UndoRedoManager()
+
+    var content = content
+        private set(value) {
+            value.state = this
+            value.contentChangeCallback = this
+            value.setDefaultUndoRedoManager(undoRedoManager)
+            field = value
+        }
+
     private val mutex = Mutex()
     private val charBreakIterator = BreakIterator.makeCharacterInstance()
 
@@ -110,7 +118,7 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     internal var colorScheme = DefaultEditorColorScheme
     internal var textMeasurer: Option<TextMeasurer> = none()
-    internal var textRenderer: Option<TextRenderer> = none()
+    internal var textRenderer: Option<PlatformTextRenderer> = none()
 
     internal val textStyle
         get() = TextStyle.Default.copy(
@@ -119,12 +127,13 @@ class CodeEditorState @RememberInComposition internal constructor(
             color = colorScheme.foreground,
         )
 
-    val lineBreak get() = buffer.lineBreak
-    val lineCount get() = buffer.lineCount
-    val bufferLength get() = buffer.length
+    val lineCount get() = content.lineCount
 
     var cursor by mutableStateOf(Cursor.Start)
-    var selection by mutableStateOf(Selection.Zero)
+        private set
+    @set:JvmName("setSelectionInternal")
+    var selection by mutableStateOf(TextRange.Zero)
+        private set
 
     val selectionStart get() = cursorAt(selection.min)
     val selectionEnd get() = cursorAt(selection.max)
@@ -139,15 +148,14 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     internal var invalidateDrawCallback: InvalidateDrawCallback = {}
     internal var cursorAlpha by mutableStateOf(1f)
+    internal var cursorRect = Rect.Zero
     internal val scrollState = ScrollState(0f, 0f)
-    internal val undoRedoManager = UndoRedoManager()
+
+    internal var editorLayoutCoordinates: LayoutCoordinates? by mutableStateOf(null, neverEqualPolicy())
 
     internal var viewportSize = Size.Zero
     internal var showLineNumber: Boolean = true
     internal var pinLineNumber: Boolean = true
-
-    private val mergeTextChanges = mutableListOf<TextChange>()
-    private var mergeJob: Job? = null
 
     private var cachedMaxLineLength: Int = 0
     private var maxLineLengthDirty: Boolean = true
@@ -184,9 +192,9 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     val eventManager by lazy { EditorEventManager(scope) }
 
-    internal constructor(file: KxFile, scope: CoroutineScope) : this(EmptyTextBuffer, true, scope) {
+    internal constructor(file: KxFile, scope: CoroutineScope) : this(emptyContent(), true, scope) {
         scope.launch(Dispatchers.IO) {
-            buffer = file.toTextBuffer()
+            content = Content(file.toTextBuffer())
             isBufferLoading = false
             maxLineLengthDirty = true
         }
@@ -240,49 +248,48 @@ class CodeEditorState @RememberInComposition internal constructor(
         return eventManager.subscribe(dispatcher, onEvent)
     }
 
-    internal fun insert(text: String, range: Range) {
+    suspend fun <E : EditorEvent> postEvent(event: E) = eventManager.post(event)
+    fun postEventSync(event: EditorEvent) = eventManager.postSync(event)
+
+    fun getSelectedText() = content.substring(selection)
+
+    fun insert(text: CharSequence, range: TextRange = this.selection) {
         if (editable) {
-            applyEdits(listOf(SingleEditOperation(range, text)))
+            content.edit {
+                if (range.collapsed) {
+                    insert(text)
+                } else {
+                    insert(text, range)
+                    collapseSelection()
+                }
+            }
         }
     }
 
-    internal fun delete(range: Range) {
-        if (editable && range.isNotEmpty()) {
-            applyEdits(listOf(SingleEditOperation(range, null)))
+    fun delete(range: TextRange = this.selection) {
+        if (!editable) return
+
+        content.edit {
+            if (range.collapsed) {
+                deleteBackward()
+            } else {
+                delete(range)
+                collapseSelection()
+            }
         }
     }
 
-    fun insert(text: String, selection: Selection = this.selection) {
-        if (selection.collapsed) {
-            insert(text, TextAction.Insert.range())
-        } else {
-            insert(text, selection.asRange())
-            collapseSelection()
-        }
-    }
-
-    fun delete(selection: Selection = this.selection) {
-        if (selection.collapsed) {
-            delete(TextAction.Delete.range())
-        } else {
-            delete(selection.asRange())
-            collapseSelection()
-        }
-    }
+    fun replaceSelectedText(newText: CharSequence) = insert(newText, range = selection)
+    fun deleteSelectedText() = delete(range = selection)
 
     internal fun insertComposingText(composing: String) {
-        val currentRange = composingRegion
-
-        val replaceRange = currentRange?.asSelection()?.asRange()
-            ?: (if (!selection.collapsed) selection.asRange() else Range(cursor.toPosition()))
-
+        val replaceRange = composingRegion ?: if (!selection.collapsed) selection else TextRange(cursorOffset)
         insert(composing, replaceRange)
 
-        val newStartOffset = offsetAt(replaceRange.startPosition.asCursor())
+        val newStartOffset = replaceRange.start
         val newEndOffset = newStartOffset + composing.length
 
         composingRegion = TextRange(newStartOffset, newEndOffset)
-        moveCursorTo(newEndOffset)
     }
 
     internal fun setComposingRegion(start: Int, end: Int) {
@@ -293,29 +300,38 @@ class CodeEditorState @RememberInComposition internal constructor(
         composingRegion = null
     }
 
-    internal fun Selection.asRange() = Range(startCursor().toPosition(), endCursor().toPosition())
-    internal fun Range.asSelection() = Selection(offsetAt(startPosition.asCursor()), offsetAt(endPosition.asCursor()))
-    internal fun Range.toTextRange() = this.asSelection().asTextRange()
-    internal fun Selection.startCursor() = cursorAt(start)
-    internal fun Selection.endCursor() = cursorAt(end)
-
-    fun select(anchor: Int = selection.start, active: Int = cursorOffset) {
-        selection = Selection(anchor.coerceAtLeast(0), active.coerceAtLeast(0))
+    fun setSelection(start: Int, end: Int = start) {
+        selection = TextRange(start.coerceIn(0, content.length), end.coerceIn(0, content.length))
+        postEventSync(SelectionChangeEvent(selection, cursor))
     }
 
-    fun select(range: IntRange) {
-        selection = range.toSelection()
-    }
+    fun setSelection(selection: TextRange) = setSelection(selection.start, selection.end)
+    fun setSelection(range: IntRange) = setSelection(range.first, range.last)
+    fun startOrExpandSelection(offset: Int = selection.start) = setSelection(offset, cursorOffset)
 
-    fun collapseSelection() {
-        selection = Selection(cursorOffset)
-    }
+    fun collapseSelectionToMax() = setSelection(selection.max)
+    fun collapseSelectionToEnd() = setSelection(selection.end)
+
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun collapseSelection() = setSelection(cursorOffset)
 
     fun moveCursor(line: Int, column: Int = 0, select: Boolean = false) {
+        val oldCursor = cursor
+        val oldOffset = offsetAt(oldCursor)
+
         val l = line.coerceAtMost(lineCount)
         val c = column.coerceAtMost(getLineLength(l))
-        cursor = Cursor(l, c)
-        if (select) select() else collapseSelection()
+        cursor = Cursor(l, c).also {
+            postEventSync(
+                CursorChangeEvent(
+                    oldCursor = oldCursor,
+                    oldCursorOffset = oldOffset,
+                    newCursor = cursor,
+                    newCursorOffset = cursorOffset
+                )
+            )
+        }
+        if (select) startOrExpandSelection() else collapseSelection()
         scope.launch { ensureCursorVisible() }
         invalidateDraw()
     }
@@ -336,7 +352,7 @@ class CodeEditorState @RememberInComposition internal constructor(
                 if (column > 0) {
                     val text = getLine(line)
                     val prevEnd = column - 1
-                    val prevStart = getCharStart(text, prevEnd)
+                    val prevStart = CharUtils.getCharStart(text, prevEnd)
                     cursor = Cursor(line, prevStart)
                 } else if (line > 1) {
                     val prevLineLength = getLineLength(line - 1)
@@ -347,7 +363,7 @@ class CodeEditorState @RememberInComposition internal constructor(
             Direction.Right -> {
                 val lineText = getLine(line)
                 if (column < lineText.length) {
-                    val nextStart = getCharEnd(lineText, column)
+                    val nextStart = CharUtils.getCharEnd(lineText, column)
                     cursor = Cursor(line, nextStart)
                 } else if (line < lineCount) {
                     cursor = Cursor(line + 1, 0)
@@ -371,25 +387,10 @@ class CodeEditorState @RememberInComposition internal constructor(
             }
         }
 
-        if (select) select() else collapseSelection()
+        if (select) startOrExpandSelection() else collapseSelection()
 
         scope.launch { ensureCursorVisible() }
         invalidateDraw()
-    }
-
-    fun getCharStart(text: String, endOffset: Int): Int {
-        return with(charBreakIterator) {
-            setText(text)
-            following(endOffset)
-            previous()
-        }
-    }
-
-    fun getCharEnd(text: String, startOffset: Int): Int {
-        return with(charBreakIterator) {
-            setText(text)
-            following(startOffset)
-        }
     }
 
     private suspend fun ensureCursorVisible(padding: Float = 48f, smooth: Boolean = true) {
@@ -463,146 +464,6 @@ class CodeEditorState @RememberInComposition internal constructor(
         return Cursor(clampedLine, column)
     }
 
-    internal fun getTextInRange(range: Range) = buffer.getValueInRange(range)
-    fun substring(range: TextRange) = getTextInRange(range.asSelection().asRange())
-
-    private fun TextAction.range() = when (this) {
-        TextAction.Insert -> Range(cursor.toPosition())
-        TextAction.Delete -> {
-            if (cursor.line == 1 && cursor.column == 0) {
-                Range(cursor.toPosition())
-            } else if (cursor.column == 0 && cursor.line > 1) {
-                Range(
-                    startLine = cursor.line - 1,
-                    startColumn = buffer.getLineMaxColumn(cursor.line - 1),
-                    endLine = cursor.line,
-                    endColumn = cursor.column + 1
-                )
-            } else {
-                Range(cursor.line, 1, cursor.line, cursor.column + 1).apply {
-                    startColumn = getCharStart(getTextInRange(this), endColumn) + 1
-                }
-            }
-        }
-    }
-
-    private fun applyEdits(
-        operations: List<SingleEditOperation>,
-        computeUndoEdits: Boolean = true
-    ) {
-        beforeTextChanged(operations)
-        val result = buffer.applyEdits(operations, false, computeUndoEdits)
-
-        var lastLineNumber = 1
-        var lastColumn = 0
-
-        result.changes.forEachIndexed { index, change ->
-            val (insertingLinesCnt, _, lastLineLength, _) = Strings.countLineBreaks(change.text!!)
-            val deletingLinesCnt = change.range.endLine - change.range.startLine
-
-            val finalLineNumber = change.range.startLine + insertingLinesCnt
-            var finalColumn = change.range.endColumn
-
-            finalColumn = if (change.text.isNotEmpty()) {
-                when (insertingLinesCnt) {
-                    0 -> change.range.startColumn + lastLineLength
-                    else -> lastLineLength + 1
-                }
-            } else {
-                change.range.startColumn
-            }
-
-            if (index == 0) {
-                lastLineNumber = finalLineNumber
-                lastColumn = finalColumn
-            }
-
-            onTextChanged(
-                range = change.range,
-                rangeOffset = change.rangeOffset,
-                insertedLinesCnt = insertingLinesCnt,
-                insertedTextLength = change.text.length,
-                deletedLinesCnt = deletingLinesCnt,
-                deletedTextLength = change.rangeLength,
-                finalLineNumber = finalLineNumber,
-                finalColumn = finalColumn
-            )
-        }
-
-        if (computeUndoEdits) {
-            scope.launch { pushEdits(result.reverseEdits) }
-        }
-
-        maxLineLengthDirty = true
-        lineLengthCache.clear()
-        textWidthCache.evictAll()
-
-        afterTextChanged(result.changes, lastLineNumber, lastColumn)
-    }
-
-    private suspend fun pushEdits(
-        reverseEdits: List<ReverseEditOperation>?,
-        delay: Long = 500L
-    ) = mutex.withLock {
-        undoRedoManager.clearRedo()
-        onMergeTextChangesBefore()
-
-        reverseEdits?.let { operations ->
-            mergeTextChanges.addAll(
-                TextChange.compressConsecutiveTextChanges(
-                    mergeTextChanges,
-                    operations.map { it.textChange }
-                )
-            )
-
-            delay(delay)
-
-            mergeJob = coroutineScope {
-                launch {
-                    undoRedoManager.push(mergeTextChanges)
-                    mergeTextChanges.clear()
-                    onMergeTextChangesAfter()
-                }
-            }
-        }
-    }
-
-    private suspend fun onMergeTextChangesBefore() {}
-    private suspend fun onMergeTextChangesAfter() {}
-
-    private fun afterTextChanged(
-        changes: List<ContentChange>,
-        lastLineNumber: Int,
-        lastColumn: Int
-    ) {
-        cursor = Cursor(lastLineNumber, lastColumn - 1)
-        scope.launch { ensureCursorVisible(smooth = false) }
-        invalidateDraw()
-    }
-
-    private fun beforeTextChanged(operations: List<SingleEditOperation>) {
-        mergeJob?.cancel()
-    }
-
-    private fun onTextChanged(
-        range: Range,
-        rangeOffset: Int,
-        insertedLinesCnt: Int,
-        insertedTextLength: Int,
-        deletedLinesCnt: Int,
-        deletedTextLength: Int,
-        finalLineNumber: Int,
-        finalColumn: Int
-    ) {
-        eventManager.postSync(
-            event = TextChangeEvent(
-                range = range.asSelection(),
-                cursor = cursor,
-                changedText = getTextInRange(range)
-            )
-        )
-    }
-
     internal fun textWidth(text: String, style: TextStyle = textStyle): Float {
         val cacheKey = "$text-${style.fontSize.value}-${style.fontFamily.hashCode()}"
         return textWidthCache.getOrPut(cacheKey) {
@@ -610,19 +471,49 @@ class CodeEditorState @RememberInComposition internal constructor(
         }
     }
 
-    fun getLineLength(lineNumber: Int) = buffer.getLineLength(lineNumber)
-    internal fun getRangeLength(range: Range) = buffer.getValueLengthInRange(range)
-    fun cursorAt(offset: Int) = buffer.positionAt(offset).asCursor()
-    fun offsetAt(lineNumber: Int, column: Int) = offsetAt(Cursor(lineNumber, column))
-    fun offsetAt(cursor: Cursor) = buffer.offsetAt(cursor.toPosition())
-    fun charAt(lineNumber: Int, column: Int) = buffer.run { getCharCode(offsetAt(lineNumber, column)).toChar() }
-    fun lineCharAt(lineNumber: Int, offset: Int) = buffer.getLineCharCode(lineNumber, offset).toChar()
-    fun getLine(lineNumber: Int) = buffer.getLineContent(lineNumber)
-    fun lineWithLineBreak(lineNumber: Int) = buffer.getLineContentWithLineBreak(lineNumber)
-    fun getLineStart(lineNumber: Int) = offsetAt(lineNumber, 1)
-    fun getLineEnd(lineNumber: Int) = offsetAt(lineNumber, buffer.getLineMaxColumn(lineNumber))
+    internal fun getTextDirectionForOffset(offset: Int): ResolvedTextDirection {
+        val (line, column) = cursorAt(offset)
+        val result = measureText(getLine(line))
+            .getOrElse { return ResolvedTextDirection.Ltr }
+        return with(result) {
+            if (isOffsetAnEmptyLine(column)) getParagraphDirection(column) else getBidiRunDirection(column)
+        }
+    }
 
-    fun getLineNumberWidth(lineNumber: Int = lineCount) = textWidth(lineNumber.toString())
+    internal fun getBidiRunDirection(offset: Int): ResolvedTextDirection {
+        val (line, column) = cursorAt(offset)
+        val result = measureText(getLine(line))
+            .getOrElse { return ResolvedTextDirection.Ltr }
+        return with(result) { getBidiRunDirection(column) }
+    }
+
+    internal fun getCursorRect(offset: Int): Rect {
+        val (line, column) = cursorAt(offset)
+        val result = measureText(getLine(line)).getOrElse { return Rect.Zero }
+        return with(result) { getCursorRect(column) }
+    }
+
+    internal fun getLineStart(line: Int): Int {
+        return offsetAt(line, 0)
+    }
+
+    internal fun getLineEnd(line: Int): Int {
+        return offsetAt(line, content.maxColumnForLine(line))
+    }
+
+    internal fun getWordBoundary(offset: Int): TextRange {
+        val (line, column) = cursorAt(offset)
+        val result = measureText(getLine(line)).getOrElse { return TextRange.Zero }
+        return with(result) { getWordBoundary(column) }
+    }
+
+    fun getLineLength(lineNumber: Int) = content.lengthOf(line = lineNumber)
+    fun getLine(lineNumber: Int) = content.lineText(lineNumber)
+    fun cursorAt(offset: Int) = content.cursorAt(offset)
+    fun offsetAt(cursor: Cursor) = content.offsetAt(cursor)
+    fun offsetAt(line: Int, column: Int) = content.offsetAt(line, column)
+
+    inline val Cursor.offset get() = offsetAt(this)
 
     fun scrollByX(dx: Float) = scrollBy(dx, 0f)
     fun scrollByY(dy: Float) = scrollBy(0f, dy)
@@ -692,7 +583,7 @@ class CodeEditorState @RememberInComposition internal constructor(
         overflow: TextOverflow = TextOverflow.Clip,
         softWrap: Boolean = false,
         maxLines: Int = Int.MAX_VALUE,
-        constraints: Constraints = Constraints(),
+        constraints: Constraints = Constraints(maxWidth = Constraints.Infinity),
         skipCache: Boolean = false
     ) = textMeasurer.map {
         it.measure(
@@ -719,9 +610,107 @@ class CodeEditorState @RememberInComposition internal constructor(
     }
 
     fun copy(
-        buffer: PieceTreeTextBuffer = this.buffer,
+        content: Content = this.content,
         scope: CoroutineScope = this.scope
-    ) = CodeEditorState(buffer, editable, scope)
+    ) = CodeEditorState(content, editable, scope)
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other == null || this::class != other::class) return false
+
+        other as CodeEditorState
+
+        if (editable != other.editable) return false
+        if (showLineNumber != other.showLineNumber) return false
+        if (pinLineNumber != other.pinLineNumber) return false
+        if (cachedMaxLineLength != other.cachedMaxLineLength) return false
+        if (maxLineLengthDirty != other.maxLineLengthDirty) return false
+        if (content != other.content) return false
+        if (colorScheme != other.colorScheme) return false
+        if (textMeasurer != other.textMeasurer) return false
+        if (textRenderer != other.textRenderer) return false
+        if (invalidateDrawCallback != other.invalidateDrawCallback) return false
+        if (scrollState != other.scrollState) return false
+        if (viewportSize != other.viewportSize) return false
+        if (lineLengthCache != other.lineLengthCache) return false
+        if (textWidthCache != other.textWidthCache) return false
+        if (composingRegion != other.composingRegion) return false
+        if (textWidthsCache != other.textWidthsCache) return false
+        if (isBufferLoading != other.isBufferLoading) return false
+        if (lineCount != other.lineCount) return false
+        if (content.length != other.content.length) return false
+        if (cursorAlpha != other.cursorAlpha) return false
+        if (_fontSize != other._fontSize) return false
+        if (_fontFamily != other._fontFamily) return false
+        if (textStyle != other.textStyle) return false
+        if (cursor != other.cursor) return false
+        if (selection != other.selection) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = editable.hashCode()
+        result = 31 * result + showLineNumber.hashCode()
+        result = 31 * result + pinLineNumber.hashCode()
+        result = 31 * result + cachedMaxLineLength
+        result = 31 * result + maxLineLengthDirty.hashCode()
+        result = 31 * result + content.hashCode()
+        result = 31 * result + colorScheme.hashCode()
+        result = 31 * result + textMeasurer.hashCode()
+        result = 31 * result + textRenderer.hashCode()
+        result = 31 * result + invalidateDrawCallback.hashCode()
+        result = 31 * result + scrollState.hashCode()
+        result = 31 * result + viewportSize.hashCode()
+        result = 31 * result + lineLengthCache.hashCode()
+        result = 31 * result + textWidthCache.hashCode()
+        result = 31 * result + (composingRegion?.hashCode() ?: 0)
+        result = 31 * result + textWidthsCache.hashCode()
+        result = 31 * result + isBufferLoading.hashCode()
+        result = 31 * result + lineCount
+        result = 31 * result + content.length
+        result = 31 * result + cursorAlpha.hashCode()
+        result = 31 * result + _fontSize.hashCode()
+        result = 31 * result + _fontFamily.hashCode()
+        result = 31 * result + textStyle.hashCode()
+        result = 31 * result + cursor.hashCode()
+        result = 31 * result + selection.hashCode()
+        return result
+    }
+
+    override fun onContentChanged(
+        range: TextRange,
+        rangeOffset: Int,
+        insertedLinesCount: Int,
+        insertedTextLength: Int,
+        deletedLinesCount: Int,
+        deletedTextLength: Int,
+        finalLineNumber: Int,
+        finalColumn: Int
+    ) {
+        eventManager.postSync(
+            event = TextChangeEvent(
+                range = range,
+                cursor = cursor,
+                changedText = content.substring(range)
+            )
+        )
+    }
+
+    override fun afterContentChanged(
+        changeList: ContentChangeList,
+        lastLineNumber: Int,
+        lastColumn: Int
+    ) {
+        maxLineLengthDirty = true
+        lineLengthCache.clear()
+        textWidthCache.evictAll()
+
+        cursor = Cursor(lastLineNumber, lastColumn - 1)
+        scope.launch { ensureCursorVisible(smooth = false) }
+
+        invalidateDraw()
+    }
 }
 
 @Composable
@@ -732,7 +721,7 @@ fun rememberCodeEditorState(
     val scope = rememberCoroutineScope { Dispatchers.Default }
 
     return remember(initialText, editable, scope) {
-        CodeEditorState(initialText.toTextBuffer(), editable, scope)
+        CodeEditorState(Content(initialText), editable, scope)
     }
 }
 
@@ -759,7 +748,7 @@ fun CodeEditorState(file: KxFile): CodeEditorState {
 @RememberInComposition
 fun CodeEditorState(initialText: String): CodeEditorState {
     return CodeEditorState(
-        buffer = initialText.toTextBuffer(),
+        content = Content(initialText),
         editable = true,
         scope = CoroutineScope(Dispatchers.Default) + DefaultMonotonicFrameClock
     )

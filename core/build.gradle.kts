@@ -46,13 +46,6 @@ kotlin {
         jvmMain.get().dependsOn(commonJvmAndroid)
 
         commonMain {
-            languageSettings {
-                @OptIn(ExperimentalKotlinGradlePluginApi::class)
-                compilerOptions {
-                    freeCompilerArgs.addAll("-Xexpect-actual-classes")
-                }
-            }
-
             dependencies {
                 api(libs.koin.compose)
 

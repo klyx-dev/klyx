@@ -10,12 +10,11 @@ import com.klyx.editor.compose.text.SingleEditOperation
 import com.klyx.editor.compose.text.Strings
 import com.klyx.editor.compose.text.TextChange
 import com.klyx.editor.compose.text.ValidatedEditOperation
-import com.klyx.editor.compose.text.asCursor
 import com.klyx.editor.compose.text.codePointAt
 import kotlinx.serialization.Serializable
 
 @Serializable
-class PieceTreeTextBuffer : CharSequence {
+internal class PieceTreeTextBuffer : CharSequence {
     internal val pieceTree: PieceTreeBase
     val bom: String
 
