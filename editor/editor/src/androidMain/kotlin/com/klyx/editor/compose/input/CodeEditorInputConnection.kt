@@ -216,15 +216,15 @@ internal class CodeEditorInputConnection(
 
         state.insertComposingText(text.toString())
 
-        val cursorOffset = state.cursorOffset
-
-        state.composingRegion?.let { region ->
-            val newAbsoluteCursorOffset = region.start + newCursorPosition.coerceIn(0, region.length)
-            state.moveCursorTo(newAbsoluteCursorOffset)
-        } ?: run {
-            // should not happen if insertComposingText worked, but as a fallback
-            state.moveCursorTo(cursorOffset + newCursorPosition)
-        }
+//        val cursorOffset = state.cursorOffset
+//
+//        state.composingRegion?.let { region ->
+//            val newAbsoluteCursorOffset = region.start + newCursorPosition.coerceIn(0, region.length)
+//            state.moveCursorTo(newAbsoluteCursorOffset)
+//        } ?: run {
+//            // should not happen if insertComposingText worked, but as a fallback
+//            state.moveCursorTo(cursorOffset + newCursorPosition)
+//        }
 
         return true
     }
