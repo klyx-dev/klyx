@@ -60,7 +60,7 @@ fun TabSizeDialog(
                 )
 
                 OutlinedTextField(
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
                     value = tabSize,
                     onValueChange = { tabSize = it },
                     placeholder = { Text("4") },

@@ -60,7 +60,7 @@ fun FontSizeDialog(
                 )
 
                 OutlinedTextField(
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier = Modifier.padding(vertical = 8.dp).fillMaxWidth(),
                     value = fontSize,
                     onValueChange = { fontSize = it },
                     placeholder = { Text("14") },
