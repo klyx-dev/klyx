@@ -22,5 +22,5 @@ object ContextHolder : KoinComponent {
     }
 
     fun currentActivityOrNull() = currentActivity.getOrNull()
-    fun currentActivity() = requireNotNull(currentActivityOrNull()) { "No activity found" }
+    fun currentActivity() = checkNotNull(currentActivityOrNull()) { "No activity found" }
 }
