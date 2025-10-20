@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
@@ -31,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.klyx.core.file.humanBytes
 import com.klyx.core.logging.logger
@@ -86,6 +89,13 @@ fun Terminal(
                             }
                         }
 
+                        val createSession = {
+                            with(context) {
+                                currentUser = userName
+                                user = userName
+                            }
+                        }
+
                         OutlinedTextField(
                             value = userName,
                             onValueChange = {
@@ -103,6 +113,9 @@ fun Terminal(
                                     fontFamily = fontFamily
                                 )
                             },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { createSession() }),
                             isError = !isValid,
                             shape = RoundedCornerShape(12.dp),
                         )
@@ -110,12 +123,7 @@ fun Terminal(
                         //Spacer(modifier = Modifier.height(4.dp))
 
                         Button(
-                            onClick = {
-                                with(context) {
-                                    currentUser = userName
-                                    user = userName
-                                }
-                            },
+                            onClick = createSession,
                             shape = RoundedCornerShape(12.dp),
                             enabled = isValid
                         ) {

@@ -40,8 +40,10 @@ import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
+import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.Route
 import com.klyx.core.ui.animatedComposable
+import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.ui.DisclaimerDialog
@@ -73,6 +75,7 @@ private val TopDestinations = listOf(Route.HOME, Route.SETTINGS_PAGE)
 
 @Composable
 fun AppEntry() {
+    val appSettings = currentAppSettings
     val lifecycleOwner = LocalLifecycleOwner.current
 
     val scope = rememberCoroutineScope()
@@ -112,6 +115,12 @@ fun AppEntry() {
             if (event.isCtrlPressed && event.isShiftPressed && event.key == Key.P) {
                 CommandManager.showPalette()
             }
+        }
+    }
+
+    LaunchedEffect(appSettings.loadExtensionsOnStartup) {
+        if (appSettings.loadExtensionsOnStartup) {
+            ExtensionManager.loadExtensions()
         }
     }
 

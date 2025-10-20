@@ -35,21 +35,24 @@ actual fun makeFileExecutable(path: String): Result<Unit, String> {
 
 actual fun findBinary(binaryName: String): String? {
     with(ContextHolder.context) {
-        val result = ubuntuProcess("which", binaryName).executeBlocking()
-        return result.output.ifEmpty { null }
+        val result = runCatching { ubuntuProcess("which", binaryName).executeBlocking() }.getOrNull()
+        return result?.output?.ifEmpty { null }
     }
 }
 
 actual fun getenv(name: String): String? {
     with(ContextHolder.context) {
-        val result = ubuntuProcess("printenv", name).executeBlocking()
-        return result.output.trim().ifEmpty { null }
+        val result = runCatching { ubuntuProcess("printenv", name).executeBlocking() }.getOrNull()
+        return result?.output?.trim()?.ifEmpty { null }
     }
 }
 
 actual fun getenv(): Map<String, String> {
     with(ContextHolder.context) {
-        val result = ubuntuProcess("printenv").executeBlocking()
+        val result = runCatching {
+            ubuntuProcess("printenv").executeBlocking()
+        }.getOrElse { return emptyMap() }
+
         if (!result.success) return emptyMap()
 
         return result.output
@@ -69,7 +72,16 @@ actual fun executeCommand(
     env: Map<String, String>
 ): Output {
     with(ContextHolder.context) {
-        val result = localProcess(command, *args) { env(env) }.executeBlocking()
+        val result = runCatching {
+            localProcess(command, *args) { env(env) }.executeBlocking()
+        }.getOrElse {
+            return Output(
+                status = -1,
+                stdout = it.message ?: "Unknown error",
+                stderr = it.message ?: "Unknown error"
+            )
+        }
+
         return Output(
             result.exitCode,
             result.output,

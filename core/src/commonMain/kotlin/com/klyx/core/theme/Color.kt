@@ -44,7 +44,7 @@ fun String.toColor(): Color {
 
         return Color(color)
     } else {
-        colorNameMap[this]?.let { return it }
+        colorNameMap[this.lowercase()]?.let { return it }
     }
     throwUnknownColor()
 }

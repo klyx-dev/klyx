@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.klyx.core.notification.Notification
 import com.klyx.core.notification.NotificationType
+import com.klyx.core.theme.harmonizeWithPrimary
 
 @Composable
 internal fun NotificationCard(
@@ -41,9 +42,9 @@ internal fun NotificationCard(
     val colorScheme = MaterialTheme.colorScheme
 
     val bgColor = when (notification.type) {
-        NotificationType.Info -> Color(0xFF2196F3)
-        NotificationType.Success -> Color(0xFF4CAF50)
-        NotificationType.Warning -> Color(0xFFFFC107)
+        NotificationType.Info -> Color(0xFF2196F3).harmonizeWithPrimary()
+        NotificationType.Success -> Color(0xFF4CAF50).harmonizeWithPrimary()
+        NotificationType.Warning -> Color(0xFFFFC107).harmonizeWithPrimary()
         NotificationType.Error -> colorScheme.errorContainer
     }
 
