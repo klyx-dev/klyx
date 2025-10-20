@@ -49,7 +49,7 @@ data class KeyShortcut(
         result = 31 * result + shift.hashCode()
         result = 31 * result + alt.hashCode()
         result = 31 * result + meta.hashCode()
-        result = 31 * result + key.hashCode()
+        result = 31 * result + key.keyCode.hashCode()
         return result
     }
 }

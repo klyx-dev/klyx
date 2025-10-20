@@ -91,14 +91,16 @@ object CommandManager {
     }
 
     fun addCommand(command: Command) {
-        commands.add(command)
+        val isPresent = commands.any { it.shortcuts == command.shortcuts }
+        if (!isPresent) commands.add(command)
     }
 
     fun addRecentlyUsedCommand(command: Command) {
-        recentlyUsedCommands.add(command)
+        val isPresent = recentlyUsedCommands.any { it.shortcuts == command.shortcuts }
+        if (!isPresent) recentlyUsedCommands.add(command)
     }
 
     fun addCommand(commands: Array<Command>) {
-        this.commands.addAll(commands)
+        this.commands.addAll(commands.filter { !this.commands.any { c -> c.shortcuts == it.shortcuts } })
     }
 }
