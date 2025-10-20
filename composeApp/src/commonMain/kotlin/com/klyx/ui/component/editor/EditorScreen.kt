@@ -21,7 +21,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
 import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.command
+import com.klyx.core.cmd.buildCommand
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
@@ -82,7 +82,7 @@ fun EditorScreen(
     }
 
     LaunchedEffect(Unit) {
-        CommandManager.addCommand(command {
+        CommandManager.addCommand(buildCommand {
             name("Close Active Tab")
             shortcut(keyShortcutOf(ctrl = true, key = Key.W))
             execute { editorViewModel.closeActiveTab() }

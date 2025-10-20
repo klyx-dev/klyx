@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.command
+import com.klyx.core.cmd.buildCommand
 import com.klyx.core.cmd.key.KeyShortcut
 
 @Composable
@@ -28,7 +28,7 @@ fun TextButtonWithShortcut(
     onClick: () -> Unit,
 ) {
     LaunchedEffect(Unit) {
-        CommandManager.addCommand(command {
+        CommandManager.addCommand(buildCommand {
             name(text)
             shortcut(shortcut)
             execute { onClick() }

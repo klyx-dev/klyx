@@ -49,7 +49,7 @@ object CommandManager {
             }
         }
 
-        addCommand(command {
+        addCommand(buildCommand {
             name("Toggle Theme Selector")
             shortcut(keyShortcutOf(Key.K, ctrl = true) and keyShortcutOf(Key.T, ctrl = true))
             execute { ThemeManager.toggleThemeSelector() }

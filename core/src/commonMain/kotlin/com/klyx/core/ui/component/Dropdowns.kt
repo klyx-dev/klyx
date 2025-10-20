@@ -12,7 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.command
+import com.klyx.core.cmd.buildCommand
 import com.klyx.core.cmd.key.KeyShortcut
 
 @Composable
@@ -34,7 +34,7 @@ fun DropdownMenuItem(
 ) {
     LaunchedEffect(shortcut) {
         if (shortcut != null) {
-            CommandManager.addCommand(command {
+            CommandManager.addCommand(buildCommand {
                 name(text)
                 shortcut(shortcut)
                 execute { onClick() }

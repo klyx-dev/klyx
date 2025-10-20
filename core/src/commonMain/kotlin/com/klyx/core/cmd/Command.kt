@@ -67,7 +67,7 @@ class CommandBuilder {
 }
 
 @OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
-inline fun command(
+inline fun buildCommand(
     @BuilderInference block: CommandBuilder.() -> Unit
 ): Command {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
