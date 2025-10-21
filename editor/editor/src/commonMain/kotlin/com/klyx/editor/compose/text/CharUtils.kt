@@ -2,6 +2,8 @@
 
 package com.klyx.editor.compose.text
 
+import com.klyx.editor.compose.BreakIterator
+import com.klyx.editor.compose.makeCharacterInstance
 import kotlin.jvm.JvmName
 
 /**
@@ -100,4 +102,23 @@ private fun codePointToChars(codePoint: Int): CharArray {
 }
 
 fun Int.toChars() = codePointToChars(this)
+
+internal object CharUtils {
+    private val charBreakIterator = BreakIterator.makeCharacterInstance()
+
+    fun getCharStart(text: String, endOffset: Int): Int {
+        return with(charBreakIterator) {
+            setText(text)
+            following(endOffset)
+            previous()
+        }
+    }
+
+    fun getCharEnd(text: String, startOffset: Int): Int {
+        return with(charBreakIterator) {
+            setText(text)
+            following(startOffset)
+        }
+    }
+}
 

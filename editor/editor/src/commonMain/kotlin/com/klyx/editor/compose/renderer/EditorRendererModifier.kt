@@ -112,7 +112,7 @@ private class EditorRendererModifierNode(
                 selectionState.updateClipboardEntry()
                 platformSelectionBehaviors?.onShowSelectionToolbar(
                     text = state.content,
-                    selection = state.selection
+                    selection = state.content.selection
                 )
                 selectionState.textToolbarShown = true
             },
@@ -246,8 +246,8 @@ private class EditorRendererModifierNode(
         val lineHeight = state.lineHeight
         val scrollY = -state.scrollY
         val maxLine = state.lineCount
-        val cursor = state.cursor
-        val selection = state.selection
+        val cursor = state.content.cursor.value
+        val selection = state.content.selection
 
         val lineNumberWidth = if (showLineNumber) maxLineWidth else 0f
         val leftOffset = lineNumberWidth + LinePadding + LineDividerWidth

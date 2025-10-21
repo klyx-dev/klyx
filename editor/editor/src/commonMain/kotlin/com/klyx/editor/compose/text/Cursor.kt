@@ -42,6 +42,9 @@ value class Cursor internal constructor(private val packedValue: Long) : Compara
     @Stable
     inline operator fun component2() = column
 
+    context(content: Content)
+    val offset get() = content.offsetAt(this)
+
     override fun toString() = "Cursor(line=$line, column=$column)"
 
     override fun compareTo(other: Cursor): Int {

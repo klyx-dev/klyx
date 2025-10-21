@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import com.klyx.editor.compose.draw.buildPath
 import com.klyx.editor.compose.renderer.CurrentLineVerticalOffset
 import com.klyx.editor.compose.renderer.TextLineCache
+import com.klyx.editor.compose.text.Cursor
 import kotlin.math.floor
 import kotlin.math.round
 
@@ -115,10 +116,9 @@ object EditorDefaults {
         }
     }
 
-    internal fun CacheDrawScope.drawCursor(state: CodeEditorState, pinLineNumber: Boolean): DrawResult {
+    internal fun CacheDrawScope.drawCursor(state: CodeEditorState,cursor: Cursor, pinLineNumber: Boolean): DrawResult {
         val noOp = onDrawBehind { }
-        if (!state.selection.collapsed) return noOp
-        val cursor = state.cursor
+        if (!state.content.selection.collapsed) return noOp
         if (cursor.line !in 1..state.lineCount) return noOp
 
         val line = state.getLine(cursor.line)

@@ -36,14 +36,14 @@ internal class CodeEditorInputConnection(
     init {
         state.subscribeEvent<SelectionChangeEvent> { event ->
             val (start, end) = event.selectionRange.start to event.selectionRange.end
-            val composingRange = state.composingRegion
+            val composingRange = state.content.composingRegion
             imm.updateSelection(view, start, end, composingRange?.start ?: -1, composingRange?.end ?: -1)
         }
 
         state.subscribeEvent<CursorChangeEvent> { event ->
             val info = CursorAnchorInfo.Builder().apply {
                 setSelectionRange(event.newCursorOffset, event.newCursorOffset)
-                state.composingRegion?.let { range ->
+                state.content.composingRegion?.let { range ->
                     setComposingText(range.start, state.content.substring(range))
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -121,13 +121,13 @@ internal class CodeEditorInputConnection(
     }
 
     override fun finishComposingText(): Boolean {
-        state.clearComposingRegion()
+        state.content.clearComposingRegion()
         return true
     }
 
     override fun getCursorCapsMode(reqModes: Int): Int {
         println("getCursorCapsMode: reqModes=$reqModes")
-        val (line, column) = state.cursor
+        val (line, column) = state.content.cursor.value
         val text = state.content.lineText(line)
         return TextUtils.getCapsMode(text, column, reqModes)
     }
@@ -150,8 +150,8 @@ internal class CodeEditorInputConnection(
     override fun getHandler(): Handler = handler
 
     override fun getSelectedText(flags: Int): CharSequence? {
-        if (state.selection.collapsed) return null
-        val text = state.getSelectedText()
+        if (state.content.selection.collapsed) return null
+        val text = state.content.getSelectedText()
         println("getSelectedText: flags=$flags, text=$text")
         return text
     }
@@ -206,7 +206,7 @@ internal class CodeEditorInputConnection(
 
     override fun setComposingRegion(start: Int, end: Int): Boolean {
         println("setComposingRegion: start=$start, end=$end")
-        state.setComposingRegion(start, end)
+        state.content.setComposingRegion(start, end)
         return true
     }
 
@@ -214,7 +214,7 @@ internal class CodeEditorInputConnection(
         println("setComposingText: text=$text, newCursorPosition=$newCursorPosition")
         if (text == null) return finishComposingText()
 
-        state.insertComposingText(text.toString())
+        state.content.insertComposingText(text.toString())
 
 //        val cursorOffset = state.cursorOffset
 //

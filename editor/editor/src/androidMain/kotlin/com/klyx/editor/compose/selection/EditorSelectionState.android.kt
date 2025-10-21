@@ -65,7 +65,7 @@ internal actual fun Modifier.addEditorTextContextMenuComponents(
         context = context,
         editable = state.editable,
         text = state.editorState.content,
-        selection = state.editorState.selection,
+        selection = state.editorState.content.selection,
         platformSelectionBehaviors = state.platformSelectionBehaviors,
     ) {
         with(state) {

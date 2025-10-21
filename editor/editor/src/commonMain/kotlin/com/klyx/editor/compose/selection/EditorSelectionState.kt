@@ -201,7 +201,7 @@ internal class EditorSelectionState(
         val visible =
             showCursorHandle &&
                     notBeingDragged &&
-                    editorState.selection.collapsed &&
+                    editorState.content.selection.collapsed &&
                     text.isNotEmpty() &&
                     (draggingHandle == Handle.Cursor || isCursorHandleInVisibleBounds())
 
@@ -226,8 +226,8 @@ internal class EditorSelectionState(
     }
 
     fun getCursorRect() = editorState.cursorRect.copy(
-        top = with(editorState) { (cursor.line - 1) * lineHeight + scrollY + CurrentLineVerticalOffset },
-        bottom = with(editorState) { (cursor.line - 1) * lineHeight + lineHeight + scrollY + CurrentLineVerticalOffset },
+        top = with(editorState) { (content.cursor.value.line - 1) * lineHeight + scrollY + CurrentLineVerticalOffset },
+        bottom = with(editorState) { (content.cursor.value.line - 1) * lineHeight + lineHeight + scrollY + CurrentLineVerticalOffset },
     )
 
     fun update(
@@ -361,7 +361,7 @@ internal class EditorSelectionState(
     fun canShowCopyMenuItem(): Boolean = isCopyAllowed() && clipboard.isWriteSupported()
 
     @Suppress("NOTHING_TO_INLINE")
-    inline fun isCopyAllowed(): Boolean = !editorState.selection.collapsed
+    inline fun isCopyAllowed(): Boolean = !editorState.content.selection.collapsed
 
     suspend fun copy(cancelSelection: Boolean = true) {
         val valueToCopy = copyWithResult(cancelSelection) ?: return
@@ -370,7 +370,7 @@ internal class EditorSelectionState(
 
     internal fun copyWithResult(cancelSelection: Boolean = true): AnnotatedString? {
         if (!isCopyAllowed()) return null
-        val selectedText = editorState.getSelectedText()
+        val selectedText = editorState.content.getSelectedText()
         return AnnotatedString(selectedText).also {
             if (cancelSelection) editorState.collapseSelection()
         }
@@ -391,10 +391,10 @@ internal class EditorSelectionState(
 
     private suspend fun pasteAsPlainText() {
         val clipboardText = clipboard.getClipEntry()?.readText() ?: return
-        editorState.replaceSelectedText(clipboardText)
+        editorState.content.replaceSelectedText(clipboardText)
     }
 
-    fun canShowSelectAllMenuItem() = editorState.selection.length != editorState.content.length
+    fun canShowSelectAllMenuItem() = editorState.content.selection.length != editorState.content.length
 
     fun selectAll() {
         editorState.setSelection(0, editorState.content.length)
@@ -403,7 +403,7 @@ internal class EditorSelectionState(
     fun canShowCutMenuItem() = isCutAllowed() && clipboard.isWriteSupported()
 
     @Suppress("NOTHING_TO_INLINE")
-    inline fun isCutAllowed(): Boolean = !editorState.selection.collapsed && editorState.editable
+    inline fun isCutAllowed(): Boolean = !editorState.content.selection.collapsed && editorState.editable
 
     suspend fun cut() {
         val cutValue = cutWithResult() ?: return
@@ -412,8 +412,8 @@ internal class EditorSelectionState(
 
     fun cutWithResult(): AnnotatedString? {
         if (!isCutAllowed()) return null
-        val selectedText = editorState.getSelectedText()
-        return AnnotatedString(selectedText).also { editorState.deleteSelectedText() }
+        val selectedText = editorState.content.getSelectedText()
+        return AnnotatedString(selectedText).also { editorState.content.deleteSelectedText() }
     }
 
     // TODO(grantapher) android ClipboardManager has a way to notify primary clip changes.
@@ -427,7 +427,7 @@ internal class EditorSelectionState(
         includePosition: Boolean,
     ): CodeEditorHandleState {
         val handle = if (isStartHandle) Handle.SelectionStart else Handle.SelectionEnd
-        val selection = editorState.selection
+        val selection = editorState.content.selection
         if (selection.collapsed) return CodeEditorHandleState.Hidden
 
         val position = getHandlePosition(isStartHandle)
@@ -473,7 +473,7 @@ internal class EditorSelectionState(
     }
 
     private fun getHandlePosition(isStartHandle: Boolean): Offset {
-        val selection = editorState.selection
+        val selection = editorState.content.selection
         val offset = if (isStartHandle) {
             selection.start
         } else {
@@ -558,22 +558,22 @@ internal class EditorSelectionState(
                                 calculateCursorPositionFromScreenOffset(handleDragPosition).offset
                             }
                         } else {
-                            editorState.selection.start
+                            editorState.content.selection.start
                         }
 
                     val endOffset =
                         if (isStartHandle) {
-                            editorState.selection.end
+                            editorState.content.selection.end
                         } else {
                             with(editorState) {
                                 calculateCursorPositionFromScreenOffset(handleDragPosition).offset
                             }
                         }
 
-                    val prevSelection = editorState.selection
+                    val prevSelection = editorState.content.selection
                     val newSelection =
                         updateSelection(
-                            selection = editorState.selection,
+                            selection = editorState.content.selection,
                             startOffset = startOffset,
                             endOffset = endOffset,
                             isStartHandle = isStartHandle,
@@ -598,7 +598,7 @@ internal class EditorSelectionState(
     }
 
     internal val derivedVisibleContentBounds: Rect? by derivedStateOf {
-        val isCollapsedSelection = editorState.selection.collapsed
+        val isCollapsedSelection = editorState.content.selection.collapsed
 
         // toolbar is requested specifically for the current selection state
         val textToolbarStateVisible =
@@ -718,7 +718,7 @@ internal class EditorSelectionState(
             }
 
             logDebug { "Mouse.onDrag $dragPosition" }
-            val prevSelection = editorState.selection
+            val prevSelection = editorState.content.selection
             val newSelection = updateSelection(dragPosition, adjustment, isStartOfSelection = false)
 
             if (prevSelection != newSelection) {
@@ -755,7 +755,7 @@ internal class EditorSelectionState(
             }
 
             var newSelection = updateSelection(
-                selection = editorState.selection,
+                selection = editorState.content.selection,
                 startOffset = startOffset,
                 endOffset = endOffset,
                 isStartHandle = false,
@@ -900,9 +900,9 @@ internal class EditorSelectionState(
                 updateTextToolbarState(Selection)
             }
 
-            val prevSelection = editorState.selection
+            val prevSelection = editorState.content.selection
             var newSelection = updateSelection(
-                selection = editorState.selection,
+                selection = editorState.content.selection,
                 startOffset = startOffset,
                 endOffset = endOffset,
                 isStartHandle = false,
@@ -980,7 +980,7 @@ internal class EditorSelectionState(
     fun maybeSuggestSelectionRange() {
         val platformSelectionBehaviors = platformSelectionBehaviors ?: return
         val text = editorState.content
-        val selection = editorState.selection
+        val selection = editorState.content.selection
 
         if (text.isNotEmpty() && !selection.collapsed) {
             coroutineScope.launch(start = CoroutineStart.UNDISPATCHED) {
@@ -996,8 +996,8 @@ internal class EditorSelectionState(
                 if (
                     suggestedSelection != null &&
                     editorState.content == text &&
-                    editorState.selection == selection &&
-                    suggestedSelection != editorState.selection
+                    editorState.content.selection == selection &&
+                    suggestedSelection != editorState.content.selection
                 ) {
                     editorState.setSelection(suggestedSelection)
                 }
@@ -1021,7 +1021,7 @@ internal class EditorSelectionState(
         // accept cursor position as content rect when selection is collapsed
         // contentRect is defined in text layout node coordinates, so it needs to be realigned to
         // the root container.
-        if (editorState.selection.collapsed) {
+        if (editorState.content.selection.collapsed) {
             val cursorRect = getCursorRect()
             val topLeft = textLayoutCoordinates.localToRoot(cursorRect.topLeft)
             return Rect(topLeft, cursorRect.size)
@@ -1029,8 +1029,8 @@ internal class EditorSelectionState(
         val startOffset = textLayoutCoordinates.localToRoot(getHandlePosition(true))
         val endOffset = textLayoutCoordinates.localToRoot(getHandlePosition(false))
 
-        val (startLine) = with(editorState) { cursorAt(selection.start) }
-        val (endLine) = with(editorState) { cursorAt(selection.end) }
+        val (startLine) = with(editorState.content) { cursorAt(selection.start) }
+        val (endLine) = with(editorState.content) { cursorAt(selection.end) }
 
         val verticalOffset = { line: Int ->
             with(editorState) { (line - 1) * lineHeight + scrollY + CurrentLineVerticalOffset }
@@ -1042,7 +1042,7 @@ internal class EditorSelectionState(
                     Offset(
                         0f,
                         with(editorState) {
-                            getCursorRect(selection.start).top + verticalOffset(startLine)
+                            getCursorRect(content.selection.start).top + verticalOffset(startLine)
                         })
                 )
                 .y
@@ -1052,7 +1052,7 @@ internal class EditorSelectionState(
                     Offset(
                         0f,
                         with(editorState) {
-                            getCursorRect(selection.end).top + verticalOffset(endLine)
+                            getCursorRect(content.selection.end).top + verticalOffset(endLine)
                         })
                 )
                 .y

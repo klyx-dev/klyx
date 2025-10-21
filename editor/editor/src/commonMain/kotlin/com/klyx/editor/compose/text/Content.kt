@@ -1,10 +1,13 @@
 package com.klyx.editor.compose.text
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.TextRange
-import com.klyx.editor.compose.BreakIterator
+import androidx.compose.ui.text.substring
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.UndoRedoManager
-import com.klyx.editor.compose.makeCharacterInstance
+import com.klyx.editor.compose.event.SelectionChangeEvent
 import com.klyx.editor.compose.text.buffer.EmptyTextBuffer
 import com.klyx.editor.compose.text.buffer.PieceTreeTextBuffer
 import com.klyx.editor.compose.text.buffer.toTextBuffer
@@ -14,30 +17,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.io.RawSink
-import kotlin.coroutines.CoroutineContext
-
-internal object CharUtils {
-    private val charBreakIterator = BreakIterator.makeCharacterInstance()
-
-    fun getCharStart(text: String, endOffset: Int): Int {
-        return with(charBreakIterator) {
-            setText(text)
-            following(endOffset)
-            previous()
-        }
-    }
-
-    fun getCharEnd(text: String, startOffset: Int): Int {
-        return with(charBreakIterator) {
-            setText(text)
-            following(startOffset)
-        }
-    }
-}
+import kotlin.jvm.JvmName
 
 typealias Text = CharSequence
 
@@ -47,12 +34,24 @@ inline fun Content() = emptyContent()
 fun emptyContent() = Content(EmptyTextBuffer)
 fun Content(text: String) = Content(text.toTextBuffer())
 
-class Content internal constructor(
-    private val buffer: PieceTreeTextBuffer,
-) : CharSequence, CoroutineScope {
+class Content internal constructor(private val buffer: PieceTreeTextBuffer) : CharSequence {
+
+    private val coroutineScope = CoroutineScope(Dispatchers.Default)
 
     val lineBreak get() = buffer.lineBreak
     val lineCount get() = buffer.lineCount
+
+    private val _cursor = MutableStateFlow(Cursor.Start)
+    val cursor = _cursor.asStateFlow()
+
+    // old
+    //var cursor by mutableStateOf(Cursor.Start)
+
+    @set:JvmName("setSelectionInternal")
+    var selection by mutableStateOf(TextRange.Zero)
+        private set
+
+    internal var composingRegion: TextRange? = null
 
     var contentChangeCallback: ContentChangeCallback? = null
     internal var undoRedoCallback: UndoRedoCallback? = null
@@ -64,11 +63,6 @@ class Content internal constructor(
     private val mutex = Mutex()
     private var mergeJob: Job? = null
     private val mergeTextChanges = mutableListOf<TextChange>()
-
-    override val coroutineContext: CoroutineContext = run {
-        val dispatcher = Dispatchers.Default
-        if (dispatcher[Job] != null) dispatcher else dispatcher + Job()
-    }
 
     override val length: Int get() = buffer.length
 
@@ -137,7 +131,7 @@ class Content internal constructor(
         }
 
         if (computeUndoEdits) {
-            launch {
+            coroutineScope.launch {
                 updateUndoRedo(result.reverseEdits, undoRedoManager)
             }
         }
@@ -188,10 +182,10 @@ class Content internal constructor(
     private inline val Cursor.columnInternal get() = column + 1
 
     internal fun getRangeFor(action: ContentEditAction): Range = when (action) {
-        ContentEditAction.Insert -> Range(state.cursor.toPosition())
+        ContentEditAction.Insert -> Range(cursor.value.toPosition())
 
         is ContentEditAction.Delete -> {
-            val cursor = state.cursor
+            val cursor = cursor.value
             val count = action.count.coerceAtLeast(1)
 
             when {
@@ -257,4 +251,72 @@ class Content internal constructor(
     fun writeToSink(sink: RawSink) = buffer.writeToSink(sink)
 
     override fun toString() = buffer.toString()
+
+    fun moveCursor(line: Int, column: Int = 0) = moveCursor(Cursor(line, column))
+
+    fun moveCursor(newCursor: Cursor) {
+        _cursor.update { newCursor }
+    }
+
+    fun moveCursorAtOffset(offset: Int) = moveCursor(cursorAt(offset))
+
+    fun setSelection(start: Int, end: Int = start, postEvent: Boolean = true) {
+        selection = TextRange(start.coerceIn(0, length), end.coerceIn(0, length))
+        if (postEvent) state.postEventSync(SelectionChangeEvent(selection, this))
+    }
+
+    fun setSelection(selection: TextRange) = setSelection(selection.start, selection.end)
+    fun setSelection(range: IntRange) = setSelection(range.first, range.last)
+    fun startOrExpandSelection(offset: Int = selection.start) = setSelection(offset, cursor.value.offset)
+
+    fun collapseSelectionToMax() = setSelection(selection.max)
+    fun collapseSelectionToEnd() = setSelection(selection.end)
+
+    @Suppress("NOTHING_TO_INLINE")
+    inline fun collapseSelection() = setSelection(cursor.value.offset)
+
+    fun getSelectedText() = substring(selection)
+    fun replaceSelectedText(newText: CharSequence) = insert(newText, range = selection)
+    fun deleteSelectedText() = delete(range = selection)
+
+    internal fun insertComposingText(composing: String) {
+        val replaceRange = composingRegion ?: if (!selection.collapsed) selection else TextRange(cursor.value.offset)
+        insert(composing, replaceRange)
+
+        val newStartOffset = replaceRange.start
+        val newEndOffset = newStartOffset + composing.length
+
+        composingRegion = TextRange(newStartOffset, newEndOffset)
+    }
+
+    internal fun setComposingRegion(start: Int, end: Int) {
+        composingRegion = TextRange(start, end)
+    }
+
+    internal fun clearComposingRegion() {
+        composingRegion = null
+    }
+
+    fun insert(
+        text: CharSequence,
+        range: TextRange = selection,
+        collapseSelection: Boolean = true,
+        undoRedoManager: UndoRedoManager? = null
+    ) = edit(undoRedoManager = undoRedoManager) {
+        if (range.collapsed) {
+            insert(text)
+        } else {
+            insert(text, range)
+            if (collapseSelection) collapseSelection()
+        }
+    }
+
+    fun delete(range: TextRange = selection, undoRedoManager: UndoRedoManager? = null) = edit(undoRedoManager) {
+        if (range.collapsed) {
+            deleteBackward()
+        } else {
+            delete(range)
+            collapseSelection()
+        }
+    }
 }

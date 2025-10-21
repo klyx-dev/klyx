@@ -1,5 +1,6 @@
 package com.klyx.editor.compose.event
 
+import com.klyx.editor.compose.text.Content
 import com.klyx.editor.compose.text.Cursor
 
 data class CursorChangeEvent(
@@ -7,5 +8,5 @@ data class CursorChangeEvent(
     val oldCursorOffset: Int,
     val newCursor: Cursor,
     val newCursorOffset: Int,
-    override val cursor: Cursor = newCursor
+    override val content: Content
 ) : EditorEvent

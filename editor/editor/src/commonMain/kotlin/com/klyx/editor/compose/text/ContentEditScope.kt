@@ -44,9 +44,7 @@ private class ContentEditScopeImpl(
         return this
     }
 
-    private fun rangeFor(action: ContentEditAction) = content.getRangeFor(action).also {
-        println("${action::class.simpleName}: $it")
-    }
+    private fun rangeFor(action: ContentEditAction) = content.getRangeFor(action)
     private fun TextRange.toInternalRange() = with(content) { this@toInternalRange.toRange() }
 
     override fun insert(text: CharSequence): ContentEditScope {

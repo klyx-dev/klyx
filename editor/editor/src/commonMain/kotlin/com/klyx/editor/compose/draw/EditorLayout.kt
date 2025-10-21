@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -25,7 +26,6 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
@@ -113,7 +113,8 @@ internal fun EditorLayout(
     var isTyping by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        snapshotFlow { state.cursor }.collect {
+        state.cursor.collect {
+            println("Collecting: $it")
             isTyping = true
             delay(400)
             isTyping = false
@@ -230,6 +231,8 @@ internal fun EditorLayout(
         propagateMinConstraints = true
     ) {
         EditorContextMenuArea(selectionState, enabled = true) {
+            val cursor by state.cursor.collectAsState()
+
             Layout(
                 modifier = Modifier
                     .matchParentSize()
@@ -268,7 +271,7 @@ internal fun EditorLayout(
                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                     .drawVerticalScrollbar(editorState = state)
                     .drawHorizontalScrollbar(editorState = state)
-                    .drawWithCache { drawCursor(state, pinLineNumber) }
+                    .drawWithCache { drawCursor(state, cursor, pinLineNumber) }
                     .renderEditor(
                         state = state,
                         showLineNumber = showLineNumber,
@@ -387,7 +390,7 @@ internal fun EditorContextMenuArea(
                     selectionState.updateClipboardEntry()
                     selectionState.platformSelectionBehaviors?.onShowContextMenu(
                         text = selectionState.editorState.content,
-                        selection = selectionState.editorState.selection,
+                        selection = selectionState.editorState.content.selection,
                         secondaryClickLocation = clickLocation,
                     )
                 }
