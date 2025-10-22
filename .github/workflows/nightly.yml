@@ -63,9 +63,7 @@ jobs:
             exit 1
           fi
           
-          VERSION=${GITHUB_REF#refs/tags/v}
-          
-          APK_NAME="${{ env.APP_NAME }}-${VERSION}.apk"
+          APK_NAME="${{ env.APP_NAME }}-nightly.apk"
           
           cp "$APK_PATH" "./$APK_NAME"
           
