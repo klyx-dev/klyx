@@ -16,6 +16,7 @@ jobs:
     outputs:
       apk-path: ${{ steps.apk-info.outputs.path }}
       apk-name: ${{ steps.apk-info.outputs.name }}
+      version-name: ${{ steps.version-info.outputs.version-name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -28,6 +29,15 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Generate version info
+        id: version-info
+        run: |
+          VERSION_NAME="nightly-$(date +'%Y%m%d')"
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          
+          echo "version-name=${VERSION_NAME}-${COMMIT_SHORT}" >> $GITHUB_OUTPUT
+          echo "Version Name: ${VERSION_NAME}-${COMMIT_SHORT}"
 
       - name: Decode keystore
         run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
@@ -52,7 +62,9 @@ jobs:
         run: ./gradlew generateTsGrammar
 
       - name: Build Android Release APK
-        run: ./gradlew assembleRelease
+        run: |
+          ./gradlew assembleRelease \
+            -PversionName="${{ steps.version-info.outputs.version-name }}"
 
       - name: Find and prepare APK
         id: apk-info
@@ -63,7 +75,7 @@ jobs:
             exit 1
           fi
           
-          APK_NAME="${{ env.APP_NAME }}-nightly.apk"
+          APK_NAME="${{ env.APP_NAME }}-${{ steps.version-info.outputs.version-name }}.apk"
           
           cp "$APK_PATH" "./$APK_NAME"
           
@@ -87,11 +99,14 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Delete tag and release
-        run: gh release delete $TAG_NAME --cleanup-tag --yes
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Delete existing nightly release
+        continue-on-error: true
+        run: gh release delete nightly --cleanup-tag --yes
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_NAME: nightly
 
       - name: Download APK artifact
         uses: actions/download-artifact@v5
@@ -102,17 +117,18 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Nightly"
+          name: "Nightly Build - ${{ needs.build-android-release.outputs.version-name }}"
           body: |
             >[!CAUTION]
             >
             > * This is a **Work-In-Progress** build. Do not expect completed features!
             >
             > * Features might be broken, crash or not work at all.
-            >
+            
             Latest nightly build from `main` branch.
-
-            Commit: ${{ github.sha }}
+            
+            **Commit:** `${{ github.sha }}`
+            **Build Date:** `${{ github.event.head_commit.timestamp }}`
           files: |
             ./artifacts/${{ needs.build-android-release.outputs.apk-name }}
           draft: false
@@ -126,9 +142,7 @@ jobs:
         run: |
           echo "## Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Version:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version Name:** ${{ needs.build-android-release.outputs.version-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version Code:** ${{ needs.build-android-release.outputs.version-code }}" >> $GITHUB_STEP_SUMMARY
           echo "**APK:** ${{ needs.build-android-release.outputs.apk-name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Release URL:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Changelog Preview:" >> $GITHUB_STEP_SUMMARY
-          echo "${{ needs.generate-changelog.outputs.changelog }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/nightly" >> $GITHUB_STEP_SUMMARY

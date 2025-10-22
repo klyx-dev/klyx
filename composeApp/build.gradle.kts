@@ -128,7 +128,7 @@ android {
         targetSdk = Configs.Android.TARGET_SDK_VERSION
 
         versionCode = AppVersioning.versionCode
-        versionName = AppVersioning.resolveVersionName("release")
+        versionName = project.findProperty("versionName") as? String ?: AppVersioning.resolveVersionName("release")
     }
 
     signingConfigs {
