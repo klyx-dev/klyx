@@ -1,4 +1,4 @@
-name: Nightly Build
+name: Nightly
 
 on:
   schedule:
@@ -117,7 +117,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "Nightly Build - ${{ needs.build-android-release.outputs.version-name }}"
+          name: "Nightly - ${{ needs.build-android-release.outputs.version-name }}"
           body: |
             >[!CAUTION]
             >
@@ -127,8 +127,7 @@ jobs:
             
             Latest nightly build from `main` branch.
             
-            **Commit:** `${{ github.sha }}`
-            **Build Date:** `${{ github.event.head_commit.timestamp }}`
+            **Commit:** ${{ github.sha }}
           files: |
             ./artifacts/${{ needs.build-android-release.outputs.apk-name }}
           draft: false
@@ -143,6 +142,5 @@ jobs:
           echo "## Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version Name:** ${{ needs.build-android-release.outputs.version-name }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Version Code:** ${{ needs.build-android-release.outputs.version-code }}" >> $GITHUB_STEP_SUMMARY
           echo "**APK:** ${{ needs.build-android-release.outputs.apk-name }}" >> $GITHUB_STEP_SUMMARY
           echo "**Release URL:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/nightly" >> $GITHUB_STEP_SUMMARY
