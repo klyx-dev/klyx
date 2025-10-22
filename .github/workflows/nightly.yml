@@ -1,0 +1,136 @@
+name: Nightly Build
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # runs daily at 2 AM UTC
+  workflow_dispatch:       # allows manual run
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
+  APP_NAME: "Klyx"
+
+jobs:
+  build-android-release:
+    name: Build Android Release
+    runs-on: ubuntu-latest
+    outputs:
+      apk-path: ${{ steps.apk-info.outputs.path }}
+      apk-name: ${{ steps.apk-info.outputs.name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Decode keystore
+        run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
+
+      - name: Decode keystore properties
+        run: echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Generate Tree-sitter grammar
+        run: ./gradlew generateTsGrammar
+
+      - name: Build Android Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Find and prepare APK
+        id: apk-info
+        run: |
+          APK_PATH=$(find . -path "*/build/outputs/apk/release/*.apk" -type f | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No release APK found!"
+            exit 1
+          fi
+          
+          VERSION=${GITHUB_REF#refs/tags/v}
+          
+          APK_NAME="${{ env.APP_NAME }}-${VERSION}.apk"
+          
+          cp "$APK_PATH" "./$APK_NAME"
+          
+          echo "path=./$APK_NAME" >> $GITHUB_OUTPUT
+          echo "name=$APK_NAME" >> $GITHUB_OUTPUT
+          
+          echo "APK prepared: $APK_NAME"
+          ls -la "./$APK_NAME"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: ${{ steps.apk-info.outputs.path }}
+          retention-days: 7
+
+  create-release:
+    name: Release
+    needs: [build-android-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete tag and release
+        run: gh release delete $TAG_NAME --cleanup-tag --yes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: nightly
+
+      - name: Download APK artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: release-apk
+          path: ./artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Nightly"
+          body: |
+            >[!CAUTION]
+            >
+            > * This is a **Work-In-Progress** build. Do not expect completed features!
+            >
+            > * Features might be broken, crash or not work at all.
+            >
+            Latest nightly build from `main` branch.
+
+            Commit: ${{ github.sha }}
+          files: |
+            ./artifacts/${{ needs.build-android-release.outputs.apk-name }}
+          draft: false
+          prerelease: true
+          tag_name: nightly
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release Summary
+        run: |
+          echo "## Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**APK:** ${{ needs.build-android-release.outputs.apk-name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Release URL:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changelog Preview:" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.generate-changelog.outputs.changelog }}" >> $GITHUB_STEP_SUMMARY
