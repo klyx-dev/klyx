@@ -55,4 +55,7 @@ object GitHub {
     const val KLYX_REPO_URL = "$KLYX_ORG_URL/klyx"
 
     const val RELEASE_URL = "$KLYX_REPO_URL/releases"
+
+    const val BUG_REPORT_URL = "$KLYX_REPO_URL/issues/new?template=bug_report.yml"
+    const val FEATURE_REQUEST_URL = "$KLYX_REPO_URL/issues/new?template=feature_request.yml"
 }

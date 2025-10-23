@@ -196,6 +196,7 @@ private fun OverflowMenu(
 
         HelpMenu(
             expanded = showHelpMenu,
+            klyxViewModel = klyxViewModel,
             onDismissRequest = { showHelpMenu = false }
         )
 

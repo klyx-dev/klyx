@@ -2,6 +2,7 @@ package com.klyx.ui.page.main
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
+import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material3.DropdownMenu
@@ -16,10 +17,13 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.DOCS_URL
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
 import com.klyx.core.REPORT_ISSUE_URL
+import com.klyx.core.ui.component.DropdownMenuDivider
+import com.klyx.viewmodel.KlyxViewModel
 
 @Composable
 fun HelpMenu(
     expanded: Boolean,
+    klyxViewModel: KlyxViewModel,
     onDismissRequest: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
@@ -30,6 +34,22 @@ fun HelpMenu(
         shape = MaterialTheme.shapes.medium,
         onDismissRequest = onDismissRequest
     ) {
+        DropdownMenuItem(
+            text = { Text("Give Feedback...") },
+            onClick = {
+                klyxViewModel.showGiveFeedbackDialog()
+                onDismissRequest()
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Outlined.Feedback,
+                    contentDescription = null
+                )
+            }
+        )
+
+        DropdownMenuDivider()
+
         DropdownMenuItem(
             text = { Text("Documentation") },
             onClick = { uriHandler.openUri(DOCS_URL) },

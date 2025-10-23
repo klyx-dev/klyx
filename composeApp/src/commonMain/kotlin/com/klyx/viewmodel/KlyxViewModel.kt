@@ -9,7 +9,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 data class KlyxMenuState(
-    val showInfoDialog: Boolean = false
+    val showInfoDialog: Boolean = false,
+    val showGiveFeedbackDialog: Boolean = false,
 )
 
 data class KlyxAppState(
@@ -31,6 +32,14 @@ class KlyxViewModel(
 
     fun showInfoDialog() {
         _klyxMenuState.update { it.copy(showInfoDialog = true) }
+    }
+
+    fun showGiveFeedbackDialog() {
+        _klyxMenuState.update { it.copy(showGiveFeedbackDialog = true) }
+    }
+
+    fun dismissGiveFeedbackDialog() {
+        _klyxMenuState.update { it.copy(showGiveFeedbackDialog = false) }
     }
 
     fun dismissInfoDialog() {

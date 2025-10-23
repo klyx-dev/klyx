@@ -61,6 +61,7 @@ import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.log.LogViewerSheet
 import com.klyx.viewmodel.EditorViewModel
+import com.klyx.viewmodel.KlyxMenuState
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.StatusBarViewModel
 import com.klyx.viewmodel.openLogViewer
@@ -245,11 +246,7 @@ fun MainPage(
 
             val klyxMenuState by klyxViewModel.klyxMenuState.collectAsStateWithLifecycle()
 
-            if (klyxMenuState.showInfoDialog) {
-                InfoDialog(
-                    onDismissRequest = { klyxViewModel.dismissInfoDialog() }
-                )
-            }
+            MenuStateDialogs(klyxMenuState, klyxViewModel)
 
             if (CommandManager.showCommandPalette) {
                 CommandPalette(
@@ -265,5 +262,16 @@ fun MainPage(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun MenuStateDialogs(menuState: KlyxMenuState, klyxViewModel: KlyxViewModel) {
+    if (menuState.showInfoDialog) {
+        InfoDialog(onDismissRequest = { klyxViewModel.dismissInfoDialog() })
+    }
+
+    if (menuState.showGiveFeedbackDialog) {
+        GiveFeedbackDialog(onDismissRequest = { klyxViewModel.dismissGiveFeedbackDialog() })
     }
 }
