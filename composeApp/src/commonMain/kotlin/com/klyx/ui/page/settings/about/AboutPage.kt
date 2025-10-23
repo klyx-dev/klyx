@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -12,7 +13,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboard
@@ -30,6 +35,7 @@ import com.klyx.res.readme_desc
 import com.klyx.res.release
 import com.klyx.res.release_desc
 import com.klyx.res.version
+import com.klyx.ui.page.main.GiveFeedbackDialog
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -57,6 +63,8 @@ fun AboutPage(onNavigateBack: () -> Unit) {
             )
         }
     ) { padding ->
+        var showFeedbackDialog by remember { mutableStateOf(false) }
+
         LazyColumn(contentPadding = padding) {
             item {
                 PreferenceItem(
@@ -99,6 +107,20 @@ fun AboutPage(onNavigateBack: () -> Unit) {
                     }
                 }
             }
+
+            item {
+                PreferenceItem(
+                    title = "Give Feedback",
+                    icon = Icons.Outlined.Feedback,
+                    onClick = { showFeedbackDialog = !showFeedbackDialog }
+                )
+            }
+        }
+
+        if (showFeedbackDialog) {
+            GiveFeedbackDialog(
+                onDismissRequest = { showFeedbackDialog = false }
+            )
         }
     }
 }

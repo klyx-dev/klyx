@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.StarBorder
@@ -24,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.GitHub
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
-import com.klyx.core.ui.component.OutlinedButtonWithIcon
 import com.klyx.core.ui.component.TextButtonWithIcon
 
 @Composable
