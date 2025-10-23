@@ -80,10 +80,11 @@ class CodeEditorState @RememberInComposition internal constructor(
             value.state = this
             value.contentChangeCallback = this
             value.setDefaultUndoRedoManager(undoRedoManager)
+            isBufferLoading = false
             field = value
         }
 
-    internal var isBufferLoading by mutableStateOf(true)
+    internal var isBufferLoading by mutableStateOf(false)
 
     @Stable
     internal var _fontSize by mutableStateOf(TextUnit.Unspecified)
@@ -182,6 +183,7 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     internal constructor(file: KxFile, scope: CoroutineScope) : this(emptyContent(), true, scope) {
         scope.launch(Dispatchers.IO) {
+            isBufferLoading = true
             content = Content(file.toTextBuffer())
             isBufferLoading = false
             maxLineLengthDirty = true
