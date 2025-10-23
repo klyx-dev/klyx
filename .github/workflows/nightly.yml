@@ -2,7 +2,7 @@ name: Nightly
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # runs daily at 2 AM UTC
+    - cron: '30 19 * * *'  # runs daily at 7:30 PM UTC, which is 1:00 AM (midnight) IST
   workflow_dispatch:       # allows manual run
 
 env:
@@ -119,14 +119,7 @@ jobs:
         with:
           name: "nightly"
           body: |
-            >[!CAUTION]
-            >
-            > * This is a **Work-In-Progress** build. Do not expect completed features!
-            >
-            > * Features might be broken, crash or not work at all.
-            
             Latest nightly build from `main` branch.
-            
             **Commit:** ${{ github.sha }}
           files: |
             ./artifacts/${{ needs.build-android-release.outputs.apk-name }}

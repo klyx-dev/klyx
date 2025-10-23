@@ -28,6 +28,8 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.init
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -41,6 +43,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        FileKit.init(this)
         subscribe()
 
         setContent {

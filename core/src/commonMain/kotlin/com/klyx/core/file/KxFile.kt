@@ -103,6 +103,8 @@ inline fun KxFile.resolve(relative: String): KxFile = resolve(KxFile(relative))
 fun PlatformFile.toKxFile() = KxFile(absolutePath())
 fun KxFile.toPlatformFile() = PlatformFile(absolutePath)
 
+fun Collection<PlatformFile>.toKxFiles() = map { it.toKxFile() }
+
 /**
  * Converts a string representing a file path to a KxFile object.
  *

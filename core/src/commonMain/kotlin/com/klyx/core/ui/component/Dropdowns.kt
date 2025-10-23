@@ -8,11 +8,8 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.MenuItemColors
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.buildCommand
 import com.klyx.core.cmd.key.KeyShortcut
 
 @Composable
@@ -32,16 +29,6 @@ fun DropdownMenuItem(
     contentPadding: PaddingValues = MenuDefaults.DropdownMenuItemContentPadding,
     interactionSource: MutableInteractionSource? = null,
 ) {
-    LaunchedEffect(shortcut) {
-        if (shortcut != null) {
-            CommandManager.addCommand(buildCommand {
-                name(text)
-                shortcut(shortcut)
-                execute { onClick() }
-            })
-        }
-    }
-
     DropdownMenuItem(
         text = { Text(text = text) },
         onClick = onClick,

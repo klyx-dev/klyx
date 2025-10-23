@@ -25,6 +25,7 @@ import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
+import com.klyx.core.file.toKxFiles
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.ui.component.DropdownMenuDivider
@@ -41,6 +42,7 @@ import com.klyx.res.notification_saved
 import com.klyx.tab.Tab
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
+import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
@@ -64,10 +66,8 @@ fun FileMenu(
         }
     }
 
-    val filePicker = rememberFilePickerLauncher { file ->
-        if (file != null) {
-            editorViewModel.openFile(file.toKxFile())
-        }
+    val filePicker = rememberFilePickerLauncher(mode = FileKitMode.Multiple()) { files ->
+        files?.toKxFiles()?.forEach(editorViewModel::openFile)
         onDismissRequest()
     }
 

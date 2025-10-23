@@ -4,7 +4,6 @@ import com.klyx.core.cmd.key.KeyShortcut
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
-import kotlin.experimental.ExperimentalTypeInference
 
 @DslMarker
 private annotation class CommandDsl
@@ -12,15 +11,18 @@ private annotation class CommandDsl
 data class Command(
     val name: String,
     val description: String? = null,
-    @Deprecated(
-        message = "Use `shortcuts` instead.",
-        replaceWith = ReplaceWith("shortcuts")
-    )
-    val shortcutKey: String? = null,
+    val isHiddenInCommandPalette: Boolean = false,
+    val dismissOnAction: Boolean = true,
     val shortcuts: List<KeyShortcut> = emptyList(),
-    val execute: Command.() -> Unit
+    val action: CommandAction?
 ) {
-    fun run() = execute(this)
+    suspend fun run() {
+        action?.run(this)
+    }
+}
+
+fun interface CommandAction {
+    suspend fun run(command: Command)
 }
 
 @CommandDsl
@@ -28,9 +30,9 @@ class CommandBuilder {
     private var name: String? = null
     private var description: String? = null
     private var shortcuts = mutableListOf<KeyShortcut>()
-    private var execute: Command.() -> Unit = {
-        //error("No execution logic provided for command '${this.name}'")
-    }
+    private var action: CommandAction? = null
+    private var hideInCmdPalette = false
+    private var dismissOnAction = true
 
     fun name(name: String) = apply {
         require(name.isNotBlank()) { "Command name cannot be blank." }
@@ -49,27 +51,27 @@ class CommandBuilder {
         this.shortcuts += shortcuts
     }
 
-    @OptIn(ExperimentalTypeInference::class)
-    fun execute(@BuilderInference block: Command.() -> Unit) = apply {
-        this.execute = block
-    }
+    fun hideInCommandPalette() = apply { hideInCmdPalette = true }
+    fun dismissOnAction(dismiss: Boolean) = apply { dismissOnAction = dismiss }
+
+    fun action(action: CommandAction) = apply { this.action = action }
 
     fun build(): Command {
-        val finalName = requireNotNull(name) { "Command must have a name." }
+        if (!hideInCmdPalette) requireNotNull(name) { "Command must have a name." }
+
         return Command(
-            name = finalName,
+            name = name.orEmpty(),
             description = description,
-            shortcutKey = shortcuts.joinToString(" ") { it.toString() },
             shortcuts = shortcuts,
-            execute = execute
+            dismissOnAction = dismissOnAction,
+            isHiddenInCommandPalette = hideInCmdPalette,
+            action = action
         )
     }
 }
 
-@OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
-inline fun buildCommand(
-    @BuilderInference block: CommandBuilder.() -> Unit
-): Command {
+@OptIn(ExperimentalContracts::class)
+inline fun buildCommand(block: CommandBuilder.() -> Unit): Command {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
     return CommandBuilder().apply(block).build()
 }

@@ -40,6 +40,7 @@ import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
+import com.klyx.core.registerGeneralCommands
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.Route
 import com.klyx.core.ui.animatedComposable
@@ -113,7 +114,7 @@ fun AppEntry() {
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
             if (event.isCtrlPressed && event.isShiftPressed && event.key == Key.P) {
-                CommandManager.showPalette()
+                CommandManager.showCommandPalette()
             }
         }
     }
@@ -124,9 +125,7 @@ fun AppEntry() {
         }
     }
 
-    CollectLogs(
-        statusBarViewModel = statusBarViewModel
-    )
+    collectLogs(statusBarViewModel)
 
     KlyxTheme {
         Box(
@@ -153,6 +152,8 @@ fun AppEntry() {
                 },
                 gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentRoute == Route.HOME
             ) {
+                registerGeneralCommands(editorViewModel, klyxViewModel)
+
                 NavHost(
                     modifier = Modifier.align(Alignment.Center),
                     navController = navController,
@@ -226,8 +227,9 @@ fun NavGraphBuilder.settingsGraph(
     }
 }
 
+@Suppress("ComposableNaming")
 @Composable
-private fun CollectLogs(statusBarViewModel: StatusBarViewModel = koinViewModel()) {
+private fun collectLogs(statusBarViewModel: StatusBarViewModel = koinViewModel()) {
     val logBuffer = LocalLogBuffer.current
 
     LaunchedEffect(Unit) {

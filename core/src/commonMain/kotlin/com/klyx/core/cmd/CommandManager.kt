@@ -15,6 +15,8 @@ import com.klyx.core.cmd.key.matchesSequence
 import com.klyx.core.cmd.key.sequence
 import com.klyx.core.event.EventBus
 import com.klyx.core.theme.ThemeManager
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 object CommandManager {
     val commands = mutableStateSetOf<Command>()
@@ -23,17 +25,20 @@ object CommandManager {
     private val activeSequences = mutableMapOf<Command, KeyShortcutSequence>()
 
     var showCommandPalette by mutableStateOf(false)
+    val isCommandPaletteHidden get() = !showCommandPalette
 
     init {
         EventBus.instance.subscribe<KeyEvent> { event ->
             if (event.type == KeyEventType.KeyDown) {
-                activeSequences.entries.removeAll { (command, sequence) ->
-                    if (event.matchesSequence(sequence)) {
-                        if (sequence.advance()) {
-                            command.run()
-                            true
-                        } else false
-                    } else true
+                coroutineScope {
+                    activeSequences.entries.removeAll { (command, sequence) ->
+                        if (event.matchesSequence(sequence)) {
+                            if (sequence.advance()) {
+                                launch { command.run() }
+                                true
+                            } else false
+                        } else true
+                    }
                 }
 
                 for (command in commands) {
@@ -50,20 +55,22 @@ object CommandManager {
         }
 
         addCommand(buildCommand {
-            name("Toggle Theme Selector")
+            name("theme selector: toggle")
             shortcut(keyShortcutOf(Key.K, ctrl = true) and keyShortcutOf(Key.T, ctrl = true))
-            execute { ThemeManager.toggleThemeSelector() }
+            action { ThemeManager.toggleThemeSelector() }
         })
     }
 
-    fun performShortcut(shortcut: KeyShortcut) {
-        activeSequences.entries.removeAll { (command, sequence) ->
-            if (shortcut.matchesSequence(sequence)) {
-                if (sequence.advance()) {
-                    command.run()
-                    true
-                } else false
-            } else true
+    suspend fun performShortcut(shortcut: KeyShortcut) {
+        coroutineScope {
+            activeSequences.entries.removeAll { (command, sequence) ->
+                if (shortcut.matchesSequence(sequence)) {
+                    if (sequence.advance()) {
+                        launch { command.run() }
+                        true
+                    } else false
+                } else true
+            }
         }
 
         for (command in commands) {
@@ -78,16 +85,22 @@ object CommandManager {
         }
     }
 
-    fun performShortcut(shortcuts: Collection<KeyShortcut>) {
-        shortcuts.forEach { performShortcut(it) }
+    suspend fun performShortcut(shortcuts: Collection<KeyShortcut>) {
+        for (shortcut in shortcuts) {
+            performShortcut(shortcut)
+        }
     }
 
-    fun showPalette() {
+    fun showCommandPalette() {
         showCommandPalette = true
     }
 
-    fun hidePalette() {
+    fun hideCommandPalette() {
         showCommandPalette = false
+    }
+
+    fun toggleCommandPalette() {
+        showCommandPalette = !showCommandPalette
     }
 
     fun addCommand(command: Command) {
@@ -100,7 +113,10 @@ object CommandManager {
         if (!isPresent) recentlyUsedCommands.add(command)
     }
 
-    fun addCommand(commands: Array<Command>) {
+    fun addCommands(commands: List<Command>) {
         this.commands.addAll(commands.filter { !this.commands.any { c -> c.shortcuts == it.shortcuts } })
     }
+
+    fun removeCommand(command: Command) = commands.remove(command)
+    fun removeCommands(commands: List<Command>) = this.commands.removeAll(commands)
 }

@@ -11,13 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.buildCommand
 import com.klyx.core.cmd.key.KeyShortcut
 
 @Composable
@@ -27,14 +24,6 @@ fun TextButtonWithShortcut(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    LaunchedEffect(Unit) {
-        CommandManager.addCommand(buildCommand {
-            name(text)
-            shortcut(shortcut)
-            execute { onClick() }
-        })
-    }
-
     TextButton(
         onClick = onClick,
         modifier = modifier,

@@ -255,7 +255,7 @@ fun MainPage(
                 CommandPalette(
                     commands = CommandManager.commands,
                     recentlyUsedCommands = CommandManager.recentlyUsedCommands,
-                    onDismissRequest = CommandManager::hidePalette
+                    onDismissRequest = CommandManager::hideCommandPalette
                 )
             }
 

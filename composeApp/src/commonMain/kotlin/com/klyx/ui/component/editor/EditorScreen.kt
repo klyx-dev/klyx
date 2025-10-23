@@ -81,14 +81,6 @@ fun EditorScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        CommandManager.addCommand(buildCommand {
-            name("Close Active Tab")
-            shortcut(keyShortcutOf(ctrl = true, key = Key.W))
-            execute { editorViewModel.closeActiveTab() }
-        })
-    }
-
     Column(modifier = modifier) {
         if (openTabs.isNotEmpty()) {
             EditorTabRow(

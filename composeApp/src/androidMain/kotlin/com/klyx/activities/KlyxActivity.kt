@@ -10,13 +10,15 @@ import com.klyx.core.SharedLocalProvider
 import com.klyx.core.WindowManager
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
+import io.github.vinceglb.filekit.manualFileKitCoreInitialization
 import androidx.activity.compose.setContent as setContentInternal
 
 open class KlyxActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        FileKit.init(this)
+
+        FileKit.manualFileKitCoreInitialization(this)
         ContextHolder.setCurrentActivity(some())
 
         WindowManager.currentTaskId = taskId

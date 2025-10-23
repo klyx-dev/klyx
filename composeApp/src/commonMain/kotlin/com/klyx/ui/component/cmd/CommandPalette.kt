@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,8 @@ import androidx.compose.ui.window.PopupProperties
 import com.klyx.core.cmd.Command
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.theme.harmonizeWithPrimary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun CommandPalette(
@@ -46,10 +49,11 @@ fun CommandPalette(
     modifier: Modifier = Modifier
 ) {
     val focusRequester = remember { FocusRequester() }
+    val scope = rememberCoroutineScope { Dispatchers.Default }
 
     val allCommands = remember {
         recentlyUsedCommands + commands.filter {
-            it !in recentlyUsedCommands
+            it !in recentlyUsedCommands && !it.isHiddenInCommandPalette
         }.toMutableList().apply { sortBy { it.name.lowercase() } }
     }
 
@@ -102,8 +106,8 @@ fun CommandPalette(
                             .clip(RoundedCornerShape(6.dp))
                             .clickable {
                                 CommandManager.addRecentlyUsedCommand(command)
-                                command.run()
-                                onDismissRequest()
+                                scope.launch { command.run() }
+                                if (command.dismissOnAction) onDismissRequest()
                             }
                     ) {
                         Row(

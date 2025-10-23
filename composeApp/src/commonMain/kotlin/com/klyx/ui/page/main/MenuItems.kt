@@ -94,7 +94,7 @@ fun ColumnScope.DropdownMenuItems(
     DropdownMenuItem(
         text = "Command Palette",
         onClick = {
-            CommandManager.showPalette()
+            CommandManager.showCommandPalette()
             onDismissRequest()
         },
         icon = {
