@@ -17,6 +17,8 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.DOCS_URL
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
 import com.klyx.core.REPORT_ISSUE_URL
+import com.klyx.core.icon.Discord
+import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.viewmodel.KlyxViewModel
 
@@ -43,6 +45,17 @@ fun HelpMenu(
             leadingIcon = {
                 Icon(
                     Icons.Outlined.Feedback,
+                    contentDescription = null
+                )
+            }
+        )
+
+        DropdownMenuItem(
+            text = { Text("Discord Community") },
+            onClick = { uriHandler.openUri("https://discord.gg/ZEUHXymRVy") },
+            leadingIcon = {
+                Icon(
+                    KlyxIcons.Discord,
                     contentDescription = null
                 )
             }
