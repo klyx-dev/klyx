@@ -17,17 +17,3 @@ enum class LineBreak {
     /** Invalid end of line */
     Invalid
 }
-
-
-// line separator
-@Serializable
-enum class EndOfLine {
-    /** Use the end of line character identified in the text buffer. */
-    TextDefined,
-    /** Use line feed (\n) as the end of line character. */
-    LF,
-    /** Use carriage return and line feed (\r\n) as the end of line character. */
-    CRLF,
-    /** Invalid end of line */
-    Invalid
-}
