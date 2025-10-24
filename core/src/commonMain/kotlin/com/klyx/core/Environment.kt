@@ -35,3 +35,5 @@ internal fun String.replaceWithArgs(args: List<String>) = SimpleStringFormatRege
 fun string(resource: StringResource, vararg formatArgs: Any?) = runBlocking {
     getString(resource).replaceWithArgs(formatArgs.map { it.toString() })
 }
+
+inline val StringResource.value get() = string(this)

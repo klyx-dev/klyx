@@ -41,7 +41,6 @@ fun ColumnScope.DropdownMenuItems(
     klyxViewModel: KlyxViewModel,
     onShowFileMenu: () -> Unit,
     onShowHelpMenu: () -> Unit,
-    onShowKlyxMenu: () -> Unit,
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalPlatformContext.current
@@ -176,23 +175,6 @@ fun ColumnScope.DropdownMenuItems(
             Icon(
                 Icons.AutoMirrored.Outlined.HelpOutline,
                 contentDescription = "Help"
-            )
-        },
-        trailingIcon = {
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null
-            )
-        }
-    )
-
-    DropdownMenuItem(
-        text = { Text("Klyx") },
-        onClick = onShowKlyxMenu,
-        leadingIcon = {
-            Icon(
-                KlyxIcons.Klyx,
-                contentDescription = "Klyx Menu"
             )
         },
         trailingIcon = {

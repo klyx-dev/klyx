@@ -150,7 +150,6 @@ private fun OverflowMenu(
     var expanded by rememberSaveable { mutableStateOf(false) }
     var showFileMenu by rememberSaveable { mutableStateOf(false) }
     var showHelpMenu by rememberSaveable { mutableStateOf(false) }
-    var showKlyxMenu by rememberSaveable { mutableStateOf(false) }
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
         IconButton(
@@ -178,10 +177,6 @@ private fun OverflowMenu(
                     expanded = false
                     showHelpMenu = !showHelpMenu
                 },
-                onShowKlyxMenu = {
-                    expanded = false
-                    showKlyxMenu = !showKlyxMenu
-                },
                 onDismissRequest = { expanded = false }
             )
         }
@@ -197,14 +192,8 @@ private fun OverflowMenu(
         HelpMenu(
             expanded = showHelpMenu,
             klyxViewModel = klyxViewModel,
-            onDismissRequest = { showHelpMenu = false }
-        )
-
-        KlyxMenu(
-            expanded = showKlyxMenu,
-            onDismissRequest = { showKlyxMenu = !showKlyxMenu },
             editorViewModel = editorViewModel,
-            klyxViewModel = klyxViewModel
+            onDismissRequest = { showHelpMenu = false }
         )
     }
 }
