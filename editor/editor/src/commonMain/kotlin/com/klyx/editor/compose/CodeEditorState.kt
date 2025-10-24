@@ -460,8 +460,6 @@ class CodeEditorState @RememberInComposition internal constructor(
     fun offsetAt(cursor: Cursor) = content.offsetAt(cursor)
     fun offsetAt(line: Int, column: Int) = content.offsetAt(line, column)
 
-    inline val Cursor.offset get() = offsetAt(this)
-
     fun scrollByX(dx: Float) = scrollBy(dx, 0f)
     fun scrollByY(dy: Float) = scrollBy(0f, dy)
 

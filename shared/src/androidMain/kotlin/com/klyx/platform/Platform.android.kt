@@ -45,6 +45,7 @@ actual object PlatformInfo : KoinComponent {
 
     actual val isTV by lazy {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK) ||
+                @Suppress("DEPRECATION")
                 context.packageManager.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
     }
 
@@ -72,16 +73,28 @@ actual object PlatformInfo : KoinComponent {
 
     actual val screenWidth by lazy {
         val windowManager = context.getSystemService(WindowManager::class.java)
-        val metrics = DisplayMetrics()
-        windowManager?.defaultDisplay?.getMetrics(metrics)
-        metrics.widthPixels
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowManager.currentWindowMetrics.bounds.width()
+        } else {
+            val metrics = DisplayMetrics()
+
+            @Suppress("DEPRECATION")
+            windowManager?.defaultDisplay?.getMetrics(metrics)
+            metrics.widthPixels
+        }
     }
 
     actual val screenHeight by lazy {
         val windowManager = context.getSystemService(WindowManager::class.java)
-        val metrics = DisplayMetrics()
-        windowManager?.defaultDisplay?.getMetrics(metrics)
-        metrics.heightPixels
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            windowManager.currentWindowMetrics.bounds.height()
+        } else {
+            val metrics = DisplayMetrics()
+
+            @Suppress("DEPRECATION")
+            windowManager?.defaultDisplay?.getMetrics(metrics)
+            metrics.heightPixels
+        }
     }
 
     actual val screenDensity by lazy {

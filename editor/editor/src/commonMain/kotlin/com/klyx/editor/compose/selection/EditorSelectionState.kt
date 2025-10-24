@@ -554,8 +554,8 @@ internal class EditorSelectionState(
 
                     val startOffset =
                         if (isStartHandle) {
-                            with(editorState) {
-                                calculateCursorPositionFromScreenOffset(handleDragPosition).offset
+                            with(editorState.content) {
+                                editorState.calculateCursorPositionFromScreenOffset(handleDragPosition).offset
                             }
                         } else {
                             editorState.content.selection.start
@@ -565,8 +565,8 @@ internal class EditorSelectionState(
                         if (isStartHandle) {
                             editorState.content.selection.end
                         } else {
-                            with(editorState) {
-                                calculateCursorPositionFromScreenOffset(handleDragPosition).offset
+                            with(editorState.content) {
+                                editorState.calculateCursorPositionFromScreenOffset(handleDragPosition).offset
                             }
                         }
 
