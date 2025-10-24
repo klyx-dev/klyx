@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.klyx.ui.component.extension
 
 import androidx.compose.animation.AnimatedVisibility
@@ -25,13 +27,15 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -43,15 +47,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastMap
-import cafe.adriel.voyager.core.screen.Screen
-import cafe.adriel.voyager.navigator.LocalNavigator
-import cafe.adriel.voyager.navigator.currentOrThrow
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.klyx.core.LocalNotifier
+import com.klyx.core.event.ObserverAsEvents
 import com.klyx.core.extension.ExtensionFilter
+import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.file.toKxFile
-import com.klyx.core.net.isConnected
+import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
 import com.klyx.core.string
 import com.klyx.extension.ExtensionManager
@@ -69,64 +72,62 @@ import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 
-class ExtensionListScreen : Screen {
-    @Composable
-    override fun Content() {
-        val navigator = LocalNavigator.currentOrThrow
-        val notifier = LocalNotifier.current
-        val coroutineScope = rememberCoroutineScope()
-        var showDevExtensionInstallSheet by remember { mutableStateOf(false) }
-        val viewModel = koinViewModel<ExtensionViewModel>()
+@Composable
+fun ExtensionListScreen(
+    onExtensionItemClick: (ExtensionInfo) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val notifier = LocalNotifier.current
+    val coroutineScope = rememberCoroutineScope()
+    var showDevExtensionInstallSheet by remember { mutableStateOf(false) }
+    val viewModel = koinViewModel<ExtensionViewModel>()
+    val state by viewModel.extensionListState.collectAsState()
 
-        val selectDir = rememberDirectoryPickerLauncher { file ->
-            if (file != null) {
-                coroutineScope.launch {
-                    ExtensionManager.installExtension(
-                        directory = file.toKxFile(),
-                        isDevExtension = true
-                    ).onFailure {
-                        notifier.error(string(string.extension_install_failed, it))
-                    }.onSuccess {
-                        notifier.success(string(string.extension_install_success))
-                    }
+    val selectDir = rememberDirectoryPickerLauncher { file ->
+        if (file != null) {
+            coroutineScope.launch {
+                ExtensionManager.installExtension(
+                    directory = file.toKxFile(),
+                    isDevExtension = true
+                ).onFailure {
+                    notifier.error(string(string.extension_install_failed, it))
+                }.onSuccess {
+                    notifier.success(string(string.extension_install_success))
                 }
             }
         }
+    }
 
-        val selectZip = rememberFilePickerLauncher(
-            type = FileKitType.File("zip")
-        ) { file ->
-            if (file != null) {
-                coroutineScope.launch {
-                    ExtensionManager.installExtensionFromZip(
-                        zipFile = file.toKxFile(),
-                        isDevExtension = true
-                    ).onFailure {
-                        notifier.error(string(string.extension_install_failed, it))
-                    }.onSuccess {
-                        notifier.success(string(string.extension_install_success))
-                    }
+    val selectZip = rememberFilePickerLauncher(
+        type = FileKitType.File("zip")
+    ) { file ->
+        if (file != null) {
+            coroutineScope.launch {
+                ExtensionManager.installExtensionFromZip(
+                    zipFile = file.toKxFile(),
+                    isDevExtension = true
+                ).onFailure {
+                    notifier.error(string(string.extension_install_failed, it))
+                }.onSuccess {
+                    notifier.success(string(string.extension_install_success))
                 }
             }
         }
+    }
 
-        val extensions = viewModel.extensions
+    val networkState by rememberNetworkState()
+    var filter by remember { mutableStateOf(ExtensionFilter.All) }
 
-        val networkState by rememberNetworkState()
-        var filter by remember { mutableStateOf(ExtensionFilter.All) }
-
-        LaunchedEffect(Unit) {
-            if (networkState.isConnected) {
-                viewModel.loadExtensions()
-            } else {
-                notifier.warning(string(string.no_internet_connection))
-            }
+    ObserverAsEvents(viewModel.extensionEvents) { event ->
+        when (event) {
+            ExtensionEvent.ReloadExtensions -> viewModel.loadExtensions()
         }
+    }
 
+    Column(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(vertical = 4.dp)
@@ -193,7 +194,7 @@ class ExtensionListScreen : Screen {
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        AnimatedVisibility(viewModel.isLoading) {
+        AnimatedVisibility(state.isLoading) {
             Column {
                 CircularProgressIndicator(
                     modifier = Modifier.size(12.dp),
@@ -207,9 +208,9 @@ class ExtensionListScreen : Screen {
         val installedExtensions = ExtensionManager.installedExtensions.fastMap { it.info }
 
         val filteredExtensions = when (filter) {
-            ExtensionFilter.All -> installedExtensions + extensions.fastFilter { it !in installedExtensions }
+            ExtensionFilter.All -> installedExtensions + state.extensionInfos.fastFilter { it !in installedExtensions }
             ExtensionFilter.Installed -> installedExtensions
-            ExtensionFilter.NotInstalled -> extensions.fastFilter { it !in installedExtensions }
+            ExtensionFilter.NotInstalled -> state.extensionInfos.fastFilter { it !in installedExtensions }
         }.fastMap { ext ->
             ext to FuzzySearch.partialRatio(searchQuery.lowercase(), ext.name.lowercase())
         }.fastFilter { (_, score) -> searchQuery.isBlank() || score >= 60 }
@@ -225,9 +226,7 @@ class ExtensionListScreen : Screen {
                             .fillMaxWidth()
                             .animateItem(),
                         isInstalled = extension in installedExtensions,
-                        onClick = {
-                            navigator.push(ExtensionDetailScreen(Json.encodeToString(extension)))
-                        }
+                        onClick = { onExtensionItemClick(extension) }
                     )
                 }
             }
@@ -236,22 +235,32 @@ class ExtensionListScreen : Screen {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(stringResource(string.no_extensions))
+                if (state.isLoading) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularWavyProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Loading extensions...")
+                    }
+                } else if (networkState.isNotConnected && filteredExtensions.isNotEmpty()) {
+                    Text(stringResource(string.no_internet_connection))
+                } else {
+                    Text(stringResource(string.no_extensions))
+                }
             }
         }
+    }
 
-        if (showDevExtensionInstallSheet) {
-            InstallSheet(
-                onDismiss = { showDevExtensionInstallSheet = false },
-                onPick = { type ->
-                    showDevExtensionInstallSheet = false
+    if (showDevExtensionInstallSheet) {
+        InstallSheet(
+            onDismiss = { showDevExtensionInstallSheet = false },
+            onPick = { type ->
+                showDevExtensionInstallSheet = false
 
-                    when (type) {
-                        InstallationType.Directory -> selectDir.launch()
-                        InstallationType.Zip -> selectZip.launch()
-                    }
+                when (type) {
+                    InstallationType.Directory -> selectDir.launch()
+                    InstallationType.Zip -> selectZip.launch()
                 }
-            )
-        }
+            }
+        )
     }
 }

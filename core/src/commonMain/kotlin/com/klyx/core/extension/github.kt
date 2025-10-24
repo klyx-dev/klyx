@@ -8,8 +8,9 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.logging.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -17,7 +18,6 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.ExperimentalTime
@@ -55,52 +55,40 @@ suspend fun fetchExtensionEntries(): ExtensionsIndex {
     return Toml.decodeFromString(raw)
 }
 
-fun fetchExtensionsFlow() = flow {
+suspend fun fetchAllExtensions() = coroutineScope {
     val extensionsIndex = fetchExtensionEntries()
 
-    for ((name, entry) in extensionsIndex) {
-        try {
-            val extension = fetchSingleExtension(name, entry)
-            emit(extension)
-        } catch (e: Exception) {
-            logger.error { "Failed to process extension $name: ${e.message}" }
+    val extensions = extensionsIndex.map { (name, entry) ->
+        async(Dispatchers.IO) {
+            try {
+                fetchSingleExtension(name, entry)
+            } catch (e: Exception) {
+                logger.error { "Failed to fetch extension $name in parallel: ${e.message}" }
+                null
+            }
         }
     }
-}.flowOn(Dispatchers.IO)
+
+    extensions.awaitAll().filterNotNull()
+}
 
 private suspend fun fetchSingleExtension(name: String, entry: ExtensionEntry): ExtensionInfo {
     val submoduleMetaUrl = "$BASE_GITHUB_API_EXTENSIONS_URL/${entry.submodule}"
-    val submoduleInfoJson = try {
-        fetchText(submoduleMetaUrl)
-    } catch (e: Exception) {
-        logger.error { "Failed to fetch submodule metadata for '$name' from $submoduleMetaUrl: ${e.message}" }
-        throw ExtensionFetchException("Failed to fetch submodule metadata for '$name'. URL: $submoduleMetaUrl", e)
-    }
-
+    val submoduleInfoJson = fetchText(submoduleMetaUrl)
     val submoduleInfo = Json.parseToJsonElement(submoduleInfoJson).jsonObject
 
     val submoduleHtmlUrl = submoduleInfo["html_url"]?.jsonPrimitive?.contentOrNull
-        ?: throw ExtensionFetchException("Missing 'html_url' in submodule metadata for $name from $submoduleMetaUrl")
-    
-    val submoduleSha = submoduleInfo["sha"]?.jsonPrimitive?.contentOrNull
-        ?: throw ExtensionFetchException("Missing 'sha' (commit hash) in submodule metadata for $name from $submoduleMetaUrl")
+        ?: throw ExtensionFetchException("Missing 'html_url' in metadata for $name")
 
-    val (owner, repo) = try {
-        parseRepoInfo(submoduleHtmlUrl)
-    } catch (e: Exception) {
-        logger.error { "Failed to parse owner/repo from submodule html_url '$submoduleHtmlUrl' for extension $name: ${e.message}"}
-        throw ExtensionFetchException("Could not parse repository owner and name from submodule HTML URL: $submoduleHtmlUrl", e)
-    }
+    val submoduleSha = submoduleInfo["sha"]?.jsonPrimitive?.contentOrNull
+        ?: throw ExtensionFetchException("Missing 'sha' (commit hash) in metadata for $name")
+
+    val (owner, repo) = parseRepoInfo(submoduleHtmlUrl)
 
     val tomlFileUrl = "https://raw.githubusercontent.com/$owner/$repo/$submoduleSha/extension.toml"
 
-    try {
-        val tomlContentRaw = fetchText(tomlFileUrl)
-        return Toml.decodeFromString(tomlContentRaw)
-    } catch (e: Exception) {
-        logger.error { "Failed to fetch or parse extension.toml for '$name' from $tomlFileUrl: ${e.message}" }
-        throw ExtensionFetchException("Failed to fetch or parse extension.toml for '$name'. URL: $tomlFileUrl", e)
-    }
+    val tomlContentRaw = fetchText(tomlFileUrl)
+    return Toml.decodeFromString(tomlContentRaw)
 }
 
 suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(Dispatchers.IO) {

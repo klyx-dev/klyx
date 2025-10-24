@@ -33,6 +33,7 @@ fun InstallSheet(
             ) {
                 Text("From Directory")
             }
+
             TextButton(
                 onClick = { onPick(InstallationType.Zip) },
                 modifier = Modifier.fillMaxWidth()
