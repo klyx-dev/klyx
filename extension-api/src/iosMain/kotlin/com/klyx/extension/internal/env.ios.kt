@@ -3,6 +3,7 @@ package com.klyx.extension.internal
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import io.matthewnelson.kmp.process.Process
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
 import platform.Foundation.NSProcessInfo
@@ -35,9 +36,24 @@ actual fun executeCommand(
     command: String,
     args: Array<String>,
     env: Map<String, String>
-): Output {
-    TODO("Not yet implemented")
-}
+) = Process.Builder(command = command)
+    .args(args.asList())
+    .environment { putAll(env) }
+    .useSpawn { p ->
+        val stdout = StringBuilder()
+        val stderr = StringBuilder()
+
+        p.stderrFeed { stderr.append(it) }
+        p.stdoutFeed { stdout.append(it) }
+
+        val exitCode = p.waitFor()
+
+        Output(
+            status = exitCode,
+            stdout = stdout.toString(),
+            stderr = stderr.toString()
+        )
+    }
 
 actual val userHomeDir: String?
     get() = TODO("Not yet implemented")

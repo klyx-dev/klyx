@@ -68,6 +68,7 @@ kotlin {
                 api(libs.ktor.serialization.kotlinx.json)
                 implementation(libs.commons.compress)
                 api(libs.koin.core)
+                api(libs.kmp.process)
 
                 implementation(kotlin("reflect"))
                 api(libs.kotlinx.io.core)
