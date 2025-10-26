@@ -320,7 +320,11 @@ private fun FileTreeItem(
             enter = fadeIn(),
             exit = fadeOut()
         ) {
-            Column(modifier = Modifier.width(IntrinsicSize.Max)) {
+            Column(
+                modifier = Modifier
+                    .width(IntrinsicSize.Max)
+                    .animateEnterExit()
+            ) {
                 children.fastForEach { child ->
                     key(child.file.absolutePath) {
                         FileTreeItem(

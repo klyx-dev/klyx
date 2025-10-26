@@ -2,6 +2,7 @@ package com.klyx.filetree
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Code
@@ -97,6 +98,7 @@ internal fun FileTreeNode.resolveFileIcon(): ImageVector {
         "yml", "yaml" -> KlyxIcons.Language.Yaml
         "md", "mdx" -> KlyxIcons.Language.Markdown
         "json" -> Icons.Default.DataObject
+        "apk" -> Icons.Default.Android
         "txt" -> Icons.Default.Description
         "png", "jpg", "jpeg", "gif", "svg", "webp" -> Icons.Default.Image
         "pdf" -> Icons.Default.PictureAsPdf
