@@ -1,7 +1,7 @@
 package com.klyx.activities
 
 import android.os.Bundle
-import android.os.Process
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,7 +13,9 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
@@ -32,6 +34,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.blankj.utilcode.util.ClipboardUtils
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
 
@@ -97,6 +100,17 @@ class CrashActivity : ComponentActivity() {
                                 }
                             },
                             scrollBehavior = scrollBehavior,
+                        )
+                    },
+                    floatingActionButton = {
+                        ExtendedFloatingActionButton(
+                            onClick = {
+                                ClipboardUtils.copyText(crashLog).also {
+                                    Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            text = { Text("Copy") },
+                            icon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
                         )
                     }
                 ) { innerPadding ->

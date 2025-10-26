@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -86,7 +87,7 @@ private fun ExtensionDisclaimer() {
             confirmButton = { ConfirmButton("OK") { showExtensionDisclaimer = false } },
             icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
             title = { Text("Info", textAlign = TextAlign.Center) },
-            text = { Text(stringResource(string.extension_disclaimer)) },
+            text = { Text(stringResource(string.extension_disclaimer), style = MaterialTheme.typography.bodyLarge) },
             dismissButton = {
                 DismissButton("Don't show again") {
                     showExtensionDisclaimer = false
