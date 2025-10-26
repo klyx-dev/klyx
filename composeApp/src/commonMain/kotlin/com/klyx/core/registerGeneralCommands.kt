@@ -73,7 +73,7 @@ internal fun registerGeneralCommands(
         listOf(
             buildCommand {
                 hideInCommandPalette()
-                shortcut(keyShortcutOf(ctrl = true, alt = true, key = Key.O))
+                shortcut(keyShortcutOf(ctrl = true, key = Key.O))
                 action { projectPicker.launch() }
             },
 

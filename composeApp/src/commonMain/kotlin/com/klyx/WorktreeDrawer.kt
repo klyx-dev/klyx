@@ -83,7 +83,7 @@ fun WorktreeDrawer(
                             TextButtonWithShortcut(
                                 text = stringResource(Res.string.open_a_project),
                                 modifier = Modifier.padding(top = 20.dp),
-                                shortcut = keyShortcutOf(ctrl = true, alt = true, key = Key.O)
+                                shortcut = keyShortcutOf(ctrl = true, key = Key.O)
                             ) {
                                 directoryPicker.launch()
                             }
