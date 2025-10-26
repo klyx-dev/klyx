@@ -1,3 +1,5 @@
 package com.klyx.core.icon
 
-object KlyxIcons
+object KlyxIcons {
+    object Language
+}

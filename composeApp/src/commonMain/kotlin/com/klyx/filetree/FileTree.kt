@@ -25,19 +25,7 @@ import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
@@ -235,6 +222,15 @@ private fun FileTreeItem(
                     indication = ripple()
                 )
                 .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        val event = awaitPointerEvent()
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            event.changes.forEach { e -> e.consume() }
+                            onFileLongClick(node.file, worktree)
+                        }
+                    }
+                }
+                .pointerInput(Unit) {
                     detectTapGestures(
                         onLongPress = { offset ->
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -255,14 +251,6 @@ private fun FileTreeItem(
                             viewModel.selectNode(node)
                         }
                     )
-
-                    awaitPointerEventScope {
-                        val event = awaitPointerEvent()
-                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                            event.changes.forEach { e -> e.consume() }
-                            onFileLongClick(node.file, worktree)
-                        }
-                    }
                 }
                 .then(backgroundModifier)
                 .padding(
@@ -306,17 +294,15 @@ private fun FileTreeItem(
             }
 
             Icon(
-                imageVector = getFileIcon(node),
+                imageVector = if (node.isDirectory) {
+                    node.resolveFolderIcon(isExpanded)
+                } else {
+                    node.resolveFileIcon()
+                },
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
                 tint = fgColor
             )
-
-//            AsyncImage(
-//                "",
-//                contentDescription = null,
-//                imageLoader = SvgImageLoader
-//            )
 
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -447,35 +433,5 @@ private fun FileTreeItem(
                 success
             }
         )
-    }
-}
-
-private fun getFileIcon(node: FileTreeNode): ImageVector {
-    if (node.file.isDirectory) {
-        return Icons.Default.Folder
-    }
-
-    return when (node.file.name.substringAfterLast('.', "").lowercase()) {
-        "kt", "kts" -> Icons.Default.Code
-        "java" -> Icons.Default.Code
-        "js", "ts", "jsx", "tsx" -> Icons.Default.Code
-        "py" -> Icons.Default.Code
-        "cpp", "c", "h", "hpp" -> Icons.Default.Code
-        "cs" -> Icons.Default.Code
-        "go" -> Icons.Default.Code
-        "rs" -> Icons.Default.Code
-        "swift" -> Icons.Default.Code
-        "php" -> Icons.Default.Code
-        "rb" -> Icons.Default.Code
-        "html", "htm" -> Icons.Default.Language
-        "css", "scss", "sass" -> Icons.Default.Palette
-        "json", "xml", "yaml", "yml" -> Icons.Default.Settings
-        "md", "txt" -> Icons.Default.Description
-        "png", "jpg", "jpeg", "gif", "svg", "webp" -> Icons.Default.Image
-        "pdf" -> Icons.Default.PictureAsPdf
-        "zip", "rar", "7z", "tar", "gz" -> Icons.Default.Archive
-        "mp4", "avi", "mov", "mkv" -> Icons.Default.VideoFile
-        "mp3", "wav", "flac", "ogg" -> Icons.Default.AudioFile
-        else -> Icons.AutoMirrored.Filled.InsertDriveFile
     }
 }
