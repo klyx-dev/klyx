@@ -47,7 +47,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 data class TabState(
     val openTabs: List<Tab> = emptyList(),
@@ -127,28 +126,29 @@ class EditorViewModel(
                 _state.update { it.copy(pendingFiles = it.pendingFiles + file) }
             }
 
-            if (!file.isKlyxTempFile() && !permissionRequired && !file.isValidUtf8()) {
-                notifier.error("(${file.name}) stream did not contain valid UTF-8")
-                return@launch
+            val tab = if (!file.isKlyxTempFile() && !permissionRequired && !file.isValidUtf8()) {
+                //notifier.error("(${file.name}) stream did not contain valid UTF-8")
+                Tab.UnsupportedFileTab(
+                    id = file.id,
+                    name = tabTitle,
+                    file = file
+                )
+            } else {
+                Tab.FileTab(
+                    id = file.id,
+                    name = tabTitle,
+                    worktree = worktree,
+                    isInternal = isInternal,
+                    file = file,
+                    editorState = if (SettingsManager.settings.value.useComposeEditorInsteadOfSoraEditor) {
+                        ComposeEditorState(CodeEditorState(file))
+                    } else {
+                        SoraEditorState(com.klyx.editor.CodeEditorState(file))
+                    }
+                )
             }
 
-            val fileTab = Tab.FileTab(
-                id = file.id,
-                name = tabTitle,
-                worktree = worktree,
-                isInternal = isInternal,
-                file = file,
-                editorState = if (SettingsManager.settings.value.useComposeEditorInsteadOfSoraEditor) {
-                    ComposeEditorState(CodeEditorState(file))
-                } else {
-                    SoraEditorState(com.klyx.editor.CodeEditorState(file))
-                }
-            )
-
-            withContext(Dispatchers.Main) {
-                openTab(fileTab)
-            }
-
+            openTab(tab)
             EventBus.instance.post(FileOpenEvent(file, worktree?.rootFile))
         }
     }

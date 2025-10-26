@@ -1,12 +1,21 @@
+@file:OptIn(ExperimentalMaterial3ExpressiveApi::class)
+
 package com.klyx.ui.component.editor
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -17,12 +26,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.klyx.core.cmd.CommandManager
-import com.klyx.core.cmd.buildCommand
-import com.klyx.core.cmd.key.keyShortcutOf
+import com.klyx.core.file.openFile
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
 import com.klyx.core.language
@@ -157,7 +164,23 @@ fun EditorScreen(
                     }
 
                     is Tab.AnyTab -> tab.content.invoke()
-                    else -> {}
+
+                    is Tab.UnsupportedFileTab -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Unsupported file type", style = MaterialTheme.typography.bodyLargeEmphasized)
+
+                                ElevatedButton(
+                                    onClick = { openFile(tab.file) },
+                                    shapes = ButtonDefaults.shapes()
+                                ) {
+                                    Text("Open in Default App")
+                                }
+                            }
+                        }
+                    }
+
+                    null -> {}
                 }
             }
         } else {

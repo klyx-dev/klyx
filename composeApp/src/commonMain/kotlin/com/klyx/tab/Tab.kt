@@ -33,6 +33,13 @@ sealed class Tab(
     ) : Tab(name, id, data)
 
     @Stable
+    data class UnsupportedFileTab(
+        override val name: String,
+        val file: KxFile,
+        override val id: TabId = generateId()
+    ) : Tab(name, id, file)
+
+    @Stable
     data class FileTab(
         override val name: String,
         val file: KxFile,
