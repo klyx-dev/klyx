@@ -12,7 +12,8 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
-import com.klyx.core.terminal.SAFUtils
+import com.klyx.core.terminal.SAFUtils.getDocumentIdForUri
+import com.klyx.core.terminal.SAFUtils.getFileForDocumentId
 import com.klyx.runtimeError
 import com.klyx.unimplemented
 import com.klyx.unsupported
@@ -172,25 +173,33 @@ actual fun KxFile(path: String): KxFile {
     val context = ContextHolder.context
     val uri = path.toUri()
 
+    val fallback = {
+        if (DocumentsContract.isTreeUri(uri)) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+            DocumentFile.fromTreeUri(context, uri)!!
+        } else {
+            DocumentFile.fromSingleUri(context, uri)!!
+        }
+    }
+
     return when (uri.scheme) {
         ContentResolver.SCHEME_CONTENT -> {
-            val file = runCatching {
+            val file = try {
                 UriUtils.uri2FileNoCacheCopy(uri).asDocumentFile()
-            }.getOrElse {
-                try {
-                    SAFUtils.getFileForDocumentId(SAFUtils.getDocumentIdForUri(uri)).asDocumentFile()
-                } catch (_: Exception) {
-                    if (DocumentsContract.isTreeUri(uri)) {
-                        runCatching {
-                            context.contentResolver.takePersistableUriPermission(
-                                uri,
-                                FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
-                            )
-                        }
-                        DocumentFile.fromTreeUri(context, uri)!!
-                    } else {
-                        DocumentFile.fromSingleUri(context, uri)!!
+            } catch (_: Throwable) {
+                if (uri.host == "com.klyx.documents") {
+                    try {
+                        getFileForDocumentId(getDocumentIdForUri(uri)).asDocumentFile()
+                    } catch (_: Throwable) {
+                        fallback()
                     }
+                } else {
+                    fallback()
                 }
             }
 
