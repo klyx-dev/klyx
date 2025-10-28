@@ -13,7 +13,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -26,11 +25,18 @@ import androidx.compose.ui.input.key.key
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.klyx.AppRoute.Settings.About
+import com.klyx.AppRoute.Settings.Appearance
+import com.klyx.AppRoute.Settings.DarkTheme
+import com.klyx.AppRoute.Settings.EditorPreferences
+import com.klyx.AppRoute.Settings.GeneralPreferences
+import com.klyx.AppRoute.Settings.SettingsPage
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.isPermissionRequired
@@ -42,7 +48,6 @@ import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.registerGeneralCommands
 import com.klyx.core.settings.currentAppSettings
-import com.klyx.core.ui.Route
 import com.klyx.core.ui.animatedComposable
 import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
@@ -72,8 +77,6 @@ val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
 
 val LocalLogBuffer = staticCompositionLocalOf { LogBuffer(maxSize = 2000) }
 
-private val TopDestinations = listOf(Route.HOME, Route.SETTINGS_PAGE)
-
 @Composable
 fun AppEntry() {
     val appSettings = currentAppSettings
@@ -102,14 +105,8 @@ fun AppEntry() {
         }
     }
 
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
-    var currentTopDestination by rememberSaveable { mutableStateOf(currentRoute) }
-
-    LaunchedEffect(currentRoute) {
-        if (currentRoute in TopDestinations) {
-            currentTopDestination = currentRoute
-        }
-    }
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
 
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
@@ -150,16 +147,16 @@ fun AppEntry() {
                         }
                     }
                 },
-                gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentRoute == Route.HOME
+                gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
             ) {
                 registerGeneralCommands(editorViewModel, klyxViewModel)
 
                 NavHost(
                     modifier = Modifier.align(Alignment.Center),
                     navController = navController,
-                    startDestination = Route.HOME
+                    startDestination = AppRoute.Home
                 ) {
-                    animatedComposable(Route.HOME) {
+                    animatedComposable<AppRoute.Home> {
                         MainPage(
                             modifier = Modifier.fillMaxSize(),
                             editorViewModel = editorViewModel,
@@ -170,9 +167,7 @@ fun AppEntry() {
                                 navController.navigate(route = route) {
                                     launchSingleTop = true
                                 }
-                            },
-                            currentRoute = currentRoute,
-                            currentTopDestination = currentTopDestination
+                            }
                         )
                     }
 
@@ -209,21 +204,20 @@ fun AppEntry() {
 
 fun NavGraphBuilder.settingsGraph(
     onNavigateBack: () -> Unit,
-    onNavigateTo: (route: String) -> Unit,
+    onNavigateTo: (route: Any) -> Unit,
 ) {
-    navigation(startDestination = Route.SETTINGS_PAGE, route = Route.SETTINGS) {
-        animatedComposable(Route.SETTINGS_PAGE) {
-            SettingsPage(onNavigateBack = onNavigateBack, onNavigateTo = onNavigateTo)
+    navigation<AppRoute.Settings>(startDestination = SettingsPage) {
+        animatedComposable<SettingsPage> { SettingsPage(onNavigateBack = onNavigateBack, onNavigateTo = onNavigateTo) }
+        animatedComposable<GeneralPreferences> { GeneralPreferences(onNavigateBack = onNavigateBack) }
+        animatedComposable<Appearance> {
+            AppearancePreferences(
+                onNavigateBack = onNavigateBack,
+                onNavigateTo = onNavigateTo
+            )
         }
-        animatedComposable(Route.GENERAL_PREFERENCES) {
-            GeneralPreferences(onNavigateBack = onNavigateBack)
-        }
-        animatedComposable(Route.APPEARANCE) {
-            AppearancePreferences(onNavigateBack = onNavigateBack, onNavigateTo = onNavigateTo)
-        }
-        animatedComposable(Route.DARK_THEME) { DarkThemePreferences { onNavigateBack() } }
-        animatedComposable(Route.EDITOR_PREFERENCES) { EditorPreferences(onNavigateBack) }
-        animatedComposable(Route.ABOUT) { AboutPage(onNavigateBack) }
+        animatedComposable<DarkTheme> { DarkThemePreferences { onNavigateBack() } }
+        animatedComposable<EditorPreferences> { EditorPreferences(onNavigateBack) }
+        animatedComposable<About> { AboutPage(onNavigateBack) }
     }
 }
 

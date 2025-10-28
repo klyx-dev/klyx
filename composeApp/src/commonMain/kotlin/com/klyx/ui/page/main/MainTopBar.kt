@@ -36,16 +36,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.AppRoute
 import com.klyx.LocalDrawerState
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.settings.currentAppSettings
-import com.klyx.core.ui.Route
 import com.klyx.core.ui.component.FpsText
 import com.klyx.extension.api.Project
 import com.klyx.filetree.FileTreeViewModel
-import com.klyx.res.Res
 import com.klyx.res.Res.string
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved
@@ -66,7 +65,7 @@ fun MainTopBar(
     editorViewModel: EditorViewModel,
     klyxViewModel: KlyxViewModel,
     fileTreeViewModel: FileTreeViewModel,
-    onNavigateToRoute: (String) -> Unit,
+    onNavigateToRoute: (Any) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
     val notifier = LocalNotifier.current
@@ -219,14 +218,14 @@ private fun FileTreeButton() {
 }
 
 @Composable
-private fun SettingsButton(onNavigate: (String) -> Unit) {
+private fun SettingsButton(onNavigate: (Any) -> Unit) {
     IconButton(
-        onClick = { onNavigate(Route.SETTINGS_PAGE) },
+        onClick = { onNavigate(AppRoute.Settings.SettingsPage) },
         shapes = IconButtonDefaults.shapes()
     ) {
         Icon(
             Icons.Outlined.Settings,
-            contentDescription = stringResource(Res.string.settings)
+            contentDescription = stringResource(string.settings)
         )
     }
 }

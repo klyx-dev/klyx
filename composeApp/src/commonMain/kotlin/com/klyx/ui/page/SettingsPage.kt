@@ -16,7 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.klyx.core.ui.Route
+import com.klyx.AppRoute
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.SettingItem
 import com.klyx.res.Res
@@ -35,7 +35,7 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun SettingsPage(
     onNavigateBack: () -> Unit,
-    onNavigateTo: (String) -> Unit
+    onNavigateTo: (Any) -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -57,7 +57,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.general_settings_desc),
                     icon = Icons.Outlined.Settings
                 ) {
-                    onNavigateTo(Route.GENERAL_PREFERENCES)
+                    onNavigateTo(AppRoute.Settings.GeneralPreferences)
                 }
             }
 
@@ -67,7 +67,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.editor_settings_desc),
                     icon = Icons.Outlined.Code
                 ) {
-                    onNavigateTo(Route.EDITOR_PREFERENCES)
+                    onNavigateTo(AppRoute.Settings.EditorPreferences)
                 }
             }
 
@@ -77,7 +77,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.display_settings),
                     icon = Icons.Outlined.Palette,
                 ) {
-                    onNavigateTo(Route.APPEARANCE)
+                    onNavigateTo(AppRoute.Settings.Appearance)
                 }
             }
 
@@ -87,7 +87,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.about_page),
                     icon = Icons.Outlined.Info,
                 ) {
-                    onNavigateTo(Route.ABOUT)
+                    onNavigateTo(AppRoute.Settings.About)
                 }
             }
         }

@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.AppRoute
 import com.klyx.LocalDrawerState
 import com.klyx.LocalLogBuffer
 import com.klyx.core.cmd.CommandManager
@@ -76,14 +77,12 @@ import org.koin.compose.viewmodel.koinViewModel
 )
 @Composable
 fun MainPage(
-    onNavigateToRoute: (String) -> Unit,
+    onNavigateToRoute: (Any) -> Unit,
     modifier: Modifier = Modifier,
     editorViewModel: EditorViewModel = koinViewModel(),
     klyxViewModel: KlyxViewModel = koinViewModel(),
     fileTreeViewModel: FileTreeViewModel = koinViewModel(),
-    statusBarViewModel: StatusBarViewModel = koinViewModel(),
-    currentRoute: String? = null,
-    currentTopDestination: String? = null,
+    statusBarViewModel: StatusBarViewModel = koinViewModel()
 ) {
     val logBuffer = LocalLogBuffer.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()

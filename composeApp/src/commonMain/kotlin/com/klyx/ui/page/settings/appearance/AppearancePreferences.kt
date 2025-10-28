@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
+import com.klyx.AppRoute
 import com.klyx.core.LocalPaletteStyleIndex
 import com.klyx.core.LocalSeedColor
 import com.klyx.core.settings.LocalAppSettings
@@ -57,7 +58,6 @@ import com.klyx.core.settings.paletteStyles
 import com.klyx.core.settings.update
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.LocalIsDarkMode
-import com.klyx.core.ui.Route
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceSwitch
 import com.klyx.core.ui.component.PreferenceSwitchWithDivider
@@ -85,7 +85,7 @@ private val ColorList = ((4..10) + (1..3)).map { it * 35.0 }.map {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (String) -> Unit) {
+fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (Any) -> Unit) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val appSettings = LocalAppSettings.current
@@ -199,7 +199,7 @@ fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (String) -> 
                         it.copy(appearance = if (checked) Appearance.Dark else Appearance.Light)
                     }
                 },
-                onClick = { onNavigateTo(Route.DARK_THEME) },
+                onClick = { onNavigateTo(AppRoute.Settings.DarkTheme) },
             )
         }
     }
