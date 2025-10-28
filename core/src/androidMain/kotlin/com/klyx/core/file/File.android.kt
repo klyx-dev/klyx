@@ -6,6 +6,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Environment
+import android.webkit.MimeTypeMap
+import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.klyx.core.ContextHolder
 import com.klyx.core.PlatformContext
@@ -108,32 +110,62 @@ internal fun KxFile.canAccess(): Boolean {
  */
 actual fun openFile(file: KxFile) {
     val context = ContextHolder.context
+    val rawFile = file.rawFile()
     val uri = FileProvider.getUriForFile(
         context,
         "${context.packageName}.provider",
-        file.rawFile()
+        rawFile
     )
 
+    val mimeType = context.contentResolver.getType(uri)
+        ?: run {
+            MimeTypeMap
+                .getSingleton()
+                .getMimeTypeFromExtension(rawFile.extension)
+                ?: "application/octet-stream"
+        }
+
     val intent = Intent(Intent.ACTION_VIEW).apply {
-        setDataAndType(uri, "text/plain")
+        setDataAndType(uri, mimeType)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    context.startActivity(
-        Intent.createChooser(intent, "Open with").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    )
+    if (intent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(
+            Intent
+                .createChooser(intent, "Open with")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } else {
+        Toast.makeText(context, "No app found to open this file type", Toast.LENGTH_SHORT).show()
+    }
 }
 
 actual fun PlatformContext.shareFile(file: KxFile) {
-    val uri = FileProvider.getUriForFile(this, "${packageName}.provider", file.rawFile())
+    val rawFile = file.rawFile()
+    val uri = FileProvider.getUriForFile(this, "${packageName}.provider", rawFile)
+
+    val mimeType = contentResolver.getType(uri)
+        ?: run {
+            MimeTypeMap
+                .getSingleton()
+                .getMimeTypeFromExtension(rawFile.extension)
+                ?: "application/octet-stream"
+        }
 
     val intent = Intent(Intent.ACTION_SEND).apply {
-        setDataAndType(uri, "text/plain")
+        setDataAndType(uri, mimeType)
         putExtra(Intent.EXTRA_STREAM, uri)
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    startActivity(
-        Intent.createChooser(intent, "Share file via...").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    )
+    if (intent.resolveActivity(packageManager) != null) {
+        startActivity(
+            Intent
+                .createChooser(intent, "Share file via...")
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } else {
+        Toast.makeText(this, "No app found to open this file type", Toast.LENGTH_SHORT).show()
+    }
 }

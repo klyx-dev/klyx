@@ -36,9 +36,7 @@ import java.nio.charset.Charset
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
-actual open class KxFile(
-    private val raw: DocumentFile,
-) : KoinComponent {
+actual open class KxFile(internal val raw: DocumentFile) : KoinComponent {
     private val context: Context by inject()
     private val file = runCatching { raw.uri.toFile() }.getOrNull()
 
@@ -140,6 +138,8 @@ private fun DocumentFile.deleteRecursively(): Boolean {
         false
     }
 }
+
+val KxFile.uri get() = raw.uri
 
 fun Uri.isFromTermux() = host == "com.termux.documents"
 
