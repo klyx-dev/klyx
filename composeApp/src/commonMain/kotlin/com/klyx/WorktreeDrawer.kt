@@ -3,6 +3,7 @@ package com.klyx
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.DrawerState
@@ -73,7 +74,7 @@ fun WorktreeDrawer(
                 ModalDrawerSheet(
                     drawerState = drawerState,
                     drawerContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
-                    modifier = modifier.width(WorktreeDrawerWidth).fillMaxHeight()
+                    modifier = modifier.width(WorktreeDrawerWidth).fillMaxHeight().imePadding()
                 ) {
                     if (project.isEmpty()) {
                         Column(
