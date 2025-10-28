@@ -1,4 +1,4 @@
-package com.klyx
+package com.klyx.activities
 
 import android.os.Bundle
 import androidx.compose.foundation.layout.Box
@@ -14,7 +14,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.sp
-import com.klyx.activities.KlyxActivity
 import com.klyx.core.ui.component.FpsText
 import com.klyx.editor.compose.CodeEditor
 import com.klyx.editor.compose.CodeEditorState
@@ -47,7 +46,7 @@ class TestActivity : KlyxActivity() {
 
                         BasicText("")
                         BasicTextField("", onValueChange = {})
-                        SelectionContainer() { }
+                        SelectionContainer { }
 
                         Box(
                             Modifier.fillMaxWidth(),

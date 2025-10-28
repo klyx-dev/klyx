@@ -22,6 +22,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -62,6 +63,7 @@ import com.klyx.ui.page.settings.appearance.AppearancePreferences
 import com.klyx.ui.page.settings.appearance.DarkThemePreferences
 import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
+import com.klyx.ui.page.terminal.TerminalPage
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
@@ -81,6 +83,7 @@ val LocalLogBuffer = staticCompositionLocalOf { LogBuffer(maxSize = 2000) }
 fun AppEntry() {
     val appSettings = currentAppSettings
     val lifecycleOwner = LocalLifecycleOwner.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
@@ -166,6 +169,20 @@ fun AppEntry() {
                             onNavigateToRoute = { route ->
                                 navController.navigate(route = route) {
                                     launchSingleTop = true
+                                }
+                            }
+                        )
+                    }
+
+                    animatedComposable<AppRoute.Terminal> {
+                        TerminalPage(
+                            modifier = Modifier.fillMaxSize(),
+                            onSessionFinish = {
+                                currentDestination?.let { destination ->
+                                    if (destination.hasRoute<AppRoute.Terminal>()) {
+                                        navController.popBackStack()
+                                        keyboardController?.hide()
+                                    }
                                 }
                             }
                         )

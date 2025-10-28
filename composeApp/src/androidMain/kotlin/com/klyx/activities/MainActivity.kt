@@ -1,4 +1,4 @@
-package com.klyx
+package com.klyx.activities
 
 import android.annotation.SuppressLint
 import android.app.ActivityManager
@@ -15,7 +15,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
-import com.klyx.activities.KlyxActivity
+import com.klyx.AppEntry
+import com.klyx.BuildConfig
 import com.klyx.core.Notifier
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus

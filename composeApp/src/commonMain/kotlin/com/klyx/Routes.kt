@@ -8,6 +8,9 @@ sealed interface AppRoute {
     data object Home : AppRoute
 
     @Serializable
+    data object Terminal : AppRoute
+
+    @Serializable
     data object Settings : AppRoute {
 
         @Serializable

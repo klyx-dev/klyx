@@ -107,7 +107,13 @@ fun MainTopBar(
             }
         }
 
-        OverflowMenu(project, editorViewModel, klyxViewModel, fileTreeViewModel)
+        OverflowMenu(
+            project = project,
+            editorViewModel = editorViewModel,
+            klyxViewModel = klyxViewModel,
+            fileTreeViewModel = fileTreeViewModel,
+            onNavigateToRoute = onNavigateToRoute
+        )
     }
 
     if (isTabOpen) {
@@ -144,7 +150,8 @@ private fun OverflowMenu(
     project: Project,
     editorViewModel: EditorViewModel,
     klyxViewModel: KlyxViewModel,
-    fileTreeViewModel: FileTreeViewModel
+    fileTreeViewModel: FileTreeViewModel,
+    onNavigateToRoute: (Any) -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var showFileMenu by rememberSaveable { mutableStateOf(false) }
@@ -176,6 +183,7 @@ private fun OverflowMenu(
                     expanded = false
                     showHelpMenu = !showHelpMenu
                 },
+                onNavigateToRoute = onNavigateToRoute,
                 onDismissRequest = { expanded = false }
             )
         }

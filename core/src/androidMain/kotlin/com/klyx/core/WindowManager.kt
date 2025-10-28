@@ -2,7 +2,6 @@ package com.klyx.core
 
 import android.app.ActivityManager
 import android.content.Context
-import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -23,20 +22,16 @@ object WindowManager : KoinComponent {
 
     fun closeWindow(taskId: Int) {
         val am = context.getSystemService(ActivityManager::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                am.appTasks.single().finishAndRemoveTask()
-                exitProcess(0)
-            } catch (_: Exception) {
-                for (appTask in am.appTasks) {
-                    if (appTask.taskInfo.taskId == taskId) {
-                        appTask.finishAndRemoveTask()
-                        break
-                    }
+        try {
+            am.appTasks.single().finishAndRemoveTask()
+            exitProcess(0)
+        } catch (_: Exception) {
+            for (appTask in am.appTasks) {
+                if (appTask.taskInfo.taskId == taskId) {
+                    appTask.finishAndRemoveTask()
+                    break
                 }
             }
-        } else {
-            ContextHolder.currentActivityOrNull()?.finishAndRemoveTask()
         }
         openedWindows -= taskId
         currentTaskId = openedWindows.lastOrNull() ?: -1
@@ -44,5 +39,13 @@ object WindowManager : KoinComponent {
 
     fun closeCurrentWindow() {
         closeWindow(currentTaskId)
+    }
+
+    fun closeAllWindowsAndQuit(): Nothing {
+        val am = context.getSystemService(ActivityManager::class.java)
+        openedWindows.clear()
+        currentTaskId = -1
+        am.appTasks.forEach { it.finishAndRemoveTask() }
+        exitProcess(0)
     }
 }

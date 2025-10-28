@@ -18,12 +18,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.Key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.AppRoute
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.PlatformContext
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.icon.BackToTab
-import com.klyx.core.icon.Klyx
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.Pip
 import com.klyx.core.ui.component.DropdownMenuDivider
@@ -41,6 +41,7 @@ fun ColumnScope.DropdownMenuItems(
     klyxViewModel: KlyxViewModel,
     onShowFileMenu: () -> Unit,
     onShowHelpMenu: () -> Unit,
+    onNavigateToRoute: (Any) -> Unit,
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalPlatformContext.current
@@ -79,7 +80,10 @@ fun ColumnScope.DropdownMenuItems(
 
     DropdownMenuItem(
         text = { Text("Terminal") },
-        onClick = { editorViewModel.openSystemTerminal(context) },
+        onClick = {
+            onDismissRequest()
+            onNavigateToRoute(AppRoute.Terminal)
+        },
         leadingIcon = {
             Icon(
                 Icons.Outlined.Terminal,
@@ -202,6 +206,5 @@ fun ColumnScope.DropdownMenuItems(
 
 internal expect fun openNewWindow(context: PlatformContext)
 internal expect fun closeCurrentWindow(context: PlatformContext)
-internal expect fun EditorViewModel.openSystemTerminal(context: PlatformContext, openAsTab: Boolean = false)
 
 internal expect fun quitApp(): Nothing
