@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.klyx.core.GitHub
+import com.klyx.core.LocalNotifier
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.ui.component.TextButtonWithIcon
@@ -28,6 +29,7 @@ import com.klyx.core.ui.component.TextButtonWithIcon
 @Composable
 fun GiveFeedbackDialog(onDismissRequest: () -> Unit) {
     val uriHandler = LocalUriHandler.current
+    val notifier = LocalNotifier.current
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -62,7 +64,13 @@ fun GiveFeedbackDialog(onDismissRequest: () -> Unit) {
                     icon = Icons.Outlined.Mail,
                     text = "Send an Email",
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { uriHandler.openUri("mailto:itsvks19@gmail.com") }
+                    onClick = {
+                        try {
+                            uriHandler.openUri("mailto:itsvks19@gmail.com")
+                        } catch (_: IllegalArgumentException) {
+                            notifier.toast("No app found to handle sending email")
+                        }
+                    }
                 )
 
                 TextButtonWithIcon(

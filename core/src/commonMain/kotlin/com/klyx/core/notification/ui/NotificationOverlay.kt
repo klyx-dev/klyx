@@ -21,14 +21,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.klyx.core.notification.LocalNotificationManager
 import com.klyx.core.notification.NotificationManager
 import com.klyx.core.notification.Toast
 
 @Composable
-fun NotificationOverlay(
-    manager: NotificationManager = LocalNotificationManager.current
-) {
+fun NotificationOverlay(manager: NotificationManager = LocalNotificationManager.current) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -55,6 +54,7 @@ fun NotificationOverlay(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .zIndex(1000f)
             .imePadding()
             .systemBarsPadding(),
         contentAlignment = Alignment.BottomCenter
