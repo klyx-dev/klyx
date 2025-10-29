@@ -2,6 +2,7 @@ package com.klyx.core
 
 import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -22,16 +23,20 @@ object WindowManager : KoinComponent {
 
     fun closeWindow(taskId: Int) {
         val am = context.getSystemService(ActivityManager::class.java)
-        try {
-            am.appTasks.single().finishAndRemoveTask()
-            exitProcess(0)
-        } catch (_: Exception) {
-            for (appTask in am.appTasks) {
-                if (appTask.taskInfo.taskId == taskId) {
-                    appTask.finishAndRemoveTask()
-                    break
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            try {
+                am.appTasks.single().finishAndRemoveTask()
+                exitProcess(0)
+            } catch (_: Exception) {
+                for (appTask in am.appTasks) {
+                    if (appTask.taskInfo.taskId == taskId) {
+                        appTask.finishAndRemoveTask()
+                        break
+                    }
                 }
             }
+        } else {
+            ContextHolder.currentActivityOrNull()?.finishAndRemoveTask()
         }
         openedWindows -= taskId
         currentTaskId = openedWindows.lastOrNull() ?: -1

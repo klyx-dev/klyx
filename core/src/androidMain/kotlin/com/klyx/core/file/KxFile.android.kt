@@ -139,7 +139,7 @@ private fun DocumentFile.deleteRecursively(): Boolean {
     }
 }
 
-val KxFile.uri get() = raw.uri
+val KxFile.uri: Uri get() = raw.uri
 
 fun Uri.isFromTermux() = host == "com.termux.documents"
 
