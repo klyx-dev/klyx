@@ -1,4 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
 @file:OptIn(ExperimentalCodeEditorApi::class)
 
 package com.klyx.tab

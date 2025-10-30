@@ -24,7 +24,7 @@ open class KlyxActivity : ComponentActivity() {
         WindowManager.addWindow(taskId)
     }
 
-    fun setContent(provideLocals: Boolean = true, content: @Composable (() -> Unit)) {
+    protected fun setContent(provideLocals: Boolean = true, content: @Composable (() -> Unit)) {
         setContentInternal {
             if (provideLocals) {
                 SharedLocalProvider(content)

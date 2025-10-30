@@ -116,7 +116,7 @@ class EditorViewModel(
     @OptIn(ExperimentalComposeCodeEditorApi::class)
     fun openFile(
         file: KxFile,
-        worktree: Worktree? = file.parentAsWorktree(),
+        worktree: Worktree? = null,
         tabTitle: String = file.name,
         isInternal: Boolean = false
     ) {
@@ -150,6 +150,87 @@ class EditorViewModel(
 
             openTab(tab)
             EventBus.instance.post(FileOpenEvent(file, worktree?.rootFile))
+        }
+    }
+
+    fun closeOthersTab(currentTabId: TabId) {
+        _state.update {
+            val closingTabs = it.openTabs.filterNot { tab -> tab.id == currentTabId }
+            val newTabs = it.openTabs.filter { tab -> tab.id == currentTabId }
+            viewModelScope.launch(Dispatchers.Default) {
+                closingTabs.forEach { tab ->
+                    if (tab is Tab.FileTab) {
+                        onCloseFileTab(tab.worktree, tab.file)
+                        EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                    }
+                }
+            }
+            it.copy(openTabs = newTabs)
+        }
+    }
+
+    fun closeLeftTab(currentTabId: TabId) {
+        _state.update { state ->
+            val tabs = state.openTabs
+            val currentIndex = tabs.indexOfFirst { it.id == currentTabId }
+            if (currentIndex <= 0) return@update state // nothing to close on the left or tab not found
+
+            val closingTabs = tabs.subList(0, currentIndex)
+            val newTabs = tabs.subList(currentIndex, tabs.size)
+
+            viewModelScope.launch(Dispatchers.Default) {
+                closingTabs.forEach { tab ->
+                    if (tab is Tab.FileTab) {
+                        onCloseFileTab(tab.worktree, tab.file)
+                        EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                    }
+                }
+            }
+
+            state.copy(openTabs = newTabs)
+        }
+    }
+
+    fun closeRightTab(currentTabId: TabId) {
+        _state.update { state ->
+            val tabs = state.openTabs
+            val currentIndex = tabs.indexOfFirst { it.id == currentTabId }
+            if (currentIndex == -1 || currentIndex >= tabs.lastIndex) return@update state // nothing to close on right
+
+            val closingTabs = tabs.subList(currentIndex + 1, tabs.size)
+            val newTabs = tabs.subList(0, currentIndex + 1)
+
+            viewModelScope.launch(Dispatchers.Default) {
+                closingTabs.forEach { tab ->
+                    if (tab is Tab.FileTab) {
+                        onCloseFileTab(tab.worktree, tab.file)
+                        EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                    }
+                }
+            }
+
+            state.copy(openTabs = newTabs)
+        }
+    }
+
+    fun canCloseLeftTab(currentTabId: TabId): Boolean {
+        val tabs = _state.value.openTabs
+        val index = tabs.indexOfFirst { it.id == currentTabId }
+        return index > 0 // means there's at least one tab to the left
+    }
+
+    fun canCloseRightTab(currentTabId: TabId): Boolean {
+        val tabs = _state.value.openTabs
+        val index = tabs.indexOfFirst { it.id == currentTabId }
+        return index != -1 && index < tabs.lastIndex // means there's at least one tab to the right
+    }
+
+    fun getClosableTabSides(currentTabId: TabId): Pair<Boolean, Boolean> {
+        val tabs = _state.value.openTabs
+        val index = tabs.indexOfFirst { it.id == currentTabId }
+        return when {
+            index == -1 -> false to false
+            else -> (index > 0) to (index < tabs.lastIndex)
         }
     }
 

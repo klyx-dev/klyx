@@ -22,8 +22,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
+import com.klyx.core.clipboard.clipEntryOf
 import com.klyx.core.file.openFile
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
@@ -34,6 +36,8 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.CodeEditor
 import com.klyx.tab.Tab
+import com.klyx.tab.TabMenuAction
+import com.klyx.tab.TabMenuState
 import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
@@ -49,6 +53,9 @@ fun EditorScreen(
 ) {
     val editorSettings = currentEditorSettings
     val keyboardController = LocalSoftwareKeyboardController.current
+    val clipboard = LocalClipboard.current
+
+    val hideSoftKeyboardIfVisible = { keyboardController?.hide() }
 
     val state by editorViewModel.state.collectAsState()
     val openTabs by remember { derivedStateOf { state.openTabs } }
@@ -89,20 +96,97 @@ fun EditorScreen(
                 tabs = openTabs,
                 selectedTab = pagerState.currentPage,
                 onTabSelected = { page ->
-                    keyboardController?.hide()
+                    hideSoftKeyboardIfVisible()
 
                     openTabs.getOrNull(page)?.let { tab ->
                         editorViewModel.setActiveTab(tab.id)
                         scope.launch { pagerState.animateScrollToPage(page) }
                     }
                 },
-                onClose = { index ->
-                    keyboardController?.hide()
+                onTabMenuAction = { action ->
+                    when (action) {
+                        is TabMenuAction.Close -> {
+                            hideSoftKeyboardIfVisible()
 
-                    openTabs.getOrNull(index)?.let { tab ->
-                        editorViewModel.closeTab(tab.id)
+                            openTabs.getOrNull(action.index)?.let { tab ->
+                                editorViewModel.closeTab(tab.id)
+                            }
+                        }
+
+                        is TabMenuAction.CloseAll -> {
+                            hideSoftKeyboardIfVisible()
+
+                            editorViewModel.closeAllTabs()
+                        }
+
+                        is TabMenuAction.CloseLeft -> {
+                            editorViewModel.closeLeftTab(openTabs[action.currentIndex].id)
+                        }
+
+                        is TabMenuAction.CloseOthers -> {
+                            editorViewModel.closeOthersTab(openTabs[action.currentIndex].id)
+                        }
+
+                        is TabMenuAction.CloseRight -> {
+                            editorViewModel.closeRightTab(openTabs[action.currentIndex].id)
+                        }
+
+                        is TabMenuAction.CopyPath -> {
+                            val tab = openTabs.getOrNull(action.currentIndex)
+
+                            if (tab is Tab.FileTab) {
+                                scope.launch {
+                                    clipboard.setClipEntry(clipEntryOf(tab.file.absolutePath))
+                                }
+                            }
+                        }
+
+                        is TabMenuAction.CopyRelativePath -> {
+                            val tab = openTabs.getOrNull(action.currentIndex)
+
+                            if (tab is Tab.FileTab) {
+                                scope.launch {
+                                    val relativePath = with(tab) {
+                                        val normalizedRoot = worktree
+                                            ?.rootFile
+                                            ?.absolutePath
+                                            ?.trimEnd('/', '\\').orEmpty()
+
+                                        val path = file.absolutePath
+                                        if (path.startsWith(normalizedRoot)) {
+                                            path.removePrefix(normalizedRoot).trimStart('/', '\\')
+                                        } else {
+                                            path
+                                        }
+                                    }
+
+                                    clipboard.setClipEntry(clipEntryOf(relativePath))
+                                }
+                            }
+                        }
                     }
                 },
+                tabMenuState = TabMenuState(
+                    enabled = { action ->
+                        when (action) {
+                            is TabMenuAction.CloseLeft -> editorViewModel.canCloseLeftTab(openTabs[action.currentIndex].id)
+                            is TabMenuAction.CloseOthers -> openTabs.size > 1
+                            is TabMenuAction.CloseRight -> editorViewModel.canCloseRightTab(openTabs[action.currentIndex].id)
+                            else -> true
+                        }
+                    },
+                    visible = { action ->
+                        when (action) {
+                            is TabMenuAction.CopyPath -> openTabs[action.currentIndex] is Tab.FileTab
+                            is TabMenuAction.CopyRelativePath -> {
+                                val tab = openTabs.getOrNull(action.currentIndex)
+                                tab is Tab.FileTab && tab.worktree != null
+                            }
+
+                            else -> true
+                        }
+                    }
+                ),
                 isDirty = { index ->
                     val tab = openTabs.getOrNull(index)
                     if (tab is Tab.FileTab) tab.isModified else false
