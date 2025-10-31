@@ -29,8 +29,9 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
+import com.klyx.editor.compose.event.TextChangeEvent
+import com.klyx.editor.event.ContentChangeEvent
 import com.klyx.extension.api.Worktree
-import com.klyx.extension.api.parentAsWorktree
 import com.klyx.res.Res.string
 import com.klyx.res.tab_title_default_settings
 import com.klyx.res.tab_title_extensions
@@ -41,9 +42,16 @@ import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.ui.component.log.LogViewerScreen
 import com.klyx.viewmodel.util.stateInWhileSubscribed
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -73,9 +81,80 @@ class EditorViewModel(
         (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.editorState
     }.stateInWhileSubscribed(initialValue = null)
 
+    private val _canUndo = MutableStateFlow(false)
+    val canUndo = _canUndo.asStateFlow()
+
+    private val _canRedo = MutableStateFlow(false)
+    val canRedo = _canRedo.asStateFlow()
+
     val isTabOpen = _state.map {
         it.openTabs.isNotEmpty()
     }.stateInWhileSubscribed(initialValue = false)
+
+    init {
+        observeUndoRedoState()
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeUndoRedoState() {
+        viewModelScope.launch {
+            currentEditorState.flatMapLatest { editorState ->
+                if (editorState != null) {
+                    callbackFlow {
+                        when (editorState) {
+                            is ComposeEditorState -> {
+                                editorState.state.subscribeEvent<TextChangeEvent> {
+                                    trySend(Unit)
+                                }
+                            }
+
+                            is SoraEditorState -> {
+                                editorState.state.subscribeEvent<ContentChangeEvent> {
+                                    trySend(Unit)
+                                }
+                            }
+                        }
+
+                        trySend(Unit)
+
+                        awaitClose { }
+                    }.map {
+                        val canUndo = when (editorState) {
+                            is ComposeEditorState -> editorState.state.canUndo()
+                            is SoraEditorState -> editorState.state.canUndo()
+                        }
+                        val canRedo = when (editorState) {
+                            is ComposeEditorState -> editorState.state.canRedo()
+                            is SoraEditorState -> editorState.state.canRedo()
+                        }
+
+                        canUndo to canRedo
+                    }.distinctUntilChanged()
+                } else {
+                    flowOf(false to false)
+                }
+            }.collectLatest { (canUndo, canRedo) ->
+                _canUndo.update { canUndo }
+                _canRedo.update { canRedo }
+            }
+        }
+    }
+
+    fun undo() {
+        when (val s = currentEditorState.value) {
+            is ComposeEditorState -> s.state.undo()
+            is SoraEditorState -> s.state.undo()
+            null -> {}
+        }
+    }
+
+    fun redo() {
+        when (val s = currentEditorState.value) {
+            is ComposeEditorState -> s.state.redo()
+            is SoraEditorState -> s.state.redo()
+            null -> {}
+        }
+    }
 
     fun openTab(tab: Tab) {
         _state.update { current ->

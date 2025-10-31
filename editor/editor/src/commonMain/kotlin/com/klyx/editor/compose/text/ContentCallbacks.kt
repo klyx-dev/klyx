@@ -20,8 +20,7 @@ interface ContentChangeCallback {
 
     fun afterContentChanged(
         changeList: ContentChangeList,
-        lastLineNumber: Int,
-        lastColumn: Int
+        lastCursor: Cursor,
     ) {
     }
 }

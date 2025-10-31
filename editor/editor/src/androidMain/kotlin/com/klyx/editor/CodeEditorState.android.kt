@@ -101,6 +101,20 @@ actual class CodeEditorState actual constructor(
             }
         }
     }
+
+    actual fun canUndo(): Boolean = editor?.canUndo() == true
+
+    actual fun canRedo(): Boolean = editor?.canRedo() == true
+
+    actual fun undo(): Boolean {
+        editor?.undo()
+        return canUndo()
+    }
+
+    actual fun redo(): Boolean {
+        editor?.redo()
+        return canRedo()
+    }
 }
 
 @ExperimentalCodeEditorApi

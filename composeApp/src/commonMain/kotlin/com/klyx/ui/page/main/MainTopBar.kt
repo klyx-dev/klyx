@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.rounded.DriveFileMove
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
@@ -25,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,6 +83,21 @@ fun MainTopBar(
     }
 
     val commonActions: @Composable RowScope.() -> Unit = {
+        val canUndo by editorViewModel.canUndo.collectAsState()
+        val canRedo by editorViewModel.canRedo.collectAsState()
+
+        activeTab?.let { tab ->
+            if (isTabOpen && tab is Tab.FileTab && !tab.isInternal) {
+                IconButton(onClick = { editorViewModel.undo() }, enabled = canUndo) {
+                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
+                }
+
+                IconButton(onClick = { editorViewModel.redo() }, enabled = canRedo) {
+                    Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                }
+            }
+        }
+
         SettingsButton(onNavigateToRoute)
 
         activeTab?.let { tab ->

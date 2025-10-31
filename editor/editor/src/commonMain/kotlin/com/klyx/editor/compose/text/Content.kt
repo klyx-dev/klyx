@@ -16,7 +16,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -97,7 +96,7 @@ class Content internal constructor(private val buffer: PieceTreeTextBuffer) : Ch
         val result = buffer.applyEdits(operations, false, computeUndoEdits)
 
         var lastLineNumber = 1
-        var lastColumn = 0
+        var lastColumn = 1
 
         result.changes.forEachIndexed { index, change ->
             val (insertingLinesCnt, _, lastLineLength, _) = Strings.countLineBreaks(change.text!!)
@@ -146,15 +145,13 @@ class Content internal constructor(private val buffer: PieceTreeTextBuffer) : Ch
                     }
                 }
             },
-            lastLineNumber = lastLineNumber,
-            lastColumn = lastColumn
+            lastCursor = Position(lastLineNumber, lastColumn).toCursor(),
         )
     }
 
     private suspend fun updateUndoRedo(
         reverseEdits: List<ReverseEditOperation>?,
-        undoRedoManager: UndoRedoManager,
-        delay: Long = 500L
+        undoRedoManager: UndoRedoManager
     ) = mutex.withLock {
         undoRedoManager.clearRedo()
         undoRedoCallback?.beforeMergeTextChanges()
@@ -167,11 +164,9 @@ class Content internal constructor(private val buffer: PieceTreeTextBuffer) : Ch
                 )
             )
 
-            delay(delay)
-
             mergeJob = coroutineScope {
                 launch {
-                    undoRedoManager.push(mergeTextChanges)
+                    undoRedoManager.push(mergeTextChanges.toList())
                     mergeTextChanges.clear()
                     undoRedoCallback?.afterMergeTextChanges()
                 }
@@ -236,7 +231,9 @@ class Content internal constructor(private val buffer: PieceTreeTextBuffer) : Ch
     }
 
     internal fun Range.toTextRange() = TextRange(buffer.offsetAt(startPosition), buffer.offsetAt(endPosition))
-    internal fun TextRange.toRange() = Range(buffer.positionAt(start), buffer.positionAt(end))
+    internal fun TextRange.toRange() = Range(buffer.positionAt(min), buffer.positionAt(max))
+
+    internal fun positionAt(offset: Int) = buffer.positionAt(offset)
 
     fun cursorAt(offset: Int) = buffer.positionAt(offset).toCursor()
 
@@ -301,7 +298,7 @@ class Content internal constructor(private val buffer: PieceTreeTextBuffer) : Ch
         text: CharSequence,
         range: TextRange = selection,
         collapseSelection: Boolean = true,
-        undoRedoManager: UndoRedoManager? = null
+        undoRedoManager: UndoRedoManager? = this.undoRedoManager
     ) = edit(undoRedoManager = undoRedoManager) {
         if (range.collapsed) {
             insert(text)
@@ -311,12 +308,13 @@ class Content internal constructor(private val buffer: PieceTreeTextBuffer) : Ch
         }
     }
 
-    fun delete(range: TextRange = selection, undoRedoManager: UndoRedoManager? = null) = edit(undoRedoManager) {
-        if (range.collapsed) {
-            deleteBackward()
-        } else {
-            delete(range)
-            collapseSelection()
+    fun delete(range: TextRange = selection, undoRedoManager: UndoRedoManager? = this.undoRedoManager) =
+        edit(undoRedoManager) {
+            if (range.collapsed) {
+                deleteBackward()
+            } else {
+                delete(range)
+                collapseSelection()
+            }
         }
-    }
 }

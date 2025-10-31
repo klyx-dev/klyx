@@ -114,7 +114,6 @@ internal fun EditorLayout(
 
     LaunchedEffect(Unit) {
         state.cursor.collect {
-            println("Collecting: $it")
             isTyping = true
             delay(400)
             isTyping = false

@@ -4,7 +4,7 @@ import androidx.compose.runtime.Stable
 import com.klyx.editor.compose.text.TextChange
 
 @Stable
-class UndoRedoManager {
+class UndoRedoManager internal constructor() {
     private val undoStack = ArrayDeque<List<TextChange>>()
     private val redoStack = ArrayDeque<List<TextChange>>()
 

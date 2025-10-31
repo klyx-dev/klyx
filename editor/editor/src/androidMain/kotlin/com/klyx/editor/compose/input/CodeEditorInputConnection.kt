@@ -1,5 +1,6 @@
 package com.klyx.editor.compose.input
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.RectF
 import android.os.Build

@@ -19,6 +19,12 @@ expect class CodeEditorState(
 
     inline fun <reified E : Event> subscribeEvent(crossinline onEvent: (E) -> Unit)
 
+    fun canUndo(): Boolean
+    fun canRedo(): Boolean
+
+    fun undo(): Boolean
+    fun redo(): Boolean
+
     operator fun getValue(thisRef: Any?, property: KProperty<*>): String
     operator fun setValue(thisRef: Any?, property: KProperty<*>, text: String)
 }

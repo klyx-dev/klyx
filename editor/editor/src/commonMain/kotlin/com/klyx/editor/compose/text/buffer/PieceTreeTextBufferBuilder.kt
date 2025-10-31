@@ -39,7 +39,7 @@ internal class PieceTreeTextBufferBuilder(sequence: CharSequence? = null) {
             }
         }
 
-        val lastChar = chunk.codePointAt(chunk.length - 1)
+        val lastChar = Char.codePointAt(chunk, chunk.length - 1)
         if (lastChar == CharCode.CarriageReturn || (lastChar in 0xD800..0xDBFF)) {
             // last character is \r or a high surrogate => keep it back
             acceptChunk(chunk.dropLast(1), false)

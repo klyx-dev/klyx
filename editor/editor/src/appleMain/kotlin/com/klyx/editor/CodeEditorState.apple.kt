@@ -31,6 +31,22 @@ actual class CodeEditorState actual constructor(
 
     actual val cursor: StateFlow<CursorState>
         get() = TODO("Not yet implemented")
+
+    actual fun canUndo(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    actual fun canRedo(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    actual fun undo(): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    actual fun redo(): Boolean {
+        TODO("Not yet implemented")
+    }
 }
 
 @ExperimentalCodeEditorApi

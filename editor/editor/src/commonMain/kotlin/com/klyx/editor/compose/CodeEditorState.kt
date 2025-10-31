@@ -53,6 +53,8 @@ import com.klyx.editor.compose.text.Content
 import com.klyx.editor.compose.text.ContentChangeCallback
 import com.klyx.editor.compose.text.ContentChangeList
 import com.klyx.editor.compose.text.Cursor
+import com.klyx.editor.compose.text.Range
+import com.klyx.editor.compose.text.SingleEditOperation
 import com.klyx.editor.compose.text.buffer.toTextBuffer
 import com.klyx.editor.compose.text.emptyContent
 import kotlinx.coroutines.CoroutineDispatcher
@@ -418,6 +420,49 @@ class CodeEditorState @RememberInComposition internal constructor(
         }
     }
 
+    fun canUndo() = undoRedoManager.canUndo()
+    fun canRedo() = undoRedoManager.canRedo()
+
+    fun undo(): Boolean {
+        val changes = undoRedoManager.undo()
+        val operations = mutableListOf<SingleEditOperation>()
+        changes.forEach {
+            val posStart = content.positionAt(it.newPosition)
+            val posEnd = content.positionAt(it.newEnd)
+            val range = Range(
+                posStart.lineNumber, posStart.column,
+                posEnd.lineNumber, posEnd.column
+            )
+            operations.add(SingleEditOperation(range, it.oldText))
+        }
+
+        if (operations.isNotEmpty()) {
+            content.applyEdits(operations, null)
+        }
+
+        return undoRedoManager.canUndo()
+    }
+
+    fun redo(): Boolean {
+        val changes = undoRedoManager.redo()
+        val operations = mutableListOf<SingleEditOperation>()
+        changes.forEach {
+            val posStart = content.positionAt(it.oldPosition)
+            val posEnd = content.positionAt(it.oldEnd)
+            val range = Range(
+                posStart.lineNumber, posStart.column,
+                posEnd.lineNumber, posEnd.column
+            )
+            operations.add(SingleEditOperation(range, it.newText))
+        }
+
+        if (operations.isNotEmpty()) {
+            content.applyEdits(operations, null)
+        }
+
+        return undoRedoManager.canRedo()
+    }
+
     internal fun getTextDirectionForOffset(offset: Int): ResolvedTextDirection {
         val (line, column) = cursorAt(offset)
         val result = measureText(getLine(line))
@@ -580,14 +625,13 @@ class CodeEditorState @RememberInComposition internal constructor(
 
     override fun afterContentChanged(
         changeList: ContentChangeList,
-        lastLineNumber: Int,
-        lastColumn: Int
+        lastCursor: Cursor
     ) {
         maxLineLengthDirty = true
         lineLengthCache.clear()
         textWidthCache.evictAll()
 
-        setCursor(lastLineNumber, lastColumn - 1)
+        setCursor(lastCursor)
         scope.launch { ensureCursorVisible(smooth = false) }
 
         invalidateDraw()

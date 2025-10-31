@@ -89,12 +89,12 @@ internal fun registerGeneralCommands(
                 action { editorViewModel.closeActiveTab() }
             },
 
-            buildCommand {
-                name("command palette: toggle")
-                dismissOnAction(false)
-                shortcut(keyShortcutOf(shift = true, key = Key.ShiftLeft))
-                action { CommandManager.toggleCommandPalette() }
-            },
+//            buildCommand {
+//                name("command palette: toggle")
+//                dismissOnAction(false)
+//                shortcut(keyShortcutOf(shift = true, key = Key.ShiftLeft))
+//                action { CommandManager.toggleCommandPalette() }
+//            },
 
             buildCommand {
                 name("klyx: command palette")
