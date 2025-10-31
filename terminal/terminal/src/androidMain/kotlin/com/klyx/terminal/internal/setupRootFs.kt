@@ -111,21 +111,18 @@ suspend fun extractTarGz(
         GzipCompressorInputStream(tarGz.inputStream().buffered()).use { gzIn ->
             TarArchiveInputStream(gzIn).use { tarIn ->
                 generateSequence { tarIn.nextEntry }.forEach { entry ->
-                    val tarEntry = entry
-                    val outputFile = File(dest, tarEntry.name).canonicalFile
+                    val outputFile = File(dest, entry.name).canonicalFile
 
                     if (!outputFile.toPath().startsWith(canonicalOutputDir.toPath())) {
-                        throw SecurityException("Zip Slip vulnerability detected! Malicious entry: ${tarEntry.name}")
+                        throw SecurityException("Zip Slip vulnerability detected! Malicious entry: ${entry.name}")
                     }
 
                     when {
-                        tarEntry.isDirectory -> {
-                            outputFile.mkdirs()
-                        }
+                        entry.isDirectory -> outputFile.mkdirs()
 
-                        tarEntry.isSymbolicLink -> {
+                        entry.isSymbolicLink -> {
                             try {
-                                Os.symlink(tarEntry.linkName, outputFile.absolutePath)
+                                Os.symlink(entry.linkName, outputFile.absolutePath)
                             } catch (_: Exception) {
                                 outputFile.parentFile?.mkdirs()
                                 outputFile.outputStream().use { fos ->
@@ -142,7 +139,7 @@ suspend fun extractTarGz(
                         }
                     }
 
-                    restorePermissions(outputFile, tarEntry)
+                    restorePermissions(outputFile, entry)
                 }
             }
         }

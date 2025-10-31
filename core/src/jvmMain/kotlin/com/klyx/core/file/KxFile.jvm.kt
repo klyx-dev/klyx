@@ -7,6 +7,7 @@ import com.klyx.core.io.X_OK
 import kotlinx.io.asSink
 import kotlinx.io.asSource
 import java.io.File
+import java.net.URLConnection
 import java.nio.charset.Charset
 
 actual open class KxFile(
@@ -87,3 +88,5 @@ actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
 
 actual fun KxFile.source() = inputStream().asSource()
 actual fun KxFile.sink() = outputStream().asSink()
+
+actual fun KxFile.mimeType(): String? = URLConnection.guessContentTypeFromName(name)

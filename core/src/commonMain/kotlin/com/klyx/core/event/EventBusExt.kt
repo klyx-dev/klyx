@@ -13,15 +13,15 @@ inline fun <reified E : Any> EventBus.registerSubscriber(
     return subscribe<E>(dispatcher = dispatcher, onEvent = subscriber::onEvent)
 }
 
-inline fun <reified E : Any> Subscriber<E>.subscribe(dispatcher: CoroutineDispatcher = Dispatchers.Default) {
-    EventBus.instance.registerSubscriber(this, dispatcher)
+inline fun <reified E : Any> Subscriber<E>.subscribe(dispatcher: CoroutineDispatcher = Dispatchers.Default): Job {
+    return EventBus.instance.registerSubscriber(this, dispatcher)
 }
 
 inline fun <reified E : Any> LifecycleOwner.registerSubscriber(
     subscriber: Subscriber<E>,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
-) {
-    EventBus.instance.subscribe<E>(
+): Job {
+    return EventBus.instance.subscribe<E>(
         lifecycleOwner = this,
         minActiveState = minActiveState,
         onEvent = subscriber::onEvent
@@ -29,6 +29,6 @@ inline fun <reified E : Any> LifecycleOwner.registerSubscriber(
 }
 
 context(lifecycleOwner: LifecycleOwner)
-inline fun <reified E : Any> Subscriber<E>.subscribe(minActiveState: Lifecycle.State = Lifecycle.State.STARTED) {
-    lifecycleOwner.registerSubscriber(this, minActiveState)
+inline fun <reified E : Any> Subscriber<E>.subscribe(minActiveState: Lifecycle.State = Lifecycle.State.STARTED): Job {
+    return lifecycleOwner.registerSubscriber(this, minActiveState)
 }

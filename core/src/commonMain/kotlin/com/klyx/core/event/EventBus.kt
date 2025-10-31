@@ -63,8 +63,8 @@ class EventBus private constructor() {
         lifecycleOwner: LifecycleOwner,
         minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
         crossinline onEvent: suspend (T) -> Unit
-    ) {
-        lifecycleOwner.lifecycleScope.launch {
+    ): Job {
+        return lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(minActiveState) {
                 subscribe<T>().collect {
                     onEvent(it)
@@ -94,8 +94,8 @@ class EventBus private constructor() {
         minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
         crossinline onEvent: suspend (T) -> Unit,
         crossinline onError: suspend (Throwable) -> Unit = {}
-    ) {
-        lifecycleOwner.lifecycleScope.launch {
+    ): Job {
+        return lifecycleOwner.lifecycleScope.launch {
             lifecycleOwner.repeatOnLifecycle(minActiveState) {
                 subscribe<T>().catch { onError(it) }.collect { onEvent(it) }
             }

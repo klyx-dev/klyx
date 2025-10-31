@@ -6,13 +6,14 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.io.X_OK
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
+import platform.Foundation.NSURL
 import platform.posix.F_OK
 import platform.posix.access
 import platform.posix.R_OK as POSIX_R_OK
 import platform.posix.W_OK as POSIX_W_OK
 import platform.posix.X_OK as POSIX_X_OK
 
-actual open class KxFile {
+actual open class KxFile(internal val nsurl: NSURL) {
     actual val name: String
         get() = TODO("Not yet implemented")
     actual val path: String
@@ -167,5 +168,9 @@ actual fun KxFile.source(): RawSource {
 }
 
 actual fun KxFile.sink(): RawSink {
+    TODO("Not yet implemented")
+}
+
+actual fun KxFile.mimeType(): String? {
     TODO("Not yet implemented")
 }

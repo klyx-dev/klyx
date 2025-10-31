@@ -79,6 +79,8 @@ fun Path.toKxFile() = KxFile(toString())
 
 val KxFile.size get() = SystemFileSystem.metadataOrNull(this.toKotlinxIoPath())?.size
 
+expect fun KxFile.mimeType(): String?
+
 expect fun KxFile(path: String): KxFile
 expect fun KxFile(parent: KxFile, child: String): KxFile
 expect fun KxFile(parent: String, child: String): KxFile

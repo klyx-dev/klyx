@@ -7,6 +7,7 @@ import android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 import android.net.Uri
 import android.provider.DocumentsContract
 import android.util.Log
+import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
@@ -223,4 +224,11 @@ actual fun KxFile.source(): RawSource {
 actual fun KxFile.sink(): RawSink {
     val output = outputStream() ?: runtimeError("Failed to open output stream for $absolutePath")
     return output.asSink()
+}
+
+actual fun KxFile.mimeType(): String? {
+    val context = ContextHolder.context
+    val mimeType = context.contentResolver.getType(uri)
+        ?: MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+    return mimeType
 }
