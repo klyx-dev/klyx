@@ -120,7 +120,7 @@ private fun EditorTab(
                 .clip(MaterialTheme.shapes.small)
                 .background(backgroundColor)
                 .combinedClickable(
-                    onClick = onClick,
+                    onClick = { onClick(); if (isSelected) showDropdown = true },
                     onLongClick = { showDropdown = true }
                 )
                 .padding(horizontal = 13.dp, vertical = 7.dp)
