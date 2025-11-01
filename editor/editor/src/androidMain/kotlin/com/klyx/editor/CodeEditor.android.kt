@@ -2,18 +2,21 @@ package com.klyx.editor
 
 import android.content.Context
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,11 +26,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
@@ -205,6 +206,7 @@ actual fun CodeEditor(
             }
         )
 
+        HorizontalDivider(thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outline)
         VirtualKeys(
             editor = editor,
             keys = remember {
@@ -231,6 +233,7 @@ actual fun CodeEditor(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VirtualKeys(
     editor: CodeEditor,
@@ -238,44 +241,37 @@ private fun VirtualKeys(
     modifier: Modifier = Modifier,
     fontFamily: FontFamily = FontFamily.Default,
 ) {
-    LazyRow(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .border(Dp.Hairline, MaterialTheme.colorScheme.outline)
-            .padding(4.dp),
-        //contentPadding = PaddingValues(4.dp)
-    ) {
+    LazyRow(modifier = modifier.background(MaterialTheme.colorScheme.surfaceContainer)) {
         items(keys) { (display, insertText) ->
-            Text(
-                text = display,
-                fontFamily = fontFamily,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.small)
-                    .clickable {
-                        if (editor.isEditable) {
-                            if ("\t" == insertText) {
-                                if (editor.snippetController.isInSnippet()) {
-                                    editor.snippetController.shiftToNextTabStop()
-                                } else {
-                                    editor.indentOrCommitTab()
-                                }
+            TextButton(
+                onClick = {
+                    if (editor.isEditable) {
+                        if ("\t" == insertText) {
+                            if (editor.snippetController.isInSnippet()) {
+                                editor.snippetController.shiftToNextTabStop()
                             } else {
-                                if (editor.cursor.isSelected && insertText.length > 1) {
-                                    val left = editor.cursor.left
-                                    val right = editor.cursor.right
-                                    val selectedText = editor.text.substring(left, right)
+                                editor.indentOrCommitTab()
+                            }
+                        } else {
+                            if (editor.cursor.isSelected && insertText.length > 1) {
+                                val left = editor.cursor.left
+                                val right = editor.cursor.right
+                                val selectedText = editor.text.substring(left, right)
 
-                                    val newText = "${insertText[0]}$selectedText${insertText[1]}"
-                                    editor.text.replace(left, right, newText)
-                                } else {
-                                    editor.insertText(insertText, 1)
-                                }
+                                val newText = "${insertText[0]}$selectedText${insertText[1]}"
+                                editor.text.replace(left, right, newText)
+                            } else {
+                                editor.insertText(insertText, 1)
                             }
                         }
                     }
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            )
+                },
+                contentPadding = PaddingValues(0.dp),
+                shapes = ButtonDefaults.shapes(),
+                modifier = Modifier.defaultMinSize(minWidth = 40.dp, minHeight = 40.dp)
+            ) {
+                Text(text = display, fontFamily = fontFamily)
+            }
         }
     }
 }
