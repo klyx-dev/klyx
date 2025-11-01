@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 
 data class TabState(
@@ -117,7 +118,7 @@ class EditorViewModel(
 
                         trySend(Unit)
 
-                        awaitClose { }
+                        awaitClose()
                     }.map {
                         val canUndo = when (editorState) {
                             is ComposeEditorState -> editorState.state.canUndo()
@@ -140,12 +141,29 @@ class EditorViewModel(
         }
     }
 
+    private fun updateUndoRedoState() = when (val s = currentEditorState.value) {
+        is ComposeEditorState -> {
+            val u = _canUndo.updateAndGet { s.state.canUndo() }
+            val r = _canRedo.updateAndGet { s.state.canRedo() }
+            u to r
+        }
+
+        is SoraEditorState -> {
+            val u = _canUndo.updateAndGet { s.state.canUndo() }
+            val r = _canRedo.updateAndGet { s.state.canRedo() }
+            u to r
+        }
+
+        null -> false to false
+    }
+
     fun undo() {
         when (val s = currentEditorState.value) {
             is ComposeEditorState -> s.state.undo()
             is SoraEditorState -> s.state.undo()
             null -> {}
         }
+        updateUndoRedoState()
     }
 
     fun redo() {
@@ -154,6 +172,7 @@ class EditorViewModel(
             is SoraEditorState -> s.state.redo()
             null -> {}
         }
+        updateUndoRedoState()
     }
 
     fun openTab(tab: Tab) {
