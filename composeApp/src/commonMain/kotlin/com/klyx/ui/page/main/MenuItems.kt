@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.Cancel
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.KeyboardCommandKey
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -29,9 +30,12 @@ import com.klyx.core.icon.Pip
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.extension.api.Project
+import com.klyx.res.Res
+import com.klyx.res.settings
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openExtensionScreen
+import org.jetbrains.compose.resources.stringResource
 
 @Suppress("UnusedReceiverParameter")
 @Composable
@@ -41,7 +45,7 @@ fun ColumnScope.DropdownMenuItems(
     klyxViewModel: KlyxViewModel,
     onShowFileMenu: () -> Unit,
     onShowHelpMenu: () -> Unit,
-    onNavigateToRoute: (Any) -> Unit,
+    onNavigateToRoute: (AppRoute) -> Unit,
     onDismissRequest: () -> Unit = {}
 ) {
     val context = LocalPlatformContext.current
@@ -91,6 +95,22 @@ fun ColumnScope.DropdownMenuItems(
             )
         }
     )
+
+    if (isTabOpen) {
+        DropdownMenuItem(
+            text = { Text(stringResource(Res.string.settings)) },
+            onClick = {
+                onDismissRequest()
+                onNavigateToRoute(AppRoute.Settings.SettingsPage)
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Outlined.Settings,
+                    contentDescription = stringResource(Res.string.settings)
+                )
+            }
+        )
+    }
 
     DropdownMenuDivider()
 

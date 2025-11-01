@@ -48,6 +48,8 @@ sealed class Tab(
         override val id: TabId = generateId()
     ) : Tab(name, id, file) {
 
+        inline val isReadOnly get() = isInternal
+
         var isModified by mutableStateOf(false)
 
         init {
