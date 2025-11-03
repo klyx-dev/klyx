@@ -286,9 +286,9 @@ compose.desktop {
 }
 
 compose.resources {
-    publicResClass = false
+    publicResClass = true
     packageOfResClass = "${Configs.KLYX_NAMESPACE}.res"
-    generateResClass = auto
+    generateResClass = always
 }
 
 tasks.register("assembleAllTargets") {

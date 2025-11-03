@@ -42,7 +42,6 @@ import com.klyx.tab.FileTab
 import com.klyx.tab.TabMenuAction
 import com.klyx.tab.TabMenuState
 import com.klyx.tab.UnsupportedFileTab
-import com.klyx.ui.theme.rememberFontFamily
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCodeEditorApi::class)
@@ -63,7 +62,7 @@ fun EditorScreen(modifier: Modifier = Modifier) {
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openTabs.size })
     val scope = rememberCoroutineScope()
-    val fontFamily = rememberFontFamily(editorSettings.fontFamily)
+    val fontFamily = editorSettings.fontFamily.resolveFontFamily()
 
     val permissionGranted by rememberStoragePermissionState()
 

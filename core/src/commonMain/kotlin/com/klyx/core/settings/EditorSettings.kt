@@ -6,15 +6,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class EditorSettings(
-    @SerialComment(
-        """
-        The name of a font to use for rendering text in the editor
-        
-        Any font from [Google Fonts](https://fonts.google.com/) can be used.
-    """
-    )
     @SerialName("font_family")
-    val fontFamily: String = "IBM Plex Mono",
+    val fontFamily: EditorFontFamily = EditorFontFamily.KlyxMono,
 
     @SerialComment("The font size to use for rendering text in the editor")
     @SerialName("font_size")
@@ -28,3 +21,8 @@ data class EditorSettings(
     @SerialName("tab_size")
     val tabSize: UInt = 4u,
 ) : KlyxSettings
+
+@Serializable
+enum class EditorFontFamily {
+    KlyxMono, JetBrainsMono
+}
