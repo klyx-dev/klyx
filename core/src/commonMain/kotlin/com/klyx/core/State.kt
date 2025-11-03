@@ -6,18 +6,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 
-inline val Boolean.state
+inline val Boolean.mutableState
     @Composable
     get() = remember { mutableStateOf(this) }
 
-inline val String.state
+inline val String.mutableState
     @Composable
     get() = remember { mutableStateOf(this) }
 
-inline val Int.state
+inline val Int.mutableState
     @Composable
     get() = remember { mutableIntStateOf(this) }
 
-inline val Float.state
+inline val Float.mutableState
     @Composable
     get() = remember { mutableFloatStateOf(this) }

@@ -39,6 +39,7 @@ import com.klyx.res.notification_failed_to_save
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_no_files_to_save
 import com.klyx.res.notification_saved
+import com.klyx.tab.FileTab
 import com.klyx.tab.Tab
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
@@ -174,7 +175,7 @@ fun FileMenu(
         DropdownMenuDivider()
 
         activeTab?.let { tab ->
-            if (tab is Tab.FileTab && !tab.isInternal) {
+            if (tab is FileTab && !tab.isInternal) {
                 DropdownMenuItem(
                     text = "Save",
                     onClick = {

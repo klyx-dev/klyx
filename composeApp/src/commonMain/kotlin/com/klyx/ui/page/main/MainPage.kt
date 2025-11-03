@@ -53,7 +53,7 @@ import com.klyx.core.language
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
-import com.klyx.tab.Tab
+import com.klyx.tab.FileTab
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
@@ -209,7 +209,7 @@ fun MainPage(
 
             LaunchedEffect(activeTab?.id) {
                 when (val tab = activeTab) {
-                    is Tab.FileTab -> {
+                    is FileTab -> {
 //                        tab.editorState.cursor.collectLatest { cursorState ->
 //                            statusBarViewModel.setCursorState(cursorState)
 //                        }

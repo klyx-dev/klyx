@@ -52,6 +52,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.klyx.tab.FileTab
 import com.klyx.tab.Tab
 
 private data class Gap(val leftPx: Float, val rightPx: Float)
@@ -139,7 +140,7 @@ fun EditorTab(
     val recomposeScope = currentRecomposeScope
 
     LaunchedEffect(tab) {
-        if (tab is Tab.FileTab) {
+        if (tab is FileTab) {
             val file = tab.file
             if (!file.exists) return@LaunchedEffect
 
@@ -197,7 +198,7 @@ fun EditorTab(
             Spacer(modifier = Modifier.width(6.dp))
         }
 
-//        if (tab is Tab.FileTab) {
+//        if (tab is FileTab) {
 //            Icon(
 //                imageVector = Icons.Default.Description,
 //                contentDescription = null,
@@ -207,7 +208,7 @@ fun EditorTab(
 //            Spacer(modifier = Modifier.width(6.dp))
 //        }
 
-        val isFileMissing = tab is Tab.FileTab && !tab.file.exists && tab.file.path != "/untitled"
+        val isFileMissing = tab is FileTab && !tab.file.exists && tab.file.path != "/untitled"
         Text(
             text = tab.name,
             color = if (isFileMissing) colorScheme.error else textColor,
@@ -217,7 +218,7 @@ fun EditorTab(
             textDecoration = if (isFileMissing) TextDecoration.LineThrough else TextDecoration.None
         )
 
-        if (tab is Tab.FileTab && tab.file.path != "/untitled" && !tab.isInternal) {
+        if (tab is FileTab && tab.file.path != "/untitled" && !tab.isInternal) {
 //            Spacer(modifier = Modifier.width(6.dp))
 //            Text(
 //                text = tab.file.path

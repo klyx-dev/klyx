@@ -50,9 +50,13 @@ import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.registerGeneralCommands
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.animatedComposable
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalFileTreeViewModel
+import com.klyx.di.LocalKlyxViewModel
+import com.klyx.di.LocalStatusBarViewModel
+import com.klyx.di.ProvideViewModels
 import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
-import com.klyx.filetree.FileTreeViewModel
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.component.log.LogBuffer
@@ -65,8 +69,6 @@ import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
 import com.klyx.ui.theme.KlyxTheme
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.StatusBarViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -80,7 +82,7 @@ val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
 val LocalLogBuffer = staticCompositionLocalOf { LogBuffer(maxSize = 2000) }
 
 @Composable
-fun AppEntry() {
+fun AppEntry() = ProvideViewModels {
     val appSettings = currentAppSettings
     val lifecycleOwner = LocalLifecycleOwner.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -90,10 +92,10 @@ fun AppEntry() {
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    val editorViewModel: EditorViewModel = koinViewModel()
-    val klyxViewModel: KlyxViewModel = koinViewModel()
-    val statusBarViewModel: StatusBarViewModel = koinViewModel()
-    val fileTreeViewModel: FileTreeViewModel = koinViewModel()
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+    val statusBarViewModel = LocalStatusBarViewModel.current
+    val fileTreeViewModel = LocalFileTreeViewModel.current
 
     val project by klyxViewModel.openedProject.collectAsStateWithLifecycle()
     val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
@@ -128,93 +130,102 @@ fun AppEntry() {
     collectLogs(statusBarViewModel)
 
     KlyxTheme {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+        ProvideNavigator(
+            onNavigateBack = onNavigateBack,
+            onNavigateTo = { route ->
+                navController.navigate(route = route) {
+                    launchSingleTop = true
+                }
+            }
         ) {
-            WorktreeDrawer(
-                project = project,
-                drawerState = drawerState,
-                onFileClick = { file, worktree ->
-                    editorViewModel.openFile(file, worktree)
-                },
-                onDirectoryPicked = { directory ->
-                    if (directory.isPermissionRequired(R_OK or W_OK)) {
-                        klyxViewModel.showPermissionDialog()
-                    } else {
-                        klyxViewModel.openProject(Worktree(directory))
-
-                        if (drawerState.isClosed) {
-                            scope.launch { drawerState.open() }
-                        }
-                    }
-                },
-                gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
             ) {
-                registerGeneralCommands(editorViewModel, klyxViewModel)
+                WorktreeDrawer(
+                    project = project,
+                    drawerState = drawerState,
+                    onFileClick = { file, worktree ->
+                        editorViewModel.openFile(file, worktree)
+                    },
+                    onDirectoryPicked = { directory ->
+                        if (directory.isPermissionRequired(R_OK or W_OK)) {
+                            klyxViewModel.showPermissionDialog()
+                        } else {
+                            klyxViewModel.openProject(Worktree(directory))
 
-                NavHost(
-                    modifier = Modifier.align(Alignment.Center),
-                    navController = navController,
-                    startDestination = AppRoute.Home
+                            if (drawerState.isClosed) {
+                                scope.launch { drawerState.open() }
+                            }
+                        }
+                    },
+                    gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
                 ) {
-                    animatedComposable<AppRoute.Home> {
-                        MainPage(
-                            modifier = Modifier.fillMaxSize(),
-                            editorViewModel = editorViewModel,
-                            klyxViewModel = klyxViewModel,
-                            statusBarViewModel = statusBarViewModel,
-                            fileTreeViewModel = fileTreeViewModel,
-                            onNavigateToRoute = { route ->
+                    registerGeneralCommands(editorViewModel, klyxViewModel)
+
+                    NavHost(
+                        modifier = Modifier.align(Alignment.Center),
+                        navController = navController,
+                        startDestination = AppRoute.Home
+                    ) {
+                        animatedComposable<AppRoute.Home> {
+                            MainPage(
+                                modifier = Modifier.fillMaxSize(),
+                                editorViewModel = editorViewModel,
+                                klyxViewModel = klyxViewModel,
+                                statusBarViewModel = statusBarViewModel,
+                                fileTreeViewModel = fileTreeViewModel,
+                                onNavigateToRoute = { route ->
+                                    navController.navigate(route = route) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                            )
+                        }
+
+                        animatedComposable<AppRoute.Terminal> {
+                            TerminalPage(
+                                modifier = Modifier.fillMaxSize(),
+                                onSessionFinish = {
+                                    currentDestination?.let { destination ->
+                                        if (destination.hasRoute<AppRoute.Terminal>()) {
+                                            navController.popBackStack()
+                                            keyboardController?.hide()
+                                        }
+                                    }
+                                }
+                            )
+                        }
+
+                        settingsGraph(
+                            onNavigateBack = onNavigateBack,
+                            onNavigateTo = { route ->
                                 navController.navigate(route = route) {
                                     launchSingleTop = true
                                 }
                             }
                         )
                     }
+                }
 
-                    animatedComposable<AppRoute.Terminal> {
-                        TerminalPage(
-                            modifier = Modifier.fillMaxSize(),
-                            onSessionFinish = {
-                                currentDestination?.let { destination ->
-                                    if (destination.hasRoute<AppRoute.Terminal>()) {
-                                        navController.popBackStack()
-                                        keyboardController?.hide()
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    settingsGraph(
-                        onNavigateBack = onNavigateBack,
-                        onNavigateTo = { route ->
-                            navController.navigate(route = route) {
-                                launchSingleTop = true
-                            }
-                        }
+                if (appState.showPermissionDialog) {
+                    PermissionDialog(
+                        onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
+                        onRequestPermission = { requestFileAccessPermission() }
                     )
                 }
+
+                var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
+
+                if (!disclaimerAccepted) {
+                    DisclaimerDialog(
+                        onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
+                    )
+                }
+
+                NotificationOverlay()
             }
-
-            if (appState.showPermissionDialog) {
-                PermissionDialog(
-                    onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
-                    onRequestPermission = { requestFileAccessPermission() }
-                )
-            }
-
-            var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
-
-            if (!disclaimerAccepted) {
-                DisclaimerDialog(
-                    onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
-                )
-            }
-
-            NotificationOverlay()
         }
     }
 }

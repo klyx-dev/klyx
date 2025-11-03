@@ -40,7 +40,7 @@ import com.klyx.res.Res.string
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved
 import com.klyx.res.settings
-import com.klyx.tab.Tab
+import com.klyx.tab.FileTab
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
@@ -70,7 +70,7 @@ fun commonTopBarActions(
     val canRedo by editorViewModel.canRedo.collectAsState()
 
     activeTab?.let { tab ->
-        if (tab is Tab.FileTab && !tab.isReadOnly) {
+        if (tab is FileTab && !tab.isReadOnly) {
             TopBarIconButton(
                 Icons.AutoMirrored.Filled.Undo,
                 enabled = canUndo,
@@ -107,7 +107,7 @@ fun commonTopBarActions(
         }
     }
 
-    if (activeTab == null) {
+    if (activeTab == null || activeTab !is FileTab) {
         TopBarIconButton(
             Icons.Outlined.Settings,
             contentDescription = stringResource(Res.string.settings),

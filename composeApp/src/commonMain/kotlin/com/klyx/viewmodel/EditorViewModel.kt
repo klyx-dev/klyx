@@ -35,11 +35,14 @@ import com.klyx.extension.api.Worktree
 import com.klyx.res.Res.string
 import com.klyx.res.tab_title_default_settings
 import com.klyx.res.tab_title_extensions
+import com.klyx.tab.ComposableTab
+import com.klyx.tab.FileTab
 import com.klyx.tab.Tab
 import com.klyx.tab.TabId
-import com.klyx.ui.component.WelcomeScreen
+import com.klyx.tab.UnsupportedFileTab
 import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.ui.component.log.LogViewerScreen
+import com.klyx.ui.page.createWelcomePage
 import com.klyx.viewmodel.util.stateInWhileSubscribed
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -71,7 +74,7 @@ class EditorViewModel(
     val state = _state.asStateFlow()
 
     val activeFile = _state.map { tabState ->
-        (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.file
+        (tabState.openTabs.find { it is FileTab && it.id == tabState.activeTabId } as? FileTab)?.file
     }.stateInWhileSubscribed(initialValue = null)
 
     val activeTab = _state.map { tabState ->
@@ -79,7 +82,7 @@ class EditorViewModel(
     }.stateInWhileSubscribed(null)
 
     val currentEditorState = _state.map { tabState ->
-        (tabState.openTabs.find { it is Tab.FileTab && it.id == tabState.activeTabId } as? Tab.FileTab)?.editorState
+        (tabState.openTabs.find { it is FileTab && it.id == tabState.activeTabId } as? FileTab)?.editorState
     }.stateInWhileSubscribed(initialValue = null)
 
     private val _canUndo = MutableStateFlow(false)
@@ -93,6 +96,13 @@ class EditorViewModel(
     }.stateInWhileSubscribed(initialValue = false)
 
     init {
+        openTab(
+            ComposableTab(
+                name = "Welcome",
+                content = createWelcomePage()
+            )
+        )
+
         observeUndoRedoState()
     }
 
@@ -194,7 +204,7 @@ class EditorViewModel(
         data: Any? = null,
         content: @Composable () -> Unit,
     ) {
-        val tab = Tab.AnyTab(
+        val tab = ComposableTab(
             id = id ?: name,
             name = name,
             data = data,
@@ -226,13 +236,13 @@ class EditorViewModel(
 
             val tab = if (!file.isKlyxTempFile() && !permissionRequired && !file.isValidUtf8()) {
                 //notifier.error("(${file.name}) stream did not contain valid UTF-8")
-                Tab.UnsupportedFileTab(
+                UnsupportedFileTab(
                     id = file.id,
                     name = tabTitle,
                     file = file
                 )
             } else {
-                Tab.FileTab(
+                FileTab(
                     id = file.id,
                     name = tabTitle,
                     worktree = worktree,
@@ -257,7 +267,7 @@ class EditorViewModel(
             val newTabs = it.openTabs.filter { tab -> tab.id == currentTabId }
             viewModelScope.launch(Dispatchers.Default) {
                 closingTabs.forEach { tab ->
-                    if (tab is Tab.FileTab) {
+                    if (tab is FileTab) {
                         onCloseFileTab(tab.worktree, tab.file)
                         EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                     }
@@ -278,7 +288,7 @@ class EditorViewModel(
 
             viewModelScope.launch(Dispatchers.Default) {
                 closingTabs.forEach { tab ->
-                    if (tab is Tab.FileTab) {
+                    if (tab is FileTab) {
                         onCloseFileTab(tab.worktree, tab.file)
                         EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                     }
@@ -300,7 +310,7 @@ class EditorViewModel(
 
             viewModelScope.launch(Dispatchers.Default) {
                 closingTabs.forEach { tab ->
-                    if (tab is Tab.FileTab) {
+                    if (tab is FileTab) {
                         onCloseFileTab(tab.worktree, tab.file)
                         EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                     }
@@ -341,7 +351,7 @@ class EditorViewModel(
             }
 
             val tab = current.openTabs.find { it.id == tabId }
-            if (tab is Tab.FileTab) {
+            if (tab is FileTab) {
                 viewModelScope.launch(Dispatchers.Default) {
                     onCloseFileTab(tab.worktree, tab.file)
                     EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
@@ -402,7 +412,7 @@ class EditorViewModel(
     }
 
     fun isFileTabOpen(fileId: FileId): Boolean {
-        return _state.value.openTabs.any { it is Tab.FileTab && it.id == fileId }
+        return _state.value.openTabs.any { it is FileTab && it.id == fileId }
     }
 
     fun isFileTabActive(fileId: FileId): Boolean {
@@ -410,18 +420,18 @@ class EditorViewModel(
     }
 
     fun isFileTab(tabId: TabId): Boolean {
-        return _state.value.openTabs.any { it is Tab.FileTab && it.id == tabId }
+        return _state.value.openTabs.any { it is FileTab && it.id == tabId }
     }
 
     fun isFileTabInternal(tabId: TabId): Boolean {
-        return _state.value.openTabs.any { it is Tab.FileTab && it.isInternal && it.id == tabId }
+        return _state.value.openTabs.any { it is FileTab && it.isInternal && it.id == tabId }
     }
 
     fun saveCurrent(): Boolean {
         val current = _state.value
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
 
-        return if (tab is Tab.FileTab) {
+        return if (tab is FileTab) {
             val state = tab.editorState
             val file = tab.file
 
@@ -458,7 +468,7 @@ class EditorViewModel(
     fun saveAs(tabId: TabId, newFile: KxFile): Boolean {
         val tab = _state.value.openTabs.find { it.id == tabId } ?: return false
 
-        return if (tab is Tab.FileTab) {
+        return if (tab is FileTab) {
             val editorState = tab.editorState
 
             try {
@@ -477,7 +487,7 @@ class EditorViewModel(
                 return false
             }
 
-            val newTab = Tab.FileTab(
+            val newTab = FileTab(
                 id = newFile.id,
                 name = newFile.name,
                 file = newFile,
@@ -500,7 +510,7 @@ class EditorViewModel(
         val results = mutableMapOf<String, Boolean>()
 
         _state.value.openTabs.forEach { tab ->
-            if (tab is Tab.FileTab) {
+            if (tab is FileTab) {
                 val file = tab.file
                 val state = tab.editorState
 
@@ -564,11 +574,7 @@ fun EditorViewModel.openExtensionScreen() {
     }
 }
 
-fun EditorViewModel.showWelcome() {
-    openTab("Welcome") {
-        WelcomeScreen(modifier = Modifier.fillMaxSize())
-    }
-}
+fun EditorViewModel.openUntitledFile() = openFile(KxFile("untitled"))
 
 fun EditorViewModel.openLogViewer() {
     openTab("Logs") {

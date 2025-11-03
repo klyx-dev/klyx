@@ -23,53 +23,54 @@ sealed class Tab(
     open val name: String,
     open val id: TabId = generateId(),
     open val data: Any? = null
-) {
-    data class AnyTab(
-        override val name: String,
-        override val id: TabId = generateId(),
-        override val data: Any? = null,
-        val content: @Composable () -> Unit,
-    ) : Tab(name, id, data)
+)
 
-    @Stable
-    data class UnsupportedFileTab(
-        override val name: String,
-        val file: KxFile,
-        override val id: TabId = generateId()
-    ) : Tab(name, id, file)
+@Stable
+data class ComposableTab(
+    override val name: String,
+    override val id: TabId = generateId(),
+    override val data: Any? = null,
+    val content: @Composable () -> Unit,
+) : Tab(name, id, data)
 
-    @Stable
-    data class FileTab(
-        override val name: String,
-        val file: KxFile,
-        val editorState: EditorState,
-        val worktree: Worktree? = null,
-        val isInternal: Boolean = false,
-        override val id: TabId = generateId()
-    ) : Tab(name, id, file) {
+@Stable
+data class UnsupportedFileTab(
+    override val name: String,
+    val file: KxFile,
+    override val id: TabId = generateId()
+) : Tab(name, id, file)
 
-        inline val isReadOnly get() = isInternal
+@Stable
+data class FileTab(
+    override val name: String,
+    val file: KxFile,
+    val editorState: EditorState,
+    val worktree: Worktree? = null,
+    val isInternal: Boolean = false,
+    override val id: TabId = generateId()
+) : Tab(name, id, file) {
 
-        var isModified by mutableStateOf(false)
+    inline val isReadOnly get() = isInternal
 
-        init {
-            when (editorState) {
-                is ComposeEditorState -> {
-                    editorState.state.subscribeEvent<TextChangeEvent> {
-                        isModified = true
-                    }
+    var isModified by mutableStateOf(false)
+
+    init {
+        when (editorState) {
+            is ComposeEditorState -> {
+                editorState.state.subscribeEvent<TextChangeEvent> {
+                    isModified = true
                 }
+            }
 
-                is SoraEditorState -> {
-                    editorState.state.subscribeEvent<ContentChangeEvent> {
-                        isModified = true
-                    }
+            is SoraEditorState -> {
+                editorState.state.subscribeEvent<ContentChangeEvent> {
+                    isModified = true
                 }
             }
         }
+    }
 
-        fun markAsSaved() {
-            isModified = false
-        }
+    fun markAsSaved() {
+        isModified = false
     }
 }

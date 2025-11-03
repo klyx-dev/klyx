@@ -35,9 +35,11 @@ import com.klyx.editor.ComposeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.CodeEditor
-import com.klyx.tab.Tab
+import com.klyx.tab.ComposableTab
+import com.klyx.tab.FileTab
 import com.klyx.tab.TabMenuAction
 import com.klyx.tab.TabMenuState
+import com.klyx.tab.UnsupportedFileTab
 import com.klyx.ui.theme.rememberFontFamily
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
@@ -134,7 +136,7 @@ fun EditorScreen(
                         is TabMenuAction.CopyPath -> {
                             val tab = openTabs.getOrNull(action.currentIndex)
 
-                            if (tab is Tab.FileTab) {
+                            if (tab is FileTab) {
                                 scope.launch {
                                     clipboard.setClipEntry(clipEntryOf(tab.file.absolutePath))
                                 }
@@ -144,7 +146,7 @@ fun EditorScreen(
                         is TabMenuAction.CopyRelativePath -> {
                             val tab = openTabs.getOrNull(action.currentIndex)
 
-                            if (tab is Tab.FileTab) {
+                            if (tab is FileTab) {
                                 scope.launch {
                                     val relativePath = with(tab) {
                                         val normalizedRoot = worktree
@@ -177,10 +179,10 @@ fun EditorScreen(
                     },
                     visible = { action ->
                         when (action) {
-                            is TabMenuAction.CopyPath -> openTabs[action.currentIndex] is Tab.FileTab
+                            is TabMenuAction.CopyPath -> openTabs[action.currentIndex] is FileTab
                             is TabMenuAction.CopyRelativePath -> {
                                 val tab = openTabs.getOrNull(action.currentIndex)
-                                tab is Tab.FileTab && tab.worktree != null
+                                tab is FileTab && tab.worktree != null
                             }
 
                             else -> true
@@ -189,7 +191,7 @@ fun EditorScreen(
                 ),
                 isDirty = { index ->
                     val tab = openTabs.getOrNull(index)
-                    if (tab is Tab.FileTab) tab.isModified else false
+                    if (tab is FileTab) tab.isModified else false
                 }
             )
 
@@ -200,7 +202,7 @@ fun EditorScreen(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 when (val tab = openTabs.getOrNull(page)) {
-                    is Tab.FileTab -> {
+                    is FileTab -> {
                         val file = tab.file
 
                         if (file.path != "/untitled") {
@@ -242,9 +244,9 @@ fun EditorScreen(
                         //}
                     }
 
-                    is Tab.AnyTab -> tab.content.invoke()
+                    is ComposableTab -> tab.content.invoke()
 
-                    is Tab.UnsupportedFileTab -> {
+                    is UnsupportedFileTab -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Unsupported file type", style = MaterialTheme.typography.bodyLargeEmphasized)
