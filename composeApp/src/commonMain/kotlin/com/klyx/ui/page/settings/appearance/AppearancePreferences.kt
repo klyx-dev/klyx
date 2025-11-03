@@ -49,6 +49,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
+import com.klyx.LocalNavigator
 import com.klyx.core.LocalPaletteStyleIndex
 import com.klyx.core.LocalSeedColor
 import com.klyx.core.settings.LocalAppSettings
@@ -85,7 +86,8 @@ private val ColorList = ((4..10) + (1..3)).map { it * 35.0 }.map {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (Any) -> Unit) {
+fun AppearancePreferences() {
+    val navigator = LocalNavigator.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val appSettings = LocalAppSettings.current
@@ -96,7 +98,7 @@ fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (Any) -> Uni
         topBar = {
             LargeTopAppBar(
                 title = { Text(text = stringResource(Res.string.look_and_feel)) },
-                navigationIcon = { BackButton(onNavigateBack) },
+                navigationIcon = { BackButton(navigator::navigateBack) },
                 scrollBehavior = scrollBehavior
             )
         }
@@ -199,7 +201,7 @@ fun AppearancePreferences(onNavigateBack: () -> Unit, onNavigateTo: (Any) -> Uni
                         it.copy(appearance = if (checked) Appearance.Dark else Appearance.Light)
                     }
                 },
-                onClick = { onNavigateTo(AppRoute.Settings.DarkTheme) },
+                onClick = { navigator.navigateTo(AppRoute.Settings.DarkTheme) },
             )
         }
     }

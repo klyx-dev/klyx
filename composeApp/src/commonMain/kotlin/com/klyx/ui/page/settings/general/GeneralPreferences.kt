@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextAlign
+import com.klyx.LocalNavigator
 import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.BackButton
@@ -36,7 +37,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GeneralPreferences(onNavigateBack: () -> Unit) {
+fun GeneralPreferences() {
+    val navigator = LocalNavigator.current
     val appSettings = LocalAppSettings.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -45,7 +47,7 @@ fun GeneralPreferences(onNavigateBack: () -> Unit) {
         topBar = {
             LargeTopAppBar(
                 title = { Text(text = stringResource(Res.string.general_settings)) },
-                navigationIcon = { BackButton(onNavigateBack) },
+                navigationIcon = { BackButton(navigator::navigateBack) },
                 scrollBehavior = scrollBehavior
             )
         }

@@ -51,33 +51,27 @@ import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.language
 import com.klyx.core.theme.ThemeManager
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalKlyxViewModel
+import com.klyx.di.LocalStatusBarViewModel
 import com.klyx.extension.api.Worktree
-import com.klyx.filetree.FileTreeViewModel
 import com.klyx.tab.FileTab
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
 import com.klyx.ui.component.editor.EditorScreen
 import com.klyx.ui.component.log.LogViewerSheet
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxMenuState
-import com.klyx.viewmodel.KlyxViewModel
-import com.klyx.viewmodel.StatusBarViewModel
 import com.klyx.viewmodel.openLogViewer
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.launch
-import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun MainPage(
-    onNavigateToRoute: (Any) -> Unit,
-    modifier: Modifier = Modifier,
-    editorViewModel: EditorViewModel = koinViewModel(),
-    klyxViewModel: KlyxViewModel = koinViewModel(),
-    fileTreeViewModel: FileTreeViewModel = koinViewModel(),
-    statusBarViewModel: StatusBarViewModel = koinViewModel()
-) {
+fun MainPage(modifier: Modifier = Modifier) {
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+    val statusBarViewModel = LocalStatusBarViewModel.current
+
     val logBuffer = LocalLogBuffer.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
@@ -104,10 +98,6 @@ fun MainPage(
                 isTabOpen = isTabOpen,
                 activeTab = activeTab,
                 project = project,
-                editorViewModel = editorViewModel,
-                klyxViewModel = klyxViewModel,
-                fileTreeViewModel = fileTreeViewModel,
-                onNavigateToRoute = onNavigateToRoute,
                 scrollBehavior = scrollBehavior
             )
         },
@@ -221,11 +211,7 @@ fun MainPage(
                 }
             }
 
-            EditorScreen(
-                modifier = Modifier.weight(1f),
-                editorViewModel = editorViewModel,
-                klyxViewModel = klyxViewModel
-            )
+            EditorScreen(modifier = Modifier.weight(1f))
 
             if (appState.showLogViewer) {
                 LogViewerSheet(
@@ -237,9 +223,7 @@ fun MainPage(
                 )
             }
 
-            val klyxMenuState by klyxViewModel.klyxMenuState.collectAsStateWithLifecycle()
-
-            MenuStateDialogs(klyxMenuState, klyxViewModel)
+            MenuStateDialogs()
 
             if (CommandManager.showCommandPalette) {
                 CommandPalette(
@@ -259,7 +243,10 @@ fun MainPage(
 }
 
 @Composable
-private fun MenuStateDialogs(menuState: KlyxMenuState, klyxViewModel: KlyxViewModel) {
+private fun MenuStateDialogs() {
+    val klyxViewModel = LocalKlyxViewModel.current
+    val menuState by klyxViewModel.klyxMenuState.collectAsState()
+
     if (menuState.showInfoDialog) {
         InfoDialog(onDismissRequest = { klyxViewModel.dismissInfoDialog() })
     }

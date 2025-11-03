@@ -12,6 +12,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import com.klyx.LocalNavigator
 import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.update
 import com.klyx.core.theme.Appearance
@@ -33,7 +34,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DarkThemePreferences(onNavigateBack: () -> Unit) {
+fun DarkThemePreferences() {
+    val navigator = LocalNavigator.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val appSettings = LocalAppSettings.current
@@ -47,7 +49,7 @@ fun DarkThemePreferences(onNavigateBack: () -> Unit) {
                 title = {
                     Text(modifier = Modifier, text = stringResource(Res.string.dark_theme))
                 },
-                navigationIcon = { BackButton { onNavigateBack() } },
+                navigationIcon = { BackButton(navigator::navigateBack) },
                 scrollBehavior = scrollBehavior,
             )
         }

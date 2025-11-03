@@ -18,21 +18,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.klyx.core.cmd.key.keyShortcutOf
-import com.klyx.core.ui.component.TextButtonWithShortcut
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
-import com.klyx.res.Res
-import com.klyx.res.open_a_project
+import com.klyx.core.ui.component.TextButtonWithShortcut
 import com.klyx.extension.api.Project
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
 import com.klyx.platform.PlatformInfo
+import com.klyx.res.Res
+import com.klyx.res.open_a_project
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -41,10 +40,9 @@ val WorktreeDrawerWidth: Dp
     @ReadOnlyComposable
     @Composable
     get() {
-        val density = LocalDensity.current
         val windowInfo = LocalWindowInfo.current
-        val width = windowInfo.containerSize.width * if (PlatformInfo.isMobile) 0.75f else 0.3f
-        return with(density) { width.toDp() }
+        val width = windowInfo.containerDpSize.width * if (PlatformInfo.isMobile) 0.75f else 0.3f
+        return width
     }
 
 @Composable

@@ -30,6 +30,9 @@ import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.core.ui.component.DropdownMenuItem
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalFileTreeViewModel
+import com.klyx.di.LocalKlyxViewModel
 import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.filetree.asFileTreeNode
@@ -53,10 +56,11 @@ import kotlinx.coroutines.launch
 fun FileMenu(
     expanded: Boolean,
     onDismissRequest: () -> Unit,
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
-    fileTreeViewModel: FileTreeViewModel
 ) {
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+    val fileTreeViewModel = LocalFileTreeViewModel.current
+
     val notifier = LocalNotifier.current
     val drawerState = LocalDrawerState.current
     val scope = rememberCoroutineScope()

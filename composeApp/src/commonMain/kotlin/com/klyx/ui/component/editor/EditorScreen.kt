@@ -31,6 +31,8 @@ import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
 import com.klyx.core.language
 import com.klyx.core.settings.currentEditorSettings
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalKlyxViewModel
 import com.klyx.editor.ComposeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
@@ -41,18 +43,14 @@ import com.klyx.tab.TabMenuAction
 import com.klyx.tab.TabMenuState
 import com.klyx.tab.UnsupportedFileTab
 import com.klyx.ui.theme.rememberFontFamily
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
 import kotlinx.coroutines.launch
-import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalCodeEditorApi::class)
 @Composable
-fun EditorScreen(
-    modifier: Modifier = Modifier,
-    editorViewModel: EditorViewModel = koinViewModel(),
-    klyxViewModel: KlyxViewModel = koinViewModel(),
-) {
+fun EditorScreen(modifier: Modifier = Modifier) {
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+
     val editorSettings = currentEditorSettings
     val keyboardController = LocalSoftwareKeyboardController.current
     val clipboard = LocalClipboard.current

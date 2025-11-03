@@ -35,6 +35,8 @@ import com.klyx.core.icon.Discord
 import com.klyx.core.icon.Klyx
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.ui.component.DropdownMenuDivider
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalKlyxViewModel
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openLogViewer
@@ -43,10 +45,11 @@ import com.klyx.viewmodel.openSettings
 @Composable
 fun HelpMenu(
     expanded: Boolean,
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
     onDismissRequest: () -> Unit
 ) {
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+
     val uriHandler = LocalUriHandler.current
 
     var showKlyxMenu by rememberSaveable { mutableStateOf(false) }

@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
+import com.klyx.LocalNavigator
 import com.klyx.core.icon.BrandFamily
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.settings.LocalEditorSettings
@@ -64,7 +65,8 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditorPreferences(onNavigateBack: () -> Unit) {
+fun EditorPreferences() {
+    val navigator = LocalNavigator.current
     val uriHandler = LocalUriHandler.current
     val settings = LocalEditorSettings.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -74,7 +76,7 @@ fun EditorPreferences(onNavigateBack: () -> Unit) {
         topBar = {
             LargeTopAppBar(
                 title = { Text(text = stringResource(string.editor_settings)) },
-                navigationIcon = { BackButton(onNavigateBack) },
+                navigationIcon = { BackButton(navigator::navigateBack) },
                 scrollBehavior = scrollBehavior,
             )
         }

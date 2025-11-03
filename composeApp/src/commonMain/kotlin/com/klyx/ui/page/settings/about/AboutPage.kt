@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import com.klyx.LocalNavigator
 import com.klyx.core.GitHub
 import com.klyx.core.LocalNotifier
 import com.klyx.core.clipboard.clipEntryOf
@@ -41,9 +42,10 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutPage(onNavigateBack: () -> Unit) {
+fun AboutPage() {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
+    val navigator = LocalNavigator.current
     val uriHandler = LocalUriHandler.current
     val clipboard = LocalClipboard.current
     val notifier = LocalNotifier.current
@@ -58,7 +60,7 @@ fun AboutPage(onNavigateBack: () -> Unit) {
         topBar = {
             LargeTopAppBar(
                 title = { Text(text = stringResource(Res.string.about)) },
-                navigationIcon = { BackButton(onNavigateBack) },
+                navigationIcon = { BackButton(navigator::navigateBack) },
                 scrollBehavior = scrollBehavior
             )
         }

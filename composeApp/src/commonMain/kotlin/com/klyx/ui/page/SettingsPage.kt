@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
+import com.klyx.LocalNavigator
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.SettingItem
 import com.klyx.res.Res
@@ -33,18 +34,17 @@ import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsPage(
-    onNavigateBack: () -> Unit,
-    onNavigateTo: (Any) -> Unit
-) {
+fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
+    val navigator = LocalNavigator.current
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
-        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
                 title = { Text(text = stringResource(Res.string.settings)) },
-                navigationIcon = { BackButton(onNavigateBack) },
+                navigationIcon = { BackButton(navigator::navigateBack) },
                 scrollBehavior = scrollBehavior,
                 expandedHeight = TopAppBarDefaults.LargeAppBarExpandedHeight + 24.dp
             )
@@ -57,7 +57,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.general_settings_desc),
                     icon = Icons.Outlined.Settings
                 ) {
-                    onNavigateTo(AppRoute.Settings.GeneralPreferences)
+                    navigator.navigateTo(AppRoute.Settings.GeneralPreferences)
                 }
             }
 
@@ -67,7 +67,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.editor_settings_desc),
                     icon = Icons.Outlined.Code
                 ) {
-                    onNavigateTo(AppRoute.Settings.EditorPreferences)
+                    navigator.navigateTo(AppRoute.Settings.EditorPreferences)
                 }
             }
 
@@ -77,7 +77,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.display_settings),
                     icon = Icons.Outlined.Palette,
                 ) {
-                    onNavigateTo(AppRoute.Settings.Appearance)
+                    navigator.navigateTo(AppRoute.Settings.Appearance)
                 }
             }
 
@@ -87,7 +87,7 @@ fun SettingsPage(
                     description = stringResource(Res.string.about_page),
                     icon = Icons.Outlined.Info,
                 ) {
-                    onNavigateTo(AppRoute.Settings.About)
+                    navigator.navigateTo(AppRoute.Settings.About)
                 }
             }
         }

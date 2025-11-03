@@ -29,31 +29,27 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
+import com.klyx.LocalNavigator
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.value
+import com.klyx.di.LocalEditorViewModel
 import com.klyx.extension.api.Project
-import com.klyx.filetree.FileTreeViewModel
 import com.klyx.res.Res
 import com.klyx.res.Res.string
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved
 import com.klyx.res.settings
 import com.klyx.tab.FileTab
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
 import org.jetbrains.compose.resources.stringResource
 
 @RememberInComposition
-fun commonTopBarActions(
-    project: Project,
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
-    fileTreeViewModel: FileTreeViewModel,
-    onNavigateToRoute: (AppRoute) -> Unit,
-) = movableContentWithReceiverOf<RowScope> {
+fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScope> {
+    val editorViewModel = LocalEditorViewModel.current
+
+    val navigator = LocalNavigator.current
     val notifier = LocalNotifier.current
 
     val activeTab by editorViewModel.activeTab.collectAsState()
@@ -111,25 +107,19 @@ fun commonTopBarActions(
         TopBarIconButton(
             Icons.Outlined.Settings,
             contentDescription = stringResource(Res.string.settings),
-            onClick = { onNavigateToRoute(AppRoute.Settings.SettingsPage) }
+            onClick = { navigator.navigateTo(AppRoute.Settings.SettingsPage) }
         )
     }
 
     OverflowMenu(
         project = project,
-        editorViewModel = editorViewModel,
-        klyxViewModel = klyxViewModel,
-        fileTreeViewModel = fileTreeViewModel,
-        onNavigateToRoute = onNavigateToRoute
+        onNavigateToRoute = navigator::navigateTo
     )
 }
 
 @Composable
 private fun OverflowMenu(
     project: Project,
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
-    fileTreeViewModel: FileTreeViewModel,
     onNavigateToRoute: (AppRoute) -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
@@ -151,8 +141,6 @@ private fun OverflowMenu(
         ) {
             DropdownMenuItems(
                 project = project,
-                editorViewModel = editorViewModel,
-                klyxViewModel = klyxViewModel,
                 onShowFileMenu = {
                     expanded = false
                     showFileMenu = !showFileMenu
@@ -169,15 +157,10 @@ private fun OverflowMenu(
         FileMenu(
             expanded = showFileMenu,
             onDismissRequest = { showFileMenu = false },
-            editorViewModel = editorViewModel,
-            klyxViewModel = klyxViewModel,
-            fileTreeViewModel = fileTreeViewModel
         )
 
         HelpMenu(
             expanded = showHelpMenu,
-            klyxViewModel = klyxViewModel,
-            editorViewModel = editorViewModel,
             onDismissRequest = { showHelpMenu = false }
         )
     }

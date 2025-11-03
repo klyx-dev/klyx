@@ -17,6 +17,8 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toKxFiles
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalKlyxViewModel
 import com.klyx.extension.api.Worktree
 import com.klyx.res.Res
 import com.klyx.res.notification_all_files_saved
@@ -27,8 +29,6 @@ import com.klyx.res.notification_saved
 import com.klyx.ui.page.main.closeCurrentWindow
 import com.klyx.ui.page.main.openNewWindow
 import com.klyx.ui.page.main.quitApp
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openExtensionScreen
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
@@ -38,10 +38,10 @@ import kotlinx.coroutines.launch
 
 @Suppress("ComposableNaming")
 @Composable
-internal fun registerGeneralCommands(
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel
-) {
+internal fun registerGeneralCommands() {
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+
     val context = LocalPlatformContext.current
     val notifier = LocalNotifier.current
     val drawerState = LocalDrawerState.current

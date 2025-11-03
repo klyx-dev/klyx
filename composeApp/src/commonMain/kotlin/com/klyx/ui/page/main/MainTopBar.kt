@@ -25,10 +25,7 @@ import com.klyx.LocalDrawerState
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.component.FpsText
 import com.klyx.extension.api.Project
-import com.klyx.filetree.FileTreeViewModel
 import com.klyx.tab.Tab
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,21 +34,9 @@ fun MainTopBar(
     isTabOpen: Boolean,
     activeTab: Tab?,
     project: Project,
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
-    fileTreeViewModel: FileTreeViewModel,
-    onNavigateToRoute: (Any) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior
 ) {
-    val commonActions = remember {
-        commonTopBarActions(
-            project = project,
-            editorViewModel = editorViewModel,
-            klyxViewModel = klyxViewModel,
-            fileTreeViewModel = fileTreeViewModel,
-            onNavigateToRoute = onNavigateToRoute
-        )
-    }
+    val commonActions = remember(project) { commonTopBarActions(project) }
 
     if (isTabOpen) {
         TopAppBar(

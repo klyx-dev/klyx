@@ -51,7 +51,6 @@ import com.klyx.core.registerGeneralCommands
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.animatedComposable
 import com.klyx.di.LocalEditorViewModel
-import com.klyx.di.LocalFileTreeViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
 import com.klyx.di.ProvideViewModels
@@ -69,11 +68,9 @@ import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
 import com.klyx.ui.theme.KlyxTheme
-import com.klyx.viewmodel.StatusBarViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.koin.compose.viewmodel.koinViewModel
 
 val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
     noLocalProvidedFor<DrawerState>()
@@ -94,8 +91,6 @@ fun AppEntry() = ProvideViewModels {
 
     val editorViewModel = LocalEditorViewModel.current
     val klyxViewModel = LocalKlyxViewModel.current
-    val statusBarViewModel = LocalStatusBarViewModel.current
-    val fileTreeViewModel = LocalFileTreeViewModel.current
 
     val project by klyxViewModel.openedProject.collectAsStateWithLifecycle()
     val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
@@ -127,7 +122,7 @@ fun AppEntry() = ProvideViewModels {
         }
     }
 
-    collectLogs(statusBarViewModel)
+    collectLogs()
 
     KlyxTheme {
         ProvideNavigator(
@@ -162,7 +157,7 @@ fun AppEntry() = ProvideViewModels {
                     },
                     gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
                 ) {
-                    registerGeneralCommands(editorViewModel, klyxViewModel)
+                    registerGeneralCommands()
 
                     NavHost(
                         modifier = Modifier.align(Alignment.Center),
@@ -170,18 +165,7 @@ fun AppEntry() = ProvideViewModels {
                         startDestination = AppRoute.Home
                     ) {
                         animatedComposable<AppRoute.Home> {
-                            MainPage(
-                                modifier = Modifier.fillMaxSize(),
-                                editorViewModel = editorViewModel,
-                                klyxViewModel = klyxViewModel,
-                                statusBarViewModel = statusBarViewModel,
-                                fileTreeViewModel = fileTreeViewModel,
-                                onNavigateToRoute = { route ->
-                                    navController.navigate(route = route) {
-                                        launchSingleTop = true
-                                    }
-                                }
-                            )
+                            MainPage(modifier = Modifier.fillMaxSize())
                         }
 
                         animatedComposable<AppRoute.Terminal> {
@@ -198,14 +182,7 @@ fun AppEntry() = ProvideViewModels {
                             )
                         }
 
-                        settingsGraph(
-                            onNavigateBack = onNavigateBack,
-                            onNavigateTo = { route ->
-                                navController.navigate(route = route) {
-                                    launchSingleTop = true
-                                }
-                            }
-                        )
+                        settingsGraph()
                     }
                 }
 
@@ -230,28 +207,21 @@ fun AppEntry() = ProvideViewModels {
     }
 }
 
-fun NavGraphBuilder.settingsGraph(
-    onNavigateBack: () -> Unit,
-    onNavigateTo: (route: Any) -> Unit,
-) {
+fun NavGraphBuilder.settingsGraph() {
     navigation<AppRoute.Settings>(startDestination = SettingsPage) {
-        animatedComposable<SettingsPage> { SettingsPage(onNavigateBack = onNavigateBack, onNavigateTo = onNavigateTo) }
-        animatedComposable<GeneralPreferences> { GeneralPreferences(onNavigateBack = onNavigateBack) }
-        animatedComposable<Appearance> {
-            AppearancePreferences(
-                onNavigateBack = onNavigateBack,
-                onNavigateTo = onNavigateTo
-            )
-        }
-        animatedComposable<DarkTheme> { DarkThemePreferences { onNavigateBack() } }
-        animatedComposable<EditorPreferences> { EditorPreferences(onNavigateBack) }
-        animatedComposable<About> { AboutPage(onNavigateBack) }
+        animatedComposable<SettingsPage> { SettingsPage() }
+        animatedComposable<GeneralPreferences> { GeneralPreferences() }
+        animatedComposable<Appearance> { AppearancePreferences() }
+        animatedComposable<DarkTheme> { DarkThemePreferences() }
+        animatedComposable<EditorPreferences> { EditorPreferences() }
+        animatedComposable<About> { AboutPage() }
     }
 }
 
 @Suppress("ComposableNaming")
 @Composable
-private fun collectLogs(statusBarViewModel: StatusBarViewModel = koinViewModel()) {
+private fun collectLogs() {
+    val statusBarViewModel = LocalStatusBarViewModel.current
     val logBuffer = LocalLogBuffer.current
 
     LaunchedEffect(Unit) {

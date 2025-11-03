@@ -29,11 +29,11 @@ import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.Pip
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.core.ui.component.DropdownMenuItem
+import com.klyx.di.LocalEditorViewModel
+import com.klyx.di.LocalKlyxViewModel
 import com.klyx.extension.api.Project
 import com.klyx.res.Res
 import com.klyx.res.settings
-import com.klyx.viewmodel.EditorViewModel
-import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openExtensionScreen
 import org.jetbrains.compose.resources.stringResource
 
@@ -41,13 +41,14 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 fun ColumnScope.DropdownMenuItems(
     project: Project,
-    editorViewModel: EditorViewModel,
-    klyxViewModel: KlyxViewModel,
     onShowFileMenu: () -> Unit,
     onShowHelpMenu: () -> Unit,
     onNavigateToRoute: (AppRoute) -> Unit,
     onDismissRequest: () -> Unit = {}
 ) {
+    val editorViewModel = LocalEditorViewModel.current
+    val klyxViewModel = LocalKlyxViewModel.current
+
     val context = LocalPlatformContext.current
     val isTabOpen by editorViewModel.isTabOpen.collectAsStateWithLifecycle()
 
