@@ -100,10 +100,8 @@ fun WelcomePage() {
             } else {
                 klyxViewModel.openProject(Worktree(kx))
 
-                coroutineScope.launch {
-                    if (drawerState.isOpen) {
-                        drawerState.close()
-                    }
+                if (drawerState.isClosed) {
+                    coroutineScope.launch { drawerState.open() }
                 }
             }
         }
