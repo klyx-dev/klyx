@@ -68,7 +68,13 @@ fun EditorPreferences() {
                 PreferenceItem(
                     title = stringResource(string.font_family),
                     icon = KlyxIcons.BrandFamily,
-                    description = settings.fontFamily.name,
+                    description = with(settings) {
+                        if (customFontPath != null && useCustomFont) {
+                            "Custom"
+                        } else {
+                            fontFamily.name
+                        }
+                    },
                     onClick = { showFontFamilyDialog = true }
                 )
             }

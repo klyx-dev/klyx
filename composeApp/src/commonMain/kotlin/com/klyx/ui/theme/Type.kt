@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextDirection
+import com.klyx.core.file.KxFile
 import com.klyx.res.IBMPlexSans_Bold
 import com.klyx.res.IBMPlexSans_BoldItalic
 import com.klyx.res.IBMPlexSans_ExtraLight
@@ -57,6 +58,8 @@ expect val displayFontFamily: FontFamily
 
 @Composable
 expect fun rememberFontFamily(name: String): FontFamily
+
+expect fun KxFile.resolveFontFamily(): FontFamily
 
 inline val KlyxSans
     @Composable

@@ -1,11 +1,13 @@
 package com.klyx.ui.theme
 
+import android.graphics.Typeface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import com.klyx.R
+import com.klyx.core.file.KxFile
 
 val provider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
@@ -37,4 +39,9 @@ actual fun rememberFontFamily(name: String): FontFamily {
             )
         )
     }
+}
+
+actual fun KxFile.resolveFontFamily(): FontFamily {
+    val typeface = Typeface.createFromFile(absolutePath)
+    return FontFamily(typeface)
 }

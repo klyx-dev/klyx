@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.sp
 import com.klyx.core.clipboard.clipEntryOf
+import com.klyx.core.file.KxFile
 import com.klyx.core.file.openFile
 import com.klyx.core.generateId
 import com.klyx.core.io.rememberStoragePermissionState
@@ -42,6 +43,7 @@ import com.klyx.tab.FileTab
 import com.klyx.tab.TabMenuAction
 import com.klyx.tab.TabMenuState
 import com.klyx.tab.UnsupportedFileTab
+import com.klyx.ui.theme.resolveFontFamily
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCodeEditorApi::class)
@@ -62,7 +64,14 @@ fun EditorScreen(modifier: Modifier = Modifier) {
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { openTabs.size })
     val scope = rememberCoroutineScope()
-    val fontFamily = editorSettings.fontFamily.resolveFontFamily()
+
+    val fontFamily = with(editorSettings) {
+        if (customFontPath != null && useCustomFont) {
+            KxFile(customFontPath!!).resolveFontFamily()
+        } else {
+            fontFamily.resolveFontFamily()
+        }
+    }
 
     val permissionGranted by rememberStoragePermissionState()
 

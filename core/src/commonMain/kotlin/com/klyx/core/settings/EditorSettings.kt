@@ -8,6 +8,8 @@ import kotlinx.serialization.Serializable
 data class EditorSettings(
     @SerialName("font_family")
     val fontFamily: EditorFontFamily = EditorFontFamily.KlyxMono,
+    val useCustomFont: Boolean = false,
+    val customFontPath: String? = null,
 
     @SerialComment("The font size to use for rendering text in the editor")
     @SerialName("font_size")
