@@ -14,14 +14,14 @@ inline fun <reified E : Any> EventBus.registerSubscriber(
 }
 
 inline fun <reified E : Any> Subscriber<E>.subscribe(dispatcher: CoroutineDispatcher = Dispatchers.Default): Job {
-    return EventBus.instance.registerSubscriber(this, dispatcher)
+    return EventBus.INSTANCE.registerSubscriber(this, dispatcher)
 }
 
 inline fun <reified E : Any> LifecycleOwner.registerSubscriber(
     subscriber: Subscriber<E>,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
 ): Job {
-    return EventBus.instance.subscribe<E>(
+    return EventBus.INSTANCE.subscribe<E>(
         lifecycleOwner = this,
         minActiveState = minActiveState,
         onEvent = subscriber::onEvent

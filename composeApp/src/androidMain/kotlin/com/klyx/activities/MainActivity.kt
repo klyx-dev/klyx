@@ -103,7 +103,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
     @SuppressLint("RestrictedApi")
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         lifecycleScope.launch {
-            EventBus.instance.post(event.asComposeKeyEvent())
+            EventBus.INSTANCE.post(event.asComposeKeyEvent())
         }
         return super.dispatchKeyEvent(event)
     }
@@ -147,7 +147,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
 
 //    override fun onKeyShortcut(keyCode: Int, event: KeyEvent): Boolean {
 //        lifecycleScope.launch {
-//            EventBus.instance.post(event.asComposeKeyEvent())
+//            EventBus.INSTANCE.post(event.asComposeKeyEvent())
 //        }
 //        return super.onKeyShortcut(keyCode, event)
 //    }

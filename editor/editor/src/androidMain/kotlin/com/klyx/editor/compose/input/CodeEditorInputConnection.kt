@@ -1,6 +1,5 @@
 package com.klyx.editor.compose.input
 
-import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.RectF
 import android.os.Build
@@ -201,7 +200,7 @@ internal class CodeEditorInputConnection(
     override fun sendKeyEvent(event: KeyEvent): Boolean {
         println("sendKeyEvent: $event")
         state.handleKeyEvent(event.asComposeKeyEvent())
-        EventBus.instance.postSync(event.asComposeKeyEvent())
+        EventBus.INSTANCE.postSync(event.asComposeKeyEvent())
         return true
     }
 

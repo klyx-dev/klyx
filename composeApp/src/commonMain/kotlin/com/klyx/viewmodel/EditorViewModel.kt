@@ -257,7 +257,7 @@ class EditorViewModel(
             }
 
             openTab(tab)
-            EventBus.instance.post(FileOpenEvent(file, worktree?.rootFile))
+            EventBus.INSTANCE.post(FileOpenEvent(file, worktree?.rootFile))
         }
     }
 
@@ -269,7 +269,7 @@ class EditorViewModel(
                 closingTabs.forEach { tab ->
                     if (tab is FileTab) {
                         onCloseFileTab(tab.worktree, tab.file)
-                        EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                        EventBus.INSTANCE.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                     }
                 }
             }
@@ -290,7 +290,7 @@ class EditorViewModel(
                 closingTabs.forEach { tab ->
                     if (tab is FileTab) {
                         onCloseFileTab(tab.worktree, tab.file)
-                        EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                        EventBus.INSTANCE.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                     }
                 }
             }
@@ -312,7 +312,7 @@ class EditorViewModel(
                 closingTabs.forEach { tab ->
                     if (tab is FileTab) {
                         onCloseFileTab(tab.worktree, tab.file)
-                        EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                        EventBus.INSTANCE.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                     }
                 }
             }
@@ -354,7 +354,7 @@ class EditorViewModel(
             if (tab is FileTab) {
                 viewModelScope.launch(Dispatchers.Default) {
                     onCloseFileTab(tab.worktree, tab.file)
-                    EventBus.instance.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
+                    EventBus.INSTANCE.post(FileCloseEvent(tab.file, tab.worktree?.rootFile))
                 }
             }
 
@@ -452,7 +452,7 @@ class EditorViewModel(
 
                 viewModelScope.launch(Dispatchers.Default) {
                     onSaveFile(tab.worktree, file)
-                    EventBus.instance.post(FileSaveEvent(file, tab.worktree?.rootFile))
+                    EventBus.INSTANCE.post(FileSaveEvent(file, tab.worktree?.rootFile))
                 }
 
                 true
@@ -500,7 +500,7 @@ class EditorViewModel(
 
             viewModelScope.launch(Dispatchers.Default) {
                 onSaveFile(tab.worktree, newFile)
-                EventBus.instance.post(FileSaveEvent(newFile, tab.worktree?.rootFile))
+                EventBus.INSTANCE.post(FileSaveEvent(newFile, tab.worktree?.rootFile))
             }
             true
         } else false
@@ -538,7 +538,7 @@ class EditorViewModel(
 
                         viewModelScope.launch(Dispatchers.Default) {
                             onSaveFile(tab.worktree, file)
-                            EventBus.instance.post(FileSaveEvent(file, tab.worktree?.rootFile))
+                            EventBus.INSTANCE.post(FileSaveEvent(file, tab.worktree?.rootFile))
                         }
                     }
                     results[tab.name] = saved

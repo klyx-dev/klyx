@@ -28,7 +28,7 @@ object CommandManager {
     val isCommandPaletteHidden get() = !showCommandPalette
 
     init {
-        EventBus.instance.subscribe<KeyEvent> { event ->
+        EventBus.INSTANCE.subscribe<KeyEvent> { event ->
             if (event.type == KeyEventType.KeyDown) {
                 coroutineScope {
                     activeSequences.entries.removeAll { (command, sequence) ->

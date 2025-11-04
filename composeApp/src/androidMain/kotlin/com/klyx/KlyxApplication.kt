@@ -120,7 +120,7 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
     }
 
     val file = runCatching { saveLogs(thread, throwable) }.getOrNull()
-    EventBus.instance.postSync(CrashEvent(thread, throwable, file))
+    EventBus.INSTANCE.postSync(CrashEvent(thread, throwable, file))
 
     if (thread.name == "main") {
         Toast.makeText(

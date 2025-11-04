@@ -5,6 +5,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.klyx.core.atomic.atomicMapOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,14 +24,22 @@ import kotlin.reflect.KClass
 
 class EventBus private constructor() {
     companion object {
-        val instance by lazy { EventBus() }
+        val INSTANCE by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) { EventBus() }
     }
 
     private val eventChannels = atomicMapOf<KClass<*>, Channel<Any>>()
     private val eventFlows = atomicMapOf<KClass<*>, SharedFlow<Any>>()
 
     @PublishedApi
+    internal val subscribers = hashMapOf<KClass<*>, Job>()
+
+    @PublishedApi
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+
+    @PublishedApi
+    internal inline infix fun <reified T> addSubscriber(job: Job) {
+        subscribers += T::class to job
+    }
 
     /**
      * Post an event to all subscribers
@@ -70,7 +79,7 @@ class EventBus private constructor() {
                     onEvent(it)
                 }
             }
-        }
+        }.also { addSubscriber<T>(it) }
     }
 
     /**
@@ -83,7 +92,7 @@ class EventBus private constructor() {
     ): Job {
         return scope.launch(dispatcher) {
             subscribe<T>().collect { onEvent(it) }
-        }
+        }.also { addSubscriber<T>(it) }
     }
 
     /**
@@ -99,8 +108,28 @@ class EventBus private constructor() {
             lifecycleOwner.repeatOnLifecycle(minActiveState) {
                 subscribe<T>().catch { onError(it) }.collect { onEvent(it) }
             }
-        }
+        }.also { addSubscriber<T>(it) }
     }
+
+    inline fun <reified T : Any> unsubscribe(job: Job) {
+        unsubscribeFlow(T::class)
+        val cause = CancellationException("This event subscription was cancelled.")
+        unsubscribeChannel(T::class)?.also { channel -> channel.cancel(cause) }
+        job.cancel(cause)
+        subscribers.remove(T::class)
+    }
+
+    inline fun <reified T : Any> unsubscribe() {
+        subscribers[T::class]
+            ?.let { job -> unsubscribe<T>(job) }
+            ?.also { subscribers.remove(T::class) }
+    }
+
+    @PublishedApi
+    internal fun unsubscribeChannel(eventClass: KClass<*>) = eventChannels.remove(eventClass)
+
+    @PublishedApi
+    internal fun unsubscribeFlow(eventClass: KClass<*>) = eventFlows.remove(eventClass)
 
     private fun getOrCreateChannel(eventClass: KClass<*>): Channel<Any> {
         return eventChannels.getOrPut(eventClass) {
@@ -125,7 +154,8 @@ class EventBus private constructor() {
     }
 
     fun clear() {
-        eventChannels.values.forEach { it.close() }
+        subscribers.values.forEach { job -> job.cancel(CancellationException("EventBus was cleared.")) }
+        eventChannels.values.forEach { it.cancel(CancellationException("EventBus was cleared.")) }
         eventChannels.clear()
         eventFlows.clear()
     }
@@ -136,6 +166,6 @@ class EventBus private constructor() {
 inline fun <reified T : Any> LifecycleOwner.subscribeToEvent(
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
     crossinline onEvent: suspend (event: T) -> Unit
-) {
-    EventBus.instance.subscribe<T>(this, minActiveState, onEvent)
+): Job {
+    return EventBus.INSTANCE.subscribe<T>(this, minActiveState, onEvent)
 }

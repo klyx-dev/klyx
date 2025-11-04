@@ -29,7 +29,7 @@ fun main() {
                 resizable = state.placement == WindowPlacement.Floating,
                 icon = painterResource(Res.drawable.klyx_logo),
                 onPreviewKeyEvent = { event ->
-                    EventBus.instance.postSync(event)
+                    EventBus.INSTANCE.postSync(event)
                     false
                 }
             ) {
