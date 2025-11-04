@@ -7,7 +7,7 @@ object AppVersioning {
         major = 1,
         minor = 9,
         patch = 0,
-        preRelease = "alpha01"
+        //preRelease = "alpha01"
         //buildMetadata = "build"
     )
 
