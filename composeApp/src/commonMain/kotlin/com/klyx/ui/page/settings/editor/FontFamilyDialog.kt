@@ -148,8 +148,7 @@ fun FontFamilyDialog(
                                 readOnly = true,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 2.dp)
-                                    .clickable { fontPicker.launch() },
+                                    .padding(horizontal = 2.dp),
                                 placeholder = { Text("Choose a font") },
                                 trailingIcon = {
                                     IconButton(onClick = fontPicker::launch) {
