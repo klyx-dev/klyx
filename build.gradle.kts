@@ -17,8 +17,6 @@ plugins {
     alias(libs.plugins.detekt)
 }
 
-val detektFormatting = libs.detekt.formatting
-
 allprojects {
     apply {
         plugin("io.gitlab.arturbosch.detekt")
@@ -49,10 +47,6 @@ allprojects {
             it.file.relativeTo(projectDir).startsWith("build")
         }
     }
-
-//    dependencies {
-//        detektPlugins(detektFormatting)
-//    }
 }
 
 tasks.register("printTargets") {

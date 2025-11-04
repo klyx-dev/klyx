@@ -71,9 +71,6 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.navigation.compose)
 
-            implementation(libs.voyager.navigator)
-            implementation(libs.voyager.screenmodel)
-
             implementation(libs.fuzzywuzzy.kotlin)
 
             implementation(libs.androidx.lifecycle.viewmodel)
@@ -139,7 +136,7 @@ android {
             val propPath = if (isCI) {
                 "/tmp/sign.properties"
             } else {
-                "/home/vivek/klyx/key/sign.properties"
+                "${System.getenv("HOME")}/klyx/key/sign.properties"
             }
 
             val propFile = File(propPath)
