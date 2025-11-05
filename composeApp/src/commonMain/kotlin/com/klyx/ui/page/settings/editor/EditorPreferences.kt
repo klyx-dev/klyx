@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardTab
 import androidx.compose.material.icons.outlined.FormatListNumbered
+import androidx.compose.material.icons.outlined.KeyboardAlt
 import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
@@ -94,6 +95,18 @@ fun EditorPreferences() {
                     icon = Icons.AutoMirrored.Outlined.KeyboardTab,
                     description = "${settings.tabSize}",
                     onClick = { showTabSizeDialog = true }
+                )
+            }
+
+            item {
+                PreferenceSwitch(
+                    title = "Show Virtual Keys",
+                    description = "Show virtual keys (e.g. Tab, Brackets) above the keyboard",
+                    icon = Icons.Outlined.KeyboardAlt,
+                    isChecked = settings.showVirtualKeys,
+                    onClick = { show ->
+                        settings.update { it.copy(showVirtualKeys = show) }
+                    }
                 )
             }
 
