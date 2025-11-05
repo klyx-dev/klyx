@@ -206,30 +206,32 @@ actual fun CodeEditor(
             }
         )
 
-        HorizontalDivider(thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outline)
-        VirtualKeys(
-            editor = editor,
-            keys = remember {
-                listOf(
-                    "->" to "\t",
-                    "(" to "()",
-                    ")" to ")",
-                    "\"" to "\"\"",
-                    "{" to "{}",
-                    "}" to "}",
-                    "[" to "[]",
-                    "]" to "]",
-                    ";" to ";",
-                    ":" to ":",
-                    "=" to "=",
-                    "+" to "+",
-                    "-" to "-",
-                    "|" to "|",
-                )
-            },
-            fontFamily = fontFamily,
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (appSettings.editor.showVirtualKeys) {
+            HorizontalDivider(thickness = Dp.Hairline, color = MaterialTheme.colorScheme.outline)
+            VirtualKeys(
+                editor = editor,
+                keys = remember {
+                    listOf(
+                        "->" to "\t",
+                        "(" to "()",
+                        ")" to ")",
+                        "\"" to "\"\"",
+                        "{" to "{}",
+                        "}" to "}",
+                        "[" to "[]",
+                        "]" to "]",
+                        ";" to ";",
+                        ":" to ":",
+                        "=" to "=",
+                        "+" to "+",
+                        "-" to "-",
+                        "|" to "|",
+                    )
+                },
+                fontFamily = fontFamily,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
@@ -284,7 +286,7 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(WHOLE_BACKGROUND, colorScheme.background)
     setColor(TEXT_NORMAL, colorScheme.onSurface)
 
-    setColor(LINE_NUMBER_BACKGROUND, colorScheme.surfaceColorAtElevation(1.dp))
+    setColor(LINE_NUMBER_BACKGROUND, colorScheme.background)
     setColor(LINE_NUMBER, colorScheme.onSurfaceVariant)
     setColor(LINE_NUMBER_CURRENT, colorScheme.onSurface)
 
@@ -332,5 +334,5 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(BLOCK_LINE, colorScheme.outlineVariant.copy(alpha = 0.4f))
     setColor(BLOCK_LINE_CURRENT, colorScheme.primary.copy(alpha = 0.6f))
 
-    setColor(LINE_DIVIDER, colorScheme.outline)
+    setColor(LINE_DIVIDER, colorScheme.outline.copy(alpha = 0.4f))
 }

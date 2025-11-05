@@ -1,6 +1,7 @@
 package com.klyx.activities
 
 import android.os.Bundle
+import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth

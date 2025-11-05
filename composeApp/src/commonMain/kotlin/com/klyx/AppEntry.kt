@@ -32,6 +32,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import arrow.core.Option
 import com.klyx.AppRoute.Settings.About
 import com.klyx.AppRoute.Settings.Appearance
 import com.klyx.AppRoute.Settings.DarkTheme
@@ -53,7 +54,6 @@ import com.klyx.core.ui.animatedComposable
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
-import com.klyx.di.ProvideViewModels
 import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
 import com.klyx.ui.DisclaimerDialog
@@ -72,14 +72,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-val LocalDrawerState = staticCompositionLocalOf<DrawerState> {
-    noLocalProvidedFor<DrawerState>()
-}
-
 val LocalLogBuffer = staticCompositionLocalOf { LogBuffer(maxSize = 2000) }
 
 @Composable
-fun AppEntry() = ProvideViewModels {
+fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLocals {
+    onBeforeRender()
+
     val appSettings = currentAppSettings
     val lifecycleOwner = LocalLifecycleOwner.current
     val keyboardController = LocalSoftwareKeyboardController.current

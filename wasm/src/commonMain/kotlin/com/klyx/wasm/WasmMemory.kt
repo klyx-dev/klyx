@@ -20,7 +20,6 @@ import io.github.charlietap.chasm.embedding.memory.writeInt
 import io.github.charlietap.chasm.embedding.memory.writeLong
 import io.github.charlietap.chasm.embedding.memory.writeUtf8String
 import io.github.charlietap.chasm.embedding.shapes.ChasmResult
-import io.github.charlietap.chasm.embedding.shapes.Export
 import io.github.charlietap.chasm.embedding.shapes.Memory
 import io.github.charlietap.chasm.embedding.shapes.Store
 
@@ -82,9 +81,3 @@ class WasmMemory internal constructor(
 }
 
 private fun <V, E : ChasmError> ChasmResult<V, E>.value() = asResult().getOrThrow(::WasmRuntimeException)
-
-@OptIn(ExperimentalWasmApi::class)
-internal fun Export.asMemory(store: Store, instance: WasmInstance) = run {
-    val memory = requireNotNull(value as? Memory) { "Export '$name' is not a memory" }
-    WasmMemory(instance, memory, store)
-}

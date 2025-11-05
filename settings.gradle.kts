@@ -1,5 +1,8 @@
 @file:Suppress("UnstableApiUsage")
 
+include(":mcp")
+
+
 rootProject.name = "Klyx"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 

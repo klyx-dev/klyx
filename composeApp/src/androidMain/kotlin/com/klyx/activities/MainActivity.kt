@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.SystemBarStyle
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
@@ -48,37 +49,37 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
         subscribe()
 
         setContent {
-            val projects by fileTreeViewModel.rootNodes.collectAsState()
+            AppEntry {
+                val projects by fileTreeViewModel.rootNodes.collectAsState()
 
-            LaunchedEffect(projects) {
-                setTaskDescription(
-                    createTaskDescription(
-                        if (projects.isEmpty()) {
-                            "empty project"
-                        } else {
-                            projects.entries.joinToString { it.value.name }
-                        }
+                LaunchedEffect(projects) {
+                    setTaskDescription(
+                        createTaskDescription(
+                            if (projects.isEmpty()) {
+                                "empty project"
+                            } else {
+                                projects.entries.joinToString { it.value.name }
+                            }
+                        )
+                    )
+                }
+
+                val darkMode = LocalIsDarkMode.current
+                val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
+
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        darkScrim = scrimColor.toArgb(),
+                        lightScrim = scrimColor.toArgb(),
+                        detectDarkMode = { darkMode }
+                    ),
+                    navigationBarStyle = SystemBarStyle.auto(
+                        darkScrim = scrimColor.toArgb(),
+                        lightScrim = scrimColor.toArgb(),
+                        detectDarkMode = { darkMode }
                     )
                 )
             }
-
-            val darkMode = LocalIsDarkMode.current
-            val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
-
-            enableEdgeToEdge(
-                statusBarStyle = SystemBarStyle.auto(
-                    darkScrim = scrimColor.toArgb(),
-                    lightScrim = scrimColor.toArgb(),
-                    detectDarkMode = { darkMode }
-                ),
-                navigationBarStyle = SystemBarStyle.auto(
-                    darkScrim = scrimColor.toArgb(),
-                    lightScrim = scrimColor.toArgb(),
-                    detectDarkMode = { darkMode }
-                )
-            )
-
-            AppEntry()
         }
     }
 

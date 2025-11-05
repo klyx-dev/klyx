@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardCommandKey
@@ -58,6 +60,7 @@ import androidx.compose.ui.unit.em
 import com.klyx.AppRoute
 import com.klyx.LocalDrawerState
 import com.klyx.LocalNavigator
+import com.klyx.openIfClosed
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.KeyShortcut
 import com.klyx.core.cmd.key.keyShortcutOf
@@ -98,20 +101,19 @@ fun WelcomePage() {
                 klyxViewModel.showPermissionDialog()
             } else {
                 klyxViewModel.openProject(Worktree(kx))
-
-                if (drawerState.isClosed) {
-                    coroutineScope.launch { drawerState.open() }
-                }
+                coroutineScope.launch { drawerState.openIfClosed() }
             }
         }
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.sizeIn(maxWidth = containerSize.width * 0.8f),
+            modifier = Modifier
+                .sizeIn(maxWidth = containerSize.width * 0.8f)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             val infiniteTransition = rememberInfiniteTransition()

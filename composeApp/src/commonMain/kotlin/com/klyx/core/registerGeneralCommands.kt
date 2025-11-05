@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
 import com.klyx.LocalDrawerState
+import com.klyx.openIfClosed
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.CommandManager.addCommands
 import com.klyx.core.cmd.CommandManager.removeCommands
@@ -64,7 +65,7 @@ internal fun registerGeneralCommands() {
             if (dir.isPermissionRequired(R_OK or W_OK)) klyxViewModel.showPermissionDialog()
             else {
                 klyxViewModel.openProject(Worktree(dir))
-                if (drawerState.isClosed) coroutineScope.launch { drawerState.open() }
+                coroutineScope.launch { drawerState.openIfClosed() }
             }
         }
     }

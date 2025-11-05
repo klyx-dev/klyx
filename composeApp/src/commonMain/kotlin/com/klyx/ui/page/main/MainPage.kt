@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.LocalLogBuffer
+import com.klyx.openIfClosed
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.isPermissionRequired
@@ -84,9 +85,7 @@ fun MainPage(modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
 
     val openDrawerIfClosed = {
-        if (drawerState.isClosed) {
-            scope.launch { drawerState.open() }
-        }
+        scope.launch { drawerState.openIfClosed() }
     }
 
     var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }

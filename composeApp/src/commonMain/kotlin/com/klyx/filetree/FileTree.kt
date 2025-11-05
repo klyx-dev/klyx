@@ -65,7 +65,7 @@ import androidx.compose.ui.util.fastForEach
 import coil3.ImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.svg.SvgDecoder
-import com.klyx.WorktreeDrawerWidth
+import com.klyx.worktreeDrawerWidth
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.resolve
@@ -212,7 +212,7 @@ private fun FileTreeItem(
     Column(
         modifier = modifier
             .width(IntrinsicSize.Max)
-            .widthIn(min = WorktreeDrawerWidth)
+            .widthIn(min = worktreeDrawerWidth)
     ) {
         Row(
             modifier = Modifier

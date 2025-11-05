@@ -70,6 +70,7 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.preview)
             implementation(libs.navigation.compose)
+            implementation(libs.compose.material3.adaptive)
 
             implementation(libs.fuzzywuzzy.kotlin)
 

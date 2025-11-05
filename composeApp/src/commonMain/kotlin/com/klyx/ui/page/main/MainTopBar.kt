@@ -25,6 +25,7 @@ import com.klyx.LocalDrawerState
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.component.FpsText
 import com.klyx.extension.api.Project
+import com.klyx.isModalNavigationDrawerAvailable
 import com.klyx.tab.Tab
 import kotlinx.coroutines.launch
 
@@ -51,7 +52,7 @@ fun MainTopBar(
                 }
             },
             subtitle = { if (currentAppSettings.showFps) FpsText() },
-            navigationIcon = { FileTreeButton() },
+            navigationIcon = { if (isModalNavigationDrawerAvailable) FileTreeButton() },
             actions = commonActions
         )
     } else {
@@ -61,7 +62,7 @@ fun MainTopBar(
                 { FpsText() }
             } else null,
             scrollBehavior = scrollBehavior,
-            navigationIcon = { FileTreeButton() },
+            navigationIcon = { if (isModalNavigationDrawerAvailable) FileTreeButton() },
             actions = commonActions
         )
     }
@@ -69,11 +70,11 @@ fun MainTopBar(
 
 @Composable
 private fun FileTreeButton() {
-    val drawerState = LocalDrawerState.current
+    val drawerState = LocalDrawerState.current.getOrNull()
     val scope = rememberCoroutineScope()
 
     FilledIconButton(
-        onClick = { scope.launch { drawerState.open() } },
+        onClick = { scope.launch { drawerState?.open() } },
         shapes = IconButtonDefaults.shapes(
             shape = IconButtonDefaults.mediumSquareShape,
             pressedShape = IconButtonDefaults.mediumPressedShape

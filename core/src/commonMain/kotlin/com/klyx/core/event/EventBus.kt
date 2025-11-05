@@ -158,6 +158,7 @@ class EventBus private constructor() {
         eventChannels.values.forEach { it.cancel(CancellationException("EventBus was cleared.")) }
         eventChannels.clear()
         eventFlows.clear()
+        subscribers.clear()
     }
 
     fun unsubscribeAll() = clear()
