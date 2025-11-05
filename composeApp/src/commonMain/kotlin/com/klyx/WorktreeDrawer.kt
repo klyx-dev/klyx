@@ -25,6 +25,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.PermanentDrawerSheet
 import androidx.compose.material3.PermanentNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -93,22 +94,14 @@ suspend fun Either<WorktreeDrawerState, DrawerState>.openIfClosed() {
 @Composable
 fun WorktreeDrawer(
     project: Project,
-    drawerState: DrawerState,
     onFileClick: (KxFile, Worktree) -> Unit,
-    onDirectoryPicked: (directory: KxFile) -> Unit,
+    onDirectoryPicked: (directory: KxFile, drawerState: Either<WorktreeDrawerState, DrawerState>) -> Unit,
     modifier: Modifier = Modifier,
-    onDismissRequest: suspend () -> Unit = { drawerState.close() },
-    gesturesEnabled: Boolean = true,
+    gesturesEnabled: (DrawerState) -> Boolean = { true },
     content: @Composable () -> Unit,
 ) {
     val windowSizeClass = LocalWindowSizeClass.current
     val scope = rememberCoroutineScope()
-
-    val directoryPicker = rememberDirectoryPickerLauncher { file ->
-        if (file != null) {
-            onDirectoryPicked(file.toKxFile())
-        }
-    }
 
     val drawerModifier = Modifier
         .fillMaxHeight()
@@ -157,8 +150,20 @@ fun WorktreeDrawer(
                                         )
                                     }
 
+                                    val directoryPicker = rememberDirectoryPickerLauncher { file ->
+                                        if (file != null) {
+                                            onDirectoryPicked(file.toKxFile(), drawerState.left())
+                                        }
+                                    }
+
                                     AnimatedVisibility(visible = isExpanded) {
-                                        DrawerContent(project, directoryPicker, onFileClick, scope, onDismissRequest)
+                                        DrawerContent(
+                                            project = project,
+                                            directoryPicker = directoryPicker,
+                                            onFileClick = onFileClick,
+                                            scope = scope,
+                                            onDismissRequest = { drawerState.close() }
+                                        )
                                     }
                                 }
                             }
@@ -169,9 +174,11 @@ fun WorktreeDrawer(
             }
 
             else -> {
+                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+
                 CompositionLocalProvider(LocalDrawerState provides drawerState.right()) {
                     ModalNavigationDrawer(
-                        gesturesEnabled = gesturesEnabled,
+                        gesturesEnabled = gesturesEnabled(drawerState),
                         drawerState = drawerState,
                         drawerContent = {
                             ModalDrawerSheet(
@@ -179,7 +186,19 @@ fun WorktreeDrawer(
                                 drawerContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
                                 modifier = modifier.width(worktreeDrawerWidth).then(drawerModifier)
                             ) {
-                                DrawerContent(project, directoryPicker, onFileClick, scope, onDismissRequest)
+                                val directoryPicker = rememberDirectoryPickerLauncher { file ->
+                                    if (file != null) {
+                                        onDirectoryPicked(file.toKxFile(), drawerState.right())
+                                    }
+                                }
+
+                                DrawerContent(
+                                    project = project,
+                                    directoryPicker = directoryPicker,
+                                    onFileClick = onFileClick,
+                                    scope = scope,
+                                    onDismissRequest = drawerState::close
+                                )
                             }
                         },
                         content = content,

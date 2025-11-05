@@ -3,10 +3,7 @@ package com.klyx
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.DrawerState
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +29,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import arrow.core.Option
 import com.klyx.AppRoute.Settings.About
 import com.klyx.AppRoute.Settings.Appearance
 import com.klyx.AppRoute.Settings.DarkTheme
@@ -46,7 +42,6 @@ import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
-import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.registerGeneralCommands
 import com.klyx.core.settings.currentAppSettings
@@ -84,8 +79,6 @@ fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLo
 
     val scope = rememberCoroutineScope()
     val navController = rememberNavController()
-
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val editorViewModel = LocalEditorViewModel.current
     val klyxViewModel = LocalKlyxViewModel.current
@@ -138,22 +131,20 @@ fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLo
             ) {
                 WorktreeDrawer(
                     project = project,
-                    drawerState = drawerState,
                     onFileClick = { file, worktree ->
                         editorViewModel.openFile(file, worktree)
                     },
-                    onDirectoryPicked = { directory ->
+                    onDirectoryPicked = { directory, drawerState ->
                         if (directory.isPermissionRequired(R_OK or W_OK)) {
                             klyxViewModel.showPermissionDialog()
                         } else {
                             klyxViewModel.openProject(Worktree(directory))
-
-                            if (drawerState.isClosed) {
-                                scope.launch { drawerState.open() }
-                            }
+                            scope.launch { drawerState.openIfClosed() }
                         }
                     },
-                    gesturesEnabled = (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
+                    gesturesEnabled = { drawerState ->
+                        (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
+                    }
                 ) {
                     registerGeneralCommands()
 
