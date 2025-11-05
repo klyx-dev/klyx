@@ -65,13 +65,13 @@ import androidx.compose.ui.util.fastForEach
 import coil3.ImageLoader
 import coil3.compose.LocalPlatformContext
 import coil3.svg.SvgDecoder
-import com.klyx.worktreeDrawerWidth
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.resolve
+import com.klyx.di.LocalFileTreeViewModel
 import com.klyx.extension.api.Worktree
 import com.klyx.ui.component.menu.PopupMenu
-import org.koin.compose.viewmodel.koinViewModel
+import com.klyx.worktreeDrawerWidth
 
 private inline fun <K, V> LazyListScope.items(
     items: Map<K, V>,
@@ -99,7 +99,7 @@ private val SvgImageLoader
 fun FileTree(
     rootNodes: Map<Worktree, FileTreeNode> = emptyMap(),
     modifier: Modifier = Modifier,
-    viewModel: FileTreeViewModel = koinViewModel(),
+    viewModel: FileTreeViewModel = LocalFileTreeViewModel.current,
     onFileClick: (KxFile, Worktree) -> Unit = { _, _ -> },
     onFileLongClick: (KxFile, Worktree) -> Unit = { _, _ -> },
 ) {
