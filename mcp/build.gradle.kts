@@ -28,8 +28,10 @@ kotlin {
     applyDefaultHierarchyTemplate()
 
     sourceSets {
-        commonMain.dependencies {
-
+        commonMain {
+            dependencies {
+                implementation("io.modelcontextprotocol:kotlin-sdk-client:0.7.4")
+            }
         }
 
         commonTest.dependencies {

@@ -1,9 +1,11 @@
 package com.klyx.ui.page.main
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.waterfall
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -100,6 +102,7 @@ fun MainPage(modifier: Modifier = Modifier) {
                 scrollBehavior = scrollBehavior
             )
         },
+        contentWindowInsets = WindowInsets.waterfall,
         floatingActionButton = {
             val directoryPicker = rememberDirectoryPickerLauncher { file ->
                 if (file != null) {

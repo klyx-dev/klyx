@@ -104,6 +104,7 @@ kotlin {
             implementation(projects.extensionApi)
             implementation(projects.wasm)
             implementation(projects.terminal.terminal)
+            implementation(projects.mcp)
         }
 
         commonTest.dependencies {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
@@ -70,7 +71,7 @@ val worktreeDrawerWidth: Dp
         val windowDpSize = LocalWindowInfo.current.containerDpSize
         val windowSizeClass = LocalWindowSizeClass.current
         return when {
-            windowSizeClass.isWidthAtLeastMediumOrExpanded -> windowDpSize.width * 0.3f
+            windowSizeClass.isWidthAtLeastMediumOrExpanded -> windowDpSize.width * 0.35f
             else -> windowDpSize.width * 0.7f
         }
     }
@@ -106,7 +107,7 @@ fun WorktreeDrawer(
     val drawerModifier = Modifier
         .fillMaxHeight()
         .imePadding()
-        .systemBarsPadding()
+        .navigationBarsPadding()
 
     AnimatedContent(targetState = windowSizeClass) { targetClass ->
         when {

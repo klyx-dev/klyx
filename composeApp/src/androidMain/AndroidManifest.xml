@@ -34,6 +34,7 @@
             android:alwaysRetainTaskState="true"
             android:exported="true"
             android:launchMode="singleInstancePerTask"
+            android:configChanges="orientation"
             android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>

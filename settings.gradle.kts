@@ -1,8 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-include(":mcp")
-
-
 rootProject.name = "Klyx"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
@@ -43,6 +40,7 @@ plugins {
 include(":composeApp")
 include(":shared")
 include(":core")
+include(":mcp")
 include(
     ":editor:editor",
     ":editor:tree-sitter"
