@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="Klyx.composeApp">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-03T08:19:46.237196382Z">
+        <DropdownSelection timestamp="2025-11-06T12:04:22.495187982Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="Default" identifier="serial=192.168.240.112:5555;connection=acba5159" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=DEAY9D4DAU75ON7L" />
             </handle>
           </Target>
         </DropdownSelection>

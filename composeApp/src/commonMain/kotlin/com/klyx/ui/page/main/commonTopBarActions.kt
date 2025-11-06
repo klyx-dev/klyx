@@ -107,7 +107,7 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
         TopBarIconButton(
             Icons.Outlined.Settings,
             contentDescription = stringResource(Res.string.settings),
-            onClick = { navigator.navigateTo(AppRoute.Settings.SettingsPage) }
+            onClick = { navigator.navigateTo(AppRoute.Settings) }
         )
     }
 
