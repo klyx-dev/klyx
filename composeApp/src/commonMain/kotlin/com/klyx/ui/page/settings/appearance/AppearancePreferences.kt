@@ -26,22 +26,26 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Colorize
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.backhandler.BackHandler
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
@@ -55,6 +59,7 @@ import com.klyx.core.settings.paletteStyles
 import com.klyx.core.settings.update
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.LocalIsDarkMode
+import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceSwitch
 import com.klyx.core.ui.component.PreferenceSwitchWithDivider
 import com.klyx.res.Res
@@ -62,6 +67,7 @@ import com.klyx.res.dark_theme
 import com.klyx.res.dynamic_color
 import com.klyx.res.dynamic_color_desc
 import com.klyx.res.follow_system
+import com.klyx.res.look_and_feel
 import com.klyx.res.off
 import com.klyx.res.on
 import com.kyant.monet.LocalTonalPalettes
@@ -78,115 +84,126 @@ private val ColorList = ((4..10) + (1..3)).map { it * 35.0 }.map {
     Color(Hct.from(it, 40.0, 40.0).toInt())
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppearancePreferences() {
     val navigator = LocalNavigator.current
-
-    @Suppress("DEPRECATION")
-    BackHandler { navigator.navigateBack() }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val appSettings = LocalAppSettings.current
     val isDynamicColor = appSettings.dynamicColor
 
-    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-        val pageCount = ColorList.size + 1
+    Scaffold(
+        modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                title = { Text(text = stringResource(Res.string.look_and_feel)) },
+                navigationIcon = { BackButton(navigator::navigateBack) },
+                scrollBehavior = scrollBehavior
+            )
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier.verticalScroll(rememberScrollState()).padding(padding)
+        ) {
+            val pageCount = ColorList.size + 1
 
-        val pagerState = rememberPagerState(
-            initialPage = if (LocalPaletteStyleIndex.current == STYLE_MONOCHROME) {
-                pageCount
-            } else {
-                ColorList.indexOf(Color(LocalSeedColor.current)).let { if (it == -1) 0 else it }
-            }
-        ) { pageCount }
-
-        HorizontalPager(
-            modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
-            contentPadding = PaddingValues(horizontal = 12.dp),
-            state = pagerState
-        ) { page ->
-            if (page < pageCount - 1) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    ColorButtons(ColorList[page])
+            val pagerState = rememberPagerState(
+                initialPage = if (LocalPaletteStyleIndex.current == STYLE_MONOCHROME) {
+                    pageCount
+                } else {
+                    ColorList.indexOf(Color(LocalSeedColor.current)).let { if (it == -1) 0 else it }
                 }
-            } else {
-                // ColorButton for Monochrome theme
-                val isSelected = LocalPaletteStyleIndex.current == STYLE_MONOCHROME && !isDynamicColor
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    ColorButtonImpl(
-                        modifier = Modifier,
-                        isSelected = { isSelected },
-                        tonalPalettes = Color.Black.toTonalPalettes(PaletteStyle.Monochrome),
-                        onClick = {
-                            appSettings.update {
-                                it.copy(
-                                    dynamicColor = false,
-                                    seedColor = Color.Black.toArgb(),
-                                    paletteStyleIndex = STYLE_MONOCHROME
-                                )
+            ) { pageCount }
+
+            HorizontalPager(
+                modifier = Modifier.fillMaxWidth().clearAndSetSemantics {},
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                state = pagerState
+            ) { page ->
+                if (page < pageCount - 1) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        ColorButtons(ColorList[page])
+                    }
+                } else {
+                    // ColorButton for Monochrome theme
+                    val isSelected = LocalPaletteStyleIndex.current == STYLE_MONOCHROME && !isDynamicColor
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        ColorButtonImpl(
+                            modifier = Modifier,
+                            isSelected = { isSelected },
+                            tonalPalettes = Color.Black.toTonalPalettes(PaletteStyle.Monochrome),
+                            onClick = {
+                                appSettings.update {
+                                    it.copy(
+                                        dynamicColor = false,
+                                        seedColor = Color.Black.toArgb(),
+                                        paletteStyleIndex = STYLE_MONOCHROME
+                                    )
+                                }
                             }
-                        }
+                        )
+                    }
+                }
+            }
+
+            Row(
+                Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+                    .clearAndSetSemantics {}
+                    .align(Alignment.CenterHorizontally)
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                repeat(pagerState.pageCount) { iteration ->
+                    val color = if (pagerState.currentPage == iteration) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .size(6.dp)
                     )
                 }
             }
-        }
 
-        Row(
-            Modifier
-                .wrapContentHeight()
-                .fillMaxWidth()
-                .clearAndSetSemantics {}
-                .align(Alignment.CenterHorizontally)
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.Center
-        ) {
-            repeat(pagerState.pageCount) { iteration ->
-                val color = if (pagerState.currentPage == iteration) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.outlineVariant
+            PreferenceSwitch(
+                title = stringResource(Res.string.dynamic_color),
+                description = stringResource(Res.string.dynamic_color_desc),
+                icon = Icons.Outlined.Colorize,
+                isChecked = appSettings.dynamicColor,
+                onClick = { dynamicColor ->
+                    appSettings.update { it.copy(dynamicColor = dynamicColor) }
                 }
+            )
 
-                Box(
-                    modifier = Modifier
-                        .padding(2.dp)
-                        .clip(CircleShape)
-                        .background(color)
-                        .size(6.dp)
-                )
-            }
+            val isDarkTheme = LocalIsDarkMode.current
+
+            PreferenceSwitchWithDivider(
+                title = stringResource(Res.string.dark_theme),
+                icon = if (isDarkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                isChecked = isDarkTheme,
+                description = appSettings.appearance.desc(),
+                onChecked = { checked ->
+                    appSettings.update {
+                        it.copy(appearance = if (checked) Appearance.Dark else Appearance.Light)
+                    }
+                },
+                onClick = { navigator.navigateTo(AppRoute.Settings.DarkTheme) },
+            )
         }
-
-        PreferenceSwitch(
-            title = stringResource(Res.string.dynamic_color),
-            description = stringResource(Res.string.dynamic_color_desc),
-            icon = Icons.Outlined.Colorize,
-            isChecked = appSettings.dynamicColor,
-            onClick = { dynamicColor ->
-                appSettings.update { it.copy(dynamicColor = dynamicColor) }
-            }
-        )
-
-        val isDarkTheme = LocalIsDarkMode.current
-
-        PreferenceSwitchWithDivider(
-            title = stringResource(Res.string.dark_theme),
-            icon = if (isDarkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
-            isChecked = isDarkTheme,
-            description = appSettings.appearance.desc(),
-            onChecked = { checked ->
-                appSettings.update {
-                    it.copy(appearance = if (checked) Appearance.Dark else Appearance.Light)
-                }
-            },
-            onClick = { navigator.navigateTo(AppRoute.Settings.DarkTheme) },
-        )
     }
 }
 

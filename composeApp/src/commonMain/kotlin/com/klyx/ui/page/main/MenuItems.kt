@@ -102,7 +102,7 @@ fun ColumnScope.DropdownMenuItems(
             text = { Text(stringResource(Res.string.settings)) },
             onClick = {
                 onDismissRequest()
-                onNavigateToRoute(AppRoute.Settings)
+                onNavigateToRoute(AppRoute.Settings.SettingsPage)
             },
             leadingIcon = {
                 Icon(

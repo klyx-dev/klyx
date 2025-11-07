@@ -209,7 +209,7 @@ fun WelcomePage() {
                 text = "Open Settings",
                 shortcut = null,
                 icon = Icons.Outlined.Settings,
-                onClick = { navigator.navigateTo(AppRoute.Settings) }
+                onClick = { navigator.navigateTo(AppRoute.Settings.SettingsPage) }
             )
 
             TextButtonWithShortcutAndIcon(

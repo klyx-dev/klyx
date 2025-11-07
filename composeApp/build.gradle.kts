@@ -69,12 +69,8 @@ kotlin {
             implementation(compose.uiUtil)
             implementation(compose.components.resources)
             implementation(compose.preview)
-            implementation(compose.material3AdaptiveNavigationSuite)
             implementation(libs.navigation.compose)
             implementation(libs.compose.material3.adaptive)
-            implementation(libs.compose.material3.adaptive.layout)
-            implementation(libs.compose.material3.adaptive.navigation)
-            implementation(libs.compose.ui.backhandler)
 
             implementation(libs.fuzzywuzzy.kotlin)
 

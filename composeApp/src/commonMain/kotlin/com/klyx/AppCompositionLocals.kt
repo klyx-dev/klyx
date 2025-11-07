@@ -1,31 +1,24 @@
 package com.klyx
 
-import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
+import androidx.window.core.layout.WindowSizeClass
 import com.klyx.core.SharedLocalProvider
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.di.ProvideViewModels
 
-val LocalWindowAdaptiveInfo = compositionLocalOf<WindowAdaptiveInfo> {
-    noLocalProvidedFor("LocalWindowAdaptiveInfo")
-}
-
-val LocalWindowSizeClass = compositionLocalWithComputedDefaultOf {
-    LocalWindowAdaptiveInfo.currentValue.windowSizeClass
-}
+val LocalWindowSizeClass = compositionLocalOf<WindowSizeClass> { noLocalProvidedFor<WindowSizeClass>() }
 
 @Composable
 fun ProvideCompositionLocals(content: @Composable (() -> Unit)) {
     SharedLocalProvider {
         ProvideViewModels {
-            val windowAdaptiveInfo = currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true)
+            val windowSizeClass = currentWindowAdaptiveInfo(supportLargeAndXLargeWidth = true).windowSizeClass
 
             CompositionLocalProvider(
-                LocalWindowAdaptiveInfo provides windowAdaptiveInfo,
+                LocalWindowSizeClass provides windowSizeClass,
                 content = content
             )
         }

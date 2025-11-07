@@ -24,9 +24,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import com.klyx.AppRoute.Settings.About
+import com.klyx.AppRoute.Settings.Appearance
+import com.klyx.AppRoute.Settings.DarkTheme
+import com.klyx.AppRoute.Settings.EditorPreferences
+import com.klyx.AppRoute.Settings.GeneralPreferences
+import com.klyx.AppRoute.Settings.SettingsPage
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.isPermissionRequired
@@ -48,6 +56,11 @@ import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.component.log.LogBuffer
 import com.klyx.ui.page.SettingsPage
 import com.klyx.ui.page.main.MainPage
+import com.klyx.ui.page.settings.about.AboutPage
+import com.klyx.ui.page.settings.appearance.AppearancePreferences
+import com.klyx.ui.page.settings.appearance.DarkThemePreferences
+import com.klyx.ui.page.settings.editor.EditorPreferences
+import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
 import com.klyx.ui.theme.KlyxTheme
 import kotlinx.coroutines.Dispatchers
@@ -158,9 +171,7 @@ fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLo
                             )
                         }
 
-                        animatedComposable<AppRoute.Settings> {
-                            SettingsPage()
-                        }
+                        settingsGraph()
                     }
                 }
 
@@ -182,6 +193,17 @@ fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLo
                 NotificationOverlay()
             }
         }
+    }
+}
+
+fun NavGraphBuilder.settingsGraph() {
+    navigation<AppRoute.Settings>(startDestination = SettingsPage) {
+        animatedComposable<SettingsPage> { SettingsPage() }
+        animatedComposable<GeneralPreferences> { GeneralPreferences() }
+        animatedComposable<Appearance> { AppearancePreferences() }
+        animatedComposable<DarkTheme> { DarkThemePreferences() }
+        animatedComposable<EditorPreferences> { EditorPreferences() }
+        animatedComposable<About> { AboutPage() }
     }
 }
 
