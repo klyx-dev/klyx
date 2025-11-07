@@ -12,9 +12,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -29,8 +32,15 @@ fun SettingTitle(text: String) {
 }
 
 @Composable
-fun SettingItem(title: String, description: String, icon: ImageVector?, onClick: () -> Unit) {
-    Surface(modifier = Modifier.clickable { onClick() }) {
+fun SettingItem(
+    title: String,
+    description: String,
+    icon: ImageVector?,
+    backgroundColor: Color = MaterialTheme.colorScheme.surface,
+    iconColor: Color = Color.Unspecified,
+    onClick: () -> Unit
+) {
+    Surface(modifier = Modifier.clickable { onClick() }, color = backgroundColor) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -40,7 +50,7 @@ fun SettingItem(title: String, description: String, icon: ImageVector?, onClick:
                     imageVector = icon,
                     contentDescription = null,
                     modifier = Modifier.padding(end = 16.dp).size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = if (iconColor.isSpecified) iconColor else MaterialTheme.colorScheme.primary,
                 )
             }
             Column(
@@ -50,13 +60,13 @@ fun SettingItem(title: String, description: String, icon: ImageVector?, onClick:
                     text = title,
                     maxLines = 1,
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = contentColorFor(backgroundColor),
                     overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = description,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = contentColorFor(backgroundColor).copy(alpha = 0.8f),
                     maxLines = 2,
                     style = MaterialTheme.typography.bodyMedium,
                     overflow = TextOverflow.Ellipsis,

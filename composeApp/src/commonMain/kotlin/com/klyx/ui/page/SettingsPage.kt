@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
@@ -27,10 +28,12 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.BackNavigationBehavior
 import androidx.compose.material3.adaptive.navigation.ThreePaneScaffoldNavigator
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
@@ -119,6 +122,7 @@ private fun SettingsListDetailPane(modifier: Modifier) {
                     AnimatedPane {
                         SettingsListPane(
                             modifier = Modifier.fillMaxSize(),
+                            isSelected = { it == paneNavigator.currentDestination?.contentKey },
                             onSelect = { route ->
                                 coroutineScope.launch {
                                     paneNavigator.navigateTo(
@@ -155,10 +159,27 @@ private suspend fun <T> ThreePaneScaffoldNavigator<T>.navigateBackOrPopScreen(
 
 @Composable
 private fun SettingsListPane(
+    onSelect: (AppRoute) -> Unit,
+    isSelected: (AppRoute) -> Boolean,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
-    onSelect: (AppRoute) -> Unit
 ) {
+    val backgroundColor = @Composable { route: AppRoute ->
+        if (isSelected(route)) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            MaterialTheme.colorScheme.surface
+        }
+    }
+
+    val iconColor = @Composable { route: AppRoute ->
+        if (isSelected(route)) {
+            contentColorFor(backgroundColor(route))
+        } else {
+            Color.Unspecified
+        }
+    }
+
     LazyColumn(
         modifier = modifier,
         contentPadding = contentPadding
@@ -168,6 +189,8 @@ private fun SettingsListPane(
                 title = stringResource(Res.string.general_settings),
                 description = stringResource(Res.string.general_settings_desc),
                 icon = Icons.Outlined.Settings,
+                backgroundColor = backgroundColor(AppRoute.Settings.GeneralPreferences),
+                iconColor = iconColor(AppRoute.Settings.GeneralPreferences),
                 onClick = { onSelect(AppRoute.Settings.GeneralPreferences) }
             )
         }
@@ -177,6 +200,8 @@ private fun SettingsListPane(
                 title = stringResource(Res.string.editor_settings),
                 description = stringResource(Res.string.editor_settings_desc),
                 icon = Icons.Outlined.Code,
+                backgroundColor = backgroundColor(AppRoute.Settings.EditorPreferences),
+                iconColor = iconColor(AppRoute.Settings.EditorPreferences),
                 onClick = { onSelect(AppRoute.Settings.EditorPreferences) }
             )
         }
@@ -186,6 +211,8 @@ private fun SettingsListPane(
                 title = stringResource(Res.string.look_and_feel),
                 description = stringResource(Res.string.display_settings),
                 icon = Icons.Outlined.Palette,
+                backgroundColor = backgroundColor(AppRoute.Settings.Appearance),
+                iconColor = iconColor(AppRoute.Settings.Appearance),
                 onClick = { onSelect(AppRoute.Settings.Appearance) },
             )
         }
@@ -195,6 +222,8 @@ private fun SettingsListPane(
                 title = stringResource(Res.string.about),
                 description = stringResource(Res.string.about_page),
                 icon = Icons.Outlined.Info,
+                backgroundColor = backgroundColor(AppRoute.Settings.About),
+                iconColor = iconColor(AppRoute.Settings.About),
                 onClick = { onSelect(AppRoute.Settings.About) },
             )
         }
