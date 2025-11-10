@@ -30,7 +30,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("io.modelcontextprotocol:kotlin-sdk-client:0.7.4")
+                implementation("io.modelcontextprotocol:kotlin-sdk-client:0.7.7")
             }
         }
 
