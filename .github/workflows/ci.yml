@@ -55,7 +55,7 @@ jobs:
           mkdir -p klyx
           find . -path "*/build/outputs/apk/*/*.apk" -exec cp {} klyx/ \; 2>/dev/null || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         if: hashFiles('klyx/*.apk') != ''
         with:
           name: klyx-android
@@ -372,7 +372,7 @@ jobs:
         run: ./gradlew detektAll
 
       - name: Upload code quality results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: quality-reports
