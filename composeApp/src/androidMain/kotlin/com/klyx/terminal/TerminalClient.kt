@@ -1,37 +1,32 @@
 package com.klyx.terminal
 
-import android.app.Activity
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
-import com.klyx.terminal.extrakeys.ExtraKeysView
+import com.blankj.utilcode.util.ClipboardUtils
+import com.klyx.activities.TerminalActivity
 import com.klyx.terminal.extrakeys.SpecialButton
+import com.klyx.ui.component.terminal.extraKeysView
 import com.termux.shared.view.KeyboardUtils
+import com.termux.terminal.TerminalEmulator
 import com.termux.terminal.TerminalSession
+import com.termux.terminal.TerminalSessionClient
 import com.termux.view.TerminalView
 import com.termux.view.TerminalViewClient
 
-class TerminalViewClient(
-    private val terminal: TerminalView,
-    private val extraKeysView: ExtraKeysView,
-    private val activity: Activity? = null,
-) : TerminalViewClient {
-    var onSessionFinish: (TerminalSession) -> Unit = {}
+class TerminalClient(
+    val terminal: TerminalView,
+    val activity: TerminalActivity
+) : TerminalViewClient, TerminalSessionClient {
 
-    /**
-     * Callback function on scale events according to [android.view.ScaleGestureDetector.getScaleFactor].
-     */
     override fun onScale(scale: Float): Float {
         val fontScale = scale.coerceIn(11f, 45f)
         terminal.setTextSize(fontScale.toInt())
         return fontScale
     }
 
-    /**
-     * On a single tap on the terminal if terminal mouse reporting not enabled.
-     */
     override fun onSingleTapUp(e: MotionEvent?) {
-        KeyboardUtils.showSoftKeyboard(terminal.context, terminal)
+        KeyboardUtils.showSoftKeyboard(activity, terminal)
     }
 
     override fun shouldBackButtonBeMappedToEscape(): Boolean {
@@ -39,11 +34,11 @@ class TerminalViewClient(
     }
 
     override fun shouldEnforceCharBasedInput(): Boolean {
-        return true
+        return false
     }
 
     override fun shouldUseCtrlSpaceWorkaround(): Boolean {
-        return true
+        return false
     }
 
     override fun isTerminalViewSelected(): Boolean {
@@ -54,14 +49,17 @@ class TerminalViewClient(
 
     }
 
-    override fun onKeyDown(
-        keyCode: Int,
-        e: KeyEvent?,
-        session: TerminalSession?
-    ): Boolean {
-        if (e?.keyCode == KeyEvent.KEYCODE_ENTER && session?.isRunning == false) {
-            //activity?.finishAfterTransition()
-            onSessionFinish(session)
+    override fun onKeyDown(keyCode: Int, e: KeyEvent, session: TerminalSession): Boolean {
+        if (e.keyCode == KeyEvent.KEYCODE_ENTER && !session.isRunning) {
+            activity.sessionBinder?.run {
+                terminateSession(service.currentSession)
+
+                if (service.sessionList.isEmpty()) {
+                    activity.finish()
+                } else {
+                    changeSession(activity, terminal, service.sessionList.first())
+                }
+            }
             return true
         }
         return false
@@ -76,22 +74,22 @@ class TerminalViewClient(
     }
 
     override fun readControlKey(): Boolean {
-        val state = extraKeysView.readSpecialButton(SpecialButton.CTRL, true)
+        val state = extraKeysView.get()?.readSpecialButton(SpecialButton.CTRL, true)
         return state == true
     }
 
     override fun readAltKey(): Boolean {
-        val state = extraKeysView.readSpecialButton(SpecialButton.ALT, true)
+        val state = extraKeysView.get()?.readSpecialButton(SpecialButton.ALT, true)
         return state == true
     }
 
     override fun readShiftKey(): Boolean {
-        val state = extraKeysView.readSpecialButton(SpecialButton.SHIFT, true)
+        val state = extraKeysView.get()?.readSpecialButton(SpecialButton.SHIFT, true)
         return state == true
     }
 
     override fun readFnKey(): Boolean {
-        val state = extraKeysView.readSpecialButton(SpecialButton.FN, true)
+        val state = extraKeysView.get()?.readSpecialButton(SpecialButton.FN, true)
         return state == true
     }
 
@@ -134,12 +132,50 @@ class TerminalViewClient(
     }
 
     override fun logStackTraceWithMessage(tag: String?, message: String?, e: Exception?) {
-        Log.e(tag.toString(), message.toString())
+        Log.e(tag.toString(), message.toString(), e)
         e?.printStackTrace()
     }
 
     override fun logStackTrace(tag: String?, e: Exception?) {
         e?.printStackTrace()
     }
-}
 
+    override fun onTextChanged(changedSession: TerminalSession) {
+        terminal.onScreenUpdated()
+    }
+
+    override fun onTitleChanged(changedSession: TerminalSession) {
+
+    }
+
+    override fun onSessionFinished(finishedSession: TerminalSession) {
+
+    }
+
+    override fun onCopyTextToClipboard(session: TerminalSession, text: String) {
+        ClipboardUtils.copyText("Terminal", text)
+    }
+
+    override fun onPasteTextFromClipboard(session: TerminalSession?) {
+        val clip = ClipboardUtils.getText().toString()
+        if (clip.trim { it <= ' ' }.isNotEmpty() && terminal.mEmulator != null) {
+            terminal.mEmulator.paste(clip)
+        }
+    }
+
+    override fun onBell(session: TerminalSession) {
+    }
+
+    override fun onColorsChanged(session: TerminalSession) {
+    }
+
+    override fun onTerminalCursorStateChange(state: Boolean) {
+    }
+
+    override fun setTerminalShellPid(session: TerminalSession, pid: Int) {
+    }
+
+    override fun getTerminalCursorStyle(): Int {
+        return TerminalEmulator.DEFAULT_TERMINAL_CURSOR_STYLE
+    }
+}

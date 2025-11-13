@@ -19,6 +19,8 @@ import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.di.commonModule
 import com.klyx.terminal.klyxBinDir
+import com.klyx.terminal.localDir
+import com.klyx.terminal.sandboxDir
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
@@ -103,10 +105,27 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
         launch {
             runCatching {
-                File(klyxBinDir, "init").writeBytes(
-                    assets.open("terminal/init.sh").use { it.readBytes() }
-                )
+                setupTerminalFiles()
+            }.onFailure { exception ->
+                Log.e("Klyx", "Failed to setup terminal files", exception)
             }
+        }
+    }
+
+    private fun setupTerminalFiles() {
+        listOf("init", "sandbox", "setup", "utils", "universal_runner").forEach { setupAssetFile(it) }
+        with(filesDir.resolve("ubuntu")) {
+            if (exists()) {
+                renameTo(sandboxDir)
+                localDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").createNewFile()
+            }
+        }
+    }
+
+    private fun setupAssetFile(fileName: String) {
+        with(klyxBinDir.resolve(fileName)) {
+            parentFile?.mkdirs()
+            writeBytes(assets.open("terminal/$fileName.sh").use { it.readBytes() })
         }
     }
 }

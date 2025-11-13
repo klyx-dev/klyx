@@ -11,7 +11,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -53,7 +52,6 @@ import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
-import com.klyx.ui.component.log.LogBuffer
 import com.klyx.ui.page.SettingsPage
 import com.klyx.ui.page.main.MainPage
 import com.klyx.ui.page.settings.about.AboutPage
@@ -62,17 +60,12 @@ import com.klyx.ui.page.settings.appearance.DarkThemePreferences
 import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
-import com.klyx.ui.theme.KlyxTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-val LocalLogBuffer = staticCompositionLocalOf { LogBuffer(maxSize = 2000) }
-
 @Composable
-fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLocals {
-    onBeforeRender()
-
+fun MainScreen() {
     val appSettings = currentAppSettings
     val lifecycleOwner = LocalLifecycleOwner.current
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -115,95 +108,83 @@ fun AppEntry(onBeforeRender: @Composable () -> Unit = {}) = ProvideCompositionLo
 
     collectLogs()
 
-    KlyxTheme {
-        ProvideNavigator(
-            onNavigateBack = onNavigateBack,
-            onNavigateTo = { route ->
-                navController.navigate(route = route) {
-                    launchSingleTop = true
-                }
-            }
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                WorktreeDrawer(
-                    project = project,
-                    onFileClick = { file, worktree ->
-                        editorViewModel.openFile(file, worktree)
-                    },
-                    onDirectoryPicked = { directory, drawerState ->
-                        if (directory.isPermissionRequired(R_OK or W_OK)) {
-                            klyxViewModel.showPermissionDialog()
-                        } else {
-                            klyxViewModel.openProject(Worktree(directory))
-                            scope.launch { drawerState.openIfClosed() }
-                        }
-                    },
-                    gesturesEnabled = { drawerState ->
-                        (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
-                    }
-                ) {
-                    registerGeneralCommands()
-
-                    NavHost(
-                        modifier = Modifier.align(Alignment.Center),
-                        navController = navController,
-                        startDestination = AppRoute.Home
-                    ) {
-                        animatedComposable<AppRoute.Home> {
-                            MainPage(modifier = Modifier.fillMaxSize())
-                        }
-
-                        animatedComposable<AppRoute.Terminal> {
-                            TerminalPage(
-                                modifier = Modifier.fillMaxSize(),
-                                onSessionFinish = {
-                                    currentDestination?.let { destination ->
-                                        if (destination.hasRoute<AppRoute.Terminal>()) {
-                                            navController.popBackStack()
-                                            keyboardController?.hide()
-                                        }
-                                    }
-                                }
-                            )
-                        }
-
-                        settingsGraph()
-                    }
-                }
-
-                if (appState.showPermissionDialog) {
-                    PermissionDialog(
-                        onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
-                        onRequestPermission = { requestFileAccessPermission() }
-                    )
-                }
-
-                var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
-
-                if (!disclaimerAccepted) {
-                    DisclaimerDialog(
-                        onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
-                    )
-                }
-
-                NotificationOverlay()
+    ProvideNavigator(
+        onNavigateBack = onNavigateBack,
+        onNavigateTo = { route ->
+            navController.navigate(route = route) {
+                launchSingleTop = true
             }
         }
-    }
-}
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            WorktreeDrawer(
+                project = project,
+                onFileClick = { file, worktree ->
+                    editorViewModel.openFile(file, worktree)
+                },
+                onDirectoryPicked = { directory, drawerState ->
+                    if (directory.isPermissionRequired(R_OK or W_OK)) {
+                        klyxViewModel.showPermissionDialog()
+                    } else {
+                        klyxViewModel.openProject(Worktree(directory))
+                        scope.launch { drawerState.openIfClosed() }
+                    }
+                },
+                gesturesEnabled = { drawerState ->
+                    (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
+                },
+                isHomeRoute = currentDestination?.hasRoute<AppRoute.Home>() == true
+            ) {
+                registerGeneralCommands()
 
-fun NavGraphBuilder.settingsGraph() {
-    navigation<AppRoute.Settings>(startDestination = SettingsPage) {
-        animatedComposable<SettingsPage> { SettingsPage() }
-        animatedComposable<GeneralPreferences> { GeneralPreferences() }
-        animatedComposable<Appearance> { AppearancePreferences() }
-        animatedComposable<DarkTheme> { DarkThemePreferences() }
-        animatedComposable<EditorPreferences> { EditorPreferences() }
-        animatedComposable<About> { AboutPage() }
+                NavHost(
+                    modifier = Modifier.align(Alignment.Center),
+                    navController = navController,
+                    startDestination = AppRoute.Home
+                ) {
+                    animatedComposable<AppRoute.Home> {
+                        MainPage(modifier = Modifier.fillMaxSize())
+                    }
+
+                    animatedComposable<AppRoute.Terminal> {
+                        TerminalPage(
+                            modifier = Modifier.fillMaxSize(),
+                            onSessionFinish = {
+                                currentDestination?.let { destination ->
+                                    if (destination.hasRoute<AppRoute.Terminal>()) {
+                                        navController.popBackStack()
+                                        keyboardController?.hide()
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    settingsGraph()
+                }
+            }
+
+            if (appState.showPermissionDialog) {
+                PermissionDialog(
+                    onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
+                    onRequestPermission = { requestFileAccessPermission() }
+                )
+            }
+
+            var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
+
+            if (!disclaimerAccepted) {
+                DisclaimerDialog(
+                    onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
+                )
+            }
+
+            NotificationOverlay()
+        }
     }
 }
 
@@ -222,3 +203,15 @@ private fun collectLogs() {
         }
     }
 }
+
+fun NavGraphBuilder.settingsGraph() {
+    navigation<AppRoute.Settings>(startDestination = SettingsPage) {
+        animatedComposable<SettingsPage> { SettingsPage() }
+        animatedComposable<GeneralPreferences> { GeneralPreferences() }
+        animatedComposable<Appearance> { AppearancePreferences() }
+        animatedComposable<DarkTheme> { DarkThemePreferences() }
+        animatedComposable<EditorPreferences> { EditorPreferences() }
+        animatedComposable<About> { AboutPage() }
+    }
+}
+

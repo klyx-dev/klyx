@@ -6,7 +6,7 @@ import com.klyx.core.file.downloadFile
 import com.klyx.core.logging.logger
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
-import com.klyx.terminal.ubuntuDir
+import com.klyx.terminal.sandboxDir
 import io.ktor.client.content.ProgressListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,7 +33,7 @@ suspend fun downloadRootFs(
     onComplete: suspend (outPath: String) -> Unit = {},
     onError: suspend (error: Throwable) -> Unit = {}
 ) {
-    val rootFsPath = "${context.cacheDir.absolutePath}/ubuntu.tar.gz"
+    val rootFsPath = "${context.cacheDir.absolutePath}/sandbox.tar.gz"
     try {
         downloadFile(
             url = ubuntuRootFsUrl,
@@ -53,8 +53,8 @@ suspend fun setupRootFs(path: String) = run {
         error("Failed to extract $name")
     }
 
-    if (!ubuntuDir.exists()) ubuntuDir.mkdirs()
-    if (!extractTarGz(path, ubuntuDir.absolutePath)) {
+    if (!sandboxDir.exists()) sandboxDir.mkdirs()
+    if (!extractTarGz(path, sandboxDir.absolutePath)) {
         logger.warn { "Ubuntu rootfs is not extracted properly." }
     }
     SystemFileSystem.delete(Path(path))
@@ -78,19 +78,9 @@ suspend fun setupRootFs(path: String) = run {
     with(klyxFilesDir.resolve("usr/tmp")) {
         if (!exists()) mkdirs()
     }
-
-    ubuntuDir.resolve("etc/hostname").writeText("klyx")
-    ubuntuDir.resolve("etc/hosts").writeText(
-        """
-        127.0.0.1   localhost
-        127.0.1.1   klyx
-    """.trimIndent()
-    )
-    ubuntuDir.resolve("etc/resolv.conf").writeText("nameserver 8.8.8.8")
 }
 
 context(context: Context)
-@Suppress("TooGenericExceptionThrown")
 suspend fun downloadPackage(name: String, onComplete: suspend (File) -> Unit = {}) {
     val outFile = File(context.cacheDir, "$name.tar.gz")
     downloadFile(packageUrl(name), outFile.absolutePath, onComplete = { onComplete(outFile) })

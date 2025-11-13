@@ -7,7 +7,6 @@ import com.klyx.core.ProcessBuilder
 import com.klyx.core.process
 import com.klyx.terminal.internal.buildProotArgs
 import com.klyx.terminal.internal.currentUser
-import com.klyx.terminal.internal.linker
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -21,7 +20,7 @@ inline fun ubuntuProcess(
 ): ProcessBuilder {
     contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
 
-    if (!ubuntuDir.exists() || ubuntuDir.list()?.isEmpty() == true) {
+    if (!sandboxDir.exists() || sandboxDir.list()?.isEmpty() == true) {
         error("Ubuntu rootfs is not initialized")
     }
 

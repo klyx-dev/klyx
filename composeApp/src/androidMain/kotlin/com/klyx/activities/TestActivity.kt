@@ -1,7 +1,5 @@
 package com.klyx.activities
 
-import android.os.Bundle
-import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,6 +9,7 @@ import androidx.compose.foundation.text.BasicText
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,43 +18,38 @@ import com.klyx.core.ui.component.FpsText
 import com.klyx.editor.compose.CodeEditor
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
-import com.klyx.ui.theme.KlyxTheme
 import com.klyx.ui.theme.rememberFontFamily
 
 class TestActivity : KlyxActivity() {
     @OptIn(ExperimentalComposeCodeEditorApi::class)
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            KlyxTheme {
-                Scaffold { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .fillMaxSize()
-                    ) {
-                        CodeEditor(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .imePadding(),
-                            showLineNumber = true,
-                            pinLineNumber = true,
-                            fontSize = 18.sp,
-                            fontFamily = rememberFontFamily("JetBrains Mono"),
-                            state = remember { CodeEditorState("Yyoyooyooyoyoyoyo\nyoyoyoy\nyoyoyoyoyo\n".repeat(200)) }
-                        )
+    @Composable
+    override fun Content() {
+        Scaffold { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+            ) {
+                CodeEditor(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .imePadding(),
+                    showLineNumber = true,
+                    pinLineNumber = true,
+                    fontSize = 18.sp,
+                    fontFamily = rememberFontFamily("JetBrains Mono"),
+                    state = remember { CodeEditorState("Yyoyooyooyoyoyoyo\nyoyoyoy\nyoyoyoyoyo\n".repeat(200)) }
+                )
 
-                        BasicText("")
-                        BasicTextField("", onValueChange = {})
-                        SelectionContainer { }
+                BasicText("")
+                BasicTextField("", onValueChange = {})
+                SelectionContainer { }
 
-                        Box(
-                            Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.TopEnd,
-                        ) {
-                            FpsText()
-                        }
-                    }
+                Box(
+                    Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.TopEnd,
+                ) {
+                    FpsText()
                 }
             }
         }

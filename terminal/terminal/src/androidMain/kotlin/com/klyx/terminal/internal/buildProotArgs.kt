@@ -8,8 +8,8 @@ import android.system.OsConstants
 import com.klyx.core.logging.logger
 import com.klyx.terminal.klyxBinDir
 import com.klyx.terminal.klyxFilesDir
-import com.klyx.terminal.ubuntuDir
-import com.klyx.terminal.ubuntuHomeDir
+import com.klyx.terminal.sandboxDir
+import com.klyx.terminal.sandboxHomeDir
 import java.io.File
 
 private val logger = logger("Terminal")
@@ -22,11 +22,11 @@ fun buildProotArgs(
     loginUser: Boolean = true,
     vararg commands: String = emptyArray()
 ) = run {
-    val home = File(ubuntuHomeDir, user.orEmpty())
+    val home = File(sandboxHomeDir, user.orEmpty())
 
     val args = mutableListOf(
         "--kill-on-exit", "-w",
-        if (home.exists()) home.relativeToOrSelf(ubuntuDir).absolutePath else "/"
+        if (home.exists()) home.relativeToOrSelf(sandboxDir).absolutePath else "/"
     )
 
     val bind = { source: String, target: String? ->
@@ -73,7 +73,7 @@ fun buildProotArgs(
     }
 
     args += listOf(
-        "-r", ubuntuDir.absolutePath,
+        "-r", sandboxDir.absolutePath,
         "-0",
         "--link2symlink",
         "--sysvipc",

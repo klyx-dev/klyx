@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
 import com.klyx.LocalNavigator
 import com.klyx.core.LocalNotifier
+import com.klyx.core.PlatformContext
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.value
@@ -178,3 +179,5 @@ private fun TopBarIconButton(
         Icon(icon, contentDescription)
     }
 }
+
+expect fun PlatformContext.openTerminal()

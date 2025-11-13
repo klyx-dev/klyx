@@ -5,13 +5,14 @@ import com.klyx.terminal.internal.currentUser
 import java.io.File
 
 context(context: Context)
-val ubuntuDir get() = File(context.filesDir, "ubuntu")
+val sandboxHomeDir get() = sandboxDir.resolve("home")
 
 context(context: Context)
-val ubuntuHomeDir get() = ubuntuDir.resolve("home")
+val sandboxDir
+    get() = File(context.filesDir, "sandbox").also { if (!it.exists()) it.mkdirs() }
 
 context(context: Context)
-val userHomeDir get() = if (currentUser == null) null else ubuntuHomeDir.resolve(currentUser!!)
+val userHomeDir get() = if (currentUser == null) null else sandboxHomeDir.resolve(currentUser!!)
 
 context(context: Context)
 val klyxFilesDir: File get() = context.filesDir
@@ -27,3 +28,15 @@ val klyxLibExecDir: File get() = File(klyxFilesDir, "usr/libexec")
 
 context(context: Context)
 val klyxBinDir: File get() = File(klyxFilesDir, "usr/bin")
+
+context(context: Context)
+val localDir: File get() = klyxFilesDir.resolve("usr")
+
+context(context: Context)
+fun isTerminalInstalled(): Boolean {
+    val rootfs = sandboxDir.listFiles()?.filter {
+        it.absolutePath != sandboxDir.resolve("tmp").absolutePath
+    } ?: emptyList()
+
+    return localDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").exists() && rootfs.isNotEmpty()
+}

@@ -3,12 +3,14 @@
 package com.klyx.terminal
 
 import android.content.Context
+import android.os.Process
 import com.klyx.core.ProcessBuilder
 import com.klyx.core.process
-import com.klyx.terminal.internal.linker
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+
+val linker = if (Process.is64Bit()) "/system/bin/linker64" else "/system/bin/linker"
 
 @PublishedApi
 context(context: Context)

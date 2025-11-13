@@ -4,16 +4,19 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.Surface
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.Composable
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import arrow.core.some
+import com.klyx.KlyxApp
 import com.klyx.core.ContextHolder
 import com.klyx.core.WindowManager
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.manualFileKitCoreInitialization
 
-open class KlyxActivity : ComponentActivity() {
+abstract class KlyxActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -25,7 +28,14 @@ open class KlyxActivity : ComponentActivity() {
         WindowManager.addWindow(taskId)
 
         hideSystemBarsOnLandscape()
+
+        setContent {
+            KlyxApp { Content() }
+        }
     }
+
+    @Composable
+    abstract fun Content()
 
     private fun hideSystemBarsOnLandscape() {
         when (display.rotation) {

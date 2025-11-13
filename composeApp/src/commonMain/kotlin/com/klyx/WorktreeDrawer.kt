@@ -1,41 +1,27 @@
 package com.klyx
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.DriveFileMove
-import androidx.compose.material.icons.filled.Folder
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
-import androidx.compose.material3.PermanentDrawerSheet
-import androidx.compose.material3.PermanentNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,9 +29,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.window.core.layout.WindowSizeClass
 import arrow.core.Either
-import arrow.core.left
 import arrow.core.right
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
@@ -58,6 +42,7 @@ import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
 import com.klyx.res.Res
 import com.klyx.res.open_a_project
+import com.klyx.ui.AdaptiveLayout
 import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.CoroutineScope
@@ -99,9 +84,9 @@ fun WorktreeDrawer(
     onDirectoryPicked: (directory: KxFile, drawerState: Either<WorktreeDrawerState, DrawerState>) -> Unit,
     modifier: Modifier = Modifier,
     gesturesEnabled: (DrawerState) -> Boolean = { true },
+    isHomeRoute: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val windowSizeClass = LocalWindowSizeClass.current
     val scope = rememberCoroutineScope()
 
     val drawerModifier = Modifier
@@ -109,103 +94,36 @@ fun WorktreeDrawer(
         .imePadding()
         .navigationBarsPadding()
 
-    AnimatedContent(targetState = windowSizeClass) { targetClass ->
-        when {
-            targetClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
-                var isExpanded by rememberSaveable { mutableStateOf(true) }
-                val width by animateDpAsState(if (isExpanded) worktreeDrawerWidth else 60.dp)
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-                val drawerState = rememberWorktreeDrawerState(
-                    initialValue = if (isExpanded) DrawerValue.Open else DrawerValue.Closed,
-                    onOpen = { isExpanded = true },
-                    onClose = { isExpanded = false }
-                )
-
-                CompositionLocalProvider(LocalDrawerState provides drawerState.left()) {
-                    PermanentNavigationDrawer(
-                        drawerContent = {
-                            PermanentDrawerSheet(
-                                drawerShape = RoundedCornerShape(topEnd = 16.dp),
-                                drawerContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
-                                modifier = modifier.width(width).then(drawerModifier)
-                            ) {
-                                Row {
-                                    NavigationRail(modifier = Modifier.width(60.dp)) {
-                                        NavigationRailItem(
-                                            icon = {
-                                                Icon(
-                                                    if (isExpanded) {
-                                                        Icons.Default.Folder
-                                                    } else {
-                                                        Icons.AutoMirrored.Outlined.DriveFileMove
-                                                    },
-                                                    contentDescription = if (isExpanded) {
-                                                        "Hide worktree"
-                                                    } else {
-                                                        "Show worktree"
-                                                    },
-                                                )
-                                            },
-                                            selected = isExpanded,
-                                            onClick = { isExpanded = !isExpanded },
-                                        )
-                                    }
-
-                                    val directoryPicker = rememberDirectoryPickerLauncher { file ->
-                                        if (file != null) {
-                                            onDirectoryPicked(file.toKxFile(), drawerState.left())
-                                        }
-                                    }
-
-                                    AnimatedVisibility(visible = isExpanded) {
-                                        DrawerContent(
-                                            project = project,
-                                            directoryPicker = directoryPicker,
-                                            onFileClick = onFileClick,
-                                            scope = scope,
-                                            onDismissRequest = { drawerState.close() }
-                                        )
-                                    }
-                                }
-                            }
-                        },
-                        content = content,
-                    )
-                }
-            }
-
-            else -> {
-                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-
-                CompositionLocalProvider(LocalDrawerState provides drawerState.right()) {
-                    ModalNavigationDrawer(
-                        gesturesEnabled = gesturesEnabled(drawerState),
+    AdaptiveLayout {
+        CompositionLocalProvider(LocalDrawerState provides drawerState.right()) {
+            ModalNavigationDrawer(
+                gesturesEnabled = gesturesEnabled(drawerState),
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet(
                         drawerState = drawerState,
-                        drawerContent = {
-                            ModalDrawerSheet(
-                                drawerState = drawerState,
-                                drawerContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
-                                modifier = modifier.width(worktreeDrawerWidth).then(drawerModifier)
-                            ) {
-                                val directoryPicker = rememberDirectoryPickerLauncher { file ->
-                                    if (file != null) {
-                                        onDirectoryPicked(file.toKxFile(), drawerState.right())
-                                    }
-                                }
-
-                                DrawerContent(
-                                    project = project,
-                                    directoryPicker = directoryPicker,
-                                    onFileClick = onFileClick,
-                                    scope = scope,
-                                    onDismissRequest = drawerState::close
-                                )
+                        drawerContainerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp),
+                        modifier = modifier.width(worktreeDrawerWidth).then(drawerModifier)
+                    ) {
+                        val directoryPicker = rememberDirectoryPickerLauncher { file ->
+                            if (file != null) {
+                                onDirectoryPicked(file.toKxFile(), drawerState.right())
                             }
-                        },
-                        content = content,
-                    )
-                }
-            }
+                        }
+
+                        DrawerContent(
+                            project = project,
+                            directoryPicker = directoryPicker,
+                            onFileClick = onFileClick,
+                            scope = scope,
+                            onDismissRequest = drawerState::close
+                        )
+                    }
+                },
+                content = content,
+            )
         }
     }
 }
@@ -220,7 +138,9 @@ private fun DrawerContent(
 ) {
     if (project.isEmpty()) {
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.statusBars),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             TextButtonWithShortcut(

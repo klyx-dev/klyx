@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <uses-permission
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
@@ -32,9 +35,9 @@
         <activity
             android:name=".activities.MainActivity"
             android:alwaysRetainTaskState="true"
+            android:configChanges="orientation"
             android:exported="true"
             android:launchMode="singleInstancePerTask"
-            android:configChanges="orientation"
             android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -70,6 +73,10 @@
             android:name=".activities.CrashActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".activities.TerminalActivity"
+            android:exported="false" />
+
         <profileable
             android:shell="true"
             tools:targetApi="q" />
@@ -95,6 +102,10 @@
                 <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
             </intent-filter>
         </provider>
+
+        <service
+            android:name=".terminal.service.SessionService"
+            android:foregroundServiceType="specialUse" />
 
     </application>
 </manifest>

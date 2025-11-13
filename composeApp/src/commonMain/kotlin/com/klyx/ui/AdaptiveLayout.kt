@@ -1,0 +1,29 @@
+package com.klyx.ui
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.runtime.Composable
+import androidx.window.core.layout.WindowSizeClass
+import com.klyx.LocalWindowSizeClass
+
+@Composable
+fun AdaptiveLayout(
+    expandedLayout: (@Composable () -> Unit)? = null,
+    mediumLayout: (@Composable () -> Unit)? = null,
+    compactLayout: @Composable () -> Unit,
+) {
+    val windowSizeClass = LocalWindowSizeClass.current
+
+    AnimatedContent(targetState = windowSizeClass) { targetClass ->
+        when {
+            targetClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
+                expandedLayout?.invoke() ?: mediumLayout?.invoke() ?: compactLayout()
+            }
+
+            targetClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
+                mediumLayout?.invoke() ?: compactLayout()
+            }
+
+            else -> compactLayout()
+        }
+    }
+}

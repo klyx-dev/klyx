@@ -5,19 +5,20 @@ import android.app.ActivityManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Environment
 import android.view.KeyEvent
 import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.contentColorFor
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
-import com.klyx.AppEntry
 import com.klyx.BuildConfig
+import com.klyx.MainScreen
 import com.klyx.core.Notifier
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
@@ -29,9 +30,11 @@ import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
+import com.klyx.runner.UniversalRunner
 import com.klyx.viewmodel.EditorViewModel
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -48,39 +51,46 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
         FileKit.init(this)
         subscribe()
 
-        setContent {
-            AppEntry {
-                val projects by fileTreeViewModel.rootNodes.collectAsState()
+        val runner = UniversalRunner(this)
 
-                LaunchedEffect(projects) {
-                    setTaskDescription(
-                        createTaskDescription(
-                            if (projects.isEmpty()) {
-                                "empty project"
-                            } else {
-                                projects.entries.joinToString { it.value.name }
-                            }
-                        )
-                    )
-                }
-
-                val darkMode = LocalIsDarkMode.current
-                val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
-
-                enableEdgeToEdge(
-                    statusBarStyle = SystemBarStyle.auto(
-                        darkScrim = scrimColor.toArgb(),
-                        lightScrim = scrimColor.toArgb(),
-                        detectDarkMode = { darkMode }
-                    ),
-                    navigationBarStyle = SystemBarStyle.auto(
-                        darkScrim = scrimColor.toArgb(),
-                        lightScrim = scrimColor.toArgb(),
-                        detectDarkMode = { darkMode }
-                    )
-                )
-            }
+        lifecycleScope.launch(Dispatchers.IO) {
+            runner.run(Environment.getExternalStorageDirectory().resolve("vivek/test.py").toKxFile())
         }
+    }
+
+    @Composable
+    override fun Content() {
+        val projects by fileTreeViewModel.rootNodes.collectAsState()
+
+        LaunchedEffect(projects) {
+            setTaskDescription(
+                createTaskDescription(
+                    if (projects.isEmpty()) {
+                        "empty project"
+                    } else {
+                        projects.entries.joinToString { it.value.name }
+                    }
+                )
+            )
+        }
+
+        val darkMode = LocalIsDarkMode.current
+        val scrimColor = contentColorFor(MaterialTheme.colorScheme.primary)
+
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                darkScrim = scrimColor.toArgb(),
+                lightScrim = scrimColor.toArgb(),
+                detectDarkMode = { darkMode }
+            ),
+            navigationBarStyle = SystemBarStyle.auto(
+                darkScrim = scrimColor.toArgb(),
+                lightScrim = scrimColor.toArgb(),
+                detectDarkMode = { darkMode }
+            )
+        )
+
+        MainScreen()
     }
 
     override fun onResume() {

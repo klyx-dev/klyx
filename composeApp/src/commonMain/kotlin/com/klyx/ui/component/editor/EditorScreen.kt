@@ -17,6 +17,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -221,33 +222,33 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                             }
                         }
 
-                        //key(tab.file.absolutePath) {
-                        when (tab.editorState) {
-                            is ComposeEditorState -> {
-                                CodeEditor(
-                                    modifier = Modifier.fillMaxSize(),
-                                    state = tab.editorState.state,
-                                    fontFamily = fontFamily,
-                                    fontSize = editorSettings.fontSize.sp,
-                                    editable = !tab.isInternal,
-                                    pinLineNumber = editorSettings.pinLineNumbers
-                                )
-                            }
+                        key(tab.file.absolutePath) {
+                            when (tab.editorState) {
+                                is ComposeEditorState -> {
+                                    CodeEditor(
+                                        modifier = Modifier.fillMaxSize(),
+                                        state = tab.editorState.state,
+                                        fontFamily = fontFamily,
+                                        fontSize = editorSettings.fontSize.sp,
+                                        editable = !tab.isInternal,
+                                        pinLineNumber = editorSettings.pinLineNumbers
+                                    )
+                                }
 
-                            is SoraEditorState -> {
-                                com.klyx.editor.CodeEditor(
-                                    modifier = Modifier.fillMaxSize(),
-                                    state = tab.editorState.state,
-                                    worktree = tab.worktree,
-                                    fontFamily = fontFamily,
-                                    fontSize = editorSettings.fontSize.sp,
-                                    editable = !tab.isInternal,
-                                    pinLineNumber = editorSettings.pinLineNumbers,
-                                    language = tab.file.language().lowercase()
-                                )
+                                is SoraEditorState -> {
+                                    com.klyx.editor.CodeEditor(
+                                        modifier = Modifier.fillMaxSize(),
+                                        state = tab.editorState.state,
+                                        worktree = tab.worktree,
+                                        fontFamily = fontFamily,
+                                        fontSize = editorSettings.fontSize.sp,
+                                        editable = !tab.isInternal,
+                                        pinLineNumber = editorSettings.pinLineNumbers,
+                                        language = tab.file.language().lowercase()
+                                    )
+                                }
                             }
                         }
-                        //}
                     }
 
                     is ComposableTab -> tab.content.invoke()
