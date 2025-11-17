@@ -1,5 +1,6 @@
 package com.klyx.terminal
 
+import android.os.Build
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -27,7 +28,12 @@ fun createSession(
     }
 
     val pendingCommand = if (intent.hasExtra("command")) {
-        intent.getSerializableExtra("command", TerminalCommand::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            intent.getSerializableExtra("command", TerminalCommand::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            intent.getSerializableExtra("command") as? TerminalCommand
+        }
     } else {
         null
     }

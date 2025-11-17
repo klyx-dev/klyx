@@ -31,7 +31,7 @@ fun main() {
                 false
             }
         ) {
-            AppEntry()
+            KlyxApp { MainScreen() }
         }
     }
 }

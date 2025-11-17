@@ -8,5 +8,5 @@ fun MainViewController() = ComposeUIViewController(
         initKoin()
     }
 ) {
-    AppEntry()
+    KlyxApp { MainScreen() }
 }

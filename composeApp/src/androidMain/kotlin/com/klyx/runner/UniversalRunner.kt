@@ -1,5 +1,6 @@
 package com.klyx.runner
 
+import android.annotation.SuppressLint
 import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
@@ -19,14 +20,31 @@ private const val CANNOT_RUN_ERROR =
 private const val SDCARD_RUNNER_WARNING =
     "Running code is not recommended in this location. Consider moving your file to the terminal's home directory."
 
-class UniversalRunner(val context: Context) : CodeRunner, KoinComponent {
+class UniversalRunner : CodeRunner, KoinComponent {
     private val notifier: Notifier by inject()
-    //private val context: Context by inject()
+    private val context: Context by inject()
 
+    @JvmName("canRun1")
     private fun KxFile.canRun() = this.uri.scheme == ContentResolver.SCHEME_FILE
+
+    @SuppressLint("SdCardPath")
     private fun KxFile.isFromExternalStorage() = absolutePath.startsWith("/sdcard") or
             absolutePath.startsWith("/storage") or
             absolutePath.startsWith(Environment.getExternalStorageDirectory().absolutePath)
+
+    private val runnableExtensions = setOf(
+        "py", "js", "ts", "java", "kt", "rs", "rb", "php",
+        "c", "cpp", "cxx", "cc", "cs",
+        "sh", "bash", "zsh", "fish",
+        "pl", "lua", "r",
+        "f90", "f95", "f03", "f08",
+        "pas", "tcm", "elm",
+        "fsx", "fs"
+    )
+
+    override fun canRun(file: KxFile): Boolean {
+        return file.extension.lowercase() in runnableExtensions && file.canRun()
+    }
 
     override suspend fun run(file: KxFile) {
         if (!file.canRun()) {
@@ -49,6 +67,7 @@ class UniversalRunner(val context: Context) : CodeRunner, KoinComponent {
                         cwd = file.parentFile?.absolutePath ?: "/"
                     )
                 )
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })
         }
     }

@@ -50,12 +50,6 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
         subscribe()
-
-        val runner = UniversalRunner(this)
-
-        lifecycleScope.launch(Dispatchers.IO) {
-            runner.run(Environment.getExternalStorageDirectory().resolve("vivek/test.py").toKxFile())
-        }
     }
 
     @Composable

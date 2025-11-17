@@ -82,7 +82,7 @@ fun Terminal(
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 context(context: Context)
-internal fun TerminalScreen1(activity: TerminalActivity, onSessionFinish: (TerminalSession) -> Unit) {
+private fun TerminalScreen1(activity: TerminalActivity, onSessionFinish: (TerminalSession) -> Unit) {
     val networkState by rememberNetworkState()
     val fontFamily = rememberFontFamily("JetBrains Mono")
     val textStyle = MaterialTheme.typography.bodySmall.copy(

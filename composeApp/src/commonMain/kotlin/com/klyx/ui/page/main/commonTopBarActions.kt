@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.MoreVert
@@ -21,6 +22,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.movableContentWithReceiverOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,8 +45,10 @@ import com.klyx.res.Res.string
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved
 import com.klyx.res.settings
+import com.klyx.runner.CodeRunner
 import com.klyx.tab.FileTab
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 @RememberInComposition
@@ -55,6 +60,8 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
 
     val activeTab by editorViewModel.activeTab.collectAsState()
     val activeFile by editorViewModel.activeFile.collectAsState()
+
+    val coroutineScope = rememberCoroutineScope()
 
     val fileSaver = rememberFileSaverLauncher { file ->
         if (file != null) {
@@ -81,6 +88,21 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
                 contentDescription = "Redo",
                 onClick = editorViewModel::redo
             )
+
+            run {
+                val runner = remember { CodeRunner() }
+
+                TopBarIconButton(
+                    Icons.Outlined.PlayArrow,
+                    enabled = runner.canRun(tab.file),
+                    contentDescription = "Run",
+                    onClick = {
+                        coroutineScope.launch {
+                            runner.run(tab.file)
+                        }
+                    }
+                )
+            }
 
             TopBarIconButton(
                 Icons.Outlined.Save,
