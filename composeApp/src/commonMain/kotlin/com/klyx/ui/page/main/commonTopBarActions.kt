@@ -89,12 +89,11 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
                 onClick = editorViewModel::redo
             )
 
-            run {
-                val runner = remember { CodeRunner() }
+            val runner = remember { CodeRunner() }
 
+            if (runner.canRun(tab.file)) {
                 TopBarIconButton(
                     Icons.Outlined.PlayArrow,
-                    enabled = runner.canRun(tab.file),
                     contentDescription = "Run",
                     onClick = {
                         coroutineScope.launch {

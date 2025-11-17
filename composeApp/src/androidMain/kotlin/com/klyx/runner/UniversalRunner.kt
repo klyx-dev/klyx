@@ -5,6 +5,7 @@ import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
+import android.widget.Toast
 import com.klyx.activities.TerminalActivity
 import com.klyx.core.Notifier
 import com.klyx.core.file.KxFile
@@ -53,7 +54,8 @@ class UniversalRunner : CodeRunner, KoinComponent {
         }
 
         if (file.isFromExternalStorage()) {
-            notifier.toast(SDCARD_RUNNER_WARNING)
+            //notifier.toast(SDCARD_RUNNER_WARNING)
+            Toast.makeText(context, SDCARD_RUNNER_WARNING, Toast.LENGTH_SHORT).show()
         }
 
         with(context) {
