@@ -48,14 +48,15 @@ kotlin {
             dependencies {
                 api(libs.koin.compose)
 
-                implementation(compose.runtime)
-                implementation(compose.foundation)
-                implementation(compose.material3)
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.materialIconsExtended)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.components.resources)
+                implementation(libs.compose.uiToolingPreview)
+
                 implementation(libs.navigation.compose)
-                implementation(compose.materialIconsExtended)
-                implementation(compose.ui)
-                implementation(compose.components.resources)
-                implementation(compose.preview)
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtimeCompose)
 

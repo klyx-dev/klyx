@@ -17,8 +17,7 @@ navigationCompose = "2.9.1"
 kmp-process = "0.4.0"
 semver = "3.0.0"
 wasip1Bindings = "0.6.0"
-composeHotReload = "1.0.0-rc02"
-composeMultiplatform = "1.10.0-alpha03"
+composeMultiplatform = "1.10.0-beta01"
 junit = "4.13.2"
 kotlin = "2.2.21"
 kotlinx-coroutines = "1.10.2"
@@ -47,8 +46,18 @@ arrow = "2.2.0"
 kotlinStdlib = "2.2.21"
 runner = "1.7.0"
 core = "1.7.0"
+compose-material3 = "1.10.0-alpha04"
 
 [libraries]
+compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
+compose-materialIconsExtended = { module = "org.jetbrains.compose.material:material-icons-extended", version = "1.7.3" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
+compose-uiUtil = { module = "org.jetbrains.compose.ui:ui-util", version.ref = "composeMultiplatform" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
+
 compose-material3-adaptive = { module = "org.jetbrains.compose.material3.adaptive:adaptive", version.ref = "compose-material3-adaptive" }
 androidx-collection = { module = "androidx.collection:collection", version.ref = "collection" }
 androidx-core = { module = "androidx.core:core", version.ref = "androidx-core" }
@@ -125,7 +134,6 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
 androidLint = { id = "com.android.lint", version.ref = "agp" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
-composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }

@@ -11,7 +11,6 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
@@ -46,7 +45,6 @@ kotlin {
         val desktopMain by getting
 
         androidMain.dependencies {
-            implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.documentfile)
             implementation(libs.androidx.google.fonts)
@@ -61,17 +59,17 @@ kotlin {
         }
 
         commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.ui)
-            implementation(compose.uiUtil)
-            implementation(compose.components.resources)
-            implementation(compose.preview)
-            implementation(libs.navigation.compose)
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.material3)
+            implementation(libs.compose.materialIconsExtended)
+            implementation(libs.compose.ui)
+            implementation(libs.compose.uiUtil)
+            implementation(libs.compose.components.resources)
+            implementation(libs.compose.uiToolingPreview)
             implementation(libs.compose.material3.adaptive)
 
+            implementation(libs.navigation.compose)
             implementation(libs.fuzzywuzzy.kotlin)
 
             implementation(libs.androidx.lifecycle.viewmodel)
@@ -218,7 +216,7 @@ android {
 }
 
 dependencies {
-    debugImplementation(compose.uiTooling)
+    debugImplementation(libs.compose.uiToolingPreview)
 }
 
 tasks.register<ShadowJar>("shadowJar") {
