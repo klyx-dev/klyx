@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.klyx.appPrefs
 import com.klyx.core.extension.ExtensionInfo
+import com.klyx.core.extension.fetchRemoteInfo
 import com.klyx.core.ui.animatedComposable
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
@@ -64,9 +66,17 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
         animatedComposable<ExtensionDetail>(typeMap = navTypeMap(typeOf<ExtensionInfo>())) { backStackEntry ->
             val detail: ExtensionDetail = backStackEntry.toRoute()
 
+//            val remoteInfo by produceState(detail.extensionInfo) {
+//                with(detail.extensionInfo) {
+//                    if (repository.isNotBlank()) {
+//                        value = fetchRemoteInfo(repository)
+//                    }
+//                }
+//            }
+
             ExtensionDetailScreen(
                 modifier = Modifier.fillMaxSize(),
-                extensionInfo = detail.extensionInfo,
+                extensionId = detail.extensionInfo.id,
                 onNavigateBack = onNavigateBack
             )
         }

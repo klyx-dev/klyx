@@ -74,8 +74,10 @@ By clicking "I Agree", you accept full responsibility for using Klyx under these
 
     <string name="extension_disclaimer">Make sure to carefully read the README files or documentation of those extensions before adding them to your setup.</string>
     <string name="update">Update</string>
+    <string name="updating">Updating...</string>
     <string name="update_available">Update Available</string>
     <string name="installed">Installed</string>
+    <string name="installing">Installing</string>
 
     <string name="open_a_project">Open a project</string>
 

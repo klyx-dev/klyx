@@ -118,4 +118,11 @@ suspend fun fetchLastUpdated(repo: String): LocalDateTime? {
     return kotlin.time.Instant.parse(pushedAt).toLocalDateTime(TimeZone.currentSystemDefault())
 }
 
+suspend fun fetchRemoteInfo(repo: String): ExtensionInfo {
+    val (owner, repo) = parseRepoInfo(repo)
+    val tomlFileUrl = "https://raw.githubusercontent.com/$owner/$repo/main/extension.toml"
+    val tomlContentRaw = fetchText(tomlFileUrl)
+    return Toml.decodeFromString(tomlContentRaw)
+}
+
 internal expect suspend fun ByteArray.extractRepoZip(targetDir: KxFile)

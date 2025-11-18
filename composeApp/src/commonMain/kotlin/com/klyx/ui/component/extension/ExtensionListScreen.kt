@@ -39,65 +39,41 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastMap
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
-import com.klyx.core.LocalNotifier
-import com.klyx.core.event.ObserverAsEvents
-import com.klyx.core.extension.ExtensionFilter
 import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.file.toKxFile
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
-import com.klyx.core.string
-import com.klyx.extension.ExtensionManager
+import com.klyx.di.LocalExtensionViewModel
 import com.klyx.res.Res.string
 import com.klyx.res.extension_install_dev_button
-import com.klyx.res.extension_install_failed
-import com.klyx.res.extension_install_success
 import com.klyx.res.extension_screen_title
 import com.klyx.res.extension_search_placeholder
 import com.klyx.res.no_extensions
 import com.klyx.res.no_internet_connection
 import com.klyx.ui.theme.DefaultKlyxShape
-import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ExtensionListScreen(
-    onExtensionItemClick: (ExtensionInfo) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onExtensionItemClick: (ExtensionInfo) -> Unit
 ) {
-    val notifier = LocalNotifier.current
-    val coroutineScope = rememberCoroutineScope()
     var showDevExtensionInstallSheet by remember { mutableStateOf(false) }
-    val viewModel = koinViewModel<ExtensionViewModel>()
+    val viewModel = LocalExtensionViewModel.current
     val state by viewModel.extensionListState.collectAsState()
 
     val selectDir = rememberDirectoryPickerLauncher { file ->
         if (file != null) {
-            coroutineScope.launch {
-                ExtensionManager.installExtension(
-                    directory = file.toKxFile(),
-                    isDevExtension = true
-                ).onFailure {
-                    notifier.error(string(string.extension_install_failed, it))
-                }.onSuccess {
-                    notifier.success(string(string.extension_install_success))
-                }
-            }
+            viewModel.installDevFromDirectory(file.toKxFile())
         }
     }
 
@@ -105,27 +81,11 @@ fun ExtensionListScreen(
         type = FileKitType.File("zip")
     ) { file ->
         if (file != null) {
-            coroutineScope.launch {
-                ExtensionManager.installExtensionFromZip(
-                    zipFile = file.toKxFile(),
-                    isDevExtension = true
-                ).onFailure {
-                    notifier.error(string(string.extension_install_failed, it))
-                }.onSuccess {
-                    notifier.success(string(string.extension_install_success))
-                }
-            }
+            viewModel.installDevFromZip(file.toKxFile())
         }
     }
 
     val networkState by rememberNetworkState()
-    var filter by remember { mutableStateOf(ExtensionFilter.All) }
-
-    ObserverAsEvents(viewModel.extensionEvents) { event ->
-        when (event) {
-            ExtensionEvent.ReloadExtensions -> viewModel.loadExtensions()
-        }
-    }
 
     Column(modifier = modifier) {
         Row(
@@ -149,7 +109,6 @@ fun ExtensionListScreen(
             }
         }
 
-        var searchQuery by remember { mutableStateOf("") }
         var showSearchBar by remember { mutableStateOf(false) }
 
         AnimatedVisibility(
@@ -158,11 +117,9 @@ fun ExtensionListScreen(
             exit = fadeOut() + slideOutVertically() + shrinkVertically()
         ) {
             OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                value = state.searchQuery,
+                onValueChange = viewModel::onSearchQueryChanged,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 placeholder = { Text(stringResource(string.extension_search_placeholder)) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.small,
@@ -180,7 +137,8 @@ fun ExtensionListScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             ExtensionFilterButtons(
-                onSelect = { filter = it },
+                onSelect = viewModel::onFilterChanged,
+                selectedFilter = state.filter,
                 modifier = Modifier.weight(1f)
             )
 
@@ -194,7 +152,7 @@ fun ExtensionListScreen(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        AnimatedVisibility(state.isLoading) {
+        AnimatedVisibility(visible = state.isLoading) {
             Column {
                 CircularProgressIndicator(
                     modifier = Modifier.size(12.dp),
@@ -205,17 +163,8 @@ fun ExtensionListScreen(
             }
         }
 
-        val installedExtensions = ExtensionManager.installedExtensions.fastMap { it.info }
-
-        val filteredExtensions = when (filter) {
-            ExtensionFilter.All -> installedExtensions + state.extensionInfos.fastFilter { it !in installedExtensions }
-            ExtensionFilter.Installed -> installedExtensions
-            ExtensionFilter.NotInstalled -> state.extensionInfos.fastFilter { it !in installedExtensions }
-        }.fastMap { ext ->
-            ext to FuzzySearch.partialRatio(searchQuery.lowercase(), ext.name.lowercase())
-        }.fastFilter { (_, score) -> searchQuery.isBlank() || score >= 60 }
-            .sortedByDescending { it.second }
-            .fastMap { it.first }
+        val filteredExtensions = viewModel.getFilteredExtensions(state)
+        val installedIds = state.installedExtensions.fastMap { it.id }
 
         if (filteredExtensions.isNotEmpty()) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -225,7 +174,7 @@ fun ExtensionListScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateItem(),
-                        isInstalled = extension in installedExtensions,
+                        isInstalled = extension.id in installedIds,
                         onClick = { onExtensionItemClick(extension) }
                     )
                 }
@@ -235,16 +184,22 @@ fun ExtensionListScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                if (state.isLoading) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularWavyProgressIndicator()
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Loading extensions...")
+                when {
+                    state.isLoading -> {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularWavyProgressIndicator()
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("Loading extensions...")
+                        }
                     }
-                } else if (networkState.isNotConnected && filteredExtensions.isNotEmpty()) {
-                    Text(stringResource(string.no_internet_connection))
-                } else {
-                    Text(stringResource(string.no_extensions))
+
+                    networkState.isNotConnected -> {
+                        Text(stringResource(string.no_internet_connection))
+                    }
+
+                    else -> {
+                        Text(stringResource(string.no_extensions))
+                    }
                 }
             }
         }

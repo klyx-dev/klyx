@@ -3,7 +3,6 @@ package com.klyx.ui.component.extension
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -25,6 +24,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -38,39 +38,43 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.github.michaelbull.result.fold
+import androidx.compose.ui.util.fastMap
 import com.klyx.core.LocalNotifier
-import com.klyx.core.Notifier
-import com.klyx.core.extension.ExtensionInfo
+import com.klyx.core.extension.ExtensionId
 import com.klyx.core.extension.fetchLastUpdated
-import com.klyx.core.extension.installExtension
 import com.klyx.core.formatDateTime
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.string
+import com.klyx.di.LocalExtensionViewModel
 import com.klyx.extension.ExtensionManager
 import com.klyx.res.Res.string
 import com.klyx.res.action_install
 import com.klyx.res.action_uninstall
-import com.klyx.res.extension_install_failed
-import com.klyx.res.extension_install_success
 import com.klyx.res.extension_uninstall_restart_prompt
+import com.klyx.res.installing
 import com.klyx.res.update
+import com.klyx.res.updating
 import com.klyx.ui.theme.DefaultKlyxShape
-import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExtensionDetailScreen(
-    extensionInfo: ExtensionInfo,
+    extensionId: ExtensionId,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
     val notifier = LocalNotifier.current
+    val viewModel = LocalExtensionViewModel.current
+    val extensionInfo = viewModel.getExtensionInfo(extensionId) ?: return
+
     val scope = rememberCoroutineScope()
-    val installedExtensions = ExtensionManager.installedExtensions
+
+    val listState by viewModel.extensionListState.collectAsState()
+    val installedIds = listState.installedExtensions.fastMap { it.id }.toSet()
+    val isInstalled = extensionInfo.id in installedIds
 
     var isInstalling by remember { mutableStateOf(false) }
 
@@ -114,9 +118,8 @@ fun ExtensionDetailScreen(
                 text = "Version: ${extensionInfo.version}"
             )
 
-            val isDevExtension = ExtensionManager
-                .findInstalledExtension(extensionInfo.id)
-                ?.isDevExtension == true
+            val installedExt = ExtensionManager.findInstalledExtension(extensionInfo.id)
+            val isDevExtension = installedExt?.isDevExtension == true
 
             if (!isDevExtension) {
                 TextWithIcon(
@@ -137,40 +140,46 @@ fun ExtensionDetailScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row {
-                val isInstalled = extensionInfo in installedExtensions.map { it.info }
+                val updateAvailable = viewModel.isUpdateAvailable(extensionInfo.id)
+                var isUpdating by remember { mutableStateOf(false) }
 
-                val installedExt = ExtensionManager.findInstalledExtension(extensionInfo.id)
-                val installedVersion = installedExt?.info?.version?.toVersion()
-                val remoteVersion = extensionInfo.version.toVersion()
+                val (icon, labelRes) = when {
+                    isInstalling -> Icons.Outlined.Download to string.installing
+                    isInstalled && updateAvailable && isUpdating -> Icons.Outlined.Update to string.updating
+                    isInstalled && updateAvailable -> Icons.Outlined.Update to string.update
+                    isInstalled -> Icons.Outlined.Delete to string.action_uninstall
+                    else -> Icons.Outlined.Download to string.action_install
+                }
 
-                val updateAvailable = installedVersion != null && remoteVersion > installedVersion
+                val isUninstall = isInstalled && !updateAvailable
+                val buttonColors = if (isUninstall) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                } else ButtonDefaults.buttonColors()
 
                 if ((isDevExtension && isInstalled) || !isDevExtension) {
                     Button(
                         onClick = {
-                            if (isInstalled && !updateAvailable) {
-                                ExtensionManager.uninstallExtension(extensionInfo)
+                            if (isUninstall) {
+                                viewModel.uninstallExtension(extensionInfo)
                                 notifier.notify(string(string.extension_uninstall_restart_prompt))
                                 onNavigateBack()
                             } else {
                                 scope.launch {
                                     isInstalling = true
-                                    install(extensionInfo, notifier)
+                                    if (updateAvailable) isUpdating = true
+                                    viewModel.installExtension(extensionInfo)
                                 }.invokeOnCompletion {
                                     isInstalling = false
+                                    isUpdating = false
                                 }
                             }
                         },
                         shape = DefaultKlyxShape,
-                        colors = if (isInstalled && !updateAvailable) {
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            )
-                        } else {
-                            ButtonDefaults.buttonColors()
-                        },
-                        enabled = !isInstalling
+                        colors = buttonColors,
+                        enabled = !isInstalling,
                     ) {
                         if (isInstalling) {
                             CircularProgressIndicator(
@@ -178,39 +187,14 @@ fun ExtensionDetailScreen(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Icon(
-                                if (isInstalled) {
-                                    if (updateAvailable) {
-                                        Icons.Outlined.Update
-                                    } else {
-                                        Icons.Outlined.Delete
-                                    }
-                                } else {
-                                    Icons.Outlined.Download
-                                },
-                                modifier = Modifier.size(14.dp),
-                                contentDescription = null,
-                            )
+                            Icon(icon, modifier = Modifier.size(14.dp), contentDescription = null)
                         }
 
-                        Spacer(modifier = Modifier.width(4.dp))
-
-                        Text(
-                            stringResource(
-                                if (isInstalled) {
-                                    if (updateAvailable) {
-                                        string.update
-                                    } else {
-                                        string.action_uninstall
-                                    }
-                                } else {
-                                    string.action_install
-                                }
-                            )
-                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(stringResource(labelRes))
                     }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(Modifier.width(8.dp))
                 }
 
                 if (extensionInfo.repository.isNotEmpty()) {
@@ -267,30 +251,4 @@ private suspend fun getLastUpdateText(repo: String): String {
     val time = fetchLastUpdated(repo) ?: return "Last updated: unknown"
     val formatted = time.formatDateTime()
     return "Last updated on $formatted"
-}
-
-private suspend fun install(
-    extensionInfo: ExtensionInfo,
-    notifier: Notifier
-) {
-    installExtension(extensionInfo).onSuccess { file ->
-        ExtensionManager.installExtension(
-            directory = file,
-            isDevExtension = false
-        ).fold(
-            failure = {
-                notifier.error(string(string.extension_install_failed, it))
-            },
-            success = {
-                notifier.success(string(string.extension_install_success))
-            }
-        )
-    }.onFailure {
-        notifier.error(
-            string(
-                string.extension_install_failed,
-                it.message ?: it.stackTraceToString()
-            )
-        )
-    }
 }

@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.github.michaelbull.result.fold
 import com.klyx.core.Notifier
+import com.klyx.core.extension.ExtensionFilter
+import com.klyx.core.extension.ExtensionId
 import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.extension.fetchAllExtensions
+import com.klyx.core.file.KxFile
 import com.klyx.core.logging.logger
 import com.klyx.core.string
 import com.klyx.core.value
@@ -13,32 +16,31 @@ import com.klyx.extension.ExtensionManager
 import com.klyx.res.Res.string
 import com.klyx.res.extension_install_failed
 import com.klyx.res.extension_install_success
-import kotlinx.coroutines.channels.Channel
+import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
+import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ExtensionListState(
+    // Extensions available from remote (github)
     val extensionInfos: List<ExtensionInfo> = emptyList(),
-    val isLoading: Boolean = false
+    // Extensions currently installed on the system
+    val installedExtensions: List<ExtensionInfo> = emptyList(),
+    // UI state
+    val isLoading: Boolean = false,
+    val filter: ExtensionFilter = ExtensionFilter.All,
+    val searchQuery: String = "",
 )
-
-sealed interface ExtensionEvent {
-    data object ReloadExtensions : ExtensionEvent
-}
 
 class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
     private val _extensionListState = MutableStateFlow(ExtensionListState())
     val extensionListState = _extensionListState.asStateFlow()
 
-    private val extensionEventChannel = Channel<ExtensionEvent>()
-    val extensionEvents = extensionEventChannel.receiveAsFlow()
-
     init {
         viewModelScope.launch {
-            extensionEventChannel.send(ExtensionEvent.ReloadExtensions)
+            loadExtensions()
         }
     }
 
@@ -47,9 +49,13 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
 
         viewModelScope.launch {
             try {
+                val remote = fetchAllExtensions()
+                val installed = ExtensionManager.installedExtensions.map { it.info }
+
                 _extensionListState.update {
                     it.copy(
-                        extensionInfos = fetchAllExtensions()
+                        extensionInfos = remote,
+                        installedExtensions = installed
                     )
                 }
             } catch (err: Throwable) {
@@ -60,6 +66,75 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
         }
     }
 
+    fun getExtensionInfo(id: ExtensionId): ExtensionInfo? {
+        // Installed version always takes priority
+        return _extensionListState.value.installedExtensions.firstOrNull { it.id == id }
+            ?: _extensionListState.value.extensionInfos.firstOrNull { it.id == id }
+    }
+
+    fun isUpdateAvailable(extensionId: ExtensionId): Boolean {
+        val installedVersion = _extensionListState.value.installedExtensions
+            .firstOrNull { it.id == extensionId }
+            ?.version
+            ?.toVersion()
+
+        val remoteVersion = _extensionListState.value.extensionInfos
+            .firstOrNull { it.id == extensionId }
+            ?.version
+            ?.toVersion()
+
+        return installedVersion != null && remoteVersion != null && remoteVersion > installedVersion
+    }
+
+    fun refreshInstalledExtensions() {
+        val installed = ExtensionManager.installedExtensions.map { it.info }
+
+        _extensionListState.update { current ->
+            current.copy(
+                installedExtensions = installed,
+                // Also update remote metadata to include updated versions
+                extensionInfos = current.extensionInfos.map { remoteInfo ->
+                    installed.firstOrNull { it.id == remoteInfo.id } ?: remoteInfo
+                }
+            )
+        }
+    }
+
+    fun onFilterChanged(filter: ExtensionFilter) {
+        _extensionListState.update { it.copy(filter = filter) }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _extensionListState.update { it.copy(searchQuery = query) }
+    }
+
+    fun getFilteredExtensions(state: ExtensionListState = _extensionListState.value): List<ExtensionInfo> {
+        val installedExtensions = state.installedExtensions
+        val installedIds = installedExtensions.map { it.id }.toSet()
+
+        val baseList: List<ExtensionInfo> = when (state.filter) {
+            ExtensionFilter.All -> installedExtensions + state.extensionInfos.filter { it.id !in installedIds }
+            ExtensionFilter.Installed -> installedExtensions
+            ExtensionFilter.NotInstalled -> state.extensionInfos.filter { it.id !in installedIds }
+        }
+
+        return baseList
+            .map { ext ->
+                ext to FuzzySearch.partialRatio(
+                    state.searchQuery.lowercase(),
+                    ext.name.lowercase()
+                )
+            }
+            .filter { (_, score) ->
+                state.searchQuery.isBlank() || score >= 60
+            }
+            .sortedByDescending { it.second }
+            .map { it.first }
+    }
+
+    /**
+     * Normal extension installation (remote).
+     */
     suspend fun installExtension(info: ExtensionInfo) {
         com.klyx.core.extension.installExtension(info).onSuccess { file ->
             ExtensionManager.installExtension(
@@ -71,6 +146,7 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
                 },
                 success = {
                     notifier.success(string.extension_install_success.value)
+                    refreshInstalledExtensions()
                 }
             )
         }.onFailure {
@@ -81,5 +157,52 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
                 )
             )
         }
+    }
+
+    suspend inline fun updateExtension(info: ExtensionInfo) = installExtension(info)
+
+    /**
+     * Dev install: from directory.
+     */
+    fun installDevFromDirectory(dir: KxFile) {
+        viewModelScope.launch {
+            ExtensionManager.installExtension(
+                directory = dir,
+                isDevExtension = true
+            ).fold(
+                failure = {
+                    notifier.error(string(string.extension_install_failed, it))
+                },
+                success = {
+                    notifier.success(string.extension_install_success.value)
+                    refreshInstalledExtensions()
+                }
+            )
+        }
+    }
+
+    /**
+     * Dev install: from zip.
+     */
+    fun installDevFromZip(zip: KxFile) {
+        viewModelScope.launch {
+            ExtensionManager.installExtensionFromZip(
+                zipFile = zip,
+                isDevExtension = true
+            ).fold(
+                failure = {
+                    notifier.error(string(string.extension_install_failed, it))
+                },
+                success = {
+                    notifier.success(string.extension_install_success.value)
+                    refreshInstalledExtensions()
+                }
+            )
+        }
+    }
+
+    fun uninstallExtension(info: ExtensionInfo) {
+        ExtensionManager.uninstallExtension(info)
+        refreshInstalledExtensions()
     }
 }

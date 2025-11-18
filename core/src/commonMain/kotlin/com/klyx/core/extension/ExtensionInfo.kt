@@ -3,6 +3,8 @@ package com.klyx.core.extension
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+typealias ExtensionId = String
+
 /**
  * This is inspired by [zed](zed.dev) extension info.
  *
@@ -20,7 +22,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class ExtensionInfo(
-    val id: String,
+    val id: ExtensionId,
     val name: String,
     val version: String = "0.0.1",
     @SerialName("schema_version")
@@ -50,7 +52,6 @@ data class ExtensionInfo(
         if (repository != other.repository) return false
         if (singleLanguageServer != other.singleLanguageServer) return false
         if (multiLanguageServers != other.multiLanguageServers) return false
-        if (languageServers != other.languageServers) return false
 
         return true
     }
@@ -65,7 +66,6 @@ data class ExtensionInfo(
         result = 31 * result + repository.hashCode()
         result = 31 * result + singleLanguageServer.hashCode()
         result = 31 * result + multiLanguageServers.hashCode()
-        result = 31 * result + languageServers.hashCode()
         return result
     }
 }
