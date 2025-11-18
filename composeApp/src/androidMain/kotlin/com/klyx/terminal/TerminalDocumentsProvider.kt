@@ -13,6 +13,7 @@ import android.webkit.MimeTypeMap
 import com.klyx.R
 import com.klyx.core.Environment
 import com.klyx.core.terminal.SAFUtils
+import com.klyx.core.terminal.userHomeDir
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException

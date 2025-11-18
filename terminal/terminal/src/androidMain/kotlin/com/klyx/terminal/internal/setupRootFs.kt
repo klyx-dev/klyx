@@ -4,9 +4,9 @@ import android.content.Context
 import android.system.Os
 import com.klyx.core.file.downloadFile
 import com.klyx.core.logging.logger
-import com.klyx.terminal.klyxBinDir
-import com.klyx.terminal.klyxFilesDir
-import com.klyx.terminal.sandboxDir
+import com.klyx.core.terminal.klyxBinDir
+import com.klyx.core.terminal.klyxFilesDir
+import com.klyx.core.terminal.sandboxDir
 import io.ktor.client.content.ProgressListener
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

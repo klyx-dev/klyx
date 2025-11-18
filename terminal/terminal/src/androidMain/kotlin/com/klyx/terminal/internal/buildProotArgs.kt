@@ -6,10 +6,10 @@ import android.system.ErrnoException
 import android.system.Os
 import android.system.OsConstants
 import com.klyx.core.logging.logger
-import com.klyx.terminal.klyxBinDir
-import com.klyx.terminal.klyxFilesDir
-import com.klyx.terminal.sandboxDir
-import com.klyx.terminal.sandboxHomeDir
+import com.klyx.core.terminal.klyxBinDir
+import com.klyx.core.terminal.klyxFilesDir
+import com.klyx.core.terminal.sandboxDir
+import com.klyx.core.terminal.sandboxHomeDir
 import java.io.File
 
 private val logger = logger("Terminal")

@@ -5,8 +5,11 @@ package com.klyx.terminal
 import android.content.Context
 import com.klyx.core.ProcessBuilder
 import com.klyx.core.process
+import com.klyx.core.terminal.klyxBinDir
+import com.klyx.core.terminal.klyxFilesDir
+import com.klyx.core.terminal.sandboxDir
 import com.klyx.terminal.internal.buildProotArgs
-import com.klyx.terminal.internal.currentUser
+import com.klyx.core.terminal.currentUser
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

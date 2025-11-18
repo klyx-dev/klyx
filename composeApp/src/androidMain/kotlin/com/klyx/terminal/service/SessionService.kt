@@ -19,7 +19,7 @@ import com.klyx.core.value
 import com.klyx.res.Res
 import com.klyx.res.app_name
 import com.klyx.terminal.TerminalSessionId
-import com.klyx.terminal.internal.currentUser
+import com.klyx.core.terminal.currentUser
 import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
 

@@ -10,12 +10,7 @@ import java.io.File
 
 object SAFUtils : KoinComponent {
     private val context: Context by inject()
-    private val terminalPrefs = context.getSharedPreferences("terminal", Context.MODE_PRIVATE)
-
-    private val currentUser get() = terminalPrefs.getString("currentUser", null)
-    private val ubuntuDir get() = File(context.filesDir, "ubuntu")
-    private val ubuntuHomeDir get() = ubuntuDir.resolve("home")
-    private val userHomeDir get() = if (currentUser == null) null else ubuntuHomeDir.resolve(currentUser!!)
+    private val userHomeDir get() = with(context) { com.klyx.core.terminal.userHomeDir }
 
     const val ROOT_ID = "klyx_terminal_home"
     const val ROOT_DOCUMENT_ID = "klyx_terminal_home_root"

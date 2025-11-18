@@ -1,4 +1,4 @@
-package com.klyx.terminal.internal
+package com.klyx.core.terminal
 
 import android.content.Context
 import androidx.core.content.edit

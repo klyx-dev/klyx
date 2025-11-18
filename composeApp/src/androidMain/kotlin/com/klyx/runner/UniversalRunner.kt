@@ -12,7 +12,7 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.file.uri
 import com.klyx.core.runner.CodeRunner
 import com.klyx.terminal.TerminalCommand
-import com.klyx.terminal.klyxBinDir
+import com.klyx.core.terminal.klyxBinDir
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 

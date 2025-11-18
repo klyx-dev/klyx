@@ -18,9 +18,9 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.di.commonModule
-import com.klyx.terminal.klyxBinDir
-import com.klyx.terminal.localDir
-import com.klyx.terminal.sandboxDir
+import com.klyx.core.terminal.klyxBinDir
+import com.klyx.core.terminal.localDir
+import com.klyx.core.terminal.sandboxDir
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry

@@ -57,6 +57,7 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMMENT
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_CORNER
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_ITEM_CURRENT
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_TEXT_MATCHED
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_TEXT_PRIMARY
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.COMPLETION_WND_TEXT_SECONDARY
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.CURRENT_LINE
@@ -311,6 +312,7 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(COMPLETION_WND_TEXT_PRIMARY, colorScheme.primary)
     setColor(COMPLETION_WND_TEXT_SECONDARY, colorScheme.secondary)
     setColor(COMPLETION_WND_ITEM_CURRENT, colorScheme.primaryContainer.copy(alpha = 0.6f))
+    setColor(COMPLETION_WND_TEXT_MATCHED, colorScheme.primaryFixedDim)
 
     setColor(DIAGNOSTIC_TOOLTIP_BACKGROUND, colorScheme.surfaceColorAtElevation(1.dp))
     setColor(DIAGNOSTIC_TOOLTIP_BRIEF_MSG, colorScheme.primary)

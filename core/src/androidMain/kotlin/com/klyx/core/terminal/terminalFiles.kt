@@ -1,7 +1,6 @@
-package com.klyx.terminal
+package com.klyx.core.terminal
 
 import android.content.Context
-import com.klyx.terminal.internal.currentUser
 import java.io.File
 
 context(context: Context)

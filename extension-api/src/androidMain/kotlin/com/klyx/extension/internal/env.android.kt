@@ -6,7 +6,7 @@ import com.github.michaelbull.result.Result
 import com.klyx.core.ContextHolder
 import com.klyx.terminal.localProcess
 import com.klyx.terminal.ubuntuProcess
-import com.klyx.terminal.userHomeDir
+import com.klyx.core.terminal.userHomeDir
 import java.io.File
 
 actual fun makeFileExecutable(path: String): Result<Unit, String> {
