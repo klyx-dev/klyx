@@ -8,16 +8,20 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,162 +32,264 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
-import androidx.compose.material3.MaterialTheme.colorScheme
-import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.logging.color
+import com.klyx.di.LocalStatusBarViewModel
 import com.klyx.editor.ExperimentalCodeEditorApi
-import com.klyx.viewmodel.StatusBarViewModel
-import org.koin.compose.viewmodel.koinViewModel
+import com.klyx.viewmodel.LspState
 import kotlin.math.absoluteValue
+import kotlin.math.roundToInt
 
 @Composable
 fun StatusBar(
     modifier: Modifier = Modifier,
-    viewModel: StatusBarViewModel = koinViewModel(),
-    height: Dp = 28.dp,
+    height: Dp = 50.dp,
+    draggable: Boolean = true,
     onLogClick: (() -> Unit)? = null,
     onLanguageClick: (() -> Unit)? = null,
     onPositionClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(0.dp)
-    val bg = colorScheme.surfaceContainer.copy(alpha = 0.85f)
-    val stroke = colorScheme.outline.copy(alpha = 0.4f)
-    val subtle = LocalContentColor.current.copy(alpha = 0.85f)
-
+    val viewModel = LocalStatusBarViewModel.current
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val logState by viewModel.currentLogState.collectAsStateWithLifecycle()
 
-    Row(
+    val subtle = LocalContentColor.current.copy(alpha = 0.85f)
+    val bg = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f)
+    val stroke = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+
+    var offset by remember { mutableStateOf(Offset(0f, 0f)) }
+    val dragEnabled by rememberUpdatedState(draggable)
+
+    Box(
         modifier = modifier
-            .height(height)
-            .background(bg, shape)
-            .border(Dp.Hairline, stroke, shape)
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
+            .then(
+                if (dragEnabled) {
+                    Modifier.pointerInput(Unit) {
+                        detectDragGestures { change, drag ->
+                            change.consume()
+                            offset += drag
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            )
     ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(0.96f)
+                .heightIn(max = height)
+                .clip(MaterialTheme.shapes.small)
+                .background(bg)
+                .border(BorderStroke(Dp.Hairline, stroke), MaterialTheme.shapes.small)
+                .padding(horizontal = 6.dp),
+            contentAlignment = Alignment.Center
         ) {
-            val logState by viewModel.currentLogState.collectAsStateWithLifecycle()
-            if (logState.message != null) {
-                val message = logState.message!!
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = true),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val lspLabel: String?
+                    val lspColor: Color?
 
-                if (logState.isProgressive) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "rotate")
+                    when (state.lspState) {
+                        LspState.Idle -> {
+                            lspLabel = null
+                            lspColor = null
+                        }
 
-                    val rotation by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 360f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(durationMillis = 1300, easing = LinearEasing),
-                            repeatMode = RepeatMode.Restart
-                        ),
-                        label = "rotationAnim"
-                    )
+                        LspState.Indexing -> {
+                            lspLabel = "Indexing…"
+                            lspColor = MaterialTheme.colorScheme.tertiary
+                        }
 
-                    Icon(
-                        imageVector = Icons.Default.Autorenew,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .rotate(rotation)
-                    )
+                        LspState.Ready -> {
+                            lspLabel = "LSP: Ready"
+                            lspColor = MaterialTheme.colorScheme.secondary
+                        }
 
-                    val percentage = message.metadata["percentage"] as? Int
+                        LspState.Error -> {
+                            lspLabel = "LSP error"
+                            lspColor = MaterialTheme.colorScheme.error
+                        }
+                    }
 
-                    if (percentage != null) {
+                    if (lspLabel != null) {
                         Seg(
-                            text = "($percentage%)",
-                            accent = message.level.color,
-                            onClick = onLogClick
+                            text = lspLabel,
+                            accent = lspColor,
+                        )
+                        Divider()
+                    }
+
+                    if (state.errorCount > 0) {
+                        Seg(
+                            text = " ${state.errorCount}",
+                            accent = MaterialTheme.colorScheme.error
                         )
                     }
-                }
 
-                if (message.message.isNotBlank()) {
-                    Seg(
-                        text = message.message,
-                        accent = message.level.color,
-                        onClick = onLogClick
-                    )
-                }
-            }
-        }
+                    if (state.warningCount > 0) {
+                        if (state.errorCount > 0) Divider()
+                        Seg(
+                            text = " ${state.warningCount}",
+                            accent = MaterialTheme.colorScheme.tertiary
+                        )
+                    }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            state.cursorState?.let { cursorState ->
-                val positionText by remember(state) {
-                    derivedStateOf {
-                        with(cursorState) {
-                            val (line, column) = leftLine to leftColumn
+                    if (state.errorCount > 0 || state.warningCount > 0) {
+                        Divider()
+                    }
 
-                            buildString {
-                                append("${(1 + line)}:$column")
+                    logState.message?.let { message ->
+                        if (logState.isProgressive) {
+                            val infiniteTransition = rememberInfiniteTransition(label = "rotate")
+                            val rotation by infiniteTransition.animateFloat(
+                                initialValue = 0f,
+                                targetValue = 360f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 1300, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Restart
+                                ),
+                                label = "rotationAnim"
+                            )
 
-                                if (isSelected) {
-                                    append(" (")
-                                    val lines = (rightLine - leftLine).absoluteValue
+                            Icon(
+                                imageVector = Icons.Default.Autorenew,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .rotate(rotation),
+                                tint = message.level.color
+                            )
 
-                                    if (lines > 0) {
-                                        append("${lines + 1} lines, ")
-                                    }
-
-                                    val chars = right - left
-                                    append("$chars character${if (chars > 1) "s" else ""}")
-                                    append(")")
-                                }
+                            val percentage = message.metadata["percentage"] as? Int
+                            percentage?.let { p ->
+                                Seg(
+                                    text = "($p%)",
+                                    accent = message.level.color,
+                                    onClick = onLogClick
+                                )
                             }
+                        }
+
+                        if (message.message.isNotBlank()) {
+                            Seg(
+                                text = message.message,
+                                accent = message.level.color,
+                                onClick = onLogClick,
+                                maxLines = 3,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
                         }
                     }
                 }
 
-                // cursor info
-                Seg(
-                    text = positionText,
-                    onClick = onPositionClick
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val cursorState = state.cursorState
 
-                Divider()
-            }
+                    cursorState?.let { cursor ->
+                        val positionText by remember(state) {
+                            derivedStateOf {
+                                with(cursor) {
+                                    val (line, column) = leftLine to leftColumn
 
-            state.language?.let { language ->
-                Seg(
-                    text = language,
-                    onClick = onLanguageClick
-                )
-            }
+                                    buildString {
+                                        append("${line + 1}:$column")
 
-            Spacer(Modifier.width(2.dp))
+                                        if (isSelected) {
+                                            append(" (")
+                                            val lines = (rightLine - leftLine).absoluteValue
+                                            if (lines > 0) {
+                                                append("${lines + 1} lines, ")
+                                            }
+                                            val chars = right - left
+                                            append("$chars character${if (chars > 1) "s" else ""}")
+                                            append(")")
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
-            IconButton(
-                onClick = { },
-                modifier = Modifier.size(22.dp)
-            ) {
-                Icon(
-                    Icons.Outlined.Tune,
-                    contentDescription = "Status bar settings",
-                    modifier = Modifier.size(16.dp),
-                    tint = subtle
-                )
+                        Seg(
+                            text = positionText,
+                            onClick = onPositionClick
+                        )
+
+                        Divider()
+                    }
+
+                    if (state.readOnly) {
+                        Seg(
+                            text = "RO",
+                            accent = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
+                        )
+                    }
+//
+//                    Divider()
+//
+//
+//                    Seg(
+//                        text = "${state.encoding} · ${state.lineEndings}",
+//                    )
+//
+                    Divider()
+
+                    state.language?.let { language ->
+                        Seg(
+                            text = language,
+                            onClick = onLanguageClick
+                        )
+                    }
+
+                    Divider()
+
+                    IconButton(
+                        onClick = { onSettingsClick?.invoke() },
+                        modifier = Modifier.size(22.dp)
+                    ) {
+                        Icon(
+                            Icons.Outlined.Tune,
+                            contentDescription = "Status bar settings",
+                            modifier = Modifier.size(16.dp),
+                            tint = subtle
+                        )
+                    }
+                }
             }
         }
     }
@@ -204,6 +310,7 @@ private fun Seg(
     leading: (@Composable () -> Unit)? = null,
     text: String,
     accent: Color? = null,
+    maxLines: Int = 1,
     onClick: (() -> Unit)? = null,
 ) {
     val clickable = onClick != null
@@ -232,11 +339,11 @@ private fun Seg(
 
         Text(
             text = text,
-            style = typography.labelMedium.copy(
+            style = MaterialTheme.typography.labelMedium.copy(
                 fontWeight = FontWeight.Medium,
                 color = accent ?: LocalContentColor.current
             ),
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis
         )
     }

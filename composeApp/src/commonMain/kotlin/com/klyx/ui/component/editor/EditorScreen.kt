@@ -5,6 +5,7 @@ package com.klyx.ui.component.editor
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.ButtonDefaults
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.core.clipboard.clipEntryOf
 import com.klyx.core.file.KxFile
@@ -223,30 +225,43 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                         }
 
                         key(tab.file.absolutePath) {
-                            when (tab.editorState) {
-                                is ComposeEditorState -> {
-                                    CodeEditor(
-                                        modifier = Modifier.fillMaxSize(),
-                                        state = tab.editorState.state,
-                                        fontFamily = fontFamily,
-                                        fontSize = editorSettings.fontSize.sp,
-                                        editable = !tab.isInternal,
-                                        pinLineNumber = editorSettings.pinLineNumbers
-                                    )
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                when (tab.editorState) {
+                                    is ComposeEditorState -> {
+                                        CodeEditor(
+                                            modifier = Modifier.fillMaxSize(),
+                                            state = tab.editorState.state,
+                                            fontFamily = fontFamily,
+                                            fontSize = editorSettings.fontSize.sp,
+                                            editable = !tab.isInternal,
+                                            pinLineNumber = editorSettings.pinLineNumbers
+                                        )
+                                    }
+
+                                    is SoraEditorState -> {
+                                        com.klyx.editor.CodeEditor(
+                                            modifier = Modifier.fillMaxSize(),
+                                            state = tab.editorState.state,
+                                            worktree = tab.worktree,
+                                            fontFamily = fontFamily,
+                                            fontSize = editorSettings.fontSize.sp,
+                                            editable = !tab.isInternal,
+                                            pinLineNumber = editorSettings.pinLineNumbers,
+                                            language = tab.file.language().lowercase()
+                                        )
+                                    }
                                 }
 
-                                is SoraEditorState -> {
-                                    com.klyx.editor.CodeEditor(
-                                        modifier = Modifier.fillMaxSize(),
-                                        state = tab.editorState.state,
-                                        worktree = tab.worktree,
-                                        fontFamily = fontFamily,
-                                        fontSize = editorSettings.fontSize.sp,
-                                        editable = !tab.isInternal,
-                                        pinLineNumber = editorSettings.pinLineNumbers,
-                                        language = tab.file.language().lowercase()
-                                    )
-                                }
+                                StatusBar(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = 12.dp, start = 12.dp, end = 12.dp),
+                                    draggable = true,
+                                    onLogClick = klyxViewModel::showLogViewer,
+                                    onLanguageClick = { },
+                                    onPositionClick = { },
+                                    onSettingsClick = { }
+                                )
                             }
                         }
                     }
