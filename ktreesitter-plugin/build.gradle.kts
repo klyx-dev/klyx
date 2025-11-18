@@ -8,7 +8,7 @@ version = with(Properties()) {
 
 plugins {
     `java-gradle-plugin`
-    id("com.gradle.plugin-publish") version "1.2.1"
+    id("com.gradle.plugin-publish") version "2.0.0"
 }
 
 repositories {
