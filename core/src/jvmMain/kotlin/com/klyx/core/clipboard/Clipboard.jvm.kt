@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 
+@OptIn(ExperimentalComposeUiApi::class)
 actual fun clipEntryOf(string: String) = ClipEntry(StringSelection(string))
 
 @OptIn(ExperimentalComposeUiApi::class)

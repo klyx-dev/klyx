@@ -22,8 +22,8 @@ fun changeSession(activity: TerminalActivity, terminalView: TerminalView, sessio
             setFocusableInTouchMode(true)
         }
 
-        extraKeysView.get()?.apply {
-            extraKeysViewClient = terminalView.mTermSession?.let { ExtraKeysViewClient(it) }
+        extraKeysView.get()?.let {
+            it.extraKeysViewClient = terminalView.mTermSession?.let { ExtraKeysViewClient(it) }
         }
 
     }

@@ -3,6 +3,7 @@ package com.klyx.terminal
 import com.klyx.core.generateId
 import java.io.Serializable
 
+@Suppress("SerialVersionUIDInSerializableClass")
 data class TerminalCommand(
     val cmd: String,
     val args: Array<String> = emptyArray(),

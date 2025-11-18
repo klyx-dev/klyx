@@ -36,7 +36,7 @@ context(context: Context)
 fun isTerminalInstalled(): Boolean {
     val rootfs = sandboxDir.listFiles()?.filter {
         it.absolutePath != sandboxDir.resolve("tmp").absolutePath
-    } ?: emptyList()
+    }.orEmpty()
 
     return localDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").exists() && rootfs.isNotEmpty()
 }

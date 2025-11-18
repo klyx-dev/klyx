@@ -13,7 +13,7 @@ suspend fun getNextStage() = withContext(Dispatchers.IO) {
     val sandboxFile = context.cacheDir.resolve("sandbox.tar.gz")
     val rootfsFiles = sandboxDir.listFiles()?.filter {
         it.absolutePath != sandboxDir.resolve("tmp").absolutePath
-    } ?: emptyList()
+    }.orEmpty()
 
     if (sandboxFile.exists() || rootfsFiles.isEmpty()) SetupNextStage.Extraction else SetupNextStage.None
 }
