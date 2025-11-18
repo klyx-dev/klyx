@@ -86,7 +86,7 @@ kotlin {
 
                 api(project.dependencies.platform(libs.sora.editor.bom))
                 api(libs.sora.editor)
-
+                implementation(libs.sora.oniguruma.native)
                 implementation(libs.sora.language.textmate)
 
                 implementation(libs.lsp4j)
