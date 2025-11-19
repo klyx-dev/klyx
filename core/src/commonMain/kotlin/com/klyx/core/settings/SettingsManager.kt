@@ -1,6 +1,8 @@
 package com.klyx.core.settings
 
 import com.klyx.core.Environment
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,7 +12,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
 import kotlin.experimental.ExperimentalTypeInference
 import kotlin.jvm.JvmName
-import kotlin.jvm.JvmStatic
 
 const val SETTINGS_FILE_NAME = "settings.json"
 
@@ -65,7 +66,9 @@ object SettingsManager {
     }
 
     fun updateSettings(function: (AppSettings) -> AppSettings) {
+        val oldSettings = settings.value.copy()
         _settings.update { function(settings.value) }
+        EventBus.INSTANCE.postSync(SettingsChangeEvent(oldSettings, settings.value))
         save()
     }
 }

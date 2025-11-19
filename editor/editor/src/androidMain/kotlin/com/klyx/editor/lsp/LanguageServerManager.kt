@@ -6,6 +6,8 @@ import com.github.michaelbull.result.fold
 import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.toJson
@@ -75,6 +77,14 @@ object LanguageServerManager {
 
                 if (command != null) {
                     val client = LanguageServerClient(extension.logger)
+
+                    EventBus.INSTANCE.subscribe<SettingsChangeEvent> {
+                        if (it.oldSettings.lsp != it.newSettings.lsp) {
+                            it.newSettings.lsp[languageServerId]?.toJson()?.let { configuration ->
+                                client.changeWorkspaceConfiguration(configuration)
+                            }
+                        }
+                    }
 
                     client.initialize(command, worktree, options).onSuccess {
                         languageClients[key] = client

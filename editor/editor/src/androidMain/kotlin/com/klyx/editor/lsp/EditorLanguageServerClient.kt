@@ -9,6 +9,8 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.runCatching
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger

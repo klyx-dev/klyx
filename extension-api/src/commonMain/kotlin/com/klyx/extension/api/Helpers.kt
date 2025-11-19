@@ -10,18 +10,28 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
-import com.klyx.wasm.memory.uint32
+import com.klyx.wasm.memory.uint8
 
 inline fun <T> WasmMemory.readOption(
     pointer: Int,
     readSome: WasmMemory.(offset: Int) -> T
 ): Option<T> {
-    val tag = uint32(pointer)
-    return if (tag == 1u) {
+    val tag = uint8(pointer)
+    return if (tag.toInt() == 1) {
         Some(readSome(pointer + 4))
     } else {
         None
     }
+}
+
+fun WasmMemory.dumpBytes(start: Int, count: Int = 32): String {
+    val sb = StringBuilder()
+    for (i in 0 until count) {
+        val b: UByte = uint8(start + i)
+        sb.append(b.toHexString(format = HexFormat.UpperCase))
+        sb.append(' ')
+    }
+    return sb.toString()
 }
 
 inline fun <T, E> WasmMemory.readResult(
@@ -29,8 +39,12 @@ inline fun <T, E> WasmMemory.readResult(
     readOk: WasmMemory.(offset: Int) -> T,
     readErr: WasmMemory.(offset: Int) -> E
 ): Result<T, E> {
-    val tag = uint32(pointer)
-    return if (tag == 0u) {
+    val tag = uint8(pointer)
+
+//    println("Memory at result pointer:")
+//    println(dumpBytes(pointer, 32))
+
+    return if (tag.toInt() == 0) {
         Ok(readOk(pointer + 4))
     } else {
         Err(readErr(pointer + 4))

@@ -17,7 +17,6 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
@@ -82,6 +81,8 @@ class LanguageServerClient(
     internal lateinit var languageServer: LanguageServer
     internal lateinit var serverCapabilities: ServerCapabilities
 
+    val isInitialized get() = ::languageServer.isInitialized
+
     private lateinit var process: Process
 
     var onDiagnostics: (List<Diagnostic>) -> Unit = {}
@@ -145,8 +146,10 @@ class LanguageServerClient(
     }
 
     suspend fun changeWorkspaceConfiguration(configuration: String) = withContext(Dispatchers.IO) {
-        try {
-            if (configuration.isNotBlank()) {
+        runCatching {
+            check(isInitialized) { "Language server not initialized" }
+
+            if (configuration.isNotEmpty()) {
                 val json = Json.parseToJsonElement(configuration)
 
                 if (json is JsonObject) {
@@ -155,10 +158,6 @@ class LanguageServerClient(
                     // logger.debug { "Changed workspace configuration: $configuration" }
                 }
             }
-            Ok(Unit)
-        } catch (e: Exception) {
-            // logger.error(e) { "Error changing workspace configuration: $configuration" }
-            Err(e.message ?: "Error changing workspace configuration: $configuration")
         }
     }
 
