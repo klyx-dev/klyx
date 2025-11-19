@@ -9,6 +9,7 @@ import com.github.michaelbull.result.onSuccess
 import com.klyx.core.file.KxFile
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.toJson
+import com.klyx.editor.lsp.util.asTextDocumentIdentifier
 import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.toCommand
 import com.klyx.editor.lsp.util.uriString
@@ -19,6 +20,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DocumentColorParams
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.services.LanguageServer
@@ -167,6 +170,15 @@ object LanguageServerManager {
 
     suspend fun hover(worktree: Worktree, file: KxFile, position: Position) = withClient(worktree, file) {
         it.hover(file.uriString, position)
+    }
+
+    suspend fun inlayHint(worktree: Worktree, file: KxFile, range: Range) = withClient(worktree, file) { client ->
+        val params = InlayHintParams(file.uriString.asTextDocumentIdentifier(), range)
+        client.inlayHint(params)
+    }
+
+    suspend fun documentColor(worktree: Worktree, file: KxFile) = withClient(worktree, file) {
+        it.documentColor(DocumentColorParams(file.uriString.asTextDocumentIdentifier()))
     }
 
     private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {

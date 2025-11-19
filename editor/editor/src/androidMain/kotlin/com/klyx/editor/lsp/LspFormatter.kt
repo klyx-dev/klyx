@@ -7,8 +7,8 @@ import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.TextRange
 import kotlinx.coroutines.launch
 
-class LspFormatter(private val client: EditorLanguageServerClient) : AsyncFormatter() {
-    private val coroutineScope = client.scope
+internal class LspFormatter(private val client: EditorLanguageServerClient) : AsyncFormatter() {
+    private val coroutineScope = client.coroutineScope
 
     override fun formatAsync(
         text: Content,

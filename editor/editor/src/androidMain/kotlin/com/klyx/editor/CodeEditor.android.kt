@@ -89,6 +89,8 @@ import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUN
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.SNIPPET_BACKGROUND_INACTIVE
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_BACKGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_ACTION_WINDOW_ICON_COLOR
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_INLAY_HINT_BACKGROUND
+import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_INLAY_HINT_FOREGROUND
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.TEXT_NORMAL
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme.WHOLE_BACKGROUND
 import kotlinx.coroutines.Dispatchers
@@ -150,7 +152,7 @@ actual fun CodeEditor(
             worktree = worktree ?: state.file.parentAsWorktreeOrSelf(),
             file = state.file,
             editor = state.editor!!,
-            scope = scope,
+            coroutineScope = scope,
             settings = appSettings
         )
 
@@ -337,4 +339,7 @@ private fun EditorColorScheme.applyAppColorScheme(colorScheme: ColorScheme, sele
     setColor(BLOCK_LINE_CURRENT, colorScheme.primary.copy(alpha = 0.6f))
 
     setColor(LINE_DIVIDER, colorScheme.outline.copy(alpha = 0.4f))
+
+    setColor(TEXT_INLAY_HINT_FOREGROUND, colorScheme.onSurfaceVariant)
+    setColor(TEXT_INLAY_HINT_BACKGROUND, colorScheme.surfaceVariant.copy(alpha = 0.5f))
 }

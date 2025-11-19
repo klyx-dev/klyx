@@ -10,7 +10,6 @@ import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
-import com.klyx.editor.lsp.util.createRange
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.internal.Command
 import com.klyx.terminal.ubuntuProcess
@@ -18,9 +17,11 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.future.await
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
@@ -34,6 +35,7 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentColorParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -359,6 +361,28 @@ class LanguageServerClient(
             val params = HoverParams(uri.asTextDocumentIdentifier(), position)
             languageServer.textDocumentService.hover(params).get()
         }.mapError { it.message ?: "Error getting hover: $uri" }
+    }
+
+    suspend fun inlayHint(params: InlayHintParams) = withContext(Dispatchers.IO) {
+        runCatching {
+            if (serverCapabilities.inlayHintProvider?.left == true || serverCapabilities.inlayHintProvider?.right != null) {
+                val inlayHintFuture = languageServer.textDocumentService.inlayHint(params)
+                withTimeout(2000) { inlayHintFuture.get().orEmpty() }
+            } else {
+                error("Inlay hints not supported by server")
+            }
+        }.mapError { it.message ?: "Error getting inlay hints" }
+    }
+
+    suspend fun documentColor(params: DocumentColorParams) = withContext(Dispatchers.IO) {
+        runCatching {
+            if (serverCapabilities.colorProvider?.left == true || serverCapabilities.colorProvider?.right != null) {
+                val documentColorFuture = languageServer.textDocumentService.documentColor(params)
+                withTimeout(1000) { documentColorFuture.get().orEmpty() }
+            } else {
+                error("Document colors not supported by server")
+            }
+        }.mapError { it.message ?: "Error getting document colors" }
     }
 
     override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {

@@ -14,12 +14,16 @@ import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
 import com.klyx.editor.KlyxEditor
+import com.klyx.editor.inlayhint.InlayHintManager
 import com.klyx.editor.lsp.completion.LspCompletionItem
+import com.klyx.editor.lsp.event.LspEditorContentChangeEvent
+import com.klyx.editor.lsp.event.LspEditorScrollEvent
 import com.klyx.editor.lsp.util.asLspPosition
 import com.klyx.editor.signature.SignatureHelpWindow
 import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.EditorReleaseEvent
+import io.github.rosemoe.sora.event.ScrollEvent
 import io.github.rosemoe.sora.event.SelectionChangeEvent
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
@@ -35,6 +39,7 @@ import io.github.rosemoe.sora.text.ContentReference
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.subscribeAlways
+import io.github.rosemoe.sora.widget.subscribeEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -44,7 +49,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -67,11 +71,11 @@ import org.koin.core.component.inject
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
-class EditorLanguageServerClient(
+internal class EditorLanguageServerClient(
     val worktree: Worktree,
     val file: KxFile,
     val editor: KlyxEditor,
-    val scope: CoroutineScope,
+    val coroutineScope: CoroutineScope,
     private val settings: AppSettings
 ) : KoinComponent {
     private val applicationContext: Context by inject()
@@ -93,12 +97,12 @@ class EditorLanguageServerClient(
 
     private val signatureHelpWindow = AtomicReference<SignatureHelpWindow>()
 
-    private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1, extraBufferCapacity = 1)
+    val inlayHintManager = InlayHintManager(this)
 
-    private val lastDiagnosticsHash = AtomicInteger(0)
-
-    private var contentChangeJob: Job? = null
     private var signatureHelpJob: Job? = null
+
+    private val diagnosticsFlow = MutableSharedFlow<List<Diagnostic>>(replay = 1, extraBufferCapacity = 1)
+    private val lastDiagnosticsHash = AtomicInteger(0)
 
     private val textEditComparator = compareByDescending<TextEdit> {
         it.range.start.line
@@ -115,24 +119,25 @@ class EditorLanguageServerClient(
         signatureHelpWindow.set(SignatureHelpWindow(editor, localView, compositionContext))
         setupFlows()
 
-        scope.launch(Dispatchers.IO) {
+        coroutineScope.launch(Dispatchers.IO) {
             LanguageServerManager
                 .tryConnectLspIfAvailable(worktree, file.language(), settings)
                 .onSuccess { client ->
                     serverClient = client
                     withContext(Dispatchers.Main) {
-                        editor.setEditorLanguage(LspLanguage(editor.editorLanguage, scope))
+                        editor.setEditorLanguage(LspLanguage(editor.editorLanguage, coroutineScope))
                     }
-                    LanguageServerManager.openDocument(worktree, file)
+
+                    LanguageServerManager
+                        .openDocument(worktree, file)
+                        .onSuccess { inlayHintManager.requestInlayHint(CharPosition(0, 0)) }
 
                     client.onDiagnostics = diagnosticsFlow::tryEmit
-
                     client.onApplyWorkspaceEdit = { workspaceEditRequest ->
-                        scope.launch(Dispatchers.Default) {
+                        coroutineScope.launch(Dispatchers.Default) {
                             applyWorkspaceEdit(workspaceEditRequest.edit)
                         }
                     }
-
                     setupEventSubscriptions()
                 }
         }
@@ -147,39 +152,17 @@ class EditorLanguageServerClient(
             .debounce(50)
             .flowOn(Dispatchers.Default)
             .onEach { diagnostics -> updateDiagnostics(diagnostics) }
-            .launchIn(scope)
+            .launchIn(coroutineScope)
     }
 
     private fun setupEventSubscriptions() {
-        editor.subscribeAlways<ContentChangeEvent> { event ->
-            contentChangeJob?.cancel()
-
-            contentChangeJob = scope.launch(Dispatchers.Default) {
-                LanguageServerManager.changeDocument(
-                    worktree,
-                    file,
-                    event.editor.text.toString()
-                )
-
-                delay(150)
-
-                val text = event.editor.text.getOrNull(event.changeStart.index - 1)?.toString().orEmpty()
-                if (hitReTrigger(text)) {
-                    showSignatureHelp(null)
-                    return@launch
-                }
-
-                if (hitTrigger(text)) {
-                    tryShowSignatureHelp(event.changeStart)
-                }
-            }
-        }
+        editor.subscribeEvent<ContentChangeEvent>(LspEditorContentChangeEvent(this))
+        editor.subscribeEvent<ScrollEvent>(LspEditorScrollEvent(this))
 
         editor.subscribeAlways<SelectionChangeEvent> { event ->
             val position = event.left
 
             val text = event.editor.text.getOrNull(position.index - 1)?.toString()
-            println("Text: $text")
             if (text != null && hitReTrigger(text)) {
                 showSignatureHelp(null)
                 return@subscribeAlways
@@ -187,7 +170,7 @@ class EditorLanguageServerClient(
 
             if (text != null && hitTrigger(text)) {
                 signatureHelpJob?.cancel()
-                signatureHelpJob = scope.launch(Dispatchers.Default) {
+                signatureHelpJob = coroutineScope.launch(Dispatchers.Default) {
                     tryShowSignatureHelp(position)
                 }
             } else {
@@ -198,7 +181,7 @@ class EditorLanguageServerClient(
         editor.subscribeAlways<EditorReleaseEvent> { dispose() }
     }
 
-    private suspend fun tryShowSignatureHelp(position: CharPosition) {
+    suspend fun tryShowSignatureHelp(position: CharPosition) {
         LanguageServerManager
             .signatureHelp(worktree, file, position.asLspPosition())
             .onSuccess { signatureHelp ->
@@ -322,7 +305,7 @@ class EditorLanguageServerClient(
                     val action = either.right
                     Quickfix(action.title ?: "Quickfix") {
                         action.edit?.let { edit ->
-                            scope.launch(Dispatchers.Default) {
+                            coroutineScope.launch(Dispatchers.Default) {
                                 applyWorkspaceEdit(edit)
                             }
                         }
@@ -332,7 +315,7 @@ class EditorLanguageServerClient(
                 either.isLeft -> {
                     val command = either.left
                     Quickfix(command.title) {
-                        scope.launch(Dispatchers.Default) {
+                        coroutineScope.launch(Dispatchers.Default) {
                             serverClient?.executeCommand(command.command, command.arguments)
                         }
                     }
@@ -375,7 +358,7 @@ class EditorLanguageServerClient(
                 val startIdx = textEdit.range.start.calculatePositionIndex(editor)
                 val endIdx = textEdit.range.end.calculatePositionIndex(editor)
 
-                if (startIdx <= endIdx && startIdx >= 0 && endIdx <= text.length) {
+                if (startIdx in 0..endIdx && endIdx <= text.length) {
                     text.replace(startIdx, endIdx, textEdit.newText)
                 }
             }
@@ -396,7 +379,7 @@ class EditorLanguageServerClient(
                 val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
                 val endIndex = content.getCharIndex(endLine, range.end.character)
 
-                if (startIndex <= endIndex && startIndex >= 0) {
+                if (startIndex in 0..endIndex) {
                     content.replace(startIndex, endIndex, text)
                 } else {
                     logger().warn { "Invalid edit range: start=$startIndex end=$endIndex" }
@@ -539,15 +522,14 @@ class EditorLanguageServerClient(
     }
 
     fun dispose() {
-        contentChangeJob?.cancel()
         signatureHelpJob?.cancel()
 
         signatureHelpWindow.get()?.dismiss()
         signatureHelpWindow.set(null)
 
-        scope.cancel()
+        coroutineScope.cancel()
 
-        scope.launch(Dispatchers.Default) {
+        coroutineScope.launch(Dispatchers.Default) {
             cacheMutex.withLock {
                 prefixCache.evictAll()
                 quickfixCache.evictAll()
