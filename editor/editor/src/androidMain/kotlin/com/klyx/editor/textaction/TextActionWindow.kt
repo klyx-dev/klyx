@@ -33,6 +33,7 @@ class TextActionWindow(
     localView: View,
     compositionContext: CompositionContext
 ) : ComposeActionPopup(editor, localView, compositionContext) {
+
     companion object {
         private const val DELAY = 200L
         private const val CHECK_FOR_DISMISS_INTERVAL = 100L

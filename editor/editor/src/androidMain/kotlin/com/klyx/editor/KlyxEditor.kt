@@ -8,6 +8,8 @@ import com.klyx.core.settings.EditorSettings
 import com.klyx.editor.completion.AutoCompletionLayout
 import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.textaction.TextActionWindow
+import io.github.rosemoe.sora.graphics.inlayHint.ColorInlayHintRenderer
+import io.github.rosemoe.sora.graphics.inlayHint.TextInlayHintRenderer
 import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.component.EditorAutoCompletion
 import io.github.rosemoe.sora.widget.component.EditorDiagnosticTooltipWindow
@@ -41,6 +43,8 @@ class KlyxEditor @JvmOverloads constructor(
         getComponent<EditorTextActionWindow>().isEnabled = false
 
         lineNumberMarginLeft = 9f
+
+        registerInlayHintRenderers(TextInlayHintRenderer.DefaultInstance, ColorInlayHintRenderer.DefaultInstance)
     }
 
     @OptIn(ExperimentalCodeEditorApi::class)

@@ -394,11 +394,10 @@ inline fun process(
     return ProcessBuilder(command).apply(block)
 }
 
-@OptIn(ExperimentalContracts::class, ExperimentalTypeInference::class)
+@OptIn(ExperimentalContracts::class)
 @Suppress("SpreadOperator")
 inline fun process(
     commands: Array<String>,
-    @BuilderInference
     block: ProcessBuilder.() -> Unit = {}
 ): ProcessBuilder {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
@@ -411,10 +410,10 @@ fun String.executeBlocking() = process(this).executeBlocking()
 suspend fun String.start() = process(this).start()
 fun String.startBlocking() = process(this).startBlocking()
 
-suspend fun List<String>.execute() = process(toTypedArray()).execute()
+suspend fun Collection<String>.execute() = process(toTypedArray()).execute()
 fun Collection<String>.executeBlocking() = process(toTypedArray()).executeBlocking()
 
-suspend fun List<String>.start() = process(toTypedArray()).start()
+suspend fun Collection<String>.start() = process(toTypedArray()).start()
 fun Collection<String>.startBlocking() = process(toTypedArray()).startBlocking()
 
 infix fun ProcessBuilder.pipe(other: ProcessBuilder): PipeBuilder {

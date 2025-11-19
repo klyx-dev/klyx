@@ -102,7 +102,6 @@ fun MainPage(modifier: Modifier = Modifier) {
                 scrollBehavior = scrollBehavior
             )
         },
-        contentWindowInsets = WindowInsets.waterfall,
         floatingActionButton = {
             val directoryPicker = rememberDirectoryPickerLauncher { file ->
                 if (file != null) {

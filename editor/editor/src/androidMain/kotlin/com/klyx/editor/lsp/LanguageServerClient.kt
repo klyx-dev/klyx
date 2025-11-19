@@ -10,6 +10,7 @@ import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
+import com.klyx.editor.lsp.util.createRange
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.internal.Command
 import com.klyx.terminal.ubuntuProcess
@@ -39,6 +40,7 @@ import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -129,13 +131,6 @@ class LanguageServerClient(
 
                 languageServer.initialized(InitializedParams())
                 serverCapabilities = result.capabilities
-
-                with(serverCapabilities) {
-                    println(completionProvider?.triggerCharacters?.joinToString(" -- "))
-                    println(completionProvider?.allCommitCharacters?.joinToString(" -- "))
-                    println(signatureHelpProvider?.triggerCharacters?.joinToString(" -- "))
-                    println(signatureHelpProvider?.retriggerCharacters?.joinToString(" -- "))
-                }
 
                 logger.debug { "Language Server initialized: ${result.capabilities}" }
                 Ok(result)

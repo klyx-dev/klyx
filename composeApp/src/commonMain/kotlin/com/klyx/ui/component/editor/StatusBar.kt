@@ -262,7 +262,6 @@ fun StatusBar(
 //
 //                    Divider()
 //
-//
 //                    Seg(
 //                        text = "${state.encoding} · ${state.lineEndings}",
 //                    )
