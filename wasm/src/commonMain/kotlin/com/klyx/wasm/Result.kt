@@ -14,10 +14,10 @@ internal fun <V, E> ChasmResult<V, E>.asResult(): Result<V, WasmException> where
     return fold(
         onSuccess = { Ok(it) },
         onError = {
-            when (val e = it) {
-                is DecodeError -> Err(WasmException(e.error))
-                is ExecutionError -> Err(WasmException(e.error))
-                is ValidationError -> Err(WasmException(e.error))
+            when (it) {
+                is DecodeError -> Err(WasmException(it.error))
+                is ExecutionError -> Err(WasmException(it.error))
+                is ValidationError -> Err(WasmException(it.error))
             }
         }
     )

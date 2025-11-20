@@ -217,7 +217,7 @@ fun PreferenceSingleChoiceItem(
 }
 
 @Composable
-internal fun PreferenceItemTitle(
+fun PreferenceItemTitle(
     modifier: Modifier = Modifier,
     text: String,
     maxLines: Int = 2,
@@ -237,7 +237,7 @@ internal fun PreferenceItemTitle(
 }
 
 @Composable
-internal fun PreferenceItemDescription(
+fun PreferenceItemDescription(
     modifier: Modifier = Modifier,
     text: String,
     maxLines: Int = Int.MAX_VALUE,

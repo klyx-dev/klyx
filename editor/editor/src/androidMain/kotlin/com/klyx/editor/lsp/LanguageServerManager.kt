@@ -46,6 +46,30 @@ object LanguageServerManager {
         return counter.incrementAndGet()
     }
 
+    init {
+        EventBus.INSTANCE.subscribe<SettingsChangeEvent> { event ->
+            val oldConfigs = event.oldSettings.lsp
+            val newConfigs = event.newSettings.lsp
+
+            val changedLangs = newConfigs.keys.filter { lang ->
+                oldConfigs[lang] != newConfigs[lang]
+            }
+
+            for (lang in changedLangs) {
+                val newSettings = newConfigs[lang] ?: continue
+
+                val matchingClients = languageClients.filterKeys { (_, langId) ->
+                    langId == lang
+                }
+
+                for ((_, client) in matchingClients) {
+                    val jsonConfig = newSettings.toJson()
+                    client.changeWorkspaceConfiguration(jsonConfig)
+                }
+            }
+        }
+    }
+
     suspend fun tryConnectLspIfAvailable(
         worktree: Worktree,
         languageName: LanguageName,
@@ -77,14 +101,6 @@ object LanguageServerManager {
 
                 if (command != null) {
                     val client = LanguageServerClient(extension.logger)
-
-                    EventBus.INSTANCE.subscribe<SettingsChangeEvent> {
-                        if (it.oldSettings.lsp != it.newSettings.lsp) {
-                            it.newSettings.lsp[languageServerId]?.toJson()?.let { configuration ->
-                                client.changeWorkspaceConfiguration(configuration)
-                            }
-                        }
-                    }
 
                     client.initialize(command, worktree, options).onSuccess {
                         languageClients[key] = client

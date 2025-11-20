@@ -72,17 +72,3 @@ object SettingsManager {
         save()
     }
 }
-
-@OptIn(ExperimentalTypeInference::class)
-@JvmName("updateSettings")
-inline fun <Settings : KlyxSettings> Settings.update(
-    @BuilderInference
-    crossinline function: (Settings) -> Settings
-) {
-    SettingsManager.updateSettings {
-        when (val settings = function(this)) {
-            is AppSettings -> settings
-            is EditorSettings -> it.copy(editor = settings)
-        }
-    }
-}

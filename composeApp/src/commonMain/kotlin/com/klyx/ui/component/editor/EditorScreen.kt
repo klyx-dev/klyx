@@ -258,9 +258,6 @@ fun EditorScreen(modifier: Modifier = Modifier) {
                                         .padding(bottom = 12.dp, start = 12.dp, end = 12.dp),
                                     draggable = true,
                                     onLogClick = klyxViewModel::showLogViewer,
-                                    onLanguageClick = { },
-                                    onPositionClick = { },
-                                    onSettingsClick = { }
                                 )
                             }
                         }

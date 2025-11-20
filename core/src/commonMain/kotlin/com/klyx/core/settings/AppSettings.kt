@@ -83,6 +83,9 @@ data class AppSettings(
     @SerialComment("Whether to show terminal tab option or not in the menu.")
     val terminalTab: Boolean = false,
 
+    @SerialComment("Status bar settings")
+    val statusBar: StatusBarSettings = StatusBarSettings(),
+
     @SerialComment("Different settings for specific languages.")
     val languages: Map<String, JsonObject> = emptyMap(),
 

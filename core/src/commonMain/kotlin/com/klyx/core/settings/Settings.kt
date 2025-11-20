@@ -11,6 +11,10 @@ val LocalEditorSettings = compositionLocalWithComputedDefaultOf {
     LocalAppSettings.currentValue.editor
 }
 
+val LocalStatusBarSettings = compositionLocalWithComputedDefaultOf {
+    LocalAppSettings.currentValue.statusBar
+}
+
 inline val currentAppSettings: AppSettings
     @Composable
     @ReadOnlyComposable

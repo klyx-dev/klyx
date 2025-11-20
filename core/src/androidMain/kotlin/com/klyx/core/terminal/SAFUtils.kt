@@ -8,9 +8,12 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
 
+@Suppress("UnreachableCode")
 object SAFUtils : KoinComponent {
     private val context: Context by inject()
-    private val userHomeDir get() = with(context) { com.klyx.core.terminal.userHomeDir }
+    private val userHomeDir by lazy {
+        with(context) { com.klyx.core.terminal.userHomeDir }
+    }
 
     const val ROOT_ID = "klyx_terminal_home"
     const val ROOT_DOCUMENT_ID = "klyx_terminal_home_root"

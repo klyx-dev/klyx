@@ -1,11 +1,9 @@
 package com.klyx.ui.page.main
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.waterfall
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
@@ -45,7 +43,6 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.LocalLogBuffer
-import com.klyx.openIfClosed
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.isPermissionRequired
@@ -57,7 +54,12 @@ import com.klyx.core.theme.ThemeManager
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
+import com.klyx.editor.ComposeEditorState
+import com.klyx.editor.CursorState
+import com.klyx.editor.ExperimentalCodeEditorApi
+import com.klyx.editor.SoraEditorState
 import com.klyx.extension.api.Worktree
+import com.klyx.openIfClosed
 import com.klyx.tab.FileTab
 import com.klyx.ui.component.ThemeSelector
 import com.klyx.ui.component.cmd.CommandPalette
@@ -66,9 +68,10 @@ import com.klyx.ui.component.log.LogViewerSheet
 import com.klyx.viewmodel.openLogViewer
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalCodeEditorApi::class)
 @Composable
 fun MainPage(modifier: Modifier = Modifier) {
     val editorViewModel = LocalEditorViewModel.current
@@ -201,14 +204,34 @@ fun MainPage(modifier: Modifier = Modifier) {
             LaunchedEffect(activeTab?.id) {
                 when (val tab = activeTab) {
                     is FileTab -> {
-//                        tab.editorState.cursor.collectLatest { cursorState ->
-//                            statusBarViewModel.setCursorState(cursorState)
-//                        }
+                        when (val state = tab.editorState) {
+                            is ComposeEditorState -> {
+                                with(state.state) {
+                                    cursor.collectLatest { cursor ->
+                                        statusBarViewModel.setCursorState(cursor.let {
+                                            CursorState(
+                                                left = if (selection.collapsed) it.line else selection.min,
+                                                right = if (selection.collapsed) it.line else selection.max,
+                                                leftLine = if (selection.collapsed) it.line else cursorAt(selection.min).line,
+                                                rightLine = if (selection.collapsed) it.line else cursorAt(selection.max).line,
+                                                leftColumn = if (selection.collapsed) it.column else cursorAt(selection.min).column,
+                                                rightColumn = if (selection.collapsed) it.column else cursorAt(selection.max).column,
+                                                isSelected = !selection.collapsed
+                                            )
+                                        })
+                                    }
+                                }
+                            }
+
+                            is SoraEditorState -> {
+                                state.state.cursor.collectLatest { cursorState ->
+                                    statusBarViewModel.setCursorState(cursorState)
+                                }
+                            }
+                        }
                     }
 
-                    else -> {
-                        statusBarViewModel.setCursorState(null)
-                    }
+                    else -> {}
                 }
             }
 

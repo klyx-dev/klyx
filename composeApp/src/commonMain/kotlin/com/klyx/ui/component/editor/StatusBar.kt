@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -25,14 +27,20 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.outlined.Tune
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.ripple
@@ -49,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -58,12 +67,19 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.logging.color
+import com.klyx.core.settings.LocalStatusBarSettings
+import com.klyx.core.settings.StatusBarSettings
+import com.klyx.core.settings.update
+import com.klyx.core.theme.applyOpacity
+import com.klyx.core.ui.component.PreferenceItemDescription
+import com.klyx.core.ui.component.PreferenceItemTitle
+import com.klyx.core.ui.component.rememberThumbContent
 import com.klyx.di.LocalStatusBarViewModel
 import com.klyx.editor.ExperimentalCodeEditorApi
-import com.klyx.viewmodel.LspState
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun StatusBar(
     modifier: Modifier = Modifier,
@@ -72,9 +88,9 @@ fun StatusBar(
     onLogClick: (() -> Unit)? = null,
     onLanguageClick: (() -> Unit)? = null,
     onPositionClick: (() -> Unit)? = null,
-    onSettingsClick: (() -> Unit)? = null,
 ) {
     val viewModel = LocalStatusBarViewModel.current
+    val settings = LocalStatusBarSettings.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val logState by viewModel.currentLogState.collectAsStateWithLifecycle()
 
@@ -84,6 +100,8 @@ fun StatusBar(
 
     var offset by remember { mutableStateOf(Offset(0f, 0f)) }
     val dragEnabled by rememberUpdatedState(draggable)
+
+    var showSettings by remember { mutableStateOf(false) }
 
     Box(
         modifier = modifier
@@ -119,55 +137,26 @@ fun StatusBar(
                     modifier = Modifier.weight(1f, fill = true),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val lspLabel: String?
-                    val lspColor: Color?
+                    val showErrCnt = settings.showErrorCount && state.errorCount > 0
+                    val showWarnCnt = settings.showWarningCount && state.warningCount > 0
 
-                    when (state.lspState) {
-                        LspState.Idle -> {
-                            lspLabel = null
-                            lspColor = null
-                        }
-
-                        LspState.Indexing -> {
-                            lspLabel = "Indexing…"
-                            lspColor = MaterialTheme.colorScheme.tertiary
-                        }
-
-                        LspState.Ready -> {
-                            lspLabel = "LSP: Ready"
-                            lspColor = MaterialTheme.colorScheme.secondary
-                        }
-
-                        LspState.Error -> {
-                            lspLabel = "LSP error"
-                            lspColor = MaterialTheme.colorScheme.error
-                        }
-                    }
-
-                    if (lspLabel != null) {
-                        Seg(
-                            text = lspLabel,
-                            accent = lspColor,
-                        )
-                        Divider()
-                    }
-
-                    if (state.errorCount > 0) {
+                    if (showErrCnt) {
                         Seg(
                             text = " ${state.errorCount}",
                             accent = MaterialTheme.colorScheme.error
                         )
                     }
 
-                    if (state.warningCount > 0) {
-                        if (state.errorCount > 0) Divider()
+                    if (showWarnCnt) {
+                        if (showErrCnt) Divider()
+
                         Seg(
                             text = " ${state.warningCount}",
                             accent = MaterialTheme.colorScheme.tertiary
                         )
                     }
 
-                    if (state.errorCount > 0 || state.warningCount > 0) {
+                    if (showErrCnt || showWarnCnt) {
                         Divider()
                     }
 
@@ -219,66 +208,83 @@ fun StatusBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    val cursorState = state.cursorState
+                    if (settings.showCursorPosition) {
+                        val cursorState = state.cursorState
 
-                    cursorState?.let { cursor ->
-                        val positionText by remember(state) {
-                            derivedStateOf {
-                                with(cursor) {
-                                    val (line, column) = leftLine to leftColumn
+                        cursorState?.let { cursor ->
+                            val positionText by remember(state) {
+                                derivedStateOf {
+                                    with(cursor) {
+                                        val (line, column) = leftLine to leftColumn
 
-                                    buildString {
-                                        append("${line + 1}:$column")
+                                        buildString {
+                                            append("${line + 1}:$column")
 
-                                        if (isSelected) {
-                                            append(" (")
-                                            val lines = (rightLine - leftLine).absoluteValue
-                                            if (lines > 0) {
-                                                append("${lines + 1} lines, ")
+                                            if (isSelected) {
+                                                append(" (")
+                                                val lines = (rightLine - leftLine).absoluteValue
+                                                if (lines > 0) {
+                                                    append("${lines + 1} lines, ")
+                                                }
+                                                val chars = right - left
+                                                append("$chars character${if (chars > 1) "s" else ""}")
+                                                append(")")
                                             }
-                                            val chars = right - left
-                                            append("$chars character${if (chars > 1) "s" else ""}")
-                                            append(")")
                                         }
                                     }
                                 }
                             }
+
+                            Divider()
+
+                            Seg(
+                                text = positionText,
+                                onClick = onPositionClick
+                            )
                         }
-
-                        Seg(
-                            text = positionText,
-                            onClick = onPositionClick
-                        )
-
-                        Divider()
                     }
 
-                    if (state.readOnly) {
+                    if (settings.showReadOnly && state.readOnly) {
+                        Divider()
+
                         Seg(
-                            text = "RO",
+                            text = "Read only",
                             accent = MaterialTheme.colorScheme.error.copy(alpha = 0.9f)
                         )
                     }
-//
-//                    Divider()
-//
-//                    Seg(
-//                        text = "${state.encoding} · ${state.lineEndings}",
-//                    )
-//
-                    Divider()
 
-                    state.language?.let { language ->
+                    if (settings.showEncoding || settings.showLineEndings) {
+                        Divider()
+
                         Seg(
-                            text = language,
-                            onClick = onLanguageClick
+                            text = buildString {
+                                if (settings.showEncoding) append(state.encoding)
+
+                                if (settings.showLineEndings) {
+                                    if (settings.showEncoding) append(" · ")
+
+                                    append(state.lineEndings)
+                                }
+                            },
                         )
+                    }
+
+                    if (settings.showLanguageName) {
+                        Divider()
+
+                        state.language?.let { language ->
+                            Seg(
+                                text = language,
+                                onClick = onLanguageClick
+                            )
+                        }
                     }
 
                     Divider()
 
                     IconButton(
-                        onClick = { onSettingsClick?.invoke() },
+                        onClick = { showSettings = !showSettings },
+                        shapes = IconButtonDefaults.shapes(),
                         modifier = Modifier.size(22.dp)
                     ) {
                         Icon(
@@ -290,6 +296,141 @@ fun StatusBar(
                     }
                 }
             }
+        }
+    }
+
+    if (showSettings) {
+        SettingsSheet(
+            settings = settings,
+            onDismissRequest = { showSettings = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsSheet(
+    settings: StatusBarSettings,
+    onDismissRequest: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest
+    ) {
+        SettingSwitch(
+            title = "Language",
+            description = "Show language name",
+            checked = settings.showLanguageName,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showLanguageName = checked) }
+            }
+        )
+
+        SettingSwitch(
+            title = "Encoding",
+            description = "Show encoding",
+            checked = settings.showEncoding,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showEncoding = checked) }
+            }
+        )
+
+        SettingSwitch(
+            title = "Line endings",
+            description = "Show line endings",
+            checked = settings.showLineEndings,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showLineEndings = checked) }
+            }
+        )
+
+        SettingSwitch(
+            title = "Read only",
+            description = "Show read only status",
+            checked = settings.showReadOnly,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showReadOnly = checked) }
+            }
+        )
+
+        SettingSwitch(
+            title = "Cursor position",
+            description = "Show cursor position",
+            checked = settings.showCursorPosition,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showCursorPosition = checked) }
+            }
+        )
+
+        SettingSwitch(
+            title = "Error count",
+            description = "Show error count",
+            checked = settings.showErrorCount,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showErrorCount = checked) }
+            }
+        )
+
+        SettingSwitch(
+            title = "Warning count",
+            description = "Show warning count",
+            checked = settings.showWarningCount,
+            onCheckedChange = { checked ->
+                settings.update { it.copy(showWarningCount = checked) }
+            }
+        )
+    }
+}
+
+@Composable
+private fun SettingSwitch(
+    title: String,
+    description: String? = null,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+    checked: Boolean = true,
+    thumbContent: (@Composable () -> Unit)? = rememberThumbContent(isChecked = checked),
+    onCheckedChange: (Boolean) -> Unit = {},
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
+    Box(
+        modifier = Modifier.toggleable(
+            value = checked,
+            enabled = enabled,
+            onValueChange = onCheckedChange,
+            indication = LocalIndication.current,
+            interactionSource = interactionSource,
+        )
+    ) {
+        Row(
+            modifier =
+                Modifier.fillMaxWidth()
+                    .padding(8.dp, 12.dp)
+                    .padding(start = if (icon == null) 12.dp else 0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            icon?.let {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.padding(start = 8.dp, end = 16.dp).size(24.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.applyOpacity(enabled),
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                PreferenceItemTitle(text = title, enabled = enabled)
+                if (!description.isNullOrEmpty()) PreferenceItemDescription(text = description, enabled = enabled)
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                interactionSource = interactionSource,
+                modifier = Modifier.padding(start = 20.dp, end = 6.dp),
+                enabled = enabled,
+                thumbContent = thumbContent,
+            )
         }
     }
 }
