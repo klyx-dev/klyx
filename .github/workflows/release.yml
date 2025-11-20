@@ -5,6 +5,7 @@ on:
     tags:
       - 'v*.*.*'
       - 'v*.*.*-*'
+  workflow_dispatch:
 
 env:
   GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
@@ -120,7 +121,7 @@ jobs:
           get_commits() {
             local pattern="$1"
             git log --pretty=format:"%h%x1f%s" "${PREVIOUS_TAG}..${CURRENT_TAG}" \
-              | grep -iE "$pattern" \
+              | { grep -iE "$pattern" || true; } \
               | while IFS=$'\x1f' read -r hash subject; do
                   subject="$(echo "$subject" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')" # trim
                   echo "* $subject ($hash)"
@@ -130,22 +131,22 @@ jobs:
           exclude_patterns="feat|add|implement|new|feature|fix|bug|issue|error|correct|repair|resolve|docs|readme|doc|perf|optimi|speed|benchmark|refactor|cleanup|rewrite|restructure|reorganize|chore|build|ci|deps|dependency|config"
           
           FEATURES=$(get_commits "feat|add|implement|new|feature")
-          [ ! -z "$FEATURES" ] && CHANGELOG+="### Features\n$FEATURES\n\n"
+          [ -n "$FEATURES" ] && CHANGELOG+="### Features\n$FEATURES\n\n"
           
           FIXES=$(get_commits "fix|bug|issue|error|correct|repair|resolve")
-          [ ! -z "$FIXES" ] && CHANGELOG+="### Fixes\n$FIXES\n\n"
+          [ -n "$FIXES" ] && CHANGELOG+="### Fixes\n$FIXES\n\n"
           
           DOCS=$(get_commits "docs|readme|doc")
-          [ ! -z "$DOCS" ] && CHANGELOG+="### Documentation\n$DOCS\n\n"
+          [ -n "$DOCS" ] && CHANGELOG+="### Documentation\n$DOCS\n\n"
           
           PERF=$(get_commits "perf|optimi|speed|benchmark")
-          [ ! -z "$PERF" ] && CHANGELOG+="### Performance\n$PERF\n\n"
+          [ -n "$PERF" ] && CHANGELOG+="### Performance\n$PERF\n\n"
           
           REFACTOR=$(get_commits "refactor|cleanup|rewrite|restructure|reorganize")
-          [ ! -z "$REFACTOR" ] && CHANGELOG+="### Refactoring\n$REFACTOR\n\n"
+          [ -n "$REFACTOR" ] && CHANGELOG+="### Refactoring\n$REFACTOR\n\n"
           
           MAINT=$(get_commits "chore|build|ci|deps|dependency|config")
-          [ ! -z "$MAINT" ] && CHANGELOG+="### Maintenance\n$MAINT\n\n"
+          [ -n "$MAINT" ] && CHANGELOG+="### Maintenance\n$MAINT\n\n"
           
           OTHER=$(git log --pretty=format:"%h%x1f%s" "${PREVIOUS_TAG}..${CURRENT_TAG}" \
             | while IFS=$'\x1f' read -r hash subject; do
@@ -155,7 +156,7 @@ jobs:
                 fi
               done)
           
-          [ ! -z "$OTHER" ] && CHANGELOG+="### Other Changes\n$OTHER\n\n"
+          [ -n "$OTHER" ] && CHANGELOG+="### Other Changes\n$OTHER\n\n"
           
           CHANGELOG+="**Full Changelog:** $REPO_URL/compare/${PREVIOUS_TAG}...${CURRENT_TAG}"
           
