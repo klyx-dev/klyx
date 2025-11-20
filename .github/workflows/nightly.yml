@@ -22,7 +22,7 @@ jobs:
       version-name: ${{ steps.version-info.outputs.version-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0
@@ -103,7 +103,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Delete existing nightly release
         continue-on-error: true
