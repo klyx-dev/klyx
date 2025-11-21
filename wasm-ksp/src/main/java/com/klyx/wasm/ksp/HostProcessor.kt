@@ -80,6 +80,7 @@ class HostProcessor(
             imports += "com.klyx.wasm.HostModule"
             imports += "com.klyx.wasm.HostModuleScope"
             imports += "com.klyx.wasm.signature"
+            imports += "com.klyx.wasm.withMemory"
 
             for (fn in functions) {
                 if (fn.parameters.any {
@@ -195,7 +196,7 @@ class HostProcessor(
                 writer.appendLine(SPACE.repeat(12) + "name = \"$exportName\",")
                 writer.appendLine(SPACE.repeat(12) + "signature { $wasmParams returns $wasmReturns }")
                 writer.appendLine(SPACE.repeat(8) + ") {")
-                writer.appendLine(SPACE.repeat(12) + "with(memory) {")
+                writer.appendLine(SPACE.repeat(12) + "withMemory {")
 
                 if (hasExtensionReceiver) {
                     writer.appendLine(SPACE.repeat(16) + "with($name) {")

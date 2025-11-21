@@ -1,6 +1,9 @@
 package com.klyx.wasm
 
 import com.klyx.wasm.internal.InternalExperimentalWasmApi
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @Suppress("NOTHING_TO_INLINE")
 @ExperimentalWasmApi
@@ -30,3 +33,10 @@ class FunctionScope internal constructor(
     inline fun takeDouble() = take().asDouble()
 }
 
+@OptIn(ExperimentalWasmApi::class, ExperimentalContracts::class)
+inline fun <R> FunctionScope.withMemory(block: WasmMemory.() -> R): R {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    return memory.block()
+}

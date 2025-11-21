@@ -7,10 +7,15 @@ import arrow.core.toOption
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.klyx.core.Notifier
+import com.klyx.core.file.archive.extractGzip
+import com.klyx.core.file.archive.extractGzipTar
+import com.klyx.core.file.archive.extractZip
 import com.klyx.core.file.humanBytes
+import com.klyx.core.file.toKotlinxIoPath
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.settings.LspSettings
 import com.klyx.core.settings.SettingsManager
+import com.klyx.extension.api.DownloadedFileType
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.lsp.CommandSettings
 import com.klyx.extension.api.lsp.LanguageServerInstallationStatus
@@ -32,14 +37,14 @@ import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
 import com.klyx.wasm.type.wstr
 import kotlinx.coroutines.runBlocking
-import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import okio.FileSystem
 import okio.Path.Companion.toPath
+import okio.SYSTEM
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import com.klyx.wasm.type.Err as WasmErr
@@ -104,27 +109,76 @@ class Root(
     }
 
     @HostFunction
-    fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) = runBlocking {
+    @Deprecated("deprecated (available in `klyx_extension_api <= 1.3.4`)")
+    fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) {
+        downloadFile(url, path, DownloadedFileType.Uncompressed.value, resultPtr)
+    }
+
+    @HostFunction
+    fun WasmMemory.downloadFile(
+        url: String,
+        path: String,
+        downloadedFileTypeValue: Int,
+        resultPtr: Int
+    ) = runBlocking {
+        val fileType = DownloadedFileType.fromValue(downloadedFileTypeValue)
+        val extractTarget = path.toPath(normalize = true)
+
         val result = try {
-            Path(path).parent?.let { SystemFileSystem.createDirectories(it) }
+            FileSystem.SYSTEM.createDirectories(extractTarget.parent ?: extractTarget)
+
+            val tempArchive = when (fileType) {
+                DownloadedFileType.Uncompressed -> extractTarget
+                DownloadedFileType.GZip -> extractTarget.parent!! / (extractTarget.name + ".tmp.gz")
+                DownloadedFileType.GZipTar -> extractTarget.parent!! / (extractTarget.name + ".tmp.tar.gz")
+                DownloadedFileType.Zip -> extractTarget.parent!! / (extractTarget.name + ".tmp.zip")
+            }
+
+            // download to temporary file
             com.klyx.core.file.downloadFile(
                 url = url,
-                outputPath = path,
-                onDownload = { bytesSentTotal, contentLength ->
-                    val progress = if (contentLength == null) 0f else bytesSentTotal.toFloat() / contentLength
-
+                outputPath = tempArchive.toString(),
+                onDownload = { total, length ->
+                    val progress = if (length == null) 0f else total.toFloat() / length
                     logger.progress((progress * 100).toInt()) {
-                        "(${bytesSentTotal.humanBytes()} / ${contentLength?.humanBytes()}) Downloading $url"
+                        "(${total.humanBytes()} / ${length?.humanBytes()}) Downloading $url"
                     }
                 },
                 onComplete = {
-                    logger.info { "" }
+                    when (fileType) {
+
+                        DownloadedFileType.Uncompressed -> {
+                            // already downloaded directly to final location
+                        }
+
+                        DownloadedFileType.GZip -> {
+                            logger.info { "Extracting GZip → $extractTarget" }
+                            extractGzip(tempArchive.toKotlinxIoPath(), extractTarget.toKotlinxIoPath())
+                            FileSystem.SYSTEM.delete(tempArchive)
+                        }
+
+                        DownloadedFileType.GZipTar -> {
+                            logger.info { "Extracting Tar.GZ → $extractTarget" }
+                            FileSystem.SYSTEM.createDirectories(extractTarget)
+                            extractGzipTar(tempArchive.toKotlinxIoPath(), extractTarget.toKotlinxIoPath())
+                            FileSystem.SYSTEM.delete(tempArchive)
+                        }
+
+                        DownloadedFileType.Zip -> {
+                            logger.info { "Extracting Zip → $extractTarget" }
+                            FileSystem.SYSTEM.createDirectories(extractTarget)
+                            extractZip(tempArchive.toKotlinxIoPath(), extractTarget.toKotlinxIoPath())
+                            FileSystem.SYSTEM.delete(tempArchive)
+                        }
+                    }
                 }
             )
+
             WasmOk(WasmUnit)
         } catch (e: Exception) {
-            WasmErr("$e".wstr)
+            WasmErr(e.toString().wstr)
         }
+
         write(resultPtr, result.toBuffer())
     }
 

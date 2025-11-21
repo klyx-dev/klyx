@@ -49,9 +49,10 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
 
         viewModelScope.launch {
             try {
-                val remote = fetchAllExtensions()
                 val installed = ExtensionManager.installedExtensions.map { it.info }
+                _extensionListState.update { it.copy(installedExtensions = installed) }
 
+                val remote = fetchAllExtensions()
                 _extensionListState.update {
                     it.copy(
                         extensionInfos = remote,

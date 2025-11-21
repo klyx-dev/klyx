@@ -77,6 +77,9 @@ fun KxFile.okioSink() = sink().asOkioSink()
 fun okio.Path.toKxFile() = KxFile(toString())
 fun Path.toKxFile() = KxFile(toString())
 
+fun Path.toOkioPath() = this.toString().toPath(normalize = true)
+fun okio.Path.toKotlinxIoPath() = Path(this.toString())
+
 val KxFile.size get() = SystemFileSystem.metadataOrNull(this.toKotlinxIoPath())?.size
 
 expect fun KxFile.mimeType(): String?

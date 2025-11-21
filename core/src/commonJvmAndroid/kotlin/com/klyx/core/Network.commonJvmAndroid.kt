@@ -7,7 +7,7 @@ import kotlin.time.Duration.Companion.minutes
 
 actual val httpClient
     get() = HttpClient(CIO) {
-        val timeout = 30.minutes.inWholeMilliseconds
+        val timeout = 10.minutes.inWholeMilliseconds
 
         engine {
             requestTimeout = timeout
@@ -15,7 +15,7 @@ actual val httpClient
 
         install(HttpTimeout) {
             requestTimeoutMillis = timeout
-            connectTimeoutMillis = timeout
+            connectTimeoutMillis = 1.minutes.inWholeMilliseconds
             socketTimeoutMillis = timeout
         }
     }

@@ -11,6 +11,7 @@ import com.klyx.extension.internal.rootDir
 import com.klyx.extension.internal.userHomeDir
 import com.klyx.extension.modules.GitHubModule
 import com.klyx.extension.modules.HttpClientModule
+import com.klyx.extension.modules.PlatformModule
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.Root
 import com.klyx.extension.modules.RootModule
@@ -80,7 +81,8 @@ object ExtensionLoader {
                     SystemModule,
                     ProcessModule,
                     HttpClientModule,
-                    GitHubModule
+                    GitHubModule,
+                    PlatformModule
                 )
                 registerHostModule(*extraHostModules)
             }
