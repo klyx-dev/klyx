@@ -57,3 +57,6 @@ actual fun executeCommand(
 
 actual val userHomeDir: String?
     get() = TODO("Not yet implemented")
+
+actual val rootDir: String
+    get() = TODO("Not yet implemented")

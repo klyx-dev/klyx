@@ -37,3 +37,5 @@ actual fun executeCommand(
 
 actual val userHomeDir: String?
     get() = System.getProperty("user.home")
+
+actual val rootDir: String = "/"

@@ -3,10 +3,11 @@ package com.klyx.extension.internal
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import com.klyx.core.ContextHolder
+import com.klyx.core.terminal.sandboxDir
+import com.klyx.core.terminal.userHomeDir
+import com.klyx.core.withAndroidContext
 import com.klyx.terminal.localProcess
 import com.klyx.terminal.ubuntuProcess
-import com.klyx.core.terminal.userHomeDir
 import java.io.File
 
 actual fun makeFileExecutable(path: String): Result<Unit, String> {
@@ -33,62 +34,63 @@ actual fun makeFileExecutable(path: String): Result<Unit, String> {
     }
 }
 
-actual fun findBinary(binaryName: String): String? {
-    with(ContextHolder.context) {
-        val result = runCatching { ubuntuProcess("which", binaryName).executeBlocking() }.getOrNull()
-        return result?.output?.ifEmpty { null }
-    }
+actual fun findBinary(binaryName: String): String? = withAndroidContext {
+    val result = runCatching {
+        ubuntuProcess("which", binaryName).executeBlocking()
+    }.getOrNull()
+
+    result?.output?.ifEmpty { null }
 }
 
-actual fun getenv(name: String): String? {
-    with(ContextHolder.context) {
-        val result = runCatching { ubuntuProcess("printenv", name).executeBlocking() }.getOrNull()
-        return result?.output?.trim()?.ifEmpty { null }
-    }
+actual fun getenv(name: String): String? = withAndroidContext {
+    val result = runCatching {
+        ubuntuProcess("printenv", name).executeBlocking()
+    }.getOrNull()
+
+    result?.output?.trim()?.ifEmpty { null }
 }
 
-actual fun getenv(): Map<String, String> {
-    with(ContextHolder.context) {
-        val result = runCatching {
-            ubuntuProcess("printenv").executeBlocking()
-        }.getOrElse { return emptyMap() }
+actual fun getenv(): Map<String, String> = withAndroidContext {
+    val result = runCatching {
+        ubuntuProcess("printenv").executeBlocking()
+    }.getOrElse { return emptyMap() }
 
-        if (!result.success) return emptyMap()
+    if (!result.success) return emptyMap()
 
-        return result.output
-            .lineSequence()
-            .mapNotNull { line ->
-                val idx = line.indexOf('=')
-                if (idx == -1) null
-                else line.substring(0, idx) to line.substring(idx + 1)
-            }
-            .toMap()
-    }
+    result.output
+        .lineSequence()
+        .mapNotNull { line ->
+            val idx = line.indexOf('=')
+            if (idx == -1) null
+            else line.take(idx) to line.substring(idx + 1)
+        }
+        .toMap()
 }
 
 actual fun executeCommand(
     command: String,
     args: Array<String>,
     env: Map<String, String>
-): Output {
-    with(ContextHolder.context) {
-        val result = runCatching {
-            localProcess(command, *args) { env(env) }.executeBlocking()
-        }.getOrElse {
-            return Output(
-                status = -1,
-                stdout = it.message ?: "Unknown error",
-                stderr = it.message ?: "Unknown error"
-            )
-        }
-
+): Output = withAndroidContext {
+    val result = runCatching {
+        localProcess(command, *args) { env(env) }.executeBlocking()
+    }.getOrElse {
         return Output(
-            result.exitCode,
-            result.output,
-            result.error
+            status = -1,
+            stdout = it.message ?: "Unknown error",
+            stderr = it.message ?: "Unknown error"
         )
     }
+
+    return Output(
+        result.exitCode,
+        result.output,
+        result.error
+    )
 }
 
 actual val userHomeDir: String?
-    get() = with(ContextHolder.context) { userHomeDir?.absolutePath }
+    get() = withAndroidContext { userHomeDir?.absolutePath }
+
+actual val rootDir: String
+    get() = withAndroidContext { sandboxDir.absolutePath }

@@ -12,3 +12,4 @@ expect fun findBinary(binaryName: String): String?
 expect fun executeCommand(command: String, args: Array<String>, env: Map<String, String>): Output
 
 expect val userHomeDir: String?
+expect val rootDir: String

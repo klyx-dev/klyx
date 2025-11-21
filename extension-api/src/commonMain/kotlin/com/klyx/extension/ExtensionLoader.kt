@@ -6,6 +6,8 @@ import com.klyx.core.extension.Extension
 import com.klyx.core.file.source
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
+import com.klyx.extension.internal.getenv
+import com.klyx.extension.internal.rootDir
 import com.klyx.extension.internal.userHomeDir
 import com.klyx.extension.modules.GitHubModule
 import com.klyx.extension.modules.HttpClientModule
@@ -58,12 +60,16 @@ object ExtensionLoader {
 
                 withWasiPreview1 {
                     directory(home, home)
-                    workingDirectory(home)
 
                     userHomeDir?.let {
                         directory(it, it)
                         env("USER_HOME", it)
+                        env("HOME", it)
+                        env { putAll(getenv()) }
+                        workingDirectory(it)
                     }
+
+                    directory(rootDir, "/")
 
                     stdout(StdioSinkProvider { stdout })
                     stderr(StdioSinkProvider { stderr })

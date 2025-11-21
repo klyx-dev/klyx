@@ -63,6 +63,10 @@ class WasiScope @PublishedApi internal constructor(
 
     fun env(name: String, value: String) = apply { environment += name to value }
 
+    fun env(builderAction: MutableMap<String, String>.() -> Unit) = apply {
+        environment += buildMap(builderAction)
+    }
+
     @PublishedApi
     internal fun build() = ChasmWasiPreview1Builder(store) {
         host = EmbedderHost {
