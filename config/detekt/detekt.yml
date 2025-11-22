@@ -840,7 +840,7 @@ style:
   UseLet:
     active: false
   UseOrEmpty:
-    active: true
+    active: false
     excludes:
       - '**/editor/sora/**'
   UseRequire:
