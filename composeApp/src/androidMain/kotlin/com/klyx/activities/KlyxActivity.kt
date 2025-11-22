@@ -1,6 +1,7 @@
 package com.klyx.activities
 
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.view.Surface
 import androidx.activity.ComponentActivity
@@ -38,6 +39,13 @@ abstract class KlyxActivity : ComponentActivity() {
     abstract fun Content()
 
     private fun hideSystemBarsOnLandscape() {
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            this.display
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay
+        }
+
         when (display.rotation) {
             Surface.ROTATION_90, Surface.ROTATION_270 -> {
                 WindowInsetsControllerCompat(window, window.decorView).apply {
