@@ -27,7 +27,7 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 - [x] Custom User Sessions
 - [x] Language Server Extensions
 - [ ] Find & Replace
-- [ ] Undo/Redo
+- [X] Undo/Redo
 - [ ] Hover Information
 - [ ] Go to Definition
 - [x] Document Formatting
