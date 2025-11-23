@@ -111,6 +111,10 @@ class HostProcessor(
                 if (fn.returnType != null) {
                     imports += "com.klyx.wasm.toWasmValue"
                 }
+
+                if (fn.isSuspend()) {
+                    imports += "kotlinx.coroutines.runBlocking"
+                }
             }
 
             writer.appendLine(imports.sorted().joinToString("\n") { "import $it" })
@@ -204,21 +208,43 @@ class HostProcessor(
 
                 val extraSpace = if (hasExtensionReceiver) SPACE.repeat(4) else ""
 
-                writer.appendLine(
-                    extraSpace + SPACE.repeat(16) + if (hasReturnType) "val $returnVarName = $fnCall" else fnCall
-                )
+                writer.append(
+                    buildString {
+                        append(extraSpace)
+                        append(SPACE.repeat(16))
 
-                writer.appendLine(
-                    extraSpace + SPACE.repeat(16) + if (hasReturnType) {
-                        generateReturnValue(
-                            resolver = resolver,
-                            fn = fn,
-                            returnVarName = returnVarName
-                        )
-                    } else {
-                        "emptyList()"
+                        if (hasReturnType) {
+                            append("val $returnVarName = ")
+                        }
+
+                        if (fn.isSuspend()) {
+                            appendLine("runBlocking {")
+                            append(extraSpace + SPACE.repeat(20))
+                        }
+
+                        if (fn.isDeprecated()) {
+                            appendLine("@Suppress(\"DEPRECATION\")")
+                            append(extraSpace + SPACE.repeat(20))
+                        }
+
+                        appendLine(fnCall)
+
+                        if (fn.isSuspend()) {
+                            append(extraSpace + SPACE.repeat(16))
+                            appendLine("}")
+                        }
                     }
                 )
+
+                writer.append(buildString {
+                    append(extraSpace + SPACE.repeat(16))
+
+                    if (hasReturnType) {
+                        appendLine(generateReturnValue(resolver, fn, returnVarName))
+                    } else {
+                        appendLine("emptyList()")
+                    }
+                })
 
                 if (hasExtensionReceiver) {
                     writer.appendLine(SPACE.repeat(16) + "}")
@@ -346,7 +372,7 @@ class HostProcessor(
         if (qualifiedName == "kotlin.String") {
             return """
                 val (ptr, len) = memory.allocateAndWrite($returnVarName.toUtf8ByteArray())
-                ${SPACE.repeat(16)}listOf(ptr.toWasmValue(), len.toWasmValue())
+                ${SPACE.repeat(if (fn.extensionReceiver?.resolve() != null) 20 else 16)}listOf(ptr.toWasmValue(), len.toWasmValue())
             """.trimIndent()
         }
 
@@ -413,5 +439,15 @@ class HostProcessor(
         return this.replace("\\", "\\\\")
             .replace("\"", "\\\"")
             .replace("$", "\\$")
+    }
+
+    private fun KSFunctionDeclaration.isSuspend(): Boolean {
+        return Modifier.SUSPEND in modifiers
+    }
+
+    private fun KSFunctionDeclaration.isDeprecated(): Boolean {
+        return annotations.any {
+            it.annotationType.resolve().declaration.qualifiedName?.asString() == "kotlin.Deprecated"
+        }
     }
 }

@@ -36,7 +36,6 @@ import com.klyx.wasm.type.collections.toWasmList
 import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
 import com.klyx.wasm.type.wstr
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
@@ -110,17 +109,17 @@ class Root(
 
     @HostFunction
     @Deprecated("deprecated (available in `klyx_extension_api <= 1.3.4`)")
-    fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) {
+    suspend fun WasmMemory.downloadFile(url: String, path: String, resultPtr: Int) {
         downloadFile(url, path, DownloadedFileType.Uncompressed.value, resultPtr)
     }
 
     @HostFunction
-    fun WasmMemory.downloadFile(
+    suspend fun WasmMemory.downloadFile(
         url: String,
         path: String,
         downloadedFileTypeValue: Int,
         resultPtr: Int
-    ) = runBlocking {
+    ) {
         val fileType = DownloadedFileType.fromValue(downloadedFileTypeValue)
         val extractTarget = path.toPath(normalize = true)
 
@@ -183,7 +182,7 @@ class Root(
     }
 
     @HostFunction
-    fun WasmMemory.unzipFile(zipPath: String, destPath: String, resultPtr: Int) = runBlocking {
+    suspend fun WasmMemory.unzipFile(zipPath: String, destPath: String, resultPtr: Int) {
         val result = try {
             com.klyx.core.file.unzip(zipPath.toPath(), destPath.toPath())
             WasmOk(WasmUnit)
