@@ -88,14 +88,14 @@ class Root(
     }
 
     @HostFunction("[method]worktree.which")
-    fun WasmMemory.worktreeWhich(ptr: Int, binaryName: String, retPtr: Int) {
+    suspend fun WasmMemory.worktreeWhich(ptr: Int, binaryName: String, retPtr: Int) {
         val worktree = ptr.asPointer().value<Worktree>()
         val result = worktree.which(binaryName).toWasmOption()
         write(retPtr, result.toBuffer())
     }
 
     @HostFunction("[method]worktree.shell-env")
-    fun WasmMemory.worktreeShellEnv(ptr: Int, retPtr: Int) {
+    suspend fun WasmMemory.worktreeShellEnv(ptr: Int, retPtr: Int) {
         val worktree = ptr.asPointer().value<Worktree>()
         val envVars = worktree.shellEnv().toWasmList()
         write(retPtr, envVars.toBuffer())

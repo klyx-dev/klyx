@@ -3,9 +3,8 @@ package com.klyx.extension.internal
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
-import com.klyx.core.terminal.localProcess
+import com.klyx.core.process.systemProcess
 import com.klyx.core.terminal.sandboxDir
-import com.klyx.core.terminal.ubuntuProcess
 import com.klyx.core.terminal.userHomeDir
 import com.klyx.core.withAndroidContext
 import java.io.File
@@ -34,60 +33,21 @@ actual fun makeFileExecutable(path: String): Result<Unit, String> {
     }
 }
 
-actual fun findBinary(binaryName: String): String? = withAndroidContext {
-    val result = runCatching {
-        ubuntuProcess("which", binaryName).executeBlocking()
-    }.getOrNull()
+actual suspend fun getenv(name: String): String? = systemProcess(arrayOf("printenv", name))
+    .output()
+    .stdout
+    .ifBlank { null }
 
-    result?.output?.ifEmpty { null }
-}
-
-actual fun getenv(name: String): String? = withAndroidContext {
-    val result = runCatching {
-        ubuntuProcess("printenv", name).executeBlocking()
-    }.getOrNull()
-
-    result?.output?.trim()?.ifEmpty { null }
-}
-
-actual fun getenv(): Map<String, String> = withAndroidContext {
-    val result = runCatching {
-        ubuntuProcess("printenv").executeBlocking()
-    }.getOrElse { return emptyMap() }
-
-    if (!result.success) return emptyMap()
-
-    result.output
-        .lineSequence()
-        .mapNotNull { line ->
-            val idx = line.indexOf('=')
-            if (idx == -1) null
-            else line.take(idx) to line.substring(idx + 1)
-        }
-        .toMap()
-}
-
-actual fun executeCommand(
-    command: String,
-    args: Array<String>,
-    env: Map<String, String>
-): Output = withAndroidContext {
-    val result = runCatching {
-        localProcess(command, *args) { env(env) }.executeBlocking()
-    }.getOrElse {
-        return Output(
-            status = -1,
-            stdout = it.message ?: "Unknown error",
-            stderr = it.message ?: "Unknown error"
-        )
+actual suspend fun getenv(): Map<String, String> = systemProcess(arrayOf("printenv"))
+    .output()
+    .stdout
+    .lineSequence()
+    .mapNotNull { line ->
+        val idx = line.indexOf('=')
+        if (idx == -1) null
+        else line.take(idx) to line.substring(idx + 1)
     }
-
-    return Output(
-        result.exitCode,
-        result.output,
-        result.error
-    )
-}
+    .toMap()
 
 actual val userHomeDir: String?
     get() = withAndroidContext { userHomeDir?.absolutePath }

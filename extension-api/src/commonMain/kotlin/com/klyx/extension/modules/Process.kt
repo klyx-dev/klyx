@@ -17,14 +17,13 @@ import com.klyx.wasm.type.str
 import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.tuple2
 import com.klyx.wasm.type.wstr
-import kotlinx.coroutines.runBlocking
 import org.koin.core.component.KoinComponent
 
 @Suppress("FunctionName")
 @HostModule("klyx:extension/process")
 object Process : KoinComponent {
     @HostFunction
-    fun runCommand(
+    suspend fun runCommand(
         memory: WasmMemory,
         command: String,
         argsPtr: Int,
@@ -45,15 +44,15 @@ object Process : KoinComponent {
         }
     }
 
-    private fun WasmMemory.internal_runCommand(
+    private suspend fun WasmMemory.internal_runCommand(
         command: String,
         args: list<str>,
         env: list<tuple2<str, str>>
-    ): Result<Output, str> = runBlocking {
-        val args = args.map { it.value }.toTypedArray()
+    ): Result<Output, str> {
+        val args = args.map { it.value }
         val env = env.associate { (k, v) -> k.value to v.value }
 
-        try {
+        return try {
             val output = executeCommand(command, args, env)
             Ok(output.toWasmOutput())
         } catch (e: Exception) {

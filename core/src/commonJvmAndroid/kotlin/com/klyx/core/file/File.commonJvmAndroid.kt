@@ -20,3 +20,8 @@ actual fun ByteArray.isValidUtf8(): Boolean {
 }
 
 fun File.toKotlinxIoPath() = Path(absolutePath)
+
+fun File.createDirIfNotExist(): File {
+    if (!exists()) mkdirs()
+    return this
+}

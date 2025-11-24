@@ -56,6 +56,8 @@ object ExtensionLoader {
         val stderr = Buffer()
 
         val instance = withContext(Dispatchers.Default) {
+            val systemEnvs = getenv()
+
             wasm {
                 module { bytes(wasmBytes) }
 
@@ -66,7 +68,7 @@ object ExtensionLoader {
                         directory(it, it)
                         env("USER_HOME", it)
                         env("HOME", it)
-                        env { putAll(getenv()) }
+                        env { putAll(systemEnvs) }
                         workingDirectory(it)
                     }
 

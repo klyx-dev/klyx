@@ -19,21 +19,8 @@ actual fun makeFileExecutable(path: String): Result<Unit, String> {
     }
 }
 
-actual fun findBinary(binaryName: String): String? {
-    return null
-}
-
-actual fun getenv(name: String): String? = System.getenv(name)
-
-actual fun getenv(): Map<String, String> = System.getenv()
-
-actual fun executeCommand(
-    command: String,
-    args: Array<String>,
-    env: Map<String, String>
-): Output {
-    TODO("Not yet implemented")
-}
+actual suspend fun getenv(name: String): String? = System.getenv(name)
+actual suspend fun getenv(): Map<String, String> = System.getenv()
 
 actual val userHomeDir: String?
     get() = System.getProperty("user.home")

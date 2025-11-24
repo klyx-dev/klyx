@@ -7,12 +7,12 @@ import androidx.compose.runtime.setValue
 import com.klyx.BuildConfig
 import com.klyx.activities.TerminalActivity
 import com.klyx.core.generateId
+import com.klyx.core.process.linker
 import com.klyx.core.terminal.SetupNextStage
 import com.klyx.core.terminal.klyxBinDir
 import com.klyx.core.terminal.klyxCacheDir
 import com.klyx.core.terminal.klyxFilesDir
 import com.klyx.core.terminal.klyxLibDir
-import com.klyx.core.terminal.linker
 import com.klyx.core.terminal.localDir
 import com.klyx.core.terminal.sandboxDir
 import com.klyx.core.terminal.userHomeDir

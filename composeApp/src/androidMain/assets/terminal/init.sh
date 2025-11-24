@@ -32,7 +32,11 @@ if ! id -u "$USER" >/dev/null 2>&1; then
     echo "$USER ALL=(ALL:ALL) ALL" >> /etc/sudoers
 fi
 
+# shellcheck disable=SC2164
 cd "$WKDIR" || cd "$HOME"
+
+declare -px > /etc/profile.d/klyxenv.sh
+chmod +x /etc/profile.d/klyxenv.sh
 
 if [ "$PENDING_CMD" = false ]; then
     exec su - "$USER" -l

@@ -6,13 +6,15 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.mapError
 import com.github.michaelbull.result.runCatching
 import com.klyx.core.Notifier
-import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
-import com.klyx.core.terminal.ubuntuProcess
+import com.klyx.core.process.InternalProcessApi
+import com.klyx.core.process.Signal
+import com.klyx.core.process.systemProcess
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.internal.Command
+import io.matthewnelson.kmp.process.changeDir
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -66,6 +68,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.io.File
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 
@@ -92,6 +95,7 @@ class LanguageServerClient(
         notifier.toast(params.message)
     }
 
+    @OptIn(InternalProcessApi::class)
     suspend fun initialize(
         serverCommand: Command,
         worktree: Worktree,
@@ -100,8 +104,21 @@ class LanguageServerClient(
         try {
             with(context) {
                 val (cmd, args, env) = serverCommand
-                val builder = ubuntuProcess(cmd, *args.toTypedArray()) { env { putAll(env) } }
-                process = builder.asJavaProcessBuilder().start()
+                val builder = systemProcess(cmd) {
+                    args(args)
+                    environment { putAll(env) }
+                    changeDir(File(worktree.rootFile.absolutePath))
+                    destroySignal(Signal.SIGKILL)
+                }.spawn().raw.let { p ->
+                    ProcessBuilder(p.command, *p.args.toTypedArray()).apply {
+                        environment().putAll(p.environment)
+                        p.cwd?.let { dir -> directory(dir) }
+                    }.also {
+                        p.destroy()
+                    }
+                }
+
+                process = builder.start()
 
                 mainScope.launch {
                     withContext(Dispatchers.IO) {

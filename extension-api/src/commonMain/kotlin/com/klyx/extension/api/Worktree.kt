@@ -43,7 +43,7 @@ class Worktree(val id: ULong, val rootFile: KxFile) {
     /**
      * Returns the path to the given binary name, if one is present on the `$PATH`.
      */
-    fun which(binaryName: String): Option<String> {
+    suspend fun which(binaryName: String): Option<String> {
         val path = findBinary(binaryName)
         return path.toOption()
     }
@@ -51,7 +51,7 @@ class Worktree(val id: ULong, val rootFile: KxFile) {
     /**
      * Returns the current shell environment.
      */
-    fun shellEnv(): List<Pair<String, String>> {
+    suspend fun shellEnv(): List<Pair<String, String>> {
         return getenv().map { (key, value) -> key to value }
     }
 

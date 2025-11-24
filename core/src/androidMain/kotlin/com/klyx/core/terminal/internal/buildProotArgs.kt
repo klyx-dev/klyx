@@ -2,98 +2,55 @@ package com.klyx.core.terminal.internal
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.system.ErrnoException
-import android.system.Os
-import android.system.OsConstants
-import com.klyx.core.logging.logger
-import com.klyx.core.terminal.klyxBinDir
 import com.klyx.core.terminal.klyxFilesDir
 import com.klyx.core.terminal.sandboxDir
-import com.klyx.core.terminal.sandboxHomeDir
 import java.io.File
 
-private val logger = logger("Terminal")
-
-@SuppressLint("SdCardPath", "SetWorldWritable", "SetWorldReadable")
-context(context: Context)
+@SuppressLint("SdCardPath")
+context(ctx: Context)
 fun buildProotArgs(
-    user: String?,
-    withInitScript: Boolean = true,
+    user: String? = null,
     loginUser: Boolean = true,
-    vararg commands: String = emptyArray()
-) = run {
-    val home = File(sandboxHomeDir, user.orEmpty())
+    commands: List<String> = emptyList()
+): List<String> {
 
-    val args = mutableListOf(
-        "--kill-on-exit", "-w",
-        if (home.exists()) home.relativeToOrSelf(sandboxDir).absolutePath else "/"
-    )
-
-    val bind = { source: String, target: String? ->
-        args += listOf(
-            "-b",
-            if (target != null) "$source:$target" else source
-        )
-    }
-
-    val pathsToCheck = listOf(
-        "/apex", "/odm", "/product", "/system_ext", "/vendor",
-        "/sdcard", "/storage", "/dev", "/data", "/proc"
-    )
-
-    for (path in pathsToCheck) {
-        val file = File(path)
-        if (file.exists()) {
-            val canAccess = try {
-                Os.access(file.absolutePath, OsConstants.R_OK)
-            } catch (error: ErrnoException) {
-                if (error.errno == OsConstants.EACCES) {
-                    logger.debug { "Cannot access $path (Permission denied)" }
-                }
-                false
-            }
-
-            bind(file.canonicalPath, null)
-        }
-    }
-
-    bind("/dev/urandom", "/dev/random")
-    bind(klyxFilesDir.absolutePath, null)
-    bind("/dev", null)
-
-    val fdPaths = listOf("0" to "stdin", "1" to "stdout", "2" to "stderr")
-    fdPaths.forEach { (fd, name) ->
-        val src = "/proc/self/fd/$fd"
-        with(File(src)) {
-            if (exists() && canRead() && canWrite()) {
-                logger.verbose { "$src -> /dev/$name" }
-                bind(canonicalPath, "/dev/$name")
-            }
-        }
-    }
+    val targetUser = user ?: "root"
+    val args = mutableListOf<String>()
 
     args += listOf(
-        "-r", sandboxDir.absolutePath,
+        "--kill-on-exit",
         "-0",
-        "--link2symlink",
         "--sysvipc",
-        "-L"
+        "--link2symlink",
+        "-r", sandboxDir.absolutePath,
+        "-w", "/"
     )
 
-    if (withInitScript) {
-        args += listOf(
-            "/bin/bash",
-            klyxBinDir.absolutePath + "/init",
-            "\"$@\""
-        )
-    } else if (loginUser) {
-        args += listOf(
-            "su", "-", user ?: "root",
-            "-c", "bash -lc \"${commands.joinToString(" ")}\""
-        )
-        return args.toTypedArray()
+    val binds = listOf(
+        "/dev", "/proc", "/sys",
+        "/system", "/vendor", "/product",
+        klyxFilesDir.absolutePath
+    )
+
+    for (p in binds) {
+        if (File(p).exists()) args += listOf("-b", p)
     }
 
-    args += commands
-    args.toTypedArray()
+    if (commands.isEmpty()) {
+        args += if (loginUser) {
+            listOf("su", "-", targetUser)
+        } else {
+            listOf("/bin/bash")
+        }
+        return args
+    }
+
+    if (loginUser) {
+        val cmd = commands.joinToString(" ")
+        args += listOf("su", "-", targetUser, "-c", "bash -lc \"$cmd\"")
+    } else {
+        args += listOf("/bin/bash", "-lc", commands.joinToString(" "))
+    }
+
+    return args
 }

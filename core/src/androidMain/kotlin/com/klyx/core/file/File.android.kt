@@ -14,6 +14,8 @@ import com.klyx.core.PlatformContext
 import com.klyx.core.io.MANAGE_ALL_FILES
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
+import com.klyx.core.terminal.sandboxDir
+import java.io.File
 import java.security.MessageDigest
 
 actual fun KxFile.isBinaryEqualTo(other: KxFile): Boolean {
@@ -169,3 +171,6 @@ actual fun PlatformContext.shareFile(file: KxFile) {
         Toast.makeText(this, "No app found to open this file type", Toast.LENGTH_SHORT).show()
     }
 }
+
+context(ctx: Context)
+fun File.relativeToSandboxOrSelf() = relativeToOrSelf(sandboxDir)

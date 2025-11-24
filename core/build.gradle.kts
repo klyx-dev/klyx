@@ -75,7 +75,7 @@ kotlin {
                 api(libs.kotlinx.io.core)
                 api(libs.kotlinx.io.okio)
                 api(libs.okio)
-                implementation(libs.kotlinx.coroutines.core)
+                api(libs.kotlinx.coroutines.core)
 
                 api(libs.kotlin.result)
                 api(libs.filekit.dialogs)
