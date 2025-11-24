@@ -46,10 +46,12 @@ class KxProcess @PublishedApi internal constructor(private val builder: KxProces
         }
 
     inline val isAlive get() = exitCodeOrNull() == null
-    val isSpawned = ::process.isInitialized
+    val isSpawned get() = ::process.isInitialized
 
     fun spawn(): KxProcess {
-        process = builder.spawn()
+        if (!isSpawned) {
+            process = builder.spawn()
+        }
         return this
     }
 
