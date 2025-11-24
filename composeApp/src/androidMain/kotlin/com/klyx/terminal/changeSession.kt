@@ -1,7 +1,7 @@
 package com.klyx.terminal
 
 import com.klyx.activities.TerminalActivity
-import com.klyx.terminal.extrakeys.ExtraKeysViewClient
+import com.klyx.core.terminal.extrakey.ExtraKeysViewClient
 import com.klyx.ui.component.terminal.extraKeysView
 import com.termux.view.TerminalView
 

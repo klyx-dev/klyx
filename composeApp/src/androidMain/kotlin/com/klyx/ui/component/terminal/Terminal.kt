@@ -39,17 +39,18 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.klyx.activities.TerminalActivity
 import com.klyx.core.file.DownloadableFile
+import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.downloadAll
 import com.klyx.core.file.humanBytes
+import com.klyx.core.file.toKotlinxIoPath
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
-import com.klyx.terminal.SetupNextStage
-import com.klyx.terminal.getNextStage
+import com.klyx.core.terminal.SetupNextStage
 import com.klyx.core.terminal.currentUser
-import com.klyx.terminal.internal.extractTarGz
-import com.klyx.terminal.internal.packageUrl
-import com.klyx.terminal.internal.ubuntuRootFsUrl
+import com.klyx.core.terminal.getNextStage
+import com.klyx.core.terminal.internal.packageUrl
+import com.klyx.core.terminal.internal.ubuntuRootFsUrl
 import com.klyx.core.terminal.isTerminalInstalled
 import com.klyx.core.terminal.klyxBinDir
 import com.klyx.core.terminal.klyxFilesDir
@@ -120,8 +121,10 @@ private fun TerminalScreen1(activity: TerminalActivity, onSessionFinish: (Termin
         filesToDownload.downloadAll(
             onComplete = { file ->
                 if (file.name.startsWith("proot") || file.name.startsWith("libtalloc")) {
-                    if (!extractTarGz(file.absolutePath, klyxFilesDir.absolutePath)) {
-                        error("Failed to extract ${file.name}")
+                    try {
+                        extractGzipTar(file.toKotlinxIoPath(), klyxFilesDir.toKotlinxIoPath())
+                    } catch (err: Throwable) {
+                        error("Failed to extract ${file.name}. ${err.message}")
                     }
                 }
             },

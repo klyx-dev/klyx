@@ -1,5 +1,7 @@
 package com.klyx.core.file
 
+import kotlinx.io.files.Path
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
@@ -16,3 +18,5 @@ actual fun ByteArray.isValidUtf8(): Boolean {
         false
     }
 }
+
+fun File.toKotlinxIoPath() = Path(absolutePath)

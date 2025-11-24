@@ -1,15 +1,11 @@
 @file:Suppress("SpreadOperator")
 
-package com.klyx.terminal
+package com.klyx.core.terminal
 
 import android.content.Context
 import com.klyx.core.ProcessBuilder
 import com.klyx.core.process
-import com.klyx.core.terminal.currentUser
-import com.klyx.core.terminal.klyxBinDir
-import com.klyx.core.terminal.klyxFilesDir
-import com.klyx.core.terminal.sandboxDir
-import com.klyx.terminal.internal.buildProotArgs
+import com.klyx.core.terminal.internal.buildProotArgs
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract

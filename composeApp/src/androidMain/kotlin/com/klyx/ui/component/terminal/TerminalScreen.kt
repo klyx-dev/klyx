@@ -37,12 +37,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.klyx.activities.TerminalActivity
 import com.klyx.core.terminal.ExtraKeys
+import com.klyx.core.terminal.extrakey.ExtraKeysConstants
+import com.klyx.core.terminal.extrakey.ExtraKeysInfo
+import com.klyx.core.terminal.extrakey.ExtraKeysView
+import com.klyx.core.terminal.extrakey.ExtraKeysViewClient
 import com.klyx.core.toJson
 import com.klyx.terminal.TerminalClient
-import com.klyx.terminal.extrakeys.ExtraKeysConstants
-import com.klyx.terminal.extrakeys.ExtraKeysInfo
-import com.klyx.terminal.extrakeys.ExtraKeysView
-import com.klyx.terminal.extrakeys.ExtraKeysViewClient
 import com.klyx.terminal.service.SessionService
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView

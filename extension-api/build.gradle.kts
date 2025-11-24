@@ -63,7 +63,6 @@ kotlin {
             implementation(projects.core)
             implementation(projects.shared)
             implementation(projects.wasm)
-            implementation(projects.terminal.terminal)
         }
 
         commonTest.dependencies {

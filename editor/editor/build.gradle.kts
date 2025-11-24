@@ -64,7 +64,6 @@ kotlin {
 
                 implementation(projects.core)
                 implementation(projects.shared)
-                implementation(projects.terminal.terminal)
                 implementation(projects.extensionApi)
 
 //                rootProject.project("tree-sitter").subprojects.forEach {

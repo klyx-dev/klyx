@@ -1,4 +1,4 @@
-package com.klyx.terminal.internal
+package com.klyx.core.terminal.internal
 
 import android.os.Build
 
@@ -10,4 +10,3 @@ fun packageUrl(name: String) = when (PREFERRED_ABI) {
     "x86_64" -> "https://github.com/klyx-dev/klyx-packages/raw/refs/heads/main/$name/$name-x86_64.tar.gz"
     else -> error("Unsupported ABI: $PREFERRED_ABI")
 }
-

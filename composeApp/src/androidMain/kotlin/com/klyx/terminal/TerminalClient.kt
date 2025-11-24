@@ -5,7 +5,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import com.blankj.utilcode.util.ClipboardUtils
 import com.klyx.activities.TerminalActivity
-import com.klyx.terminal.extrakeys.SpecialButton
+import com.klyx.core.terminal.extrakey.SpecialButton
 import com.klyx.ui.component.terminal.extraKeysView
 import com.termux.shared.view.KeyboardUtils
 import com.termux.terminal.TerminalEmulator

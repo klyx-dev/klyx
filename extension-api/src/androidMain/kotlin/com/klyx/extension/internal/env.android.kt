@@ -3,11 +3,11 @@ package com.klyx.extension.internal
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.Result
+import com.klyx.core.terminal.localProcess
 import com.klyx.core.terminal.sandboxDir
+import com.klyx.core.terminal.ubuntuProcess
 import com.klyx.core.terminal.userHomeDir
 import com.klyx.core.withAndroidContext
-import com.klyx.terminal.localProcess
-import com.klyx.terminal.ubuntuProcess
 import java.io.File
 
 actual fun makeFileExecutable(path: String): Result<Unit, String> {

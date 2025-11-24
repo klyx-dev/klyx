@@ -1,4 +1,4 @@
-package com.klyx.terminal.extrakeys
+package com.klyx.core.terminal.extrakey
 
 import android.view.View
 import com.google.android.material.button.MaterialButton

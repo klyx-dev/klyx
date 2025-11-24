@@ -9,10 +9,10 @@ import com.klyx.core.Notifier
 import com.klyx.core.asJavaProcessBuilder
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
+import com.klyx.core.terminal.ubuntuProcess
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
 import com.klyx.extension.api.Worktree
 import com.klyx.extension.internal.Command
-import com.klyx.terminal.ubuntuProcess
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope

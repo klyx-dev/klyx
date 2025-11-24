@@ -108,6 +108,11 @@ kotlin {
                 api(libs.androidx.documentfile)
                 implementation(libs.koin.android)
                 implementation(libs.kotlinx.coroutines.android)
+                implementation(libs.material)
+
+                implementation(projects.terminal.terminalEmulator)
+                implementation(projects.terminal.terminalView)
+                implementation(projects.terminal.termuxShared)
             }
         }
     }

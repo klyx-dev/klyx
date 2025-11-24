@@ -1,4 +1,4 @@
-package com.klyx.terminal.internal
+package com.klyx.core.terminal.internal
 
 import android.annotation.SuppressLint
 import android.content.Context

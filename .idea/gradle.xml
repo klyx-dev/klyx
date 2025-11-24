@@ -38,7 +38,6 @@
             <option value="$PROJECT_DIR$/mcp" />
             <option value="$PROJECT_DIR$/shared" />
             <option value="$PROJECT_DIR$/terminal" />
-            <option value="$PROJECT_DIR$/terminal/terminal" />
             <option value="$PROJECT_DIR$/terminal/terminal-emulator" />
             <option value="$PROJECT_DIR$/terminal/terminal-view" />
             <option value="$PROJECT_DIR$/terminal/termux-shared" />

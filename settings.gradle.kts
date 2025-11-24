@@ -48,7 +48,6 @@ include(
 include(":extension-api")
 include(":wasm", ":wasm-ksp")
 include(
-    ":terminal:terminal",
     ":terminal:terminal-view",
     ":terminal:terminal-emulator",
     ":terminal:termux-shared"
