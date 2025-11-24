@@ -6,7 +6,6 @@ import io.matthewnelson.kmp.process.Output
 import io.matthewnelson.kmp.process.OutputFeed
 import io.matthewnelson.kmp.process.Process
 import io.matthewnelson.kmp.process.ProcessException
-import io.matthewnelson.kmp.process.Stdio
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.contracts.ExperimentalContracts
@@ -47,6 +46,7 @@ class KxProcess @PublishedApi internal constructor(private val builder: KxProces
         }
 
     inline val isAlive get() = exitCodeOrNull() == null
+    val isSpawned = ::process.isInitialized
 
     fun spawn(): KxProcess {
         process = builder.spawn()
@@ -87,7 +87,7 @@ inline fun <T> KxProcess.use(block: (process: KxProcess) -> T): T {
         callsInPlace(block, InvocationKind.AT_MOST_ONCE)
     }
 
-    val p = spawn()
+    val p = if (isSpawned) this else spawn()
 
     val result = try {
         block(p)
