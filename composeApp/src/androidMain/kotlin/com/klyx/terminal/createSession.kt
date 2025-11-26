@@ -14,6 +14,7 @@ import com.klyx.core.terminal.klyxCacheDir
 import com.klyx.core.terminal.klyxFilesDir
 import com.klyx.core.terminal.klyxLibDir
 import com.klyx.core.terminal.localDir
+import com.klyx.core.terminal.prootBinary
 import com.klyx.core.terminal.sandboxDir
 import com.klyx.core.terminal.userHomeDir
 import com.termux.terminal.TerminalEmulator
@@ -74,6 +75,7 @@ fun createSession(
         "PROMPT_DIRTRIM=2",
         "LINKER=$linker",
         "NATIVE_LIB_DIR=${applicationInfo.nativeLibraryDir}",
+        "PROOT=${prootBinary.absolutePath}",
         "TZ=UTC",
         "TMP_DIR=${cacheDir.absolutePath}",
         "TMPDIR=${cacheDir.absolutePath}",

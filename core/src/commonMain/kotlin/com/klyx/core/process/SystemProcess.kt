@@ -1,6 +1,7 @@
 package com.klyx.core.process
 
 import com.klyx.core.logging.logger
+import kotlin.jvm.JvmName
 
 @PublishedApi
 internal val systemProcessLogger = logger("SystemProcess")
@@ -20,6 +21,7 @@ expect inline fun systemProcess(commands: Array<out String>, block: KxProcessBui
  * **Note**: If the process runs inside `sandbox` (on Android), passing arguments via [block] is not valid.
  * You must provide all arguments within the [commands] array instead.
  */
+@JvmName("systemProcess0")
 inline fun systemProcess(vararg commands: String, block: KxProcessBuilder.() -> Unit = {}): KxProcess {
     return if (commands.size == 1) {
         val command = commands[0]

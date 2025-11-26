@@ -2,9 +2,18 @@ package com.klyx.core.terminal.internal
 
 import android.annotation.SuppressLint
 import android.content.Context
+import com.klyx.core.process.KxProcess
+import com.klyx.core.process.KxProcessBuilder
+import com.klyx.core.process.process
 import com.klyx.core.terminal.klyxFilesDir
+import com.klyx.core.terminal.klyxLibDir
+import com.klyx.core.terminal.prootBinary
 import com.klyx.core.terminal.sandboxDir
+import com.klyx.core.withAndroidContext
 import java.io.File
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 @SuppressLint("SdCardPath")
 context(ctx: Context)
@@ -53,4 +62,23 @@ fun buildProotArgs(
     }
 
     return args
+}
+
+/**
+ * @return unspawned proot process
+ */
+@OptIn(ExperimentalContracts::class)
+inline fun prootProcess(vararg args: String, block: KxProcessBuilder.() -> Unit = {}): KxProcess {
+    contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
+
+    return withAndroidContext {
+        process(prootBinary.absolutePath) {
+            environment {
+                put("LD_LIBRARY_PATH", klyxLibDir.absolutePath)
+            }
+
+            args(args.asList())
+            block()
+        }
+    }
 }

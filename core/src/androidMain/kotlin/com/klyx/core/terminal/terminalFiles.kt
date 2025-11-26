@@ -1,6 +1,7 @@
 package com.klyx.core.terminal
 
 import android.content.Context
+import com.klyx.core.withAndroidContext
 import java.io.File
 
 context(context: Context)
@@ -39,3 +40,5 @@ fun isTerminalInstalled(): Boolean {
 
     return localDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").exists() && rootfs.isNotEmpty()
 }
+
+val prootBinary get() = withAndroidContext { File(applicationInfo.nativeLibraryDir, "libproot.so") }

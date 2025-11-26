@@ -44,7 +44,10 @@ actual suspend fun extractGzipTar(path: Path, destination: Path) {
                         }
 
                         when {
-                            entry.isDirectory -> outputFile.mkdirs()
+                            entry.isDirectory -> {
+                                outputFile.mkdirs()
+                                applyMode(outputFile, entry.mode)
+                            }
 
                             entry.isSymbolicLink -> {
                                 try {
@@ -62,11 +65,27 @@ actual suspend fun extractGzipTar(path: Path, destination: Path) {
                                 outputFile.outputStream().use { fos ->
                                     tarIn.copyTo(fos)
                                 }
+
+                                applyMode(outputFile, entry.mode)
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+private fun applyMode(file: File, mode: Int) {
+    try {
+        Os.chmod(file.absolutePath, mode)
+    } catch (_: Exception) {
+        val ownerExec = mode and 0b001_000_000 != 0
+        val ownerRead = mode and 0b100_000_000 != 0
+        val ownerWrite = mode and 0b010_000_000 != 0
+
+        file.setExecutable(ownerExec, true)
+        file.setReadable(ownerRead, true)
+        file.setWritable(ownerWrite, true)
     }
 }

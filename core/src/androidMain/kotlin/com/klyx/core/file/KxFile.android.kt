@@ -115,9 +115,6 @@ actual open class KxFile(internal val raw: DocumentFile) : KoinComponent {
 
     fun outputStream(): OutputStream? =
         file?.outputStream() ?: context.contentResolver.openOutputStream(raw.uri)
-
-    fun isFromTermux() = raw.uri.isFromTermux()
-    fun canWatchFileEvents() = file != null && !isFromTermux()
 }
 
 private fun DocumentFile.deleteRecursively(): Boolean {
@@ -141,9 +138,6 @@ private fun DocumentFile.deleteRecursively(): Boolean {
 }
 
 val KxFile.uri: Uri get() = raw.uri
-
-fun Uri.isFromTermux() = host == "com.termux.documents"
-
 fun DocumentFile.toKxFile(): KxFile = KxFile(this)
 
 fun File.asDocumentFile(): DocumentFile = DocumentFile.fromFile(this)

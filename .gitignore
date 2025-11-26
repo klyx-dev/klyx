@@ -20,7 +20,6 @@ local.properties
 .cmake/
 *.a
 *.lib
-*.so
 *.dylib
 *.dll
 

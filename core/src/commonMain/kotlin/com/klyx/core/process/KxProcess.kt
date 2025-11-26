@@ -11,6 +11,7 @@ import kotlinx.coroutines.withContext
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.jvm.JvmName
 import kotlin.time.ComparableTimeMark
 import kotlin.time.Duration
 
@@ -113,6 +114,18 @@ inline fun process(commands: Array<out String>, block: KxProcessBuilder.() -> Un
     contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
     require(commands.isNotEmpty()) { "commands cannot be empty" }
     return process(commands.first()) { args(commands.drop(1)); block() }
+}
+
+@JvmName("process0")
+inline fun process(vararg commands: String, block: KxProcessBuilder.() -> Unit = {}): KxProcess {
+    contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
+
+    return if (commands.size == 1) {
+        val command = commands[0]
+        process(command, block)
+    } else {
+        process(commands, block)
+    }
 }
 
 @Suppress("NOTHING_TO_INLINE")
