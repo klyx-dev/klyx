@@ -19,7 +19,6 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.core.terminal.klyxBinDir
-import com.klyx.core.terminal.localDir
 import com.klyx.core.terminal.sandboxDir
 import com.klyx.di.commonModule
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
@@ -120,7 +119,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         with(filesDir.resolve("ubuntu")) {
             if (exists()) {
                 renameTo(sandboxDir)
-                localDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").createNewFile()
+                dataDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").createNewFile()
             }
         }
     }

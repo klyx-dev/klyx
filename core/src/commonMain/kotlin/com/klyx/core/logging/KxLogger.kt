@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlin.time.ExperimentalTime
 
-val defaultLogger = logger("KlyxApp")
+val defaultLogger = logger("Klyx")
 inline val log get() = defaultLogger
 
 fun <A> AnyResult<A>.logErr(): AnyResult<A> {
