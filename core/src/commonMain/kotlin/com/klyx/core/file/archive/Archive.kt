@@ -46,3 +46,18 @@ suspend fun extractZip(path: Path, destination: Path) = withContext(Dispatchers.
         }
     }
 }
+
+/**
+ * Extract `.gz`
+ */
+expect suspend fun extractGzip(bytes: ByteArray, destination: Path)
+
+/**
+ * Extract `.tar.gz`
+ */
+expect suspend fun extractGzipTar(bytes: ByteArray, destination: Path)
+
+/**
+ * Extract `.zip`
+ */
+expect suspend fun extractZip(bytes: ByteArray, destination: Path)

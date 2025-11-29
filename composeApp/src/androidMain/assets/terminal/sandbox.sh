@@ -22,7 +22,8 @@ ARGS="$ARGS -b /dev"
 ARGS="$ARGS -b /data"
 ARGS="$ARGS -b /dev/urandom:/dev/random"
 ARGS="$ARGS -b /proc"
-ARGS="$ARGS -b $PRIVATE_DIR"
+ARGS="$ARGS -b $DATADIR:/klyx-app-data"
+ARGS="$ARGS -b $DATADIR"
 
 if [ -e "/proc/self/fd" ]; then
   ARGS="$ARGS -b /proc/self/fd:/dev/fd"
@@ -40,7 +41,6 @@ if [ -e "/proc/self/fd/2" ]; then
   ARGS="$ARGS -b /proc/self/fd/2:/dev/stderr"
 fi
 
-ARGS="$ARGS -b $PRIVATE_DIR"
 ARGS="$ARGS -b /sys"
 
 if [ ! -d "$SANDBOX_DIR/tmp" ]; then

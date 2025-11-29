@@ -2,10 +2,20 @@
 
 package com.klyx.core.logging
 
+import com.github.michaelbull.result.onFailure
+import com.klyx.core.AnyResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlin.time.ExperimentalTime
+
+val defaultLogger = logger("KlyxApp")
+inline val log get() = defaultLogger
+
+fun <A> AnyResult<A>.logErr(): AnyResult<A> {
+    onFailure { log.error { it.toString() } }
+    return this
+}
 
 class KxLogger private constructor(
     @PublishedApi
@@ -105,6 +115,13 @@ class KxLogger private constructor(
     ) {
         log(Message(level, tag, message, throwable = throwable, metadata = fields.toMap()))
     }
+
+    fun log(
+        level: Level,
+        message: String,
+        vararg fields: Pair<String, Any>,
+        throwable: Throwable? = null
+    ) = log(Message(level, tag, message, throwable = throwable, metadata = fields.toMap()))
 
     inline fun <T> measure(
         operationName: String,

@@ -27,7 +27,7 @@ ARGS="$ARGS -b /dev"
 ARGS="$ARGS -b /data"
 ARGS="$ARGS -b /dev/urandom:/dev/random"
 ARGS="$ARGS -b /proc"
-ARGS="$ARGS -b $PRIVATE_DIR"
+ARGS="$ARGS -b $DATADIR"
 
 if [ -e "/proc/self/fd" ]; then
   ARGS="$ARGS -b /proc/self/fd:/dev/fd"
@@ -45,7 +45,6 @@ if [ -e "/proc/self/fd/2" ]; then
   ARGS="$ARGS -b /proc/self/fd/2:/dev/stderr"
 fi
 
-ARGS="$ARGS -b $PRIVATE_DIR"
 ARGS="$ARGS -b /sys"
 
 ARGS="$ARGS -r /"
@@ -122,7 +121,7 @@ done
 
 rm "$TMP_DIR"/sandbox.tar.gz
 # DO NOT REMOVE THIS FILE JUST DON'T, TRUST ME
-touch $LOCAL/.terminal_setup_ok_DO_NOT_REMOVE
+touch $DATADIR/.terminal_setup_ok_DO_NOT_REMOVE
 
 if [ $# -gt 0 ]; then
     # shellcheck disable=SC2068

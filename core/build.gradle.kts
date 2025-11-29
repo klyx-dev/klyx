@@ -1,4 +1,5 @@
 import com.klyx.Configs
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -7,6 +8,8 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinxAtomicfu)
+    alias(libs.plugins.kotest)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -14,6 +17,10 @@ kotlin {
 
     compilerOptions {
         freeCompilerArgs.addAll("-Xcontext-parameters")
+
+        apiVersion = KOTLIN_2_2
+        languageVersion = KOTLIN_2_2
+        verbose = true
     }
 
     androidLibrary {
@@ -85,6 +92,7 @@ kotlin {
                 api(libs.arrow.fx.coroutines)
 
                 api(libs.kfswatch)
+                implementation(libs.semver)
                 implementation(libs.multiplatform.settings.no.arg)
 
                 implementation(projects.shared)
@@ -98,6 +106,12 @@ kotlin {
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotest.framework.engine)
+            implementation(libs.kotest.assertions.core)
+        }
+
+        jvmTest.dependencies {
+            implementation(libs.kotest.runner.junit5)
         }
 
         androidMain {
@@ -115,6 +129,13 @@ kotlin {
                 implementation(projects.terminal.termuxShared)
             }
         }
+    }
+}
+
+tasks.named<Test>("jvmTest") {
+    useJUnitPlatform()
+    filter {
+        isFailOnNoMatchingTests = false
     }
 }
 

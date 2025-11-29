@@ -4,6 +4,7 @@ import com.github.michaelbull.result.onFailure
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.file.source
+import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.internal.getenv
@@ -11,6 +12,7 @@ import com.klyx.extension.internal.rootDir
 import com.klyx.extension.internal.userHomeDir
 import com.klyx.extension.modules.GitHubModule
 import com.klyx.extension.modules.HttpClientModule
+import com.klyx.extension.modules.NodeJsModule
 import com.klyx.extension.modules.PlatformModule
 import com.klyx.extension.modules.ProcessModule
 import com.klyx.extension.modules.Root
@@ -27,8 +29,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlinx.io.Buffer
-import kotlinx.io.bytestring.decodeToString
-import kotlinx.io.snapshot
+import kotlinx.io.RawSink
+import kotlinx.io.readString
+import kotlin.jvm.JvmSynthetic
 
 object ExtensionLoader {
     private val home = Environment.DeviceHomeDir
@@ -52,9 +55,6 @@ object ExtensionLoader {
         val wasmFile = extension.wasmFiles.firstOrNull() ?: return null
         val wasmBytes = withContext(Dispatchers.IO) { wasmFile.readBytes() }
 
-        val stdout = Buffer()
-        val stderr = Buffer()
-
         val instance = withContext(Dispatchers.Default) {
             val systemEnvs = getenv()
 
@@ -74,8 +74,8 @@ object ExtensionLoader {
 
                     directory(rootDir, "/")
 
-                    stdout(StdioSinkProvider { stdout })
-                    stderr(StdioSinkProvider { stderr })
+                    stdout(createExtensionStdoutSink(logger))
+                    stderr(createExtensionStderrSink(logger))
                 }
 
                 registerHostModule(
@@ -84,7 +84,8 @@ object ExtensionLoader {
                     ProcessModule,
                     HttpClientModule,
                     GitHubModule,
-                    PlatformModule
+                    PlatformModule,
+                    NodeJsModule
                 )
                 registerHostModule(*extraHostModules)
             }
@@ -98,19 +99,36 @@ object ExtensionLoader {
             }
         }
 
-        withContext(Dispatchers.IO) {
-            stdout.snapshot()
-                .decodeToString()
-                .lineSequence()
-                .filter { it.isNotEmpty() }
-                .forEach(logger::info)
-
-            stderr.snapshot()
-                .decodeToString()
-                .lineSequence()
-                .filter { it.isNotEmpty() }
-                .forEach(logger::error)
-        }
         return localExtension
+    }
+}
+
+@JvmSynthetic
+private fun createExtensionStdoutSink(logger: KxLogger): StdioSinkProvider {
+    return StdioSinkProvider {
+        object : RawSink {
+            override fun write(source: Buffer, byteCount: Long) {
+                val text = source.readString(byteCount)
+                logger.info { text }
+            }
+
+            override fun flush() {}
+            override fun close() {}
+        }
+    }
+}
+
+@JvmSynthetic
+private fun createExtensionStderrSink(logger: KxLogger): StdioSinkProvider {
+    return StdioSinkProvider {
+        object : RawSink {
+            override fun write(source: Buffer, byteCount: Long) {
+                val text = source.readString(byteCount)
+                logger.error { text }
+            }
+
+            override fun flush() {}
+            override fun close() {}
+        }
     }
 }

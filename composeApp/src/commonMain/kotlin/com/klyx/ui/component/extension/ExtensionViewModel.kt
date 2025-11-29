@@ -18,6 +18,7 @@ import com.klyx.res.extension_install_failed
 import com.klyx.res.extension_install_success
 import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
 import io.github.z4kn4fein.semver.toVersion
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -39,7 +40,7 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
     val extensionListState = _extensionListState.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.Default) {
             loadExtensions()
         }
     }
@@ -49,6 +50,7 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
 
         viewModelScope.launch {
             try {
+                ExtensionManager.loadExtensions()
                 val installed = ExtensionManager.installedExtensions.map { it.info }
                 _extensionListState.update { it.copy(installedExtensions = installed) }
 

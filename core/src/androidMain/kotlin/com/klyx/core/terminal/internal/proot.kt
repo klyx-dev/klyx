@@ -38,7 +38,8 @@ fun buildProotArgs(
     val binds = listOf(
         "/dev", "/proc", "/sys",
         "/system", "/vendor", "/product",
-        klyxFilesDir.absolutePath
+        klyxFilesDir.absolutePath,
+        ctx.dataDir.absolutePath
     )
 
     for (p in binds) {

@@ -9,6 +9,12 @@ import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.dialogs.openFileSaver
 import io.github.vinceglb.filekit.dialogs.openFileWithDefaultApplication
+import kotlinx.io.files.SystemFileSystem
+import okio.FileSystem
+import okio.SYSTEM
+
+inline val fs get() = SystemFileSystem
+inline val okioFs get() = FileSystem.SYSTEM
 
 object FileManager {
     suspend inline fun openFilePicker(

@@ -7,6 +7,7 @@ import android.util.Log
 import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
 import com.klyx.activities.CrashActivity
+import com.klyx.core.App
 import com.klyx.core.Environment
 import com.klyx.core.defaultLogsFile
 import com.klyx.core.di.initKoin
@@ -17,10 +18,10 @@ import com.klyx.core.file.rawFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
-import com.klyx.di.commonModule
 import com.klyx.core.terminal.klyxBinDir
 import com.klyx.core.terminal.localDir
 import com.klyx.core.terminal.sandboxDir
+import com.klyx.di.commonModule
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
@@ -62,6 +63,8 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             androidContext(this@KlyxApplication)
         }
 
+        launch { App.init() }
+
         try {
             Environment.init()
         } catch (e: Exception) {
@@ -71,7 +74,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
         launch {
             Environment.defaultLogsFile().delete()
-            redirectPrintlnToFile(Environment.defaultLogsFile())
+            //redirectPrintlnToFile(Environment.defaultLogsFile())
         }
 
         @Suppress("SimplifyBooleanWithConstants")
@@ -130,6 +133,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
     }
 }
 
+@JvmSynthetic
 private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: Throwable) {
     if (throwable is ResponseErrorException &&
         (throwable.message?.contains("content modified") == true ||
@@ -195,6 +199,7 @@ private fun buildLogString(thread: Thread, throwable: Throwable): String = build
     }
 }
 
+@JvmSynthetic
 private fun redirectPrintlnToFile(logFile: KxFile) {
     val originalOut = System.out
     val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)

@@ -18,6 +18,7 @@ interface WasmType : WasmAny {
 @OptIn(ExperimentalWasmApi::class)
 context(memory: WasmMemory)
 fun <T> WasmType(value: T): WasmType = when (value) {
+    is WasmType -> value
     is Boolean -> WasmBool(value)
     is UByte -> WasmUByte(value)
     is Byte -> WasmByte(value)

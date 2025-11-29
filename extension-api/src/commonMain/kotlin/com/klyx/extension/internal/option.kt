@@ -16,6 +16,15 @@ fun <T> Option<T>.toWasmOption(): com.klyx.wasm.type.Option<WasmType> {
     }
 }
 
+@OptIn(ExperimentalWasmApi::class)
+context(memory: WasmMemory)
+fun <T> T?.toWasmOption(): com.klyx.wasm.type.Option<WasmType> {
+    return when (this) {
+        null -> com.klyx.wasm.type.None
+        else -> com.klyx.wasm.type.Some(WasmType(this))
+    }
+}
+
 fun <T> T.asOption(discriminant: Int) = when (discriminant) {
     0 -> None
     1 -> Some(this)

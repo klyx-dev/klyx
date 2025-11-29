@@ -9,7 +9,7 @@ val sandboxHomeDir get() = sandboxDir.resolve("home")
 
 context(context: Context)
 val sandboxDir
-    get() = File(context.filesDir, "sandbox").also { if (!it.exists()) it.mkdirs() }
+    get() = File(context.dataDir, "sandbox").also { if (!it.exists()) it.mkdirs() }
 
 context(context: Context)
 val userHomeDir get() = if (currentUser == null) null else sandboxHomeDir.resolve(currentUser!!)
@@ -38,7 +38,7 @@ fun isTerminalInstalled(): Boolean {
         it.absolutePath != sandboxDir.resolve("tmp").absolutePath
     }.orEmpty()
 
-    return localDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").exists() && rootfs.isNotEmpty()
+    return context.dataDir.resolve(".terminal_setup_ok_DO_NOT_REMOVE").exists() && rootfs.isNotEmpty()
 }
 
 val prootBinary get() = withAndroidContext { File(applicationInfo.nativeLibraryDir, "libproot.so") }

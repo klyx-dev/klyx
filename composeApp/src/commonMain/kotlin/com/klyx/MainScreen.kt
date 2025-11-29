@@ -48,7 +48,6 @@ import com.klyx.core.ui.animatedComposable
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
-import com.klyx.extension.ExtensionManager
 import com.klyx.extension.api.Worktree
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
@@ -102,7 +101,7 @@ fun MainScreen() {
 
     LaunchedEffect(appSettings.loadExtensionsOnStartup) {
         if (appSettings.loadExtensionsOnStartup) {
-            ExtensionManager.loadExtensions()
+//            ExtensionManager.loadExtensions()
         }
     }
 

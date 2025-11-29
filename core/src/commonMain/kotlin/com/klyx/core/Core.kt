@@ -20,6 +20,7 @@ inline fun <reified T> T.toJson() = run {
 }
 
 val DefaultScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+inline val backgroundScope get() = DefaultScope
 
 expect val currentThreadName: String
 

@@ -11,7 +11,9 @@ interface LogFormatter {
 class DefaultLogFormatter(
     private val includeThreadName: Boolean = true,
     private val includeTimestamp: Boolean = true,
-    private val includeMetadata: Boolean = true
+    private val includeMetadata: Boolean = true,
+    private val includeTag: Boolean = false,
+    private val includeLogLevel: Boolean = false
 ) : LogFormatter {
     @OptIn(ExperimentalTime::class)
     override fun format(message: Message): String {
@@ -21,10 +23,16 @@ class DefaultLogFormatter(
             parts.add(message.timestamp.toString())
         }
 
-        parts.add("${message.level.displayName}/${message.tag}")
+        if (includeLogLevel) {
+            parts.add("[ ${message.level.name.first()} ]")
+        }
+
+        if (includeTag) {
+            parts.add("[${message.tag}]")
+        }
 
         if (includeThreadName) {
-            parts.add("[${message.threadName}]")
+            parts.add("(${message.threadName})")
         }
 
         parts.add(message.message)

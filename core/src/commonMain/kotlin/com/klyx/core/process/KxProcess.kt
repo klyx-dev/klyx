@@ -8,6 +8,7 @@ import io.matthewnelson.kmp.process.Process
 import io.matthewnelson.kmp.process.ProcessException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.files.Path
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
@@ -26,13 +27,23 @@ annotation class InternalProcessApi
 typealias Signal = io.matthewnelson.kmp.process.Signal
 //typealias Output = io.matthewnelson.kmp.process.Output
 
+expect val SystemPathSeparator: Char
+
 @KxProcessDsl
 typealias KxProcessBuilder = Process.Builder
 typealias KxProcessException = ProcessException
 
 typealias CurrentProcess = Process.Current
 
-class KxProcess @PublishedApi internal constructor(private val builder: KxProcessBuilder) {
+fun KxProcessBuilder.arg(arg: String) = args(arg)
+fun KxProcessBuilder.arg(arg: Path) = arg(arg.toString())
+
+fun KxProcessBuilder.args(vararg args: Path) = args(args.map(Path::toString))
+fun KxProcessBuilder.args(args: Iterable<Path>) = args(args.map(Path::toString))
+
+expect fun KxProcessBuilder.changeDir(dir: Path)
+
+class KxProcess @PublishedApi internal constructor(internal val builder: KxProcessBuilder) {
     @PublishedApi
     internal lateinit var process: Process
     val handler get() = withProcess { this as OutputFeed.Handler }
@@ -127,6 +138,8 @@ inline fun process(vararg commands: String, block: KxProcessBuilder.() -> Unit =
         process(commands, block)
     }
 }
+
+inline fun process(path: Path, block: KxProcessBuilder.() -> Unit = {}) = process(path.toString(), block)
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun currentProcess() = CurrentProcess

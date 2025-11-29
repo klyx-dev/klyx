@@ -3,7 +3,10 @@ package com.klyx.core.logging
 import android.util.Log as AndroidLog
 
 actual object ConsoleLogger : Logger {
-    private val formatter = DefaultLogFormatter(includeTimestamp = false)
+    private val formatter = DefaultLogFormatter(
+        includeTimestamp = false,
+        includeThreadName = false
+    )
 
     actual override fun log(message: Message) {
         val formattedMessage = formatter.format(message)
