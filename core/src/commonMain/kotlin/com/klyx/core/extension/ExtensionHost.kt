@@ -1,4 +1,5 @@
 @file:OptIn(ExperimentalContracts::class)
+@file:Suppress("UnusedReceiverParameter")
 
 package com.klyx.core.extension
 

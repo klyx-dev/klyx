@@ -5,8 +5,6 @@ import android.util.AttributeSet
 import android.view.ViewGroup
 import androidx.compose.ui.unit.Density
 import com.klyx.core.settings.EditorSettings
-import com.klyx.editor.completion.AutoCompletionLayout
-import com.klyx.editor.completion.AutoCompletionLayoutAdapter
 import com.klyx.editor.textaction.TextActionWindow
 import io.github.rosemoe.sora.graphics.inlayHint.ColorInlayHintRenderer
 import io.github.rosemoe.sora.graphics.inlayHint.TextInlayHintRenderer
@@ -34,9 +32,9 @@ class KlyxEditor @JvmOverloads constructor(
 
         getComponent<EditorAutoCompletion>().apply {
             isEnabled = true
-            setLayout(AutoCompletionLayout())
-            setAdapter(AutoCompletionLayoutAdapter(density))
-            setEnabledAnimation(true)
+//            setLayout(AutoCompletionLayout())
+//            setAdapter(AutoCompletionLayoutAdapter(density))
+//            setEnabledAnimation(true)
         }
 
         getComponent<EditorDiagnosticTooltipWindow>().isEnabled = true

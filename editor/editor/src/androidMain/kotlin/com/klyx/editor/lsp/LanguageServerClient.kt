@@ -104,8 +104,7 @@ class LanguageServerClient(
         try {
             with(context) {
                 val (cmd, args, env) = serverCommand
-                val builder = systemProcess(cmd) {
-                    args(args)
+                val builder = systemProcess(cmd, *args.toTypedArray()) {
                     environment { putAll(env) }
                     changeDir(File(worktree.rootFile.absolutePath))
                     destroySignal(Signal.SIGKILL)

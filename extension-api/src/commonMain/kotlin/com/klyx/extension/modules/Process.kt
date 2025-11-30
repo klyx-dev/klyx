@@ -2,8 +2,8 @@
 
 package com.klyx.extension.modules
 
+import com.klyx.core.process.systemProcess
 import com.klyx.extension.api.Output
-import com.klyx.extension.internal.executeCommand
 import com.klyx.extension.internal.toWasmOutput
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
@@ -53,7 +53,15 @@ object Process : KoinComponent {
         val env = env.associate { (k, v) -> k.value to v.value }
 
         return try {
-            val output = executeCommand(command, args, env)
+            val output = systemProcess(command, *args.toTypedArray()) {
+                environment { putAll(env) }
+            }.output().let { output ->
+                com.klyx.extension.internal.Output(
+                    output.processInfo.exitCode,
+                    output.stdout,
+                    output.stderr
+                )
+            }
             Ok(output.toWasmOutput())
         } catch (e: Exception) {
             Err("$e".wstr)

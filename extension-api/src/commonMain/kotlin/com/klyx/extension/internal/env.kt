@@ -15,18 +15,5 @@ suspend fun findBinary(binaryName: String): String? {
         .ifBlank { null }
 }
 
-suspend fun executeCommand(command: String, args: List<String>, env: Map<String, String>): Output {
-    systemProcess(command) {
-        args(args)
-        environment { putAll(env) }
-    }.output().let { output ->
-        return Output(
-            output.processInfo.exitCode,
-            output.stdout,
-            output.stderr
-        )
-    }
-}
-
 expect val userHomeDir: String?
 expect val rootDir: String

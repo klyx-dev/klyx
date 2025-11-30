@@ -1,7 +1,7 @@
 package com.klyx.core.process
 
 import com.klyx.core.anyhow
-import com.klyx.core.io.resolveForAndroid
+import com.klyx.core.io.stripSandboxRoot
 import kotlinx.io.files.Path
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmStatic
@@ -18,7 +18,7 @@ class Command(val command: String) {
     companion object {
         @JvmStatic
         fun newCommand(path: Path, resolveForAndroid: Boolean = true): Command {
-            val path = if (resolveForAndroid) path.resolveForAndroid() else path
+            val path = if (resolveForAndroid) path.stripSandboxRoot() else path
             return Command(path.toString())
         }
 

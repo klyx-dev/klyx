@@ -28,8 +28,8 @@ import com.klyx.core.io.Paths
 import com.klyx.core.io.emptyPath
 import com.klyx.core.io.intoPath
 import com.klyx.core.io.join
-import com.klyx.core.io.resolveForAndroid
 import com.klyx.core.io.root
+import com.klyx.core.io.stripSandboxRoot
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.log
 import com.klyx.core.logging.logErr
@@ -565,11 +565,11 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                     Command.newCommand(nodeBinary)
                         .clearEnv()
                         .env(NODE_CA_CERTS_ENV_VAR, nodeCaCerts)
-                        .arg(npmFile.resolveForAndroid())
+                        .arg(npmFile.stripSandboxRoot())
                         .arg("--version")
-                        .args("--cache".intoPath(), nodeDir.join("cache").resolveForAndroid())
-                        .args("--userconfig".intoPath(), nodeDir.join("blank_user_npmrc").resolveForAndroid())
-                        .args("--globalconfig".intoPath(), nodeDir.join("blank_global_npmrc").resolveForAndroid())
+                        .args("--cache".intoPath(), nodeDir.join("cache").stripSandboxRoot())
+                        .args("--userconfig".intoPath(), nodeDir.join("blank_user_npmrc").stripSandboxRoot())
+                        .args("--globalconfig".intoPath(), nodeDir.join("blank_global_npmrc").stripSandboxRoot())
                         .output(1.minutes)
                 }
 
@@ -634,7 +634,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
             fs.sink(nodeDir.join("blank_user_npmrc")).buffered().use { it.write(ByteArray(0)) }
             fs.sink(nodeDir.join("blank_global_npmrc")).buffered().use { it.write(ByteArray(0)) }
 
-            ManagedNodeRuntime(installationPath = nodeDir.resolveForAndroid())
+            ManagedNodeRuntime(installationPath = nodeDir.stripSandboxRoot())
         }
     }
 }
@@ -695,6 +695,7 @@ private data class SystemNodeRuntime(
 }
 
 @Suppress("FunctionName")
+@JvmSynthetic
 private suspend fun SystemNodeRuntime(node: Path, npm: Path) = anyhow {
     val output = withContext("running node from $node") {
         Command.newCommand(node)

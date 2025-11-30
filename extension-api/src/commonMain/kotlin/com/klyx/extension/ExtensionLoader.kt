@@ -4,11 +4,12 @@ import com.github.michaelbull.result.onFailure
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.file.source
+import com.klyx.core.io.Paths
+import com.klyx.core.io.root
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
 import com.klyx.extension.internal.getenv
-import com.klyx.extension.internal.rootDir
 import com.klyx.extension.internal.userHomeDir
 import com.klyx.extension.modules.GitHubModule
 import com.klyx.extension.modules.HttpClientModule
@@ -69,10 +70,11 @@ object ExtensionLoader {
                         env("USER_HOME", it)
                         env("HOME", it)
                         env { putAll(systemEnvs) }
-                        workingDirectory(it)
                     }
 
-                    directory(rootDir, "/")
+                    directory(Paths.dataDir.toString(), Paths.dataDir.toString())
+                    directory(Paths.root.toString(), "/")
+                    workingDirectory(Paths.root.toString())
 
                     stdout(createExtensionStdoutSink(logger))
                     stderr(createExtensionStderrSink(logger))

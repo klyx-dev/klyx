@@ -35,18 +35,34 @@ fun Path.makeAbsolute(): Path {
     return if (isAbsolute) this else Path("/").join(this)
 }
 
-fun Path.resolveForAndroid(): Path {
-    return when (currentOs()) {
-        Os.Android -> {
-            val path = this.toString()
-            if (path.startsWith(Paths.root.toString())) {
-                path.removePrefix(Paths.root.toString()).intoPath()
-            } else {
-                Path(path)
-            }
-        }
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.stripSandboxRoot(): String = Path(this).stripSandboxRoot().toString()
 
+fun Path.stripSandboxRoot(): Path {
+    if (currentOs() != Os.Android) return this
+
+    val root = Paths.root.toString()
+    val str = this.toString()
+
+    return when {
+        str.startsWith(root) -> str.removePrefix(root).intoPath()
         else -> this
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun String.resolveToSandbox(): String = Path(this).resolveToSandbox().toString()
+
+fun Path.resolveToSandbox(): Path {
+    if (currentOs() != Os.Android) return this
+
+    val root = Paths.root
+    val str = this.toString()
+
+    return when {
+        !this.isAbsolute -> root.join(str)
+        str.startsWith(root.toString()) -> this
+        else -> this // error("Path is outside sandbox")
     }
 }
 

@@ -12,6 +12,7 @@ import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.archive.extractZip
 import com.klyx.core.file.humanBytes
 import com.klyx.core.file.toKotlinxIoPath
+import com.klyx.core.io.resolveToSandbox
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.settings.LspSettings
 import com.klyx.core.settings.SettingsManager
@@ -103,7 +104,7 @@ class Root(
 
     @HostFunction
     fun WasmMemory.makeFileExecutable(path: String, resultPtr: Int) {
-        val res = com.klyx.extension.internal.makeFileExecutable(path).toWasmResult()
+        val res = com.klyx.extension.internal.makeFileExecutable(path.resolveToSandbox()).toWasmResult()
         write(resultPtr, res.toBuffer())
     }
 
@@ -121,7 +122,7 @@ class Root(
         resultPtr: Int
     ) {
         val fileType = DownloadedFileType.fromValue(downloadedFileTypeValue)
-        val extractTarget = path.toPath(normalize = true)
+        val extractTarget = path.resolveToSandbox().toPath()
 
         val result = try {
             FileSystem.SYSTEM.createDirectories(extractTarget.parent ?: extractTarget)
@@ -151,20 +152,20 @@ class Root(
                         }
 
                         DownloadedFileType.GZip -> {
-                            logger.info { "Extracting GZip → $extractTarget" }
+                            logger.info { "Extracting GZip -> $extractTarget" }
                             extractGzip(tempArchive.toKotlinxIoPath(), extractTarget.toKotlinxIoPath())
                             FileSystem.SYSTEM.delete(tempArchive)
                         }
 
                         DownloadedFileType.GZipTar -> {
-                            logger.info { "Extracting Tar.GZ → $extractTarget" }
+                            logger.info { "Extracting Tar.Gz -> $extractTarget" }
                             FileSystem.SYSTEM.createDirectories(extractTarget)
                             extractGzipTar(tempArchive.toKotlinxIoPath(), extractTarget.toKotlinxIoPath())
                             FileSystem.SYSTEM.delete(tempArchive)
                         }
 
                         DownloadedFileType.Zip -> {
-                            logger.info { "Extracting Zip → $extractTarget" }
+                            logger.info { "Extracting Zip -> $extractTarget" }
                             FileSystem.SYSTEM.createDirectories(extractTarget)
                             extractZip(tempArchive.toKotlinxIoPath(), extractTarget.toKotlinxIoPath())
                             FileSystem.SYSTEM.delete(tempArchive)

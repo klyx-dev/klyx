@@ -9,8 +9,6 @@ import com.github.michaelbull.result.getOrElse
 import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.runCatching
-import com.klyx.core.event.EventBus
-import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger
@@ -187,7 +185,6 @@ internal class EditorLanguageServerClient(
         LanguageServerManager
             .signatureHelp(worktree, file, position.asLspPosition())
             .onSuccess { signatureHelp ->
-                println(signatureHelp)
                 showSignatureHelp(signatureHelp)
             }
             .onFailure {
@@ -241,9 +238,6 @@ internal class EditorLanguageServerClient(
     }
 
     fun showSignatureHelp(signatureHelp: SignatureHelp?) {
-        println(signatureHelp == null)
-        println(signatureHelp)
-
         val helpWindow = signatureHelpWindow.get() ?: return
 
         if (signatureHelp == null) {

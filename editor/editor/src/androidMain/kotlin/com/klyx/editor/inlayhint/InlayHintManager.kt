@@ -114,7 +114,6 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
         LanguageServerManager
             .documentColor(client.worktree, request.file)
             .onFailure {
-                System.err.println(it)
                 editor.showDocumentColors(null)
                 return
             }.onSuccess { colorInformations ->
@@ -143,7 +142,6 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
                 CharPosition(lowerLine, content.getColumnCount(lowerLine))
             )
         ).onFailure {
-            System.err.println(it)
             editor.showInlayHints(null)
             return
         }.onSuccess { inlayHints ->
