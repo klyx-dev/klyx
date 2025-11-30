@@ -776,7 +776,7 @@ style:
   UnnecessaryAnnotationUseSiteTarget:
     active: false
   UnnecessaryApply:
-    active: true
+    active: false
   UnnecessaryBackticks:
     active: false
   UnnecessaryBracesAroundTrailingLambda:

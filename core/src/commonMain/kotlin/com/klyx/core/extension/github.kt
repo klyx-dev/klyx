@@ -1,6 +1,7 @@
 package com.klyx.core.extension
 
 import com.akuleshov7.ktoml.Toml
+import com.akuleshov7.ktoml.TomlInputConfig
 import com.klyx.core.Environment
 import com.klyx.core.fetchBody
 import com.klyx.core.fetchText
@@ -88,7 +89,11 @@ private suspend fun fetchSingleExtension(name: String, entry: ExtensionEntry): E
     val tomlFileUrl = "https://raw.githubusercontent.com/$owner/$repo/$submoduleSha/extension.toml"
 
     val tomlContentRaw = fetchText(tomlFileUrl)
-    return Toml.decodeFromString(tomlContentRaw)
+    return Toml(
+        inputConfig = TomlInputConfig(
+            ignoreUnknownNames = true
+        )
+    ).decodeFromString(tomlContentRaw)
 }
 
 suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(Dispatchers.IO) {
