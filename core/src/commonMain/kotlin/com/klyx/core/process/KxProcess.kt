@@ -72,7 +72,9 @@ class KxProcess @PublishedApi internal constructor(internal val builder: KxProce
     fun exitCodeOrNull() = withProcess { exitCodeOrNull() }
     fun pid() = withProcess { pid() }
 
-    suspend fun output() = withContext(Dispatchers.Default) { builder.output() }
+    suspend fun output() =
+        withContext(Dispatchers.Default) { builder.output { timeoutMillis = 5000 } }
+
     suspend fun output(block: Output.Options.Builder.() -> Unit) =
         withContext(Dispatchers.Default) { builder.output(block) }
 

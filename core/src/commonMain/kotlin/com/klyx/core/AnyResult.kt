@@ -339,6 +339,15 @@ inline fun <A> anyhow(block: AnyResultRaise.() -> A) = anyResult(block)
 fun <E> AnyResultRaise.anyhow(error: E): Nothing = raise(error)
 fun <E> anyhow(error: E) = anyResult { raise(error) }
 
+/**
+ * Raises a _logical failure_ with the given string message.
+ * This function behaves like a _return statement_, immediately short-circuiting and terminating the computation.
+ *
+ * This is a convenience alias for `raise(message)`.
+ *
+ * @param message The error message string.
+ * @return [Nothing] This function never returns; it always raises an error.
+ */
 @RaiseDSL
 fun AnyResultRaise.bail(message: String): Nothing = raise(message)
 

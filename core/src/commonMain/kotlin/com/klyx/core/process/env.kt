@@ -1,7 +1,8 @@
 package com.klyx.core.process
 
-import com.klyx.core.anyResult
+import com.klyx.core.anyhow
 import com.klyx.core.bail
+import com.klyx.core.map
 import kotlinx.io.files.Path
 
 expect suspend fun getenv(name: String): String?
@@ -9,10 +10,13 @@ expect suspend fun getenv(): Map<String, String>
 
 expect val systemUserName: String
 
-suspend fun which(binaryName: String) = anyResult {
-    systemProcess("which", binaryName)
+suspend fun which(binaryName: String) = anyhow {
+    Command.newCommand("which")
+        .arg(binaryName)
         .output()
-        .stdout
-        .ifBlank { bail($$"failed to find '$$binaryName' in $PATH") }
-        .let(::Path)
+        .map {
+            if (it.stdout.isBlank()) bail($$"failed to find '$$binaryName' in $PATH")
+            else Path(it.stdout)
+        }
+        .bind()
 }

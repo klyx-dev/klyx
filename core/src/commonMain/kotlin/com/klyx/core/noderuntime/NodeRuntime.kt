@@ -58,7 +58,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import kotlinx.io.buffered
 import kotlinx.io.files.FileNotFoundException
 import kotlinx.io.files.Path
@@ -561,17 +560,15 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
             val nodeCaCerts = getenv(NODE_CA_CERTS_ENV_VAR).orEmpty()
 
             val valid = fs.metadataOrNull(nodeBinary)?.let {
-                val result = withTimeout(3000) {
-                    Command.newCommand(nodeBinary)
-                        .clearEnv()
-                        .env(NODE_CA_CERTS_ENV_VAR, nodeCaCerts)
-                        .arg(npmFile.stripSandboxRoot())
-                        .arg("--version")
-                        .args("--cache".intoPath(), nodeDir.join("cache").stripSandboxRoot())
-                        .args("--userconfig".intoPath(), nodeDir.join("blank_user_npmrc").stripSandboxRoot())
-                        .args("--globalconfig".intoPath(), nodeDir.join("blank_global_npmrc").stripSandboxRoot())
-                        .output(1.minutes)
-                }
+                val result = Command.newCommand(nodeBinary)
+                    .clearEnv()
+                    .env(NODE_CA_CERTS_ENV_VAR, nodeCaCerts)
+                    .arg(npmFile.stripSandboxRoot())
+                    .arg("--version")
+                    .args("--cache".intoPath(), nodeDir.join("cache").stripSandboxRoot())
+                    .args("--userconfig".intoPath(), nodeDir.join("blank_user_npmrc").stripSandboxRoot())
+                    .args("--globalconfig".intoPath(), nodeDir.join("blank_global_npmrc").stripSandboxRoot())
+                    .output(1.minutes)
 
                 result.fold(
                     success = { output ->
@@ -617,7 +614,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                         outputPath = downloadPath.toString(),
                         onComplete = { log.info { "Download of Node.js complete, extracting..." } },
                         onDownload = { sent, total ->
-                            log.info { "Downloaded $sent bytes of $total" }
+                            log.info { "[Node.js] Downloaded $sent bytes of $total" }
                         }
                     )
                 }.context("error downloading Node binary tarball").bind()
