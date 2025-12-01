@@ -28,7 +28,7 @@ allprojects {
                 languageSettings {
                     @OptIn(ExperimentalKotlinGradlePluginApi::class)
                     compilerOptions {
-                        freeCompilerArgs.addAll("-Xexpect-actual-classes")
+                        freeCompilerArgs.addAll("-Xexpect-actual-classes", "-Xcontext-parameters")
                     }
                 }
             }

@@ -88,28 +88,10 @@ jobs:
       - name: Build JVM App
         run: |
           if ./gradlew tasks --all | grep -q "packageDistributionForCurrentOS"; then
-            ./gradlew packageDistributionForCurrentOS shadowJar
+            ./gradlew packageDistributionForCurrentOS
           else
             echo "Skipping JVM build, task not available"
           fi
-
-#      - name: Upload JVM artifacts
-#        run: |
-#          find . -path "*/build/compose/binaries/main/*/*" -type f 2>/dev/null | while read -r file; do
-#            if [[ -f "$file" ]]; then
-#              echo "Found distribution file: $file"
-#              filename=$(basename "$file")
-#              echo "Uploading $filename"
-#            fi
-#          done
-#
-#          find . -path "*/build/libs/*-all.jar" -type f 2>/dev/null | while read -r file; do
-#            if [[ -f "$file" ]]; then
-#              echo "Found JAR file: $file"
-#              filename=$(basename "$file")
-#              echo "Uploading $filename"
-#            fi
-#          done
 
 #      - name: Upload distribution artifacts
 #        uses: actions/upload-artifact@v4
@@ -117,14 +99,6 @@ jobs:
 #        with:
 #          name: klyx-desktop-distribution
 #          path: '**/build/compose/binaries/main/*/*'
-#          retention-days: 30
-#
-#      - name: Upload JAR artifacts
-#        uses: actions/upload-artifact@v4
-#        if: hashFiles('**/build/libs/*-all.jar') != ''
-#        with:
-#          name: klyx-desktop-jar
-#          path: '**/build/libs/*-all.jar'
 #          retention-days: 30
 
 #  build-linux-native:

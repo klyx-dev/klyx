@@ -1,5 +1,4 @@
 import com.klyx.Configs
-import org.jetbrains.kotlin.gradle.dsl.KotlinVersion.KOTLIN_2_2
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -14,14 +13,6 @@ plugins {
 
 kotlin {
     jvmToolchain(21)
-
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xcontext-parameters")
-
-        apiVersion = KOTLIN_2_2
-        languageVersion = KOTLIN_2_2
-        verbose = true
-    }
 
     androidLibrary {
         namespace = "com.klyx.core"

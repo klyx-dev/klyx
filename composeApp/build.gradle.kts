@@ -1,5 +1,4 @@
 import com.android.build.gradle.internal.api.ApkVariantOutputImpl
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.klyx.AppVersioning
 import com.klyx.Configs
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
@@ -12,13 +11,9 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
-    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 kotlin {
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xcontext-parameters")
-    }
 
     androidTarget {
         compilerOptions {
@@ -218,24 +213,6 @@ dependencies {
     debugImplementation(libs.compose.uiToolingPreview)
 }
 
-tasks.register<ShadowJar>("shadowJar") {
-    archiveBaseName.set("klyx")
-    archiveClassifier.set("all")
-    archiveVersion.set(AppVersioning.stableVersionName)
-
-    from(kotlin.jvm("desktop").compilations.getByName("main").output)
-    configurations = listOf(
-        project.configurations.getByName("desktopRuntimeClasspath")
-    )
-
-    manifest {
-        attributes["Main-Class"] = "${Configs.KLYX_PACKAGE_NAME}.MainKt"
-    }
-
-    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
-    mergeServiceFiles()
-}
-
 compose.desktop {
     application {
         mainClass = "${Configs.KLYX_PACKAGE_NAME}.MainKt"
@@ -292,7 +269,6 @@ tasks.register("assembleAllTargets") {
 
     dependsOn(
         "assembleRelease",
-        "shadowJar",
         "packageDistributionForCurrentOS"
     )
 
@@ -311,30 +287,8 @@ tasks.register("assembleAllTargets") {
     }
 }
 
-tasks.register<Zip>("createPortableArchive") {
-    group = "distribution"
-
-    dependsOn("shadowJar")
-
-    from(tasks.named("shadowJar"))
-    from("README.md") {
-        into("docs")
-    }
-    from("LICENSE") {
-        into("docs")
-    }
-
-    archiveBaseName.set("klyx")
-    archiveVersion.set(AppVersioning.stableVersionName)
-    archiveClassifier.set("portable")
-    destinationDirectory.set(file("${layout.buildDirectory}/distributions"))
-}
-
 tasks.register("prepareArtifacts") {
     group = "distribution"
 
-    dependsOn(
-        "assembleAllTargets",
-        "createPortableArchive"
-    )
+    dependsOn("assembleAllTargets")
 }

@@ -7,9 +7,6 @@ plugins {
 }
 
 kotlin {
-    compilerOptions {
-        freeCompilerArgs.addAll("-Xcontext-parameters")
-    }
 
     androidLibrary {
         namespace = "com.klyx.wasm"
