@@ -96,13 +96,13 @@ kotlin {
 
         iosMain {
             dependencies {
-                implementation("org.jetbrains.skiko:skiko:0.9.30")
+                implementation("org.jetbrains.skiko:skiko:0.9.37.3")
             }
         }
 
         jvmMain {
             dependencies {
-                implementation("org.jetbrains.skiko:skiko:0.9.30")
+                implementation("org.jetbrains.skiko:skiko:0.9.37.3")
             }
         }
     }
