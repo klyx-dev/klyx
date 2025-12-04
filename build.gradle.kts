@@ -1,5 +1,4 @@
 import io.gitlab.arturbosch.detekt.Detekt
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 plugins {
@@ -26,7 +25,6 @@ allprojects {
         extensions.configure<KotlinMultiplatformExtension> {
             sourceSets.matching { it.name == "commonMain" }.all {
                 languageSettings {
-                    @OptIn(ExperimentalKotlinGradlePluginApi::class)
                     compilerOptions {
                         freeCompilerArgs.addAll("-Xexpect-actual-classes", "-Xcontext-parameters")
                     }
