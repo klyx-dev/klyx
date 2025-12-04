@@ -11,76 +11,51 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.ui.NavDisplay
 import com.klyx.appPrefs
-import com.klyx.core.extension.ExtensionInfo
-import com.klyx.core.extension.fetchRemoteInfo
-import com.klyx.core.ui.animatedComposable
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
-import com.klyx.navTypeMap
 import com.klyx.res.Res.string
 import com.klyx.res.extension_disclaimer
 import com.klyx.ui.component.extension.ExtensionRoutes.ExtensionDetail
 import com.klyx.ui.component.extension.ExtensionRoutes.ExtensionList
 import org.jetbrains.compose.resources.stringResource
-import kotlin.reflect.typeOf
 
 @Composable
 fun ExtensionScreen(modifier: Modifier = Modifier) {
-    val navController = rememberNavController()
 
-    val onNavigateBack: () -> Unit = {
-        with(navController) {
-            if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                popBackStack()
+    val backStack = rememberNavBackStack(ExtensionRoutes.config(), ExtensionList)
+
+    NavDisplay(
+        modifier = modifier.padding(horizontal = 8.dp),
+        backStack = backStack,
+        onBack = { backStack.removeLastOrNull() },
+        entryProvider = entryProvider {
+            entry<ExtensionList> {
+                ExtensionListScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    onExtensionItemClick = { extension ->
+                        backStack.add(ExtensionDetail(extensionInfo = extension))
+                    }
+                )
+            }
+
+            entry<ExtensionDetail> { detail ->
+                ExtensionDetailScreen(
+                    modifier = Modifier.fillMaxSize(),
+                    extensionInfo = detail.extensionInfo,
+                    onNavigateBack = { backStack.removeLastOrNull() }
+                )
             }
         }
-    }
-
-    NavHost(
-        navController = navController,
-        modifier = modifier.padding(horizontal = 8.dp),
-        startDestination = ExtensionList
-    ) {
-        animatedComposable<ExtensionList> {
-            ExtensionListScreen(
-                modifier = Modifier.fillMaxSize(),
-                onExtensionItemClick = { extension ->
-                    navController.navigate(route = ExtensionDetail(extension)) {
-                        launchSingleTop = true
-                    }
-                }
-            )
-        }
-
-        animatedComposable<ExtensionDetail>(typeMap = navTypeMap(typeOf<ExtensionInfo>())) { backStackEntry ->
-            val detail: ExtensionDetail = backStackEntry.toRoute()
-
-//            val remoteInfo by produceState(detail.extensionInfo) {
-//                with(detail.extensionInfo) {
-//                    if (repository.isNotBlank()) {
-//                        value = fetchRemoteInfo(repository)
-//                    }
-//                }
-//            }
-
-            ExtensionDetailScreen(
-                modifier = Modifier.fillMaxSize(),
-                extensionId = detail.extensionInfo.id,
-                onNavigateBack = onNavigateBack
-            )
-        }
-    }
+    )
 
     ExtensionDisclaimer()
 }

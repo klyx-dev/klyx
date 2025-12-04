@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalDrawerState
 import com.klyx.LocalLogBuffer
+import com.klyx.WorktreeDrawer
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.isPermissionRequired
@@ -50,6 +51,7 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
 import com.klyx.core.language
+import com.klyx.core.registerGeneralCommands
 import com.klyx.core.theme.ThemeManager
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
@@ -86,181 +88,204 @@ fun MainPage(modifier: Modifier = Modifier) {
     val isTabOpen by editorViewModel.isTabOpen.collectAsStateWithLifecycle()
     val activeTab by editorViewModel.activeTab.collectAsStateWithLifecycle()
 
-    val drawerState = LocalDrawerState.current
     val scope = rememberCoroutineScope()
 
-    val openDrawerIfClosed = {
-        scope.launch { drawerState.openIfClosed() }
-    }
-
-    var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
-
-    Scaffold(
-        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MainTopBar(
-                isTabOpen = isTabOpen,
-                activeTab = activeTab,
-                project = project,
-                scrollBehavior = scrollBehavior
-            )
+    WorktreeDrawer(
+        project = project,
+        onFileClick = { file, worktree ->
+            editorViewModel.openFile(file, worktree)
         },
-        floatingActionButton = {
-            val directoryPicker = rememberDirectoryPickerLauncher { file ->
-                if (file != null) {
-                    val kx = file.toKxFile()
-
-                    if (kx.isPermissionRequired(R_OK or W_OK)) {
-                        klyxViewModel.showPermissionDialog()
-                    } else {
-                        klyxViewModel.openProject(Worktree(kx))
-                        openDrawerIfClosed()
-                    }
-                }
+        onDirectoryPicked = { directory, drawerState ->
+            if (directory.isPermissionRequired(R_OK or W_OK)) {
+                klyxViewModel.showPermissionDialog()
+            } else {
+                klyxViewModel.openProject(Worktree(directory))
+                scope.launch { drawerState.openIfClosed() }
             }
+        },
+        gesturesEnabled = { drawerState -> drawerState.isOpen || !isTabOpen },
+    ) {
+        val drawerState = LocalDrawerState.current
 
-            val filePicker = rememberFilePickerLauncher { file ->
-                if (file != null) {
-                    editorViewModel.openFile(file.toKxFile())
-                }
-            }
-
-            FloatingActionButtonMenu(
-                expanded = fabMenuExpanded && !isTabOpen,
-                button = {
-                    ToggleFloatingActionButton(
-                        modifier = Modifier
-                            .semantics {
-                                traversalIndex = -1f
-                                stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
-                                contentDescription = "Toggle menu"
-                            }.animateFloatingActionButton(
-                                visible = !isTabOpen,
-                                alignment = Alignment.BottomEnd
-                            ),
-                        checked = fabMenuExpanded,
-                        onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
-                        containerSize = ToggleFloatingActionButtonDefaults.containerSizeMedium(),
-                        containerCornerRadius = ToggleFloatingActionButtonDefaults.containerCornerRadiusMedium()
-                    ) {
-                        val imageVector by remember {
-                            derivedStateOf {
-                                if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
-                            }
-                        }
-
-                        Icon(
-                            painter = rememberVectorPainter(imageVector),
-                            contentDescription = null,
-                            modifier = Modifier.animateIcon(
-                                checkedProgress = { checkedProgress },
-                                size = ToggleFloatingActionButtonDefaults.iconSizeMedium()
-                            ),
-                        )
-                    }
-                }
-            ) {
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        editorViewModel.openFile(KxFile("untitled"))
-                        fabMenuExpanded = false
-                    },
-                    text = { Text("New File") },
-                    icon = { Icon(Icons.Rounded.Add, contentDescription = "New File") }
-                )
-
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        filePicker.launch()
-                        fabMenuExpanded = false
-                    },
-                    text = { Text("Open File") },
-                    icon = { Icon(Icons.Outlined.FileOpen, contentDescription = "Open File") }
-                )
-
-                FloatingActionButtonMenuItem(
-                    onClick = {
-                        directoryPicker.launch()
-                        fabMenuExpanded = false
-                    },
-                    text = { Text("Open Folder") },
-                    icon = { Icon(Icons.Outlined.DriveFolderUpload, contentDescription = "Open Folder") }
-                )
-            }
+        val openDrawerIfClosed = {
+            scope.launch { drawerState.openIfClosed() }
         }
-    ) { padding ->
 
-        Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
-            LaunchedEffect(Unit) {
-                launch {
-                    editorViewModel.activeFile.collect { file ->
-                        statusBarViewModel.setLanguage(file?.language())
+        var fabMenuExpanded by rememberSaveable { mutableStateOf(false) }
+
+        registerGeneralCommands()
+
+        Scaffold(
+            modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                MainTopBar(
+                    isTabOpen = isTabOpen,
+                    activeTab = activeTab,
+                    project = project,
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            floatingActionButton = {
+                val directoryPicker = rememberDirectoryPickerLauncher { file ->
+                    if (file != null) {
+                        val kx = file.toKxFile()
+
+                        if (kx.isPermissionRequired(R_OK or W_OK)) {
+                            klyxViewModel.showPermissionDialog()
+                        } else {
+                            klyxViewModel.openProject(Worktree(kx))
+                            openDrawerIfClosed()
+                        }
                     }
                 }
+
+                val filePicker = rememberFilePickerLauncher { file ->
+                    if (file != null) {
+                        editorViewModel.openFile(file.toKxFile())
+                    }
+                }
+
+                FloatingActionButtonMenu(
+                    expanded = fabMenuExpanded && !isTabOpen,
+                    button = {
+                        ToggleFloatingActionButton(
+                            modifier = Modifier
+                                .semantics {
+                                    traversalIndex = -1f
+                                    stateDescription = if (fabMenuExpanded) "Expanded" else "Collapsed"
+                                    contentDescription = "Toggle menu"
+                                }.animateFloatingActionButton(
+                                    visible = !isTabOpen,
+                                    alignment = Alignment.BottomEnd
+                                ),
+                            checked = fabMenuExpanded,
+                            onCheckedChange = { fabMenuExpanded = !fabMenuExpanded },
+                            containerSize = ToggleFloatingActionButtonDefaults.containerSizeMedium(),
+                            containerCornerRadius = ToggleFloatingActionButtonDefaults.containerCornerRadiusMedium()
+                        ) {
+                            val imageVector by remember {
+                                derivedStateOf {
+                                    if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
+                                }
+                            }
+
+                            Icon(
+                                painter = rememberVectorPainter(imageVector),
+                                contentDescription = null,
+                                modifier = Modifier.animateIcon(
+                                    checkedProgress = { checkedProgress },
+                                    size = ToggleFloatingActionButtonDefaults.iconSizeMedium()
+                                ),
+                            )
+                        }
+                    }
+                ) {
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            editorViewModel.openFile(KxFile("untitled"))
+                            fabMenuExpanded = false
+                        },
+                        text = { Text("New File") },
+                        icon = { Icon(Icons.Rounded.Add, contentDescription = "New File") }
+                    )
+
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            filePicker.launch()
+                            fabMenuExpanded = false
+                        },
+                        text = { Text("Open File") },
+                        icon = { Icon(Icons.Outlined.FileOpen, contentDescription = "Open File") }
+                    )
+
+                    FloatingActionButtonMenuItem(
+                        onClick = {
+                            directoryPicker.launch()
+                            fabMenuExpanded = false
+                        },
+                        text = { Text("Open Folder") },
+                        icon = { Icon(Icons.Outlined.DriveFolderUpload, contentDescription = "Open Folder") }
+                    )
+                }
             }
+        ) { padding ->
 
-            val activeTab by editorViewModel.activeTab.collectAsState(null)
+            Column(modifier = Modifier.fillMaxSize().padding(padding).imePadding()) {
+                LaunchedEffect(Unit) {
+                    launch {
+                        editorViewModel.activeFile.collect { file ->
+                            statusBarViewModel.setLanguage(file?.language())
+                        }
+                    }
+                }
 
-            LaunchedEffect(activeTab?.id) {
-                when (val tab = activeTab) {
-                    is FileTab -> {
-                        when (val state = tab.editorState) {
-                            is ComposeEditorState -> {
-                                with(state.state) {
-                                    cursor.collectLatest { cursor ->
-                                        statusBarViewModel.setCursorState(cursor.let {
-                                            CursorState(
-                                                left = if (selection.collapsed) it.line else selection.min,
-                                                right = if (selection.collapsed) it.line else selection.max,
-                                                leftLine = if (selection.collapsed) it.line else cursorAt(selection.min).line,
-                                                rightLine = if (selection.collapsed) it.line else cursorAt(selection.max).line,
-                                                leftColumn = if (selection.collapsed) it.column else cursorAt(selection.min).column,
-                                                rightColumn = if (selection.collapsed) it.column else cursorAt(selection.max).column,
-                                                isSelected = !selection.collapsed
-                                            )
-                                        })
+                val activeTab by editorViewModel.activeTab.collectAsState(null)
+
+                LaunchedEffect(activeTab?.id) {
+                    when (val tab = activeTab) {
+                        is FileTab -> {
+                            when (val state = tab.editorState) {
+                                is ComposeEditorState -> {
+                                    with(state.state) {
+                                        cursor.collectLatest { cursor ->
+                                            statusBarViewModel.setCursorState(cursor.let {
+                                                CursorState(
+                                                    left = if (selection.collapsed) it.line else selection.min,
+                                                    right = if (selection.collapsed) it.line else selection.max,
+                                                    leftLine = if (selection.collapsed) it.line else cursorAt(selection.min).line,
+                                                    rightLine = if (selection.collapsed) it.line else cursorAt(selection.max).line,
+                                                    leftColumn = if (selection.collapsed) it.column else cursorAt(
+                                                        selection.min
+                                                    ).column,
+                                                    rightColumn = if (selection.collapsed) it.column else cursorAt(
+                                                        selection.max
+                                                    ).column,
+                                                    isSelected = !selection.collapsed
+                                                )
+                                            })
+                                        }
+                                    }
+                                }
+
+                                is SoraEditorState -> {
+                                    state.state.cursor.collectLatest { cursorState ->
+                                        statusBarViewModel.setCursorState(cursorState)
                                     }
                                 }
                             }
-
-                            is SoraEditorState -> {
-                                state.state.cursor.collectLatest { cursorState ->
-                                    statusBarViewModel.setCursorState(cursorState)
-                                }
-                            }
                         }
+
+                        else -> {}
                     }
-
-                    else -> {}
                 }
-            }
 
-            EditorScreen(modifier = Modifier.weight(1f))
+                EditorScreen(modifier = Modifier.weight(1f))
 
-            if (appState.showLogViewer) {
-                LogViewerSheet(
-                    buffer = logBuffer,
-                    onOpenAsTabClick = {
-                        editorViewModel.openLogViewer()
-                    },
-                    onDismissRequest = klyxViewModel::dismissLogViewer
-                )
-            }
+                if (appState.showLogViewer) {
+                    LogViewerSheet(
+                        buffer = logBuffer,
+                        onOpenAsTabClick = {
+                            editorViewModel.openLogViewer()
+                        },
+                        onDismissRequest = klyxViewModel::dismissLogViewer
+                    )
+                }
 
-            MenuStateDialogs()
+                MenuStateDialogs()
 
-            if (CommandManager.showCommandPalette) {
-                CommandPalette(
-                    commands = CommandManager.commands,
-                    recentlyUsedCommands = CommandManager.recentlyUsedCommands,
-                    onDismissRequest = CommandManager::hideCommandPalette
-                )
-            }
+                if (CommandManager.showCommandPalette) {
+                    CommandPalette(
+                        commands = CommandManager.commands,
+                        recentlyUsedCommands = CommandManager.recentlyUsedCommands,
+                        onDismissRequest = CommandManager::hideCommandPalette
+                    )
+                }
 
-            if (ThemeManager.showThemeSelector) {
-                ThemeSelector(
-                    onDismissRequest = ThemeManager::hideThemeSelector
-                )
+                if (ThemeManager.showThemeSelector) {
+                    ThemeSelector(
+                        onDismissRequest = ThemeManager::hideThemeSelector
+                    )
+                }
             }
         }
     }

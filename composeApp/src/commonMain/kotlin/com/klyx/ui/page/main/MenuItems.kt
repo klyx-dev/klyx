@@ -19,7 +19,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.Key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import com.klyx.AppRoute
+import com.klyx.Route
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.PlatformContext
 import com.klyx.core.cmd.CommandManager
@@ -43,7 +45,7 @@ fun ColumnScope.DropdownMenuItems(
     project: Project,
     onShowFileMenu: () -> Unit,
     onShowHelpMenu: () -> Unit,
-    onNavigateToRoute: (AppRoute) -> Unit,
+    onNavigateTo: (NavKey) -> Unit,
     onDismissRequest: () -> Unit = {}
 ) {
     val editorViewModel = LocalEditorViewModel.current
@@ -87,7 +89,7 @@ fun ColumnScope.DropdownMenuItems(
         text = { Text("Terminal") },
         onClick = {
             onDismissRequest()
-            //onNavigateToRoute(AppRoute.Terminal)
+            //onNavigateTo(Route.Terminal)
             context.openTerminal()
         },
         leadingIcon = {
@@ -103,7 +105,7 @@ fun ColumnScope.DropdownMenuItems(
             text = { Text(stringResource(Res.string.settings)) },
             onClick = {
                 onDismissRequest()
-                onNavigateToRoute(AppRoute.Settings.SettingsPage)
+                onNavigateTo(Route.Settings)
             },
             leadingIcon = {
                 Icon(

@@ -18,6 +18,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.klyx.AppRoute
 import com.klyx.LocalNavigator
+import com.klyx.SettingsRoute
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.SettingItem
 import com.klyx.res.Res
@@ -57,7 +58,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                     description = stringResource(Res.string.general_settings_desc),
                     icon = Icons.Outlined.Settings
                 ) {
-                    navigator.navigateTo(AppRoute.Settings.GeneralPreferences)
+                    navigator.navigateTo(SettingsRoute.General)
                 }
             }
 
@@ -67,7 +68,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                     description = stringResource(Res.string.editor_settings_desc),
                     icon = Icons.Outlined.Code
                 ) {
-                    navigator.navigateTo(AppRoute.Settings.EditorPreferences)
+                    navigator.navigateTo(SettingsRoute.Editor)
                 }
             }
 
@@ -77,7 +78,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                     description = stringResource(Res.string.display_settings),
                     icon = Icons.Outlined.Palette,
                 ) {
-                    navigator.navigateTo(AppRoute.Settings.Appearance)
+                    navigator.navigateTo(SettingsRoute.Appearance)
                 }
             }
 
@@ -87,7 +88,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                     description = stringResource(Res.string.about_page),
                     icon = Icons.Outlined.Info,
                 ) {
-                    navigator.navigateTo(AppRoute.Settings.About)
+                    navigator.navigateTo(SettingsRoute.About)
                 }
             }
         }

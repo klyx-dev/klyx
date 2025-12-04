@@ -54,7 +54,6 @@ kotlin {
                 implementation(libs.compose.components.resources)
                 implementation(libs.compose.ui.tooling.preview)
 
-                implementation(libs.navigation.compose)
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtime.compose)
 

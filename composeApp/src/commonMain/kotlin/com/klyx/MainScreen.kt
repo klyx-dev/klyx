@@ -1,15 +1,19 @@
 package com.klyx
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,36 +23,20 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraphBuilder
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.navigation
-import androidx.navigation.compose.rememberNavController
-import com.klyx.AppRoute.Settings.About
-import com.klyx.AppRoute.Settings.Appearance
-import com.klyx.AppRoute.Settings.DarkTheme
-import com.klyx.AppRoute.Settings.EditorPreferences
-import com.klyx.AppRoute.Settings.GeneralPreferences
-import com.klyx.AppRoute.Settings.SettingsPage
+import androidx.navigation3.runtime.EntryProviderScope
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.ui.NavDisplay
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
-import com.klyx.core.file.isPermissionRequired
-import com.klyx.core.io.R_OK
-import com.klyx.core.io.W_OK
 import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
 import com.klyx.core.notification.ui.NotificationOverlay
-import com.klyx.core.registerGeneralCommands
 import com.klyx.core.settings.currentAppSettings
-import com.klyx.core.ui.animatedComposable
-import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
-import com.klyx.extension.api.Worktree
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.page.SettingsPage
@@ -60,7 +48,6 @@ import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
@@ -69,27 +56,9 @@ fun MainScreen() {
     val lifecycleOwner = LocalLifecycleOwner.current
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val scope = rememberCoroutineScope()
-    val navController = rememberNavController()
-
-    val editorViewModel = LocalEditorViewModel.current
     val klyxViewModel = LocalKlyxViewModel.current
 
-    val project by klyxViewModel.openedProject.collectAsStateWithLifecycle()
     val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
-
-    val isTabOpen by editorViewModel.isTabOpen.collectAsStateWithLifecycle()
-
-    val onNavigateBack: () -> Unit = {
-        with(navController) {
-            if (currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
-                popBackStack()
-            }
-        }
-    }
-
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
 
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
@@ -107,84 +76,97 @@ fun MainScreen() {
 
     collectLogs()
 
-    ProvideNavigator(
-        onNavigateBack = onNavigateBack,
-        onNavigateTo = { route ->
-            navController.navigate(route = route) {
-                launchSingleTop = true
-            }
-        }
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
-        ) {
-            WorktreeDrawer(
-                project = project,
-                onFileClick = { file, worktree ->
-                    editorViewModel.openFile(file, worktree)
-                },
-                onDirectoryPicked = { directory, drawerState ->
-                    if (directory.isPermissionRequired(R_OK or W_OK)) {
-                        klyxViewModel.showPermissionDialog()
-                    } else {
-                        klyxViewModel.openProject(Worktree(directory))
-                        scope.launch { drawerState.openIfClosed() }
-                    }
-                },
-                gesturesEnabled = { drawerState ->
-                    (drawerState.isOpen || !isTabOpen) && currentDestination?.hasRoute<AppRoute.Home>() == true
-                },
-                isHomeRoute = currentDestination?.hasRoute<AppRoute.Home>() == true
-            ) {
-                registerGeneralCommands()
+        val navigationState = rememberNavigationState(startRoute = Route.Main)
+        val navigator = remember { Navigator(navigationState) }
 
-                NavHost(
-                    modifier = Modifier.align(Alignment.Center),
-                    navController = navController,
-                    startDestination = AppRoute.Home
-                ) {
-                    animatedComposable<AppRoute.Home> {
-                        MainPage(modifier = Modifier.fillMaxSize())
-                    }
-
-                    animatedComposable<AppRoute.Terminal> {
-                        TerminalPage(
-                            modifier = Modifier.fillMaxSize(),
-                            onSessionFinish = {
-                                currentDestination?.let { destination ->
-                                    if (destination.hasRoute<AppRoute.Terminal>()) {
-                                        navController.popBackStack()
-                                        keyboardController?.hide()
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    settingsGraph()
-                }
+        val entryProvider = entryProvider {
+            entry<Route.Main> {
+                MainPage(modifier = Modifier.fillMaxSize())
             }
 
-            if (appState.showPermissionDialog) {
-                PermissionDialog(
-                    onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
-                    onRequestPermission = { requestFileAccessPermission() }
+            entry<Route.Terminal> {
+                TerminalPage(
+                    modifier = Modifier.fillMaxSize(),
+                    onSessionFinish = {
+                        navigator.navigateBack()
+                        keyboardController?.hide()
+                    }
                 )
             }
 
-            var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
+            entry<Route.Settings> { SettingsPage() }
 
-            if (!disclaimerAccepted) {
-                DisclaimerDialog(
-                    onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
-                )
-            }
-
-            NotificationOverlay()
+            settingsScreenEntries()
         }
+
+        CompositionLocalProvider(LocalNavigator provides navigator) {
+            NavDisplay(
+                modifier = Modifier.align(Alignment.Center),
+                entries = navigationState.toEntries(entryProvider),
+                onBack = { navigator.navigateBack() },
+                transitionSpec = {
+                    // Slide in from right when navigating forward
+                    slideInHorizontally(
+                        initialOffsetX = { it },
+                        animationSpec = tween(Navigator.ANIMATION_DURATION)
+                    ) togetherWith slideOutHorizontally(
+                        targetOffsetX = { -it },
+                        animationSpec = tween(Navigator.ANIMATION_DURATION)
+                    )
+                },
+                popTransitionSpec = {
+                    // Slide in from left when navigating back
+                    slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(Navigator.ANIMATION_DURATION)
+                    ) togetherWith slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(Navigator.ANIMATION_DURATION)
+                    )
+                },
+                predictivePopTransitionSpec = {
+                    // Slide in from left when navigating back
+                    slideInHorizontally(
+                        initialOffsetX = { -it },
+                        animationSpec = tween(Navigator.ANIMATION_DURATION)
+                    ) togetherWith slideOutHorizontally(
+                        targetOffsetX = { it },
+                        animationSpec = tween(Navigator.ANIMATION_DURATION)
+                    )
+                }
+            )
+        }
+
+        if (appState.showPermissionDialog) {
+            PermissionDialog(
+                onDismissRequest = { klyxViewModel.dismissPermissionDialog() },
+                onRequestPermission = { requestFileAccessPermission() }
+            )
+        }
+
+        var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
+
+        if (!disclaimerAccepted) {
+            DisclaimerDialog(
+                onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
+            )
+        }
+
+        NotificationOverlay()
     }
+}
+
+private fun EntryProviderScope<NavKey>.settingsScreenEntries() {
+    entry<SettingsRoute.General> { GeneralPreferences() }
+    entry<SettingsRoute.Appearance> { AppearancePreferences() }
+    entry<SettingsRoute.DarkTheme> { DarkThemePreferences() }
+    entry<SettingsRoute.Editor> { EditorPreferences() }
+    entry<SettingsRoute.About> { AboutPage() }
 }
 
 @Suppress("ComposableNaming")
@@ -200,17 +182,6 @@ private fun collectLogs() {
                 statusBarViewModel.setCurrentLogMessage(log, isProgressive = log.type == MessageType.Progress)
             }
         }
-    }
-}
-
-fun NavGraphBuilder.settingsGraph() {
-    navigation<AppRoute.Settings>(startDestination = SettingsPage) {
-        animatedComposable<SettingsPage> { SettingsPage() }
-        animatedComposable<GeneralPreferences> { GeneralPreferences() }
-        animatedComposable<Appearance> { AppearancePreferences() }
-        animatedComposable<DarkTheme> { DarkThemePreferences() }
-        animatedComposable<EditorPreferences> { EditorPreferences() }
-        animatedComposable<About> { AboutPage() }
     }
 }
 

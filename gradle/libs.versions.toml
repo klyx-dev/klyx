@@ -13,7 +13,6 @@ kfswatch = "1.4.0"
 kotlinResult = "2.1.0"
 multiplatformMarkdownRenderer = "0.38.1"
 multiplatformSettingsNoArg = "1.3.0"
-navigationCompose = "2.9.1"
 kmp-process = "0.4.0"
 semver = "3.0.0"
 wasip1Bindings = "0.6.0"
@@ -81,7 +80,6 @@ kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", versi
 multiplatform-markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettingsNoArg" }
-navigation-compose = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
 kmp-process = { module = "io.matthewnelson.kmp-process:process", version.ref = "kmp-process" }
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
 wasip1-host = { module = "at.released.weh:host", version.ref = "wasip1Bindings" }

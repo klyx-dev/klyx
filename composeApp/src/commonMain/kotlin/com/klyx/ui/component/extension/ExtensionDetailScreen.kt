@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
 import com.klyx.core.LocalNotifier
 import com.klyx.core.extension.ExtensionId
+import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.extension.fetchLastUpdated
 import com.klyx.core.formatDateTime
 import com.klyx.core.icon.GithubAlt
@@ -61,14 +62,13 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExtensionDetailScreen(
-    extensionId: ExtensionId,
+    extensionInfo: ExtensionInfo,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
     val notifier = LocalNotifier.current
     val viewModel = LocalExtensionViewModel.current
-    val extensionInfo = viewModel.getExtensionInfo(extensionId) ?: return
 
     val scope = rememberCoroutineScope()
 

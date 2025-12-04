@@ -66,7 +66,6 @@ kotlin {
             implementation(libs.androidx.material3.adaptive)
             implementation(libs.androidx.material3.adaptive.nav3)
 
-            implementation(libs.navigation.compose)
             implementation(libs.fuzzywuzzy.kotlin)
 
             implementation(libs.androidx.lifecycle.viewmodel)

@@ -31,8 +31,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import com.klyx.AppRoute
+import androidx.navigation3.runtime.NavKey
 import com.klyx.LocalNavigator
+import com.klyx.Route
 import com.klyx.core.LocalNotifier
 import com.klyx.core.PlatformContext
 import com.klyx.core.file.isKlyxTempFile
@@ -128,21 +129,21 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
     if (activeTab == null || activeTab !is FileTab) {
         TopBarIconButton(
             Icons.Outlined.Settings,
-            contentDescription = stringResource(Res.string.settings),
-            onClick = { navigator.navigateTo(AppRoute.Settings.SettingsPage) }
+            contentDescription = stringResource(string.settings),
+            onClick = { navigator.navigateTo(Route.Settings) }
         )
     }
 
     OverflowMenu(
         project = project,
-        onNavigateToRoute = navigator::navigateTo
+        onNavigateTo = navigator::navigateTo
     )
 }
 
 @Composable
 private fun OverflowMenu(
     project: Project,
-    onNavigateToRoute: (AppRoute) -> Unit
+    onNavigateTo: (NavKey) -> Unit
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
     var showFileMenu by rememberSaveable { mutableStateOf(false) }
@@ -171,9 +172,8 @@ private fun OverflowMenu(
                     expanded = false
                     showHelpMenu = !showHelpMenu
                 },
-                onNavigateToRoute = onNavigateToRoute,
-                onDismissRequest = { expanded = false }
-            )
+                onNavigateTo = onNavigateTo
+            ) { expanded = false }
         }
 
         FileMenu(

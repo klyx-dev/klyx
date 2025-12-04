@@ -48,8 +48,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
-import com.klyx.AppRoute
 import com.klyx.LocalNavigator
+import com.klyx.SettingsRoute
 import com.klyx.core.LocalPaletteStyleIndex
 import com.klyx.core.LocalSeedColor
 import com.klyx.core.settings.LocalAppSettings
@@ -201,7 +201,9 @@ fun AppearancePreferences() {
                         it.copy(appearance = if (checked) Appearance.Dark else Appearance.Light)
                     }
                 },
-                onClick = { navigator.navigateTo(AppRoute.Settings.DarkTheme) },
+                onClick = {
+                    navigator.navigateTo(SettingsRoute.DarkTheme)
+                },
             )
         }
     }

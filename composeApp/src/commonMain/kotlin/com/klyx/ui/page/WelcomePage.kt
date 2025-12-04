@@ -57,10 +57,8 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import com.klyx.AppRoute
 import com.klyx.LocalDrawerState
 import com.klyx.LocalNavigator
-import com.klyx.openIfClosed
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.KeyShortcut
 import com.klyx.core.cmd.key.keyShortcutOf
@@ -75,6 +73,7 @@ import com.klyx.core.ui.component.ShortcutText
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.extension.api.Worktree
+import com.klyx.openIfClosed
 import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openUntitledFile
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
@@ -209,7 +208,9 @@ fun WelcomePage() {
                 text = "Open Settings",
                 shortcut = null,
                 icon = Icons.Outlined.Settings,
-                onClick = { navigator.navigateTo(AppRoute.Settings.SettingsPage) }
+                onClick = {
+                    //navigator.navigateTo(AppRoute.Settings.SettingsPage)
+                }
             )
 
             TextButtonWithShortcutAndIcon(
