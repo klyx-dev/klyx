@@ -80,7 +80,7 @@ fun EditorTabRow(
                 onCloseAll = { onTabMenuAction(TabMenuAction.CloseAll(index)) },
                 onCopyPath = { onTabMenuAction(TabMenuAction.CopyPath(index)) },
                 onCopyRelativePath = { onTabMenuAction(TabMenuAction.CopyRelativePath(index)) },
-                modifier = Modifier.animateItem()
+                //modifier = Modifier.animateItem()
             )
         }
     }
@@ -140,15 +140,13 @@ private fun EditorTab(
             Text(tab.name)
             Spacer(modifier = Modifier.width(4.dp))
 
-            AnimatedVisibility(isSelected) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onClose)
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Close,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onClose)
+            )
         }
 
         EditorTabMenu(

@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.klyx.AppRoute
 import com.klyx.LocalNavigator
 import com.klyx.SettingsRoute
 import com.klyx.core.ui.component.BackButton

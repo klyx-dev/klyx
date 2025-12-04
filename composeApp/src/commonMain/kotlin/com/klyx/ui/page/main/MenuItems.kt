@@ -20,7 +20,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.input.key.Key
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
-import com.klyx.AppRoute
 import com.klyx.Route
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.PlatformContext
