@@ -115,4 +115,6 @@ By clicking "I Agree", you accept full responsibility for using Klyx under these
     <string name="common">Common</string>
     <string name="properties">Properties</string>
     <string name="no_font_family_set">No font family set</string>
+    <string name="font_scale">Font Scale</string>
+    <string name="font_scale_desc">The font scale to use for the app UI</string>
 </resources>

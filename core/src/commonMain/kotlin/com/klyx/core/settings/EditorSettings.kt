@@ -1,9 +1,11 @@
 package com.klyx.core.settings
 
+import androidx.compose.runtime.Immutable
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@Immutable
 @Serializable
 data class EditorSettings(
     @SerialName("font_family")

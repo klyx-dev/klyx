@@ -30,7 +30,6 @@ sealed interface Route : NavKey {
                     subclass(Terminal::class, Terminal.serializer())
                     subclass(Settings::class, Settings.serializer())
 
-                    subclass(SettingsRoute.Main::class, SettingsRoute.Main.serializer())
                     subclass(SettingsRoute.General::class, SettingsRoute.General.serializer())
                     subclass(SettingsRoute.Appearance::class, SettingsRoute.Appearance.serializer())
                     subclass(SettingsRoute.DarkTheme::class, SettingsRoute.DarkTheme.serializer())
@@ -44,11 +43,6 @@ sealed interface Route : NavKey {
 
 @Serializable
 sealed interface SettingsRoute : NavKey {
-    /**
-     * Main settings page route
-     */
-    @Serializable
-    data object Main : NavKey, SettingsRoute
 
     @Serializable
     data object General : NavKey, SettingsRoute
@@ -69,7 +63,6 @@ sealed interface SettingsRoute : NavKey {
         fun config() = SavedStateConfiguration {
             serializersModule = SerializersModule {
                 polymorphic(NavKey::class) {
-                    subclass(Main::class, Main.serializer())
                     subclass(General::class, General.serializer())
                     subclass(Appearance::class, Appearance.serializer())
                     subclass(DarkTheme::class, DarkTheme.serializer())

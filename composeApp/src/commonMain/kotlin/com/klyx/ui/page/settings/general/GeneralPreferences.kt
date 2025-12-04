@@ -3,6 +3,7 @@ package com.klyx.ui.page.settings.general
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Warning
@@ -29,6 +30,7 @@ import com.klyx.core.settings.update
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
+import com.klyx.core.ui.component.PreferenceItem
 import com.klyx.core.ui.component.PreferenceSubtitle
 import com.klyx.core.ui.component.PreferenceSwitch
 import com.klyx.res.Res
@@ -53,6 +55,7 @@ fun GeneralPreferences() {
         }
     ) { padding ->
         var showComposeEditorWarning by remember { mutableStateOf(false) }
+        var showFontScaleDialog by remember { mutableStateOf(false) }
 
         LazyColumn(contentPadding = padding) {
             item { PreferenceSubtitle("Application") }
@@ -94,6 +97,24 @@ fun GeneralPreferences() {
                     }
                 )
             }
+
+            item { PreferenceSubtitle("UI") }
+
+            item {
+                PreferenceItem(
+                    title = "Font Scale",
+                    description = "${(appSettings.fontScale * 100).toInt()}%",
+                    icon = Icons.Default.FormatSize,
+                    onClick = { showFontScaleDialog = !showFontScaleDialog }
+                )
+            }
+        }
+
+        if (showFontScaleDialog) {
+            FontScaleDialog(
+                settings = appSettings,
+                onDismissRequest = { showFontScaleDialog = false }
+            )
         }
 
         if (showComposeEditorWarning) {

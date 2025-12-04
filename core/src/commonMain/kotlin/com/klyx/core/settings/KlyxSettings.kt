@@ -1,7 +1,9 @@
 package com.klyx.core.settings
 
+import androidx.compose.runtime.Stable
 import kotlin.jvm.JvmName
 
+@Stable
 sealed interface KlyxSettings
 
 @JvmName("updateSettings")

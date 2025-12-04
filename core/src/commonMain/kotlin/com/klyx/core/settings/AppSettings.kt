@@ -1,5 +1,6 @@
 package com.klyx.core.settings
 
+import androidx.compose.runtime.Immutable
 import com.klyx.core.theme.Appearance
 import com.klyx.core.theme.Contrast
 import com.klyx.core.theme.DEFAULT_SEED_COLOR
@@ -10,6 +11,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
 
+@Immutable
 @Serializable
 data class AppSettings(
     @SerialComment(
@@ -79,6 +81,8 @@ data class AppSettings(
         """
     )
     val loadExtensionsOnStartup: Boolean = true,
+
+    val fontScale: Float = 1.0f,
 
     @SerialComment("Whether to show terminal tab option or not in the menu.")
     val terminalTab: Boolean = false,

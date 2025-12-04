@@ -14,6 +14,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.watchAndReload
@@ -81,7 +83,10 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
         )
     }
 
+    val density = LocalDensity.current.density
+
     CompositionLocalProvider(
+        LocalDensity provides Density(density, settings.fontScale),
         LocalNotifier provides koinInject(),
         LocalNotificationManager provides koinInject(),
         LocalAppSettings provides settings,
