@@ -1,12 +1,12 @@
 import com.klyx.Configs
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidLibrary)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.kotlinxAtomicfu)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlinx.atomicfu)
 }
 
 kotlin {
@@ -44,13 +44,13 @@ kotlin {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.material3)
-                implementation(libs.compose.materialIconsExtended)
+                implementation(libs.compose.material.icons.extended)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.components.resources)
-                implementation(libs.compose.uiToolingPreview)
+                implementation(libs.compose.ui.tooling.preview)
 
                 implementation(libs.androidx.lifecycle.viewmodel)
-                implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation(libs.androidx.lifecycle.runtime.compose)
 
                 implementation(libs.multiplatform.markdown.renderer)
                 implementation(libs.multiplatform.markdown.renderer.m3)

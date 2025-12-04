@@ -76,8 +76,15 @@ class CodeEditorState @RememberInComposition internal constructor(
 ) : ContentChangeCallback {
 
     internal val undoRedoManager = UndoRedoManager()
+    internal var isBufferLoading by mutableStateOf(false)
 
     var content = content
+        .also {
+            it.state = this
+            it.contentChangeCallback = this
+            it.setDefaultUndoRedoManager(undoRedoManager)
+            isBufferLoading = false
+        }
         private set(value) {
             value.state = this
             value.contentChangeCallback = this
@@ -85,8 +92,6 @@ class CodeEditorState @RememberInComposition internal constructor(
             isBufferLoading = false
             field = value
         }
-
-    internal var isBufferLoading by mutableStateOf(false)
 
     @Stable
     internal var _fontSize by mutableStateOf(TextUnit.Unspecified)

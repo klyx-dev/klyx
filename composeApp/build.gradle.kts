@@ -6,11 +6,11 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
@@ -40,7 +40,7 @@ kotlin {
         val desktopMain by getting
 
         androidMain.dependencies {
-            implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.activityCompose)
             implementation(libs.androidx.documentfile)
             implementation(libs.androidx.google.fonts)
             implementation(libs.androidx.material3)
@@ -57,18 +57,24 @@ kotlin {
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)
-            implementation(libs.compose.materialIconsExtended)
+            implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.ui)
-            implementation(libs.compose.uiUtil)
+            implementation(libs.compose.ui.util)
             implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.material3.adaptive)
+            implementation(libs.compose.ui.tooling.preview)
+
+            implementation(libs.androidx.material3.adaptive)
+            implementation(libs.androidx.material3.adaptive.nav3)
 
             implementation(libs.navigation.compose)
             implementation(libs.fuzzywuzzy.kotlin)
 
             implementation(libs.androidx.lifecycle.viewmodel)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
+            implementation(libs.androidx.lifecycle.runtime.compose)
+            implementation(libs.androidx.lifecycle.viewmodel.nav3)
+
+            //implementation(libs.androidx.nav3.runtime)
+            implementation(libs.androidx.nav3.ui)
 
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
@@ -210,7 +216,7 @@ android {
 }
 
 dependencies {
-    debugImplementation(libs.compose.uiToolingPreview)
+    debugImplementation(libs.compose.ui.tooling.preview)
 }
 
 compose.desktop {

@@ -1,12 +1,12 @@
 import com.klyx.Configs
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.kotlinSerialization)
-    alias(libs.plugins.androidKotlinMultiplatformLibrary)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.kotlinxAtomicfu)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.kotlinx.atomicfu)
     alias(libs.plugins.kotest)
     alias(libs.plugins.ksp)
 }
@@ -49,14 +49,14 @@ kotlin {
                 implementation(libs.compose.runtime)
                 implementation(libs.compose.foundation)
                 implementation(libs.compose.material3)
-                implementation(libs.compose.materialIconsExtended)
+                implementation(libs.compose.material.icons.extended)
                 implementation(libs.compose.ui)
                 implementation(libs.compose.components.resources)
-                implementation(libs.compose.uiToolingPreview)
+                implementation(libs.compose.ui.tooling.preview)
 
                 implementation(libs.navigation.compose)
                 implementation(libs.androidx.lifecycle.viewmodel)
-                implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation(libs.androidx.lifecycle.runtime.compose)
 
                 api(libs.kotlinx.serialization.json)
                 implementation(libs.json5k)
@@ -107,8 +107,6 @@ kotlin {
 
         androidMain {
             dependencies {
-                implementation(libs.androidx.activity.compose)
-
                 api(libs.utilcodex)
                 api(libs.androidx.documentfile)
                 implementation(libs.koin.android)

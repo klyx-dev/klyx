@@ -2,13 +2,13 @@ import com.klyx.Configs
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
 plugins {
-    alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidKotlinMultiplatformLibrary)
-    alias(libs.plugins.composeMultiplatform)
-    alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.kmp.library)
+    alias(libs.plugins.compose.multiplatform)
+    alias(libs.plugins.compose.compiler)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.kotlinxAtomicfu)
-    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.kotlinx.atomicfu)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
