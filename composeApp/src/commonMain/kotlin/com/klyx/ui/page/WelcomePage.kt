@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.klyx.LocalDrawerState
 import com.klyx.LocalNavigator
+import com.klyx.Route
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.KeyShortcut
 import com.klyx.core.cmd.key.keyShortcutOf
@@ -208,9 +209,7 @@ fun WelcomePage() {
                 text = "Open Settings",
                 shortcut = null,
                 icon = Icons.Outlined.Settings,
-                onClick = {
-                    //navigator.navigateTo(AppRoute.Settings.SettingsPage)
-                }
+                onClick = { navigator.navigateTo(Route.Settings) }
             )
 
             TextButtonWithShortcutAndIcon(
