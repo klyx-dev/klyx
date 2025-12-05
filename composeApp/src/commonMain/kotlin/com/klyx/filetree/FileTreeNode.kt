@@ -15,6 +15,8 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Project
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolveName
 import com.klyx.core.file.toKxFile
 import com.klyx.core.icon.FolderOpen
@@ -38,8 +40,6 @@ import com.klyx.core.icon.language.Toml
 import com.klyx.core.icon.language.TypeScript
 import com.klyx.core.icon.language.Xml
 import com.klyx.core.icon.language.Yaml
-import com.klyx.extension.api.Project
-import com.klyx.extension.api.Worktree
 import io.github.vinceglb.filekit.PlatformFile
 
 data class FileTreeNode(

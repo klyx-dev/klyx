@@ -36,12 +36,11 @@ import com.klyx.LocalNavigator
 import com.klyx.Route
 import com.klyx.core.LocalNotifier
 import com.klyx.core.PlatformContext
+import com.klyx.core.file.Project
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.value
 import com.klyx.di.LocalEditorViewModel
-import com.klyx.extension.api.Project
-import com.klyx.res.Res
 import com.klyx.res.Res.string
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved

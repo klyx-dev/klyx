@@ -2,8 +2,8 @@ package com.klyx.viewmodel
 
 import androidx.lifecycle.ViewModel
 import com.klyx.core.Notifier
-import com.klyx.extension.api.Project
-import com.klyx.extension.api.Worktree
+import com.klyx.core.file.Project
+import com.klyx.core.file.Worktree
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -55,7 +55,11 @@ class KlyxViewModel(
     }
 
     fun openProject(worktree: Worktree) {
-        _openedProject.update { Project(listOf(worktree.id)) }
+        _openedProject.update { Project(listOf(worktree)) }
+    }
+
+    fun openProject(project: Project) {
+        _openedProject.update { project }
     }
 
     fun closeProject() {
@@ -63,7 +67,7 @@ class KlyxViewModel(
     }
 
     fun addWorktreeToProject(worktree: Worktree) {
-        _openedProject.update { it.copy(worktreeIds = it.worktreeIds + worktree.id) }
+        _openedProject.update { it.copy(worktrees = it.worktrees + worktree) }
     }
 
     fun showLogViewer() {

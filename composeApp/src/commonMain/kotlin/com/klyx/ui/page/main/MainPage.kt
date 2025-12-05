@@ -46,6 +46,7 @@ import com.klyx.LocalLogBuffer
 import com.klyx.WorktreeDrawer
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.io.R_OK
@@ -60,7 +61,6 @@ import com.klyx.editor.ComposeEditorState
 import com.klyx.editor.CursorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
-import com.klyx.extension.api.Worktree
 import com.klyx.openIfClosed
 import com.klyx.tab.FileTab
 import com.klyx.ui.component.ThemeSelector

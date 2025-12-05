@@ -9,6 +9,7 @@ import com.github.michaelbull.result.onSuccess
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Worktree
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.toJson
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
@@ -16,7 +17,6 @@ import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.toCommand
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.ExtensionManager
-import com.klyx.extension.api.Worktree
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher

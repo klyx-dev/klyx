@@ -6,13 +6,13 @@ import com.github.michaelbull.result.Ok
 import com.github.michaelbull.result.mapError
 import com.github.michaelbull.result.runCatching
 import com.klyx.core.Notifier
+import com.klyx.core.file.Worktree
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.process.InternalProcessApi
 import com.klyx.core.process.Signal
 import com.klyx.core.process.systemProcess
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
-import com.klyx.extension.api.Worktree
 import com.klyx.extension.internal.Command
 import io.matthewnelson.kmp.process.changeDir
 import kotlinx.coroutines.CoroutineName

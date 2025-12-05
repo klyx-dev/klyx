@@ -1,9 +1,9 @@
 package com.klyx.editor.lsp.util
 
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Worktree
 import com.klyx.core.language
 import com.klyx.extension.ExtensionManager
-import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.TextRange
 import org.eclipse.lsp4j.Position

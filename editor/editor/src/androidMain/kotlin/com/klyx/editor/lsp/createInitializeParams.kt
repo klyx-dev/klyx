@@ -1,9 +1,9 @@
 package com.klyx.editor.lsp
 
 import android.os.Process
+import com.klyx.core.file.Worktree
 import com.klyx.core.logging.logger
 import com.klyx.editor.lsp.util.uriString
-import com.klyx.extension.api.Worktree
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import org.eclipse.lsp4j.ClientCapabilities

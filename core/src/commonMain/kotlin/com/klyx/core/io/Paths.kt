@@ -31,6 +31,8 @@ inline val Paths.logFile get() = logsDir.join("Klyx.log")
 inline val Paths.settingsFile: Path get() = configDir.join("settings.json")
 inline val Paths.extensionsDir: Path get() = dataDir.join("extensions")
 
+inline val Paths.lastProjectFile: Path get() = tempDir.join("last_project.json")
+
 fun Path.makeAbsolute(): Path {
     return if (isAbsolute) this else Path("/").join(this)
 }

@@ -6,10 +6,12 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.io.X_OK
 import kotlinx.io.asSink
 import kotlinx.io.asSource
+import kotlinx.serialization.Serializable
 import java.io.File
 import java.net.URLConnection
 import java.nio.charset.Charset
 
+@Serializable(with = KxFileSerializer::class)
 actual open class KxFile(
     private val raw: File
 ) {

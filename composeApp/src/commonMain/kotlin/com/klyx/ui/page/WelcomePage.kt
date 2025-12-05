@@ -63,6 +63,7 @@ import com.klyx.Route
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.KeyShortcut
 import com.klyx.core.cmd.key.keyShortcutOf
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.icon.Klyx
@@ -73,7 +74,6 @@ import com.klyx.core.theme.blend
 import com.klyx.core.ui.component.ShortcutText
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
-import com.klyx.extension.api.Worktree
 import com.klyx.openIfClosed
 import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openUntitledFile

@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.klyx.core.file.Worktree
+import com.klyx.core.file.parentAsWorktreeOrSelf
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.LocalAppSettings
@@ -45,8 +47,6 @@ import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.EditorLanguageServerClient
 import com.klyx.editor.textaction.TextActionWindow
-import com.klyx.extension.api.Worktree
-import com.klyx.extension.api.parentAsWorktreeOrSelf
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.widget.CodeEditor

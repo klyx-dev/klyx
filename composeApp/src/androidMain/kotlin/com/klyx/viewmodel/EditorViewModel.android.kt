@@ -1,9 +1,9 @@
 package com.klyx.viewmodel
 
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Worktree
+import com.klyx.core.file.parentAsWorktreeOrSelf
 import com.klyx.editor.lsp.LanguageServerManager
-import com.klyx.extension.api.Worktree
-import com.klyx.extension.api.parentAsWorktreeOrSelf
 
 internal actual suspend fun onCloseFileTab(worktree: Worktree?, file: KxFile) {
     runCatching {

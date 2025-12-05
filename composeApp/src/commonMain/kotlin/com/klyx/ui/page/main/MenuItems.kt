@@ -25,6 +25,7 @@ import com.klyx.core.LocalPlatformContext
 import com.klyx.core.PlatformContext
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
+import com.klyx.core.file.Project
 import com.klyx.core.icon.BackToTab
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.Pip
@@ -32,7 +33,6 @@ import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
-import com.klyx.extension.api.Project
 import com.klyx.res.Res
 import com.klyx.res.settings
 import com.klyx.viewmodel.openExtensionScreen

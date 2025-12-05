@@ -8,8 +8,8 @@ import androidx.compose.ui.platform.LocalClipboard
 import com.klyx.core.LocalNotifier
 import com.klyx.core.clipboard.clipEntryOf
 import com.klyx.core.cmd.key.keyShortcutOf
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.openFile
-import com.klyx.extension.api.Worktree
 import com.klyx.menu.MenuItem
 import com.klyx.menu.menu
 import kotlinx.coroutines.launch

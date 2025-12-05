@@ -10,6 +10,7 @@ import com.github.michaelbull.result.onFailure
 import com.github.michaelbull.result.onSuccess
 import com.github.michaelbull.result.runCatching
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Worktree
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
@@ -20,7 +21,6 @@ import com.klyx.editor.lsp.event.LspEditorContentChangeEvent
 import com.klyx.editor.lsp.event.LspEditorScrollEvent
 import com.klyx.editor.lsp.util.asLspPosition
 import com.klyx.editor.signature.SignatureHelpWindow
-import com.klyx.extension.api.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.EditorReleaseEvent
 import io.github.rosemoe.sora.event.ScrollEvent

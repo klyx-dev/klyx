@@ -3,8 +3,8 @@ package com.klyx.extension
 import com.github.michaelbull.result.map
 import com.klyx.core.DefaultScope
 import com.klyx.core.extension.Extension
+import com.klyx.core.file.Worktree
 import com.klyx.core.logging.KxLogger
-import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.readCommandResult
 import com.klyx.extension.api.readResult
 import com.klyx.extension.api.readStringOption

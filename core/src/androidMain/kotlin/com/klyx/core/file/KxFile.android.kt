@@ -13,6 +13,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
+import com.klyx.core.logging.log
 import com.klyx.core.terminal.SAFUtils.getDocumentIdForUri
 import com.klyx.core.terminal.SAFUtils.getFileForDocumentId
 import com.klyx.runtimeError
@@ -26,6 +27,7 @@ import kotlinx.io.asSource
 import kotlinx.io.buffered
 import kotlinx.io.readByteArray
 import kotlinx.io.readString
+import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.BufferedInputStream
@@ -37,6 +39,7 @@ import java.nio.charset.Charset
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
+@Serializable(with = KxFileSerializer::class)
 actual open class KxFile(internal val raw: DocumentFile) : KoinComponent {
     private val context: Context by inject()
     private val file = runCatching { raw.uri.toFile() }.getOrNull()
@@ -170,12 +173,6 @@ actual fun KxFile(path: String): KxFile {
 
     val fallback = {
         if (DocumentsContract.isTreeUri(uri)) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            }
             DocumentFile.fromTreeUri(context, uri)!!
         } else {
             DocumentFile.fromSingleUri(context, uri)!!
@@ -184,6 +181,17 @@ actual fun KxFile(path: String): KxFile {
 
     return when (uri.scheme) {
         ContentResolver.SCHEME_CONTENT -> {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }.onFailure {
+                log.error(it) { "Failed to take persistable permission for $path" }
+            }.onSuccess {
+                log.debug { "Successfully took persistable permission for $path" }
+            }
+
             val file = try {
                 UriUtils.uri2FileNoCacheCopy(uri).asDocumentFile()
             } catch (_: Throwable) {

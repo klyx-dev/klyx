@@ -18,11 +18,19 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.SystemPathSeparator
 import kotlinx.io.okio.asOkioSink
 import kotlinx.io.okio.asOkioSource
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.PrimitiveKind
+import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import okio.Path.Companion.toPath
 
 /**
  * Represents a file or directory in the file system.
  */
+@Serializable(with = KxFileSerializer::class)
 expect open class KxFile {
     val name: String
     val path: String
@@ -88,6 +96,19 @@ expect fun KxFile(path: String): KxFile
 expect fun KxFile(parent: KxFile, child: String): KxFile
 expect fun KxFile(parent: String, child: String): KxFile
 expect fun KxFile(parent: KxFile, child: KxFile): KxFile
+
+object KxFileSerializer : KSerializer<KxFile> {
+    override val descriptor: SerialDescriptor
+        get() = PrimitiveSerialDescriptor("com.klyx.core.file.KxFile", PrimitiveKind.STRING)
+
+    override fun serialize(encoder: Encoder, value: KxFile) {
+        encoder.encodeString(value.path)
+    }
+
+    override fun deserialize(decoder: Decoder): KxFile {
+        return KxFile(decoder.decodeString())
+    }
+}
 
 fun KxFile.deleteAndCreate() = run { delete(); createNewFile() }
 

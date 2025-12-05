@@ -33,11 +33,11 @@ import arrow.core.Either
 import arrow.core.right
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Project
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.toKxFile
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.core.ui.component.TextButtonWithShortcut
-import com.klyx.extension.api.Project
-import com.klyx.extension.api.Worktree
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.toFileTreeNodes
 import com.klyx.res.Res

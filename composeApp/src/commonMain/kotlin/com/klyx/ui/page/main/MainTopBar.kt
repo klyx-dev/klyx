@@ -22,9 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.LocalDrawerState
+import com.klyx.core.file.Project
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.component.FpsText
-import com.klyx.extension.api.Project
 import com.klyx.isModalNavigationDrawerAvailable
 import com.klyx.tab.Tab
 import kotlinx.coroutines.launch

@@ -6,6 +6,7 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.io.X_OK
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
+import kotlinx.serialization.Serializable
 import platform.Foundation.NSURL
 import platform.posix.F_OK
 import platform.posix.access
@@ -13,6 +14,7 @@ import platform.posix.R_OK as POSIX_R_OK
 import platform.posix.W_OK as POSIX_W_OK
 import platform.posix.X_OK as POSIX_X_OK
 
+@Serializable(with = KxFileSerializer::class)
 actual open class KxFile(internal val nsurl: NSURL) {
     actual val name: String
         get() = TODO("Not yet implemented")

@@ -7,6 +7,7 @@ import arrow.core.toOption
 import com.github.michaelbull.result.Err
 import com.github.michaelbull.result.Ok
 import com.klyx.core.Notifier
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.archive.extractGzip
 import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.archive.extractZip
@@ -17,7 +18,6 @@ import com.klyx.core.logging.KxLogger
 import com.klyx.core.settings.LspSettings
 import com.klyx.core.settings.SettingsManager
 import com.klyx.extension.api.DownloadedFileType
-import com.klyx.extension.api.Worktree
 import com.klyx.extension.api.lsp.CommandSettings
 import com.klyx.extension.api.lsp.LanguageServerInstallationStatus
 import com.klyx.extension.api.lsp.parseLanguageServerInstallationStatus

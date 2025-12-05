@@ -24,6 +24,7 @@ import com.klyx.openIfClosed
 import com.klyx.core.LocalNotifier
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.Worktree
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toKxFiles
@@ -34,7 +35,6 @@ import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalFileTreeViewModel
 import com.klyx.di.LocalKlyxViewModel
-import com.klyx.extension.api.Worktree
 import com.klyx.filetree.asFileTreeNode
 import com.klyx.res.Res.string
 import com.klyx.res.notification_all_files_saved
