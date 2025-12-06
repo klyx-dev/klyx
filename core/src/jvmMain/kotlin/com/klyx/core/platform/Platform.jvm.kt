@@ -1,4 +1,4 @@
-package com.klyx.core.platfrom
+package com.klyx.core.platform
 
 actual fun currentOs(): Os {
     val name = System.getProperty("os.name")?.lowercase() ?: ""

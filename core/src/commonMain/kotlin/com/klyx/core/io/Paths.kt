@@ -2,8 +2,8 @@ package com.klyx.core.io
 
 import com.klyx.core.dirs
 import com.klyx.core.expect
-import com.klyx.core.platfrom.Os
-import com.klyx.core.platfrom.currentOs
+import com.klyx.core.platform.Os
+import com.klyx.core.platform.currentOs
 import com.klyx.core.process.systemUserName
 import kotlinx.io.files.Path
 

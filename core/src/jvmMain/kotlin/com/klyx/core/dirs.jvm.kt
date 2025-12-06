@@ -5,7 +5,7 @@ import arrow.core.Option
 import arrow.core.Some
 import arrow.core.some
 import com.klyx.core.io.join
-import com.klyx.core.platfrom.selectByOs
+import com.klyx.core.platform.selectByOs
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem

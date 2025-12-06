@@ -35,10 +35,10 @@ import com.klyx.core.logging.log
 import com.klyx.core.logging.logErr
 import com.klyx.core.logging.logger
 import com.klyx.core.ok
-import com.klyx.core.platfrom.Architecture
-import com.klyx.core.platfrom.Os
-import com.klyx.core.platfrom.currentOs
-import com.klyx.core.platfrom.currentPlatform
+import com.klyx.core.platform.Architecture
+import com.klyx.core.platform.Os
+import com.klyx.core.platform.currentOs
+import com.klyx.core.platform.currentPlatform
 import com.klyx.core.process.Command
 import com.klyx.core.process.Output
 import com.klyx.core.process.SystemPathSeparator

@@ -1,4 +1,4 @@
-package com.klyx.core.platfrom
+package com.klyx.core.platform
 
 import kotlin.jvm.JvmInline
 

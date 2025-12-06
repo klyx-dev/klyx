@@ -2,7 +2,7 @@ package com.klyx.core.io
 
 import com.klyx.core.dirs
 import com.klyx.core.expect
-import com.klyx.core.platfrom.selectByOs
+import com.klyx.core.platform.selectByOs
 import kotlinx.io.files.Path
 
 actual object Paths {

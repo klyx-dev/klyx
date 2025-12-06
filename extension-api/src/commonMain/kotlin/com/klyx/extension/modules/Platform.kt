@@ -2,8 +2,8 @@
 
 package com.klyx.extension.modules
 
-import com.klyx.core.platfrom.currentArchitecture
-import com.klyx.core.platfrom.currentOs
+import com.klyx.core.platform.currentArchitecture
+import com.klyx.core.platform.currentOs
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction
