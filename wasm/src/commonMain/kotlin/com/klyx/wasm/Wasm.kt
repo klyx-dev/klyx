@@ -3,8 +3,6 @@ package com.klyx.wasm
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.some
-import com.github.michaelbull.result.Result
-import com.github.michaelbull.result.expect
 import com.klyx.wasm.internal.InternalExperimentalWasmApi
 import io.github.charlietap.chasm.embedding.function
 import io.github.charlietap.chasm.embedding.instance
@@ -12,6 +10,8 @@ import io.github.charlietap.chasm.embedding.shapes.Import
 import io.github.charlietap.chasm.embedding.shapes.Importable
 import io.github.charlietap.chasm.embedding.store
 import io.github.charlietap.chasm.type.FunctionType
+import io.itsvks.anyhow.Result
+import io.itsvks.anyhow.expect
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

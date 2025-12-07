@@ -4,26 +4,11 @@ import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.identity
-import com.github.michaelbull.result.annotation.UnsafeResultErrorAccess
-import com.github.michaelbull.result.flatten
-import com.github.michaelbull.result.fold
-import com.github.michaelbull.result.map
-import com.github.michaelbull.result.mapError
-import com.github.michaelbull.result.onSuccess
-import com.github.michaelbull.result.zip
-import com.klyx.core.AnyErr
-import com.klyx.core.AnyResult
-import com.klyx.core.Ok
-import com.klyx.core.anyResult
-import com.klyx.core.anyhow
-import com.klyx.core.bail
-import com.klyx.core.context
 import com.klyx.core.file.archive.ArchiveType
 import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.archive.extractZip
 import com.klyx.core.file.downloadFile
 import com.klyx.core.file.fs
-import com.klyx.core.getOrNull
 import com.klyx.core.io.Paths
 import com.klyx.core.io.emptyPath
 import com.klyx.core.io.intoPath
@@ -34,7 +19,6 @@ import com.klyx.core.logging.Level
 import com.klyx.core.logging.log
 import com.klyx.core.logging.logErr
 import com.klyx.core.logging.logger
-import com.klyx.core.ok
 import com.klyx.core.platform.Architecture
 import com.klyx.core.platform.Os
 import com.klyx.core.platform.currentOs
@@ -46,6 +30,19 @@ import com.klyx.core.process.getenv
 import com.klyx.core.process.which
 import com.klyx.core.unwrapOrDefault
 import io.github.z4kn4fein.semver.Version
+import io.itsvks.anyhow.AnyhowError
+import io.itsvks.anyhow.AnyhowResult
+import io.itsvks.anyhow.Ok
+import io.itsvks.anyhow.UnsafeResultApi
+import io.itsvks.anyhow.anyhow
+import io.itsvks.anyhow.context
+import io.itsvks.anyhow.flatten
+import io.itsvks.anyhow.fold
+import io.itsvks.anyhow.map
+import io.itsvks.anyhow.mapError
+import io.itsvks.anyhow.ok
+import io.itsvks.anyhow.onSuccess
+import io.itsvks.anyhow.zip
 import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
@@ -115,11 +112,11 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
         options.usePaths?.let { (node, npm) ->
             val instance = SystemNodeRuntime(node, npm)
                 .fold(
-                    success = { instance ->
+                    ok = { instance ->
                         log.info { "using Node.js from `node.path` in settings: $instance" }
                         instance
                     },
-                    failure = { err ->
+                    err = { err ->
                         // failure case not cached, since it's cheap to check again
                         return UnavailableNodeRuntime(
                             error = "failure checking Node.js from `node.path` in settings ($node): $err"
@@ -135,7 +132,7 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
             state.shellEnvLoaded.await()
             SystemNodeRuntime.detect()
                 .fold(
-                    success = { instance ->
+                    ok = { instance ->
                         log.info { "using Node.js found on PATH: $instance" }
                         state.instance = instance.copy()
                         state.lastOptions = options
@@ -154,14 +151,14 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
 
             ManagedNodeRuntime.installIfNeeded(state.http)
                 .fold(
-                    success = { instance ->
+                    ok = { instance ->
                         log.log(
                             logLevel,
                             "using Klyx managed Node.js at ${instance.installationPath} since $whyUsingManaged"
                         )
                         instance
                     },
-                    failure = { err ->
+                    err = { err ->
                         // failure case is cached, since downloading + installing may be expensive. The
                         // downside of this is that it may fail due to an intermittent network issue.
                         //
@@ -194,7 +191,7 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
 
     suspend fun binaryPath() = instance().binaryPath()
 
-    suspend fun runNpmSubcommand(directory: Path, subcommand: String, args: Array<out String>): AnyResult<Output> {
+    suspend fun runNpmSubcommand(directory: Path, subcommand: String, args: Array<out String>): AnyhowResult<Output> {
         val instance = instance()
         return withState { (http) ->
             instance.runNpmSubcommand(directory, null, subcommand, args)
@@ -205,7 +202,7 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
         instance().npmPackageInstalledVersion(localPackageDirectory, name)
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun npmPackageLatestVersion(name: String): AnyResult<String> {
+    suspend fun npmPackageLatestVersion(name: String): AnyhowResult<String> {
         val instance = instance()
 
         return withState { (http) ->
@@ -275,7 +272,7 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
 
         val version = npmPackageInstalledVersion(localPackageDirectory, packageName)
             .logErr()
-            .getOrNull() ?: return true
+            .ok() ?: return true
 
         val installedVersion = try {
             Version.parse(version)
@@ -343,19 +340,19 @@ fun NodeRuntime(
 
 interface INodeRuntime {
     suspend fun copy(): INodeRuntime
-    suspend fun binaryPath(): AnyResult<Path>
+    suspend fun binaryPath(): AnyhowResult<Path>
 
     suspend fun runNpmSubcommand(
         directory: Path?,
         proxy: Url?,
         subcommand: String,
         args: Array<out String>
-    ): AnyResult<Output>
+    ): AnyhowResult<Output>
 
     suspend fun npmPackageInstalledVersion(
         localPackageDirectory: Path,
         name: String
-    ): AnyResult<String?>
+    ): AnyhowResult<String?>
 }
 
 data class UnavailableNodeRuntime(private val error: String) : INodeRuntime {
@@ -431,7 +428,7 @@ fun Url.forceLocalhostToIp(): Url {
 private suspend fun readPackageInstalledVersion(
     nodeModuleDirectory: Path,
     name: String
-): AnyResult<String?> = anyhow {
+): AnyhowResult<String?> = anyhow {
     val packageJsonPath = nodeModuleDirectory.join(name, "package.json")
 
     val source = try {
@@ -465,11 +462,11 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
         return copy(installationPath = installationPath)
     }
 
-    override suspend fun binaryPath(): AnyResult<Path> {
+    override suspend fun binaryPath(): AnyhowResult<Path> {
         return Ok(installationPath.join(NODE_PATH))
     }
 
-    @OptIn(UnsafeResultErrorAccess::class)
+    @OptIn(UnsafeResultApi::class)
     override suspend fun runNpmSubcommand(
         directory: Path?,
         proxy: Url?,
@@ -533,7 +530,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
             else -> Paths.dataDir.join("node")
         }
 
-        suspend fun installIfNeeded(http: HttpClient) = anyResult {
+        suspend fun installIfNeeded(http: HttpClient) = anyhow {
             val (os, arch) = currentPlatform()
             val osStr = when (os) {
                 Os.Android, Os.Linux -> "linux"
@@ -571,7 +568,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                     .output(1.minutes)
 
                 result.fold(
-                    success = { output ->
+                    ok = { output ->
                         if (output.isSuccess) {
                             true
                         } else {
@@ -581,7 +578,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                             false
                         }
                     },
-                    failure = { err ->
+                    err = { err ->
                         log.warn {
                             "Klyx managed Node.js binary at $nodeBinary failed check, so re-downloading it. Error: $err"
                         }
@@ -653,7 +650,7 @@ private data class SystemNodeRuntime(
         proxy: Url?,
         subcommand: String,
         args: Array<out String>
-    ): AnyResult<Output> = anyhow {
+    ) = anyhow {
         val nodeCaCerts = getenv(NODE_CA_CERTS_ENV_VAR).orEmpty()
         val command = Command.newCommand(npm)
         val path = pathWithNodeBinaryPrepended(node).unwrapOrDefault()
@@ -725,13 +722,13 @@ private suspend fun SystemNodeRuntime(node: Path, npm: Path) = anyhow {
 private sealed interface DetectError {
     val error: Throwable
 
-    data class NotInPath(override val error: AnyErr) : DetectError {
+    data class NotInPath(override val error: AnyhowError) : DetectError {
         override fun toString(): String {
             return "system Node.js wasn't found on PATH: $error"
         }
     }
 
-    data class Other(override val error: AnyErr) : DetectError {
+    data class Other(override val error: AnyhowError) : DetectError {
         override fun toString(): String {
             return "checking system Node.js failed with error: $error"
         }

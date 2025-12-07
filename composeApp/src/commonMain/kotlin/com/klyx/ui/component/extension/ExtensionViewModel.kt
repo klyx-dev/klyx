@@ -2,7 +2,6 @@ package com.klyx.ui.component.extension
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.github.michaelbull.result.fold
 import com.klyx.core.Notifier
 import com.klyx.core.extension.ExtensionFilter
 import com.klyx.core.extension.ExtensionId
@@ -18,6 +17,7 @@ import com.klyx.res.extension_install_failed
 import com.klyx.res.extension_install_success
 import com.willowtreeapps.fuzzywuzzy.diffutils.FuzzySearch
 import io.github.z4kn4fein.semver.toVersion
+import io.itsvks.anyhow.fold
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -144,10 +144,10 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
                 directory = file,
                 isDevExtension = false
             ).fold(
-                failure = {
+                err = {
                     notifier.error(string(string.extension_install_failed, it))
                 },
-                success = {
+                ok = {
                     notifier.success(string.extension_install_success.value)
                     refreshInstalledExtensions()
                 }
@@ -173,10 +173,10 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
                 directory = dir,
                 isDevExtension = true
             ).fold(
-                failure = {
+                err = {
                     notifier.error(string(string.extension_install_failed, it))
                 },
-                success = {
+                ok = {
                     notifier.success(string.extension_install_success.value)
                     refreshInstalledExtensions()
                 }
@@ -193,10 +193,10 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
                 zipFile = zip,
                 isDevExtension = true
             ).fold(
-                failure = {
+                err = {
                     notifier.error(string(string.extension_install_failed, it))
                 },
-                success = {
+                ok = {
                     notifier.success(string.extension_install_success.value)
                     refreshInstalledExtensions()
                 }

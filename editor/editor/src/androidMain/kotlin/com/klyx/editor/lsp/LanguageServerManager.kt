@@ -1,11 +1,5 @@
 package com.klyx.editor.lsp
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.fold
-import com.github.michaelbull.result.getOrElse
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
@@ -17,6 +11,13 @@ import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.toCommand
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.ExtensionManager
+import io.itsvks.anyhow.Err
+import io.itsvks.anyhow.Ok
+import io.itsvks.anyhow.fold
+import io.itsvks.anyhow.getOrElse
+import io.itsvks.anyhow.ok
+import io.itsvks.anyhow.onFailure
+import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -122,12 +123,12 @@ object LanguageServerManager {
         }
 
         extension.languageServerCommand(languageServerId, worktree).fold(
-            success = { command ->
+            ok = { command ->
                 val client = LanguageServerClient(extension.logger)
                 val initializationOptions = extension.languageServerInitializationOptions(
                     languageServerId = languageServerId,
                     worktree = worktree
-                ).getOrElse { null }?.getOrNull()
+                ).ok()?.getOrNull()
 
                 client.initialize(command, worktree, initializationOptions).onSuccess {
                     languageClients[key] = client
@@ -144,7 +145,7 @@ object LanguageServerManager {
 
                 Ok(client)
             },
-            failure = {
+            err = {
                 extension.logger.error { it }
                 Err(it)
             }

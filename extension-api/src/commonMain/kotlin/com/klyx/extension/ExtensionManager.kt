@@ -1,8 +1,6 @@
 package com.klyx.extension
 
 import androidx.compose.runtime.mutableStateListOf
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.extension.ExtensionInfo
@@ -19,6 +17,9 @@ import com.klyx.core.logging.logger
 import com.klyx.core.lsp.languageIdentifiers
 import com.klyx.core.settings.AppSettings
 import com.klyx.wasm.ExperimentalWasmApi
+import io.itsvks.anyhow.Err
+import io.itsvks.anyhow.Ok
+import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
@@ -51,40 +52,41 @@ object ExtensionManager {
     private val logger = logger()
 
     @OptIn(ExperimentalWasmApi::class)
-    suspend fun installExtension(directory: KxFile, isDevExtension: Boolean = false) = withContext(Dispatchers.IO) {
-        val tomlFile = directory.find("extension.toml") ?: return@withContext Err("extension.toml not found")
-        val info = withContext(Dispatchers.Default) { parseToml(tomlFile.source()) }
+    suspend fun installExtension(directory: KxFile, isDevExtension: Boolean = false) = anyhow {
+        withContext(Dispatchers.IO) {
+            val tomlFile = directory.find("extension.toml") ?: bail("extension.toml not found")
+            val info = withContext(Dispatchers.Default) { parseToml(tomlFile.source()) }
 
-        val extensionDirectory = if (isDevExtension) Environment.DevExtensionsDir else Environment.ExtensionsDir
-        val installDirectory = KxFile(extensionDirectory, info.id)
+            val extensionDirectory = if (isDevExtension) Environment.DevExtensionsDir else Environment.ExtensionsDir
+            val installDirectory = KxFile(extensionDirectory, info.id)
 
-        if (!installDirectory.exists) {
-            installDirectory.mkdirs()
+            if (!installDirectory.exists) {
+                installDirectory.mkdirs()
+                try {
+                    copyDir(directory.toOkioPath(), installDirectory.toOkioPath())
+                } catch (err: Exception) {
+                    logger.error(err) { err.message }
+                    bail(err.message ?: "Failed to copy directory.")
+                }
+            }
+
             try {
-                copyDir(directory.toOkioPath(), installDirectory.toOkioPath())
+                val extension = withContext(Dispatchers.Default) {
+                    parseExtension(installDirectory, info).copy(isDevExtension = isDevExtension)
+                }
+
+                installedExtensions.removeAll { it.info.id == extension.info.id }
+                loadedExtensions.removeAll { it.extension.info.id == extension.info.id }
+                installedExtensions.add(extension)
+
+                val localExtension = ExtensionLoader.loadExtension(extension, true)
+                if (localExtension != null) loadedExtensions.add(localExtension)
             } catch (err: Exception) {
                 logger.error(err) { err.message }
-                return@withContext Err(err.message ?: "Failed to copy directory.")
+                installedExtensions.removeAll { it.info.id == info.id }
+                loadedExtensions.removeAll { it.extension.info.id == info.id }
+                bail(err.message ?: "Failed to load extension.")
             }
-        }
-
-        try {
-            val extension = withContext(Dispatchers.Default) {
-                parseExtension(installDirectory, info).copy(isDevExtension = isDevExtension)
-            }
-
-            installedExtensions.removeAll { it.info.id == extension.info.id }
-            loadedExtensions.removeAll { it.extension.info.id == extension.info.id }
-            installedExtensions.add(extension)
-
-            val localExtension = ExtensionLoader.loadExtension(extension, true)
-            if (localExtension != null) loadedExtensions.add(localExtension)
-            Ok(Unit)
-        } catch (err: Exception) {
-            logger.error(err) { err.message }
-            installedExtensions.removeAll { it.info.id == info.id }
-            loadedExtensions.removeAll { it.extension.info.id == info.id }
-            Err(err.message ?: "Failed to load extension.")
         }
     }
 

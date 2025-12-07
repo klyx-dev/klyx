@@ -4,13 +4,13 @@ androidx-activity = "1.12.1"
 androidx-core = "1.17.0"
 androidx-lifecycle = "2.10.0-alpha06"
 androidx-adaptive = "1.3.0-alpha02"
+anyhowkt = "1.0.0"
 chasm = "1.2.0"
 coil = "3.3.0"
 collection = "1.5.0"
 emoji2 = "1.6.0"
 fuzzywuzzy-kotlin = "0.1.1"
 kfswatch = "1.4.0"
-kotlinResult = "2.1.0"
 multiplatformMarkdownRenderer = "0.38.1"
 multiplatformSettingsNoArg = "1.3.0"
 kmp-process = "0.4.0"
@@ -50,6 +50,7 @@ androidx-nav3 = "1.0.0-alpha06"
 jetbrains-skiko = "0.9.37.3"
 
 [libraries]
+anyhowkt = { module = "io.github.itsvks19:anyhowkt", version.ref = "anyhowkt" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
@@ -76,7 +77,6 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
 fuzzywuzzy-kotlin = { module = "eu.codlab:fuzzywuzzy-kotlin", version.ref = "fuzzywuzzy-kotlin" }
 kfswatch = { module = "io.github.irgaly.kfswatch:kfswatch", version.ref = "kfswatch" }
-kotlin-result = { module = "com.michael-bull.kotlin-result:kotlin-result", version.ref = "kotlinResult" }
 multiplatform-markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettingsNoArg" }

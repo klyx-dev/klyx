@@ -1,7 +1,7 @@
 package com.klyx.wasm
 
-import com.github.michaelbull.result.map
 import io.github.charlietap.chasm.embedding.module
+import io.itsvks.anyhow.map
 import kotlinx.io.RawSource
 import kotlinx.io.Source
 import kotlinx.io.buffered

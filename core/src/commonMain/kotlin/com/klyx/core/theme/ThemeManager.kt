@@ -4,8 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
+import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -51,20 +50,20 @@ object ThemeManager {
     /**
      * Load and parse a theme family from extension
      */
-    suspend fun loadThemeFamily(themeSource: RawSource?) = withContext(Dispatchers.IO) {
-        val source = themeSource?.buffered()?.peek() ?: return@withContext Err("Theme source is null")
+    suspend fun loadThemeFamily(themeSource: RawSource?) = anyhow {
+        withContext(Dispatchers.IO) {
+            val source = themeSource?.buffered()?.peek() ?: bail("Theme source is null")
 
-        val themeJson: ThemeJson = try {
-            json.decodeFromString(source.readString())
-        } catch (e: IllegalArgumentException) {
-            return@withContext Err("Invalid theme JSON: ${e.message}")
-        } catch (e: SerializationException) {
-            return@withContext Err("Error parsing theme JSON: ${e.message}")
+            val themeJson: ThemeJson = try {
+                json.decodeFromString(source.readString())
+            } catch (e: IllegalArgumentException) {
+                bail("Invalid theme JSON: ${e.message}")
+            } catch (e: SerializationException) {
+                bail("Error parsing theme JSON: ${e.message}")
+            }
+
+            availableThemes += themeJson.asTheme()
         }
-
-        availableThemes += themeJson.asTheme()
-
-        Ok(Unit)
     }
 
     /**

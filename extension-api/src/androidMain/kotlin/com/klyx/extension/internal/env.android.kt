@@ -1,35 +1,26 @@
 package com.klyx.extension.internal
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
 import com.klyx.core.process.systemProcess
 import com.klyx.core.terminal.sandboxDir
 import com.klyx.core.terminal.userHomeDir
 import com.klyx.core.withAndroidContext
+import io.itsvks.anyhow.anyhow
 import java.io.File
 
-actual fun makeFileExecutable(path: String): Result<Unit, String> {
+actual fun makeFileExecutable(path: String) = anyhow {
     val file = File(path)
 
-    if (!file.exists()) {
-        return Err("No such file: $path")
-    }
+    ensure(file.exists()) { "No such file: $path" }
+    ensure(!file.isDirectory) { "Path points to a directory: $path" }
 
-    if (file.isDirectory) {
-        return Err("Path points to a directory: $path")
-    }
-
-    return try {
-        if (file.setExecutable(true)) {
-            Ok(Unit)
-        } else {
-            Err("Permission change not applied (setExecutable returned false)")
+    try {
+        if (!file.setExecutable(true)) {
+            bail("Permission change not applied (setExecutable returned false)")
         }
     } catch (e: SecurityException) {
-        Err("Permission denied: ${e.message ?: "security restriction"}")
+        bail("Permission denied: ${e.message ?: "security restriction"}")
     } catch (e: Exception) {
-        Err("Unexpected error: ${e.message ?: e::class.simpleName}")
+        bail("Unexpected error: ${e.message ?: e::class.simpleName}")
     }
 }
 

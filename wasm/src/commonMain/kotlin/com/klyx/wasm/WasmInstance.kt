@@ -2,8 +2,6 @@
 
 package com.klyx.wasm
 
-import com.github.michaelbull.result.getOrThrow
-import com.github.michaelbull.result.mapError
 import com.klyx.wasm.internal.InternalExperimentalWasmApi
 import com.klyx.wasm.internal.asExecutionValue
 import com.klyx.wasm.internal.asInt
@@ -14,6 +12,8 @@ import io.github.charlietap.chasm.embedding.shapes.Instance
 import io.github.charlietap.chasm.embedding.shapes.Memory
 import io.github.charlietap.chasm.embedding.shapes.Store
 import io.github.charlietap.chasm.embedding.shapes.onError
+import io.itsvks.anyhow.getOrThrow
+import io.itsvks.anyhow.mapError
 
 @ExperimentalWasmApi
 class WasmInstance internal constructor(

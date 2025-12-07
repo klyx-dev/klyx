@@ -1,6 +1,5 @@
 package com.klyx.extension
 
-import com.github.michaelbull.result.map
 import com.klyx.core.DefaultScope
 import com.klyx.core.extension.Extension
 import com.klyx.core.file.Worktree
@@ -12,6 +11,7 @@ import com.klyx.extension.internal.Command
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmInstance
 import com.klyx.wasm.WasmMemory
+import io.itsvks.anyhow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch

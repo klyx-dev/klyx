@@ -1,7 +1,7 @@
 package com.klyx.core.process
 
-import com.klyx.core.anyhow
 import com.klyx.core.io.stripSandboxRoot
+import io.itsvks.anyhow.anyhow
 import kotlinx.io.files.Path
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmStatic

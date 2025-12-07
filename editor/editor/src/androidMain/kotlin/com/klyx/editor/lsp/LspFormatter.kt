@@ -1,10 +1,10 @@
 package com.klyx.editor.lsp
 
-import com.github.michaelbull.result.onSuccess
 import com.klyx.editor.lsp.util.asLspRange
 import io.github.rosemoe.sora.lang.format.AsyncFormatter
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.text.TextRange
+import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.launch
 
 internal class LspFormatter(private val client: EditorLanguageServerClient) : AsyncFormatter() {

@@ -1,8 +1,6 @@
 package com.klyx.extension.internal
 
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
+import io.itsvks.anyhow.anyhow
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
 import platform.Foundation.NSProcessInfo
@@ -18,12 +16,10 @@ actual suspend fun getenv(): Map<String, String> {
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun getenv(name: String) = platform.posix.getenv(name)?.toKString()
 
-actual fun makeFileExecutable(path: String): Result<Unit, String> {
+actual fun makeFileExecutable(path: String) = anyhow {
     val res = chmod(path, S_IXUSR.toUShort())
-    return if (res == 0) {
-        Ok(Unit)
-    } else {
-        Err("Failed to make file executable: $path")
+    if (res != 0) {
+        bail("Failed to make file executable: $path")
     }
 }
 

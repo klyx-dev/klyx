@@ -2,11 +2,11 @@ package com.klyx.core.file
 
 import arrow.core.None
 import arrow.core.Some
-import com.github.michaelbull.result.fold
-import com.github.michaelbull.result.map
-import com.klyx.core.anyhow
-import com.klyx.core.context
 import com.klyx.core.process.getenv
+import io.itsvks.anyhow.anyhow
+import io.itsvks.anyhow.context
+import io.itsvks.anyhow.fold
+import io.itsvks.anyhow.map
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem

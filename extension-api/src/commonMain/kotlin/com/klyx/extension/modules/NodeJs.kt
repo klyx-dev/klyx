@@ -4,7 +4,6 @@ package com.klyx.extension.modules
 
 import com.klyx.core.extension.WasmHost
 import com.klyx.core.extension.nodeRuntime
-import com.klyx.core.map
 import com.klyx.extension.internal.toWasmOption
 import com.klyx.extension.internal.toWasmResult
 import com.klyx.wasm.ExperimentalWasmApi
@@ -12,6 +11,7 @@ import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction
 import com.klyx.wasm.annotations.HostModule
 import com.klyx.wasm.type.toBuffer
+import io.itsvks.anyhow.map
 
 @HostModule(name = "klyx:extension/nodejs")
 object NodeJs : WasmHost {

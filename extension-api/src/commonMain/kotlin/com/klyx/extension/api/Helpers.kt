@@ -5,12 +5,12 @@ package com.klyx.extension.api
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
-import com.github.michaelbull.result.Result
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.memory.uint8
+import io.itsvks.anyhow.Err
+import io.itsvks.anyhow.Ok
+import io.itsvks.anyhow.Result
 
 inline fun <T> WasmMemory.readOption(
     pointer: Int,

@@ -4,8 +4,6 @@ package com.klyx.extension.modules
 
 import arrow.core.getOrElse
 import arrow.core.toOption
-import com.github.michaelbull.result.Err
-import com.github.michaelbull.result.Ok
 import com.klyx.core.Notifier
 import com.klyx.core.file.Worktree
 import com.klyx.core.file.archive.extractGzip
@@ -37,6 +35,8 @@ import com.klyx.wasm.type.collections.toWasmList
 import com.klyx.wasm.type.toBuffer
 import com.klyx.wasm.type.toWasm
 import com.klyx.wasm.type.wstr
+import io.itsvks.anyhow.Err
+import io.itsvks.anyhow.Ok
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy

@@ -5,10 +5,6 @@ import android.os.Bundle
 import android.util.LruCache
 import android.view.View
 import androidx.compose.runtime.CompositionContext
-import com.github.michaelbull.result.getOrElse
-import com.github.michaelbull.result.onFailure
-import com.github.michaelbull.result.onSuccess
-import com.github.michaelbull.result.runCatching
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
 import com.klyx.core.language
@@ -40,6 +36,9 @@ import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.subscribeAlways
 import io.github.rosemoe.sora.widget.subscribeEvent
+import io.itsvks.anyhow.getOrElse
+import io.itsvks.anyhow.onFailure
+import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers

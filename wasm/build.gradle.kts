@@ -46,6 +46,7 @@ kotlin {
 
                 implementation(libs.kotlinx.datetime)
                 implementation(libs.kotlinx.io.core)
+                implementation(libs.anyhowkt)
 
                 implementation(projects.shared)
             }

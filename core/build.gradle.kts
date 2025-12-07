@@ -74,7 +74,7 @@ kotlin {
                 api(libs.okio)
                 api(libs.kotlinx.coroutines.core)
 
-                api(libs.kotlin.result)
+                api(libs.anyhowkt)
                 api(libs.filekit.dialogs)
                 api(libs.filekit.dialogs.compose)
 

@@ -1,6 +1,5 @@
 package com.klyx.wasm
 
-import com.github.michaelbull.result.getOrThrow
 import com.klyx.wasm.internal.InternalExperimentalWasmApi
 import com.klyx.wasm.internal.toLengthPrefixedUtf8ByteArray
 import io.github.charlietap.chasm.embedding.error.ChasmError
@@ -22,6 +21,8 @@ import io.github.charlietap.chasm.embedding.memory.writeUtf8String
 import io.github.charlietap.chasm.embedding.shapes.ChasmResult
 import io.github.charlietap.chasm.embedding.shapes.Memory
 import io.github.charlietap.chasm.embedding.shapes.Store
+import io.itsvks.anyhow.getOrThrow
+import kotlin.jvm.JvmSynthetic
 
 @ExperimentalWasmApi
 class WasmMemory internal constructor(
@@ -80,4 +81,5 @@ class WasmMemory internal constructor(
     fun allocate(size: Int, align: Int = 1) = instance.alloc(size, align)
 }
 
+@JvmSynthetic
 private fun <V, E : ChasmError> ChasmResult<V, E>.value() = asResult().getOrThrow(::WasmRuntimeException)

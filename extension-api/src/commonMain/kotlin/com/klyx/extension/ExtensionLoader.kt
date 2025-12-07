@@ -1,6 +1,5 @@
 package com.klyx.extension
 
-import com.github.michaelbull.result.onFailure
 import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.file.source
@@ -26,6 +25,7 @@ import com.klyx.wasm.wasi.ExperimentalWasiApi
 import com.klyx.wasm.wasi.StdioSinkProvider
 import com.klyx.wasm.wasi.withWasiPreview1
 import com.klyx.wasm.wasm
+import io.itsvks.anyhow.onFailure
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext

@@ -31,7 +31,6 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
-import com.klyx.core.anyhow
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.Project
@@ -55,6 +54,7 @@ import com.klyx.ui.page.settings.appearance.DarkThemePreferences
 import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
+import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.buffered
