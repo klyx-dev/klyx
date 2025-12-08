@@ -21,7 +21,7 @@ sealed interface Route : NavKey {
     data object Settings : Route, NavKey
 
     companion object {
-        val TopLevelRoutes = setOf(Main, Terminal, Settings)
+        val TopLevelRoutes: Set<NavKey> = setOf(Main, Terminal, Settings)
 
         fun config() = SavedStateConfiguration {
             serializersModule = SerializersModule {

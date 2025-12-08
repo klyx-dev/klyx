@@ -9,6 +9,7 @@ object Strings {
     fun indent(count: Int) = CharCode.Space.toChar().toString().repeat(count)
 
     fun toChars(codePoint: Int): String {
+
         return codePoint.toChars().concatToString()
     }
 

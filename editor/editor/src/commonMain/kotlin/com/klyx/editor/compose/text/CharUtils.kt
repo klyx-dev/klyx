@@ -1,16 +1,39 @@
+@file:OptIn(ExperimentalNativeApi::class)
 @file:JvmName("CharUtilsKt")
 
 package com.klyx.editor.compose.text
 
 import com.klyx.editor.compose.BreakIterator
 import com.klyx.editor.compose.makeCharacterInstance
+import kotlin.experimental.ExperimentalNativeApi
 import kotlin.jvm.JvmName
 
+// Copied from CharHelpers.skiko.kt
+// TODO Remove once it's available in common stdlib https://youtrack.jetbrains.com/issue/KT-23251
+internal typealias CodePoint = Int
+
+// Copied from CharHelpers.skiko.kt
 /**
- * The minimum value of a
- * [Unicode supplementary code point](http://www.unicode.org/glossary/#supplementary_code_point), constant `U+10000`.
+ * Converts a surrogate pair to a unicode code point.
  */
-private const val MIN_SUPPLEMENTARY_CODE_POINT = 0x010000
+fun Char.Companion.toCodePoint(high: Char, low: Char): CodePoint =
+    (((high - MIN_HIGH_SURROGATE) shl 10) or (low - MIN_LOW_SURROGATE)) + MIN_SUPPLEMENTARY_CODE_POINT
+
+// Copy from https://github.com/JetBrains/kotlin/blob/7cd306950aad852e006715067435a4bbd9cd40d2/kotlin-native/runtime/src/main/kotlin/generated/_StringUppercase.kt#L26
+fun StringBuilder.appendCodePoint(codePoint: Int) {
+    if (codePoint < MIN_SUPPLEMENTARY_CODE_POINT) {
+        append(codePoint.toChar())
+    } else {
+        append(Char.MIN_HIGH_SURROGATE + ((codePoint - 0x10000) shr 10))
+        append(Char.MIN_LOW_SURROGATE + (codePoint and 0x3ff))
+    }
+}
+
+// Copied from CharHelpers.skiko.kt
+/**
+ * The minimum value of a supplementary code point, `\u0x10000`.
+ */
+private const val MIN_SUPPLEMENTARY_CODE_POINT: Int = 0x10000
 
 /**
  * The minimum value of a
@@ -24,15 +47,124 @@ private const val MIN_CODE_POINT = 0x000000
  */
 private const val MAX_CODE_POINT = 0X10FFFF
 
-private fun toCodePoint(high: Char, low: Char): Int {
-    return ((high.code shl 10) + low.code) + ((MIN_SUPPLEMENTARY_CODE_POINT
-            - (Char.MIN_HIGH_SURROGATE.code shl 10)
-            - Char.MIN_LOW_SURROGATE.code))
+// Copied from CharHelpers.skiko.kt
+fun CodePoint.charCount(): Int = if (this >= MIN_SUPPLEMENTARY_CODE_POINT) 2 else 1
+
+// Copied from CharHelpers.skiko.kt
+val String.codePoints
+    get() = codePointsAt(0)
+
+fun String.codePointsAt(index: Int) = sequence {
+    var current = index
+    while (current < length) {
+        val codePoint = codePointAt(current)
+        yield(codePoint)
+        current += codePoint.charCount()
+    }
+}
+
+// Copied from CharHelpers.skiko.kt
+/**
+ * Returns the character (Unicode code point) at the specified index.
+ */
+fun CharSequence.codePointAt(index: Int): CodePoint {
+    val high = this[index]
+    if (high.isHighSurrogate() && index + 1 < this.length) {
+        val low = this[index + 1]
+        if (low.isLowSurrogate()) {
+            return Char.toCodePoint(high, low)
+        }
+    }
+    return high.code
+}
+
+// Copied from CharHelpers.skiko.kt
+/**
+ * Returns the character (Unicode code point) before the specified index.
+ */
+fun CharSequence.codePointBefore(index: Int): CodePoint {
+    val low = this[index]
+    if (low.isLowSurrogate() && index - 1 >= 0) {
+        val high = this[index - 1]
+        if (high.isHighSurrogate()) {
+            return Char.toCodePoint(high, low)
+        }
+    }
+    return low.code
 }
 
 /**
+ * Returns the count of Unicode code points.
+ */
+fun CharSequence.codePointCount(): Int {
+    var count = length
+    var i = 0
+    while (i < length - 1) {
+        if (this[i].isHighSurrogate() && this[i + 1].isLowSurrogate()) {
+            count--
+            i += 2
+        } else {
+            i++
+        }
+    }
+    return count
+}
+
+/**
+ * Checks if the character at the specified offset in the given string is either a whitespace or punctuation character.
+ *
+ * @param offset The offset of the character to check.
+ * @return `true` if the character is a whitespace or punctuation character, `false` otherwise.
+ */
+fun String.isWhitespaceOrPunctuation(offset: Int): Boolean {
+    val codePoint = this.codePointAt(offset)
+    return codePoint.isPunctuation() || codePoint.isWhitespace()
+}
+
+/**
+ * Checks if the given Unicode code point is a whitespace character.
+ *
+ * @return `true` if the code point is a whitespace character, `false` otherwise.
+ */
+fun CodePoint.isWhitespace(): Boolean {
+    // TODO: Extend this behavior when (if) Unicode will have compound whitespace characters.
+    if (this.charCount() != 1) {
+        return false
+    }
+    return this.toChar().isWhitespace()
+}
+
+/**
+ * Checks if the given Unicode code point is a punctuation character.
+ *
+ * @return 'true' if the CodePoint is a punctuation character, 'false' otherwise.
+ */
+fun CodePoint.isPunctuation(): Boolean {
+    // TODO: Extend this behavior when (if) Unicode will have compound punctuation characters.
+    if (this.charCount() != 1) {
+        return false
+    }
+    val punctuationSet = setOf(
+        CharCategory.DASH_PUNCTUATION,
+        CharCategory.START_PUNCTUATION,
+        CharCategory.END_PUNCTUATION,
+        CharCategory.CONNECTOR_PUNCTUATION,
+        CharCategory.OTHER_PUNCTUATION,
+        CharCategory.INITIAL_QUOTE_PUNCTUATION,
+        CharCategory.FINAL_QUOTE_PUNCTUATION
+    )
+    return punctuationSet.any { it.contains(this.toChar()) }
+}
+
+/**
+ * Returns true when [high] is a Unicode high-surrogate code unit and [low] is a Unicode
+ * low-surrogate code unit.
+ */
+fun isSurrogatePair(high: Char, low: Char): Boolean = high.isHighSurrogate() && low.isLowSurrogate()
+
+/**
  * Determines whether the specified character (Unicode code point)
- * is in the [Basic Multilingual Plane (BMP)](#BMP).
+ * is on the [Basic Multilingual Plane (BMP)](#BMP).
  * Such code points can be represented using a single `char`.
  *
  * @param  codePoint the character (Unicode code point) to be to
@@ -40,7 +172,7 @@ private fun toCodePoint(high: Char, low: Char): Int {
  * [Char.MIN_VALUE] and [Char.MAX_VALUE] inclusive;
  * `false` otherwise.
  */
-fun Char.Companion.isBmpCodePoint(codePoint: Int): Boolean {
+fun Char.Companion.isBmpCodePoint(codePoint: CodePoint): Boolean {
     return codePoint ushr 16 == 0
 }
 
@@ -53,42 +185,23 @@ fun Char.Companion.isBmpCodePoint(codePoint: Int): Boolean {
  * [MIN_CODE_POINT] and [MAX_CODE_POINT] inclusive;
  * `false` otherwise.
  */
-fun Char.Companion.isValidCodePoint(codePoint: Int): Boolean {
+fun Char.Companion.isValidCodePoint(codePoint: CodePoint): Boolean {
     val plane = codePoint ushr 16
     return plane < ((MAX_CODE_POINT + 1) ushr 16)
 }
 
-fun Char.Companion.highSurrogate(codePoint: Int): Char {
-    return ((codePoint ushr 10)
-            + (Char.MIN_HIGH_SURROGATE.code - (MIN_SUPPLEMENTARY_CODE_POINT ushr 10))).toChar()
-}
+fun CodePoint.lowSurrogate(): Char = ((this and 0x3ff) + Char.MIN_LOW_SURROGATE.code).toChar()
 
-fun Char.Companion.lowSurrogate(codePoint: Int): Char {
-    return ((codePoint and 0x3ff) + Char.MIN_LOW_SURROGATE.code).toChar()
-}
+fun CodePoint.highSurrogate(): Char = ((this ushr 10)
+        + (Char.MIN_HIGH_SURROGATE.code - (MIN_SUPPLEMENTARY_CODE_POINT ushr 10))).toChar()
 
-private fun Int.toSurrogates(dst: CharArray, index: Int) {
+private fun CodePoint.toSurrogates(dst: CharArray, index: Int) {
     // We write elements "backwards" to guarantee all-or-nothing
-    dst[index + 1] = Char.lowSurrogate(this)
-    dst[index] = Char.highSurrogate(this)
+    dst[index + 1] = this.lowSurrogate()
+    dst[index] = this.highSurrogate()
 }
 
-private fun codePointAt1(seq: CharSequence, index: Int): Int {
-    var index = index
-    val c1 = seq[index]
-    if (c1.isHighSurrogate() && ++index < seq.length) {
-        val c2 = seq[index]
-        if (c2.isLowSurrogate()) {
-            return toCodePoint(c1, c2)
-        }
-    }
-    return c1.code
-}
-
-//fun CharSequence.codePointAt(index: Int) = codePointAt1(this, index)
-fun Char.Companion.codePointAt(seq: CharSequence, index: Int) = codePointAt1(seq, index)
-
-private fun codePointToChars(codePoint: Int): CharArray {
+private fun codePointToChars(codePoint: CodePoint): CharArray {
     return when {
         Char.isBmpCodePoint(codePoint) -> charArrayOf(codePoint.toChar())
         Char.isValidCodePoint(codePoint) -> {
@@ -101,7 +214,7 @@ private fun codePointToChars(codePoint: Int): CharArray {
     }
 }
 
-fun Int.toChars() = codePointToChars(this)
+fun CodePoint.toChars() = codePointToChars(this)
 
 internal object CharUtils {
     private val charBreakIterator = BreakIterator.makeCharacterInstance()

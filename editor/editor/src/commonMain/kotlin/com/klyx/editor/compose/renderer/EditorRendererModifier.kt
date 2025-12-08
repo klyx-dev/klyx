@@ -3,7 +3,6 @@ package com.klyx.editor.compose.renderer
 import androidx.collection.LruCache
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -12,7 +11,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.input.pointer.SuspendingPointerInputModifierNode
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.DelegatingNode
@@ -26,7 +24,6 @@ import androidx.compose.ui.node.observeReads
 import androidx.compose.ui.node.requireDensity
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -38,18 +35,9 @@ import com.klyx.core.LocalPlatformContext
 import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.EditorColorScheme
 import com.klyx.editor.compose.LocalEditorColorScheme
-import com.klyx.editor.compose.checkPreconditionNotNull
 import com.klyx.editor.compose.getOrPut
-import com.klyx.editor.compose.selection.EditorSelectionState
-import com.klyx.editor.compose.selection.PlatformSelectionBehaviors
-import com.klyx.editor.compose.selection.contextmenu.modifier.TextContextMenuToolbarHandlerNode
-import com.klyx.editor.compose.selection.contextmenu.modifier.ToolbarRequester
-import com.klyx.editor.compose.selection.contextmenu.modifier.translateRootToDestination
 import com.klyx.editor.compose.text.Cursor
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
 
 internal const val CurrentLineVerticalOffset = 2f
 internal const val LineDividerWidth = Stroke.HairlineWidth
@@ -57,8 +45,9 @@ internal const val LinePadding = 20f
 internal const val SpacingAfterLineBackground = 4f
 internal const val BUFFER_LINES = 5 // extra lines to render above/below viewport
 
-internal val TextLineCache = LruCache<String, TextLayoutResult>(100)
-internal val LineNumberCache = LruCache<String, TextLayoutResult>(100)
+// Keep caches keyed by String to maintain compatibility with other modules using them
+internal val TextLineCache = LruCache<String, TextLayoutResult>(160)
+internal val LineNumberCache = LruCache<String, TextLayoutResult>(160)
 internal val LineWidthCache = LruCache<Int, Float>(16)
 
 internal fun invalidateCache() {
@@ -72,10 +61,7 @@ private class EditorRendererModifierNode(
     private var showLineNumber: Boolean,
     private var pinLineNumber: Boolean,
     private var fontFamily: FontFamily,
-    private var fontSize: TextUnit,
-    private var selectionState: EditorSelectionState,
-    private var toolbarRequester: ToolbarRequester,
-    private var platformSelectionBehaviors: PlatformSelectionBehaviors?
+    private var fontSize: TextUnit
 ) : DelegatingNode(),
     DrawModifierNode,
     CompositionLocalConsumerModifierNode,
@@ -92,6 +78,7 @@ private class EditorRendererModifierNode(
     private var cachedMaxLineWidth: Float = 0f
     private var cachedLineCountDigits: Int = 0
     private var cachedColorScheme: EditorColorScheme? = null
+    private var cachePrefix: String = ""
 
     private val maxLineWidth: Float
         get() {
@@ -104,44 +91,6 @@ private class EditorRendererModifierNode(
             }
             return cachedMaxLineWidth
         }
-
-    private val textContextMenuToolbarHandlerNode = delegate(
-        TextContextMenuToolbarHandlerNode(
-            requester = toolbarRequester,
-            onShow = {
-                selectionState.updateClipboardEntry()
-                platformSelectionBehaviors?.onShowSelectionToolbar(
-                    text = state.content,
-                    selection = state.content.selection
-                )
-                selectionState.textToolbarShown = true
-            },
-            onHide = { selectionState.textToolbarShown = false },
-            computeContentBounds = { destinationCoordinates ->
-                val rootBounds = selectionState.derivedVisibleContentBounds ?: Rect.Zero
-                val localCoordinates = checkPreconditionNotNull(state.editorLayoutCoordinates)
-                translateRootToDestination(
-                    rootContentBounds = rootBounds,
-                    localCoordinates = localCoordinates,
-                    destinationCoordinates = destinationCoordinates,
-                )
-            }
-        )
-    )
-
-    private val pointerInputNode = delegate(
-        SuspendingPointerInputModifierNode {
-            coroutineScope {
-                with(selectionState) {
-                    launch(start = CoroutineStart.UNDISPATCHED) { detectTouchMode() }
-                    //launch(start = CoroutineStart.UNDISPATCHED) { detectTextFieldTapGestures() }
-                    launch(start = CoroutineStart.UNDISPATCHED) {
-                        textFieldSelectionGestures(requestFocus = {})
-                    }
-                }
-            }
-        }
-    )
 
     private var toolbarAndHandlesVisibilityObserverJob: Job? = null
 
@@ -158,13 +107,8 @@ private class EditorRendererModifierNode(
         showLineNumber: Boolean,
         pinLineNumber: Boolean,
         fontFamily: FontFamily,
-        fontSize: TextUnit,
-        selectionState: EditorSelectionState,
-        toolbarRequester: ToolbarRequester,
-        platformSelectionBehaviors: PlatformSelectionBehaviors?
+        fontSize: TextUnit
     ) {
-        val previousSelectionState = this.selectionState
-
         var changed = false
         var fontChanged = false
 
@@ -198,28 +142,16 @@ private class EditorRendererModifierNode(
         if (fontChanged) {
             cachedLineCountDigits = 0
             cachedMaxLineWidth = 0f
+            cachePrefix = buildString(32) {
+                append(fontSize.value)
+                append('-')
+                append(fontFamily.hashCode())
+            }
         }
-
-        this.selectionState = selectionState
-        this.toolbarRequester = toolbarRequester
-        this.platformSelectionBehaviors = platformSelectionBehaviors
-        textContextMenuToolbarHandlerNode.update(toolbarRequester)
 
         if (changed && isAttached) {
             updateEditorState()
             invalidateDraw()
-        }
-
-        if (selectionState != previousSelectionState) {
-            pointerInputNode.resetPointerInputHandler()
-
-            if (toolbarAndHandlesVisibilityObserverJob != null) {
-                toolbarAndHandlesVisibilityObserverJob?.cancel()
-                toolbarAndHandlesVisibilityObserverJob =
-                    coroutineScope.launch {
-                        selectionState.startToolbarAndHandlesVisibilityObserver()
-                    }
-            }
         }
     }
 
@@ -247,7 +179,7 @@ private class EditorRendererModifierNode(
         val scrollY = -state.scrollY
         val maxLine = state.lineCount
         val cursor = state.content.cursor.value
-        val selection = state.content.selection
+        // Selection rendering removed for performance and simplification
 
         val lineNumberWidth = if (showLineNumber) maxLineWidth else 0f
         val leftOffset = lineNumberWidth + LinePadding + LineDividerWidth
@@ -256,19 +188,8 @@ private class EditorRendererModifierNode(
         val visibleEnd = minOf(maxLine, ((scrollY + size.height) / lineHeight).toInt() + 1 + BUFFER_LINES)
         val visibleRange = visibleStart..visibleEnd
 
-        if (selection.collapsed) {
-            drawCurrentLineBackground(colorScheme, lineHeight, cursor, visibleRange)
-        }
-
-        if (!selection.collapsed) {
-            drawSelection(
-                selection = selection,
-                colorScheme = colorScheme,
-                lineHeight = lineHeight,
-                leftOffset = leftOffset,
-                visibleRange = visibleRange
-            )
-        }
+        // Always draw current line background
+        drawCurrentLineBackground(colorScheme, lineHeight, cursor, visibleRange)
 
         if (showLineNumber) {
             drawLineNumbersBackground(lineNumberWidth + LinePadding, colorScheme)
@@ -316,27 +237,26 @@ private class EditorRendererModifierNode(
         lineNumberWidth: Float,
         colorScheme: EditorColorScheme
     ) {
-        val cacheKey = "${fontSize.value}-${fontFamily.hashCode()}"
+        val cachePrefix = this@EditorRendererModifierNode.cachePrefix
 
-        for (lineIndex in range) {
-            val lineNum = lineIndex + 1
-            if (lineNum > state.lineCount) break
-
-            val y = lineIndex * state.lineHeight + state.scrollY
-            val line = state.getLine(lineNum)
-
-            if (showLineNumber) {
-                val lineResult = LineNumberCache.getOrPut("$lineNum-$cacheKey") {
+        // Draw line numbers without applying the text column transform
+        if (showLineNumber) {
+            for (lineIndex in range) {
+                val lineNum = lineIndex + 1
+                if (lineNum > state.lineCount) break
+                val y = lineIndex * state.lineHeight + state.scrollY
+                val numberKey = "ln-$lineNum-$cachePrefix-${colorScheme.lineNumber.hashCode()}-${(lineNumberWidth + 5).toInt()}"
+                val minWidth = (lineNumberWidth + 5).toInt()
+                val lineResult = LineNumberCache.getOrPut(numberKey) {
                     textMeasurer.measure(
                         text = lineNum.toString(),
                         style = state.textStyle.copy(
                             textAlign = TextAlign.Right,
                             color = colorScheme.lineNumber
                         ),
-                        constraints = Constraints(minWidth = (lineNumberWidth + 5).toInt())
+                        constraints = Constraints(minWidth = minWidth)
                     )
                 }
-
                 translateLineNumberIfRequired {
                     drawText(
                         textLayoutResult = lineResult,
@@ -344,73 +264,34 @@ private class EditorRendererModifierNode(
                     )
                 }
             }
+        }
 
-            val lineCacheKey = "${line.hashCode()}-$cacheKey-${colorScheme.foreground.hashCode()}"
-            val result = TextLineCache.getOrPut(lineCacheKey) {
-                textMeasurer.measure(
-                    text = line,
-                    softWrap = false,
-                    constraints = Constraints(maxWidth = Constraints.Infinity),
-                    style = state.textStyle.copy(color = colorScheme.foreground)
-                )
-            }
-
-            withTransform({
-                if (pinLineNumber) clipRect(left = leftOffset)
-                translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground)
-            }) {
+        // Pre-apply transforms once for the text column to reduce per-line state changes
+        val baseLeft = leftOffset + state.scrollX + SpacingAfterLineBackground
+        withTransform({
+            if (pinLineNumber) clipRect(left = leftOffset)
+            translate(left = baseLeft)
+        }) {
+            for (lineIndex in range) {
+                val lineNum = lineIndex + 1
+                if (lineNum > state.lineCount) break
+                val y = lineIndex * state.lineHeight + state.scrollY
+                val line = state.getLine(lineNum)
+                val lineKey = "tx-${line.hashCode()}-$cachePrefix-${colorScheme.foreground.hashCode()}"
+                val result = TextLineCache.getOrPut(lineKey) {
+                    textMeasurer.measure(
+                        text = line,
+                        softWrap = false,
+                        constraints = Constraints(maxWidth = Constraints.Infinity),
+                        style = state.textStyle.copy(color = colorScheme.foreground)
+                    )
+                }
                 drawText(result, topLeft = Offset(0f, y))
             }
         }
     }
 
-    private fun DrawScope.drawSelection(
-        selection: TextRange,
-        colorScheme: EditorColorScheme,
-        lineHeight: Float,
-        leftOffset: Float,
-        visibleRange: IntRange
-    ) {
-        val (start, end) = selection.min to selection.max
-        val (startLine, startCol) = state.cursorAt(start)
-        val (endLine, endCol) = state.cursorAt(end)
-
-        val renderStartLine = maxOf(startLine, visibleRange.first + 1)
-        val renderEndLine = minOf(endLine, visibleRange.last)
-
-        for (lineNum in renderStartLine..renderEndLine) {
-            if (lineNum > state.lineCount) break
-
-            val y = (lineNum - 1) * lineHeight + CurrentLineVerticalOffset
-            val line = state.getLine(lineNum)
-
-            val startIndex = if (lineNum == startLine) startCol else 0
-            val endIndex = if (lineNum == endLine) endCol else line.length
-            if (startIndex >= endIndex) continue
-
-            val cacheKey =
-                "${line.hashCode()}-${fontSize.value}-${fontFamily.hashCode()}-${colorScheme.selectionForeground.hashCode()}"
-            val result = TextLineCache.getOrPut(cacheKey) {
-                textMeasurer.measure(
-                    text = line,
-                    softWrap = false,
-                    constraints = Constraints(maxWidth = Constraints.Infinity),
-                    style = state.textStyle.copy(color = colorScheme.selectionForeground)
-                )
-            }
-
-            withTransform({
-                if (pinLineNumber) clipRect(left = leftOffset)
-                translate(left = leftOffset + state.scrollX + SpacingAfterLineBackground, top = y + state.scrollY)
-            }) {
-                drawPath(
-                    path = result.getPathForRange(startIndex, endIndex),
-                    color = colorScheme.selectionBackground,
-                    style = Fill
-                )
-            }
-        }
-    }
+    // Selection drawing removed
 
     private inline fun DrawScope.translateLineNumberIfRequired(block: DrawScope.() -> Unit) {
         translate(left = if (!pinLineNumber) state.scrollX else 0f, top = 0f, block = block)
@@ -424,13 +305,6 @@ private class EditorRendererModifierNode(
         }
         updateEditorState()
         onObservedReadsChanged()
-
-        if (toolbarAndHandlesVisibilityObserverJob == null) {
-            toolbarAndHandlesVisibilityObserverJob =
-                coroutineScope.launch {
-                    selectionState.startToolbarAndHandlesVisibilityObserver()
-                }
-        }
     }
 
     override fun onDetach() {
@@ -441,10 +315,7 @@ private class EditorRendererModifierNode(
 
     override fun onObservedReadsChanged() {
         if (!isAttached) return
-        invalidateCache().also {
-            cachedLineCountDigits = 0
-            cachedMaxLineWidth = 0f
-        }
+        // Avoid global cache eviction on every observed read; invalidate draw only.
         invalidateDraw()
     }
 
@@ -458,10 +329,7 @@ private data class EditorRendererModifierNodeElement(
     private val showLineNumber: Boolean,
     private val pinLineNumber: Boolean,
     private val fontFamily: FontFamily,
-    private val fontSize: TextUnit,
-    private val selectionState: EditorSelectionState,
-    private val toolbarRequester: ToolbarRequester,
-    private val platformSelectionBehaviors: PlatformSelectionBehaviors?
+    private val fontSize: TextUnit
 ) : ModifierNodeElement<EditorRendererModifierNode>() {
 
     override fun InspectorInfo.inspectableProperties() {
@@ -471,9 +339,6 @@ private data class EditorRendererModifierNodeElement(
         properties["pinLineNumber"] = pinLineNumber
         properties["fontFamily"] = fontFamily
         properties["fontSize"] = fontSize
-        properties["selectionState"] = selectionState
-        properties["toolbarRequester"] = toolbarRequester
-        properties["platformSelectionBehaviors"] = platformSelectionBehaviors
     }
 
     override fun create() = EditorRendererModifierNode(
@@ -481,10 +346,7 @@ private data class EditorRendererModifierNodeElement(
         showLineNumber = showLineNumber,
         pinLineNumber = pinLineNumber,
         fontFamily = fontFamily,
-        fontSize = fontSize,
-        selectionState = selectionState,
-        toolbarRequester = toolbarRequester,
-        platformSelectionBehaviors = platformSelectionBehaviors
+        fontSize = fontSize
     )
 
     override fun update(node: EditorRendererModifierNode) {
@@ -493,10 +355,7 @@ private data class EditorRendererModifierNodeElement(
             showLineNumber = showLineNumber,
             pinLineNumber = pinLineNumber,
             fontFamily = fontFamily,
-            fontSize = fontSize,
-            selectionState = selectionState,
-            toolbarRequester = toolbarRequester,
-            platformSelectionBehaviors = platformSelectionBehaviors
+            fontSize = fontSize
         )
     }
 }
@@ -506,17 +365,11 @@ internal fun Modifier.renderEditor(
     showLineNumber: Boolean,
     pinLineNumber: Boolean,
     fontFamily: FontFamily,
-    fontSize: TextUnit,
-    selectionState: EditorSelectionState,
-    toolbarRequester: ToolbarRequester,
-    platformSelectionBehaviors: PlatformSelectionBehaviors?
+    fontSize: TextUnit
 ) = this then EditorRendererModifierNodeElement(
     state = state,
     showLineNumber = showLineNumber,
     pinLineNumber = pinLineNumber,
     fontFamily = fontFamily,
-    fontSize = fontSize,
-    selectionState = selectionState,
-    toolbarRequester = toolbarRequester,
-    platformSelectionBehaviors = platformSelectionBehaviors
+    fontSize = fontSize
 )

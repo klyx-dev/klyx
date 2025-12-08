@@ -18,13 +18,6 @@ internal actual fun String.findFollowingBreak(index: Int): Int {
 }
 
 /**
- * Returns true when [high] is a Unicode high-surrogate code unit and [low] is a Unicode
- * low-surrogate code unit.
- */
-private fun isSurrogatePair(high: Char, low: Char): Boolean =
-    high.isHighSurrogate() && low.isLowSurrogate()
-
-/**
  * Returns the index, in characters, of the code point at distance [offset] from [index].
  *
  * If there aren't enough codepoints in the correct direction, returns 0 (if [offset] is negative)
@@ -88,96 +81,6 @@ private fun canBeEmojiOrPictographic(text: String): Boolean {
     return false
 }
 
-// Copied from CharHelpers.skiko.kt
-// TODO Remove once it's available in common stdlib https://youtrack.jetbrains.com/issue/KT-23251
-internal typealias CodePoint = Int
-
-// Copied from CharHelpers.skiko.kt
-/**
- * Converts a surrogate pair to a unicode code point.
- */
-internal fun Char.Companion.toCodePoint(high: Char, low: Char): CodePoint =
-    (((high - MIN_HIGH_SURROGATE) shl 10) or (low - MIN_LOW_SURROGATE)) + MIN_SUPPLEMENTARY_CODE_POINT
-
-// Copy from https://github.com/JetBrains/kotlin/blob/7cd306950aad852e006715067435a4bbd9cd40d2/kotlin-native/runtime/src/main/kotlin/generated/_StringUppercase.kt#L26
-internal fun StringBuilder.appendCodePoint(codePoint: Int) {
-    if (codePoint < MIN_SUPPLEMENTARY_CODE_POINT) {
-        append(codePoint.toChar())
-    } else {
-        append(Char.MIN_HIGH_SURROGATE + ((codePoint - 0x10000) shr 10))
-        append(Char.MIN_LOW_SURROGATE + (codePoint and 0x3ff))
-    }
-}
-
-// Copied from CharHelpers.skiko.kt
-/**
- * The minimum value of a supplementary code point, `\u0x10000`.
- */
-private const val MIN_SUPPLEMENTARY_CODE_POINT: Int = 0x10000
-
-// Copied from CharHelpers.skiko.kt
-internal fun CodePoint.charCount(): Int = if (this >= MIN_SUPPLEMENTARY_CODE_POINT) 2 else 1
-
-// Copied from CharHelpers.skiko.kt
-internal val String.codePoints
-    get() = codePointsAt(0)
-
-internal fun String.codePointsAt(index: Int) = sequence {
-    var current = index
-    while (current < length) {
-        val codePoint = codePointAt(current)
-        yield(codePoint)
-        current += codePoint.charCount()
-    }
-}
-
-// Copied from CharHelpers.skiko.kt
-/**
- * Returns the character (Unicode code point) at the specified index.
- */
-internal fun CharSequence.codePointAt(index: Int): CodePoint {
-    val high = this[index]
-    if (high.isHighSurrogate() && index + 1 < this.length) {
-        val low = this[index + 1]
-        if (low.isLowSurrogate()) {
-            return Char.toCodePoint(high, low)
-        }
-    }
-    return high.code
-}
-
-// Copied from CharHelpers.skiko.kt
-/**
- * Returns the character (Unicode code point) before the specified index.
- */
-internal fun CharSequence.codePointBefore(index: Int): CodePoint {
-    val low = this[index]
-    if (low.isLowSurrogate() && index - 1 >= 0) {
-        val high = this[index - 1]
-        if (high.isHighSurrogate()) {
-            return Char.toCodePoint(high, low)
-        }
-    }
-    return low.code
-}
-
-/**
- * Returns the count of Unicode code points.
- */
-internal fun CharSequence.codePointCount(): Int {
-    var count = length
-    var i = 0
-    while (i < length - 1) {
-        if (this[i].isHighSurrogate() && this[i + 1].isLowSurrogate()) {
-            count--
-            i += 2
-        } else {
-            i++
-        }
-    }
-    return count
-}
-
 /**
  * Finds the offset of the next non-whitespace symbols subsequence (word) in the given text
  * starting from the specified caret offset.
@@ -223,17 +126,6 @@ internal fun findNextNonWhitespaceSymbolsSubsequenceStartOffset(
 }
 
 /**
- * Checks if the character at the specified offset in the given string is either a whitespace or punctuation character.
- *
- * @param offset The offset of the character to check.
- * @return `true` if the character is a whitespace or punctuation character, `false` otherwise.
- */
-internal fun String.isWhitespaceOrPunctuation(offset: Int): Boolean {
-    val codePoint = this.codePointAt(offset)
-    return codePoint.isPunctuation() || codePoint.isWhitespace()
-}
-
-/**
  * Returns the midpoint position in the string considering Unicode symbols.
  *
  * This function calculates the midpoint position in the given string, taking into account Unicode symbols.
@@ -250,39 +142,4 @@ internal fun String.midpointPositionWithUnicodeSymbols(): Int {
         currentOffset = charIterator.next()
     }
     return currentOffset
-}
-
-/**
- * Checks if the given Unicode code point is a whitespace character.
- *
- * @return `true` if the code point is a whitespace character, `false` otherwise.
- */
-private fun CodePoint.isWhitespace(): Boolean {
-    // TODO: Extend this behavior when (if) Unicode will have compound whitespace characters.
-    if (this.charCount() != 1) {
-        return false
-    }
-    return this.toChar().isWhitespace()
-}
-
-/**
- * Checks if the given Unicode code point is a punctuation character.
- *
- * @return 'true' if the CodePoint is a punctuation character, 'false' otherwise.
- */
-private fun CodePoint.isPunctuation(): Boolean {
-    // TODO: Extend this behavior when (if) Unicode will have compound punctuation characters.
-    if (this.charCount() != 1) {
-        return false
-    }
-    val punctuationSet = setOf(
-        CharCategory.DASH_PUNCTUATION,
-        CharCategory.START_PUNCTUATION,
-        CharCategory.END_PUNCTUATION,
-        CharCategory.CONNECTOR_PUNCTUATION,
-        CharCategory.OTHER_PUNCTUATION,
-        CharCategory.INITIAL_QUOTE_PUNCTUATION,
-        CharCategory.FINAL_QUOTE_PUNCTUATION
-    )
-    return punctuationSet.any { it.contains(this.toChar()) }
 }

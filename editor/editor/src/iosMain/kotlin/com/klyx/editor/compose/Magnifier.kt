@@ -82,6 +82,7 @@ internal fun Modifier.magnifier(
             )
         )
     } else {
+        @Suppress("DEPRECATION")
         inspectable(
             // Publish inspector info even if magnification isn't supported.
             inspectorInfo = debugInspectorInfo {
