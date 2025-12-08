@@ -125,7 +125,8 @@ android {
         targetSdk = Configs.Android.TARGET_SDK_VERSION
 
         versionCode = AppVersioning.versionCode
-        versionName = project.findProperty("versionName") as? String ?: AppVersioning.resolveVersionName("release")
+        versionName = project.findProperty("versionName") as? String
+            ?: AppVersioning.resolveVersionName("release")
     }
 
     signingConfigs {
@@ -181,7 +182,7 @@ android {
     }
 
     buildTypes {
-        getByName("release") {
+        release {
             isMinifyEnabled = false
             isShrinkResources = false
 
@@ -193,14 +194,9 @@ android {
             )
         }
 
-        getByName("debug") {
-            versionNameSuffix = "+" + AppVersioning.DEBUG_SUFFIX
-            //applicationIdSuffix = "." + AppVersioning.DEBUG_SUFFIX
-
+        debug {
             // signingConfig = signingConfigs.getByName("debug")
             signingConfig = signingConfigs.getByName("release")
-
-            resValue("string", "app_name", "klyx-${AppVersioning.DEBUG_SUFFIX}")
         }
     }
 
@@ -296,4 +292,15 @@ tasks.register("prepareArtifacts") {
     group = "distribution"
 
     dependsOn("assembleAllTargets")
+}
+
+androidComponents.onVariants { variant ->
+    val buildType = variant.buildType ?: error("Build type not found")
+
+    val resolved = project.findProperty("versionName") as? String
+        ?: AppVersioning.resolveVersionName(buildType)
+
+    variant.outputs.forEach {
+        it.versionName.set(resolved)
+    }
 }

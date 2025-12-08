@@ -8,14 +8,11 @@ object AppVersioning {
         minor = 0,
         patch = 0,
         //preRelease = "alpha01"
-        //buildMetadata = "build"
+        buildMetadata = "preview"
     )
-
-    const val DEBUG_SUFFIX = "dev"
 
     val stableVersionName = "${baseVersion.major}.${baseVersion.minor}.${baseVersion.patch}"
     val preReleaseVersionName = baseVersion.toString()
-    val debugVersionName = preReleaseVersionName + DEBUG_SUFFIX
 
     val versionCode: Int
         get() {
@@ -48,7 +45,7 @@ object AppVersioning {
         }
 
     fun resolveVersionName(buildType: String) = when (buildType.lowercase()) {
-        "debug" -> debugVersionName
+        "debug" -> "$baseVersion-debug"
         "release" -> if (baseVersion.isStable) stableVersionName else preReleaseVersionName
         else -> preReleaseVersionName
     }

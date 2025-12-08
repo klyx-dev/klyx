@@ -13,7 +13,7 @@ class Command(val command: String) {
     private val _env = mutableMapOf<String, String>()
     private var directory: Path? = null
 
-    val args get() = _args.toList()
+    val args: List<String> get() = _args
 
     companion object {
         @JvmStatic
@@ -107,7 +107,7 @@ class Command(val command: String) {
             }
             append("\n")
             directory?.let {
-                append("directory: $it\n")
+                append("  directory: $it\n")
             }
         }
     }
