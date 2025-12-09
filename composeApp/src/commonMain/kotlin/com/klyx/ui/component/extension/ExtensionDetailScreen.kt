@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
 import com.klyx.core.LocalNotifier
-import com.klyx.core.extension.ExtensionId
 import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.extension.fetchLastUpdated
 import com.klyx.core.formatDateTime
@@ -248,7 +247,11 @@ private fun TextWithIcon(
 }
 
 private suspend fun getLastUpdateText(repo: String): String {
-    val time = fetchLastUpdated(repo) ?: return "Last updated: unknown"
-    val formatted = time.formatDateTime()
-    return "Last updated on $formatted"
+    return try {
+        val time = fetchLastUpdated(repo) ?: return "Last updated: unknown"
+        val formatted = time.formatDateTime()
+        "Last updated on $formatted"
+    } catch (_: Throwable) {
+        "Last updated: unknown"
+    }
 }
