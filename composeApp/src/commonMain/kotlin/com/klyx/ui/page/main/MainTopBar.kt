@@ -21,11 +21,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.LocalDrawerState
 import com.klyx.core.file.Project
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.component.FpsText
-import com.klyx.isModalNavigationDrawerAvailable
 import com.klyx.tab.Tab
 import kotlinx.coroutines.launch
 
@@ -52,7 +50,7 @@ fun MainTopBar(
                 }
             },
             subtitle = { if (currentAppSettings.showFps) FpsText() },
-            navigationIcon = { if (isModalNavigationDrawerAvailable) FileTreeButton() },
+            navigationIcon = { FileTreeButton() },
             actions = commonActions
         )
     } else {
@@ -62,7 +60,7 @@ fun MainTopBar(
                 { FpsText() }
             } else null,
             scrollBehavior = scrollBehavior,
-            navigationIcon = { if (isModalNavigationDrawerAvailable) FileTreeButton() },
+            navigationIcon = { FileTreeButton() },
             actions = commonActions
         )
     }
@@ -70,11 +68,11 @@ fun MainTopBar(
 
 @Composable
 private fun FileTreeButton() {
-    val drawerState = LocalDrawerState.current.getOrNull()
+    val drawerState = LocalDrawerState.current
     val scope = rememberCoroutineScope()
 
     FilledIconButton(
-        onClick = { scope.launch { drawerState?.open() } },
+        onClick = { scope.launch { drawerState.open() } },
         shapes = IconButtonDefaults.shapes(
             shape = IconButtonDefaults.mediumSquareShape,
             pressedShape = IconButtonDefaults.mediumPressedShape

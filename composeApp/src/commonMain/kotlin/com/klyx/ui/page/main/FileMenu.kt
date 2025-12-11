@@ -19,8 +19,6 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.klyx.LocalDrawerState
-import com.klyx.openIfClosed
 import com.klyx.core.LocalNotifier
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
@@ -43,6 +41,7 @@ import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_no_files_to_save
 import com.klyx.res.notification_saved
 import com.klyx.tab.FileTab
+import com.klyx.ui.util.openIfClosed
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher

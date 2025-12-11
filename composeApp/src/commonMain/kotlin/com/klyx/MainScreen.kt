@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
@@ -35,7 +36,6 @@ import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.Project
 import com.klyx.core.io.Paths
-import com.klyx.core.io.join
 import com.klyx.core.io.lastProjectFile
 import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
@@ -56,6 +56,8 @@ import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
 import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.buffered
 import kotlinx.io.files.SystemFileSystem
@@ -93,19 +95,25 @@ fun MainScreen() {
     LifecycleStartEffect(Unit) {
         val path = Paths.lastProjectFile
 
-        anyhow {
-            val project: Project = SystemFileSystem.source(path).buffered().use { source ->
-                Json.decodeFromString(source.readString())
-            }
+        lifecycleScope.launch(Dispatchers.Default) {
+            anyhow {
+                val project: Project = withContext(Dispatchers.IO) {
+                    SystemFileSystem.source(path).buffered().use { source ->
+                        Json.decodeFromString(source.readString())
+                    }
+                }
 
-            if (project != openedProject) {
-                klyxViewModel.openProject(project)
-            }
-        }.logErr()
+                if (project != openedProject) {
+                    klyxViewModel.openProject(project)
+                }
+            }.logErr()
+        }
 
         onStopOrDispose {
-            SystemFileSystem.sink(path).buffered().use { sink ->
-                sink.writeString(Json.encodeToString(openedProject))
+            lifecycleScope.launch(Dispatchers.IO) {
+                SystemFileSystem.sink(path).buffered().use { sink ->
+                    sink.writeString(Json.encodeToString(openedProject))
+                }
             }
         }
     }

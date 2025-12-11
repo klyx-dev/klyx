@@ -1,5 +1,6 @@
 package com.klyx.core.file
 
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 /**
@@ -7,6 +8,7 @@ import kotlinx.serialization.Serializable
  *
  * @property worktrees the worktrees in this project.
  */
+@Immutable
 @Serializable
 data class Project(val worktrees: List<Worktree>) {
     fun isEmpty() = worktrees.isEmpty()

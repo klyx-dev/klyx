@@ -57,7 +57,6 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import com.klyx.LocalDrawerState
 import com.klyx.LocalNavigator
 import com.klyx.Route
 import com.klyx.core.cmd.CommandManager
@@ -74,7 +73,8 @@ import com.klyx.core.theme.blend
 import com.klyx.core.ui.component.ShortcutText
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
-import com.klyx.openIfClosed
+import com.klyx.ui.page.main.LocalDrawerState
+import com.klyx.ui.util.openIfClosed
 import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openUntitledFile
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher

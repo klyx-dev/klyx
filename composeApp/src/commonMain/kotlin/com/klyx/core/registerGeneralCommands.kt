@@ -5,8 +5,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
-import com.klyx.LocalDrawerState
-import com.klyx.openIfClosed
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.CommandManager.addCommands
 import com.klyx.core.cmd.CommandManager.removeCommands
@@ -27,9 +25,11 @@ import com.klyx.res.notification_failed_to_save
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_no_files_to_save
 import com.klyx.res.notification_saved
+import com.klyx.ui.page.main.LocalDrawerState
 import com.klyx.ui.page.main.closeCurrentWindow
 import com.klyx.ui.page.main.openNewWindow
 import com.klyx.ui.page.main.quitApp
+import com.klyx.ui.util.openIfClosed
 import com.klyx.viewmodel.openExtensionScreen
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher

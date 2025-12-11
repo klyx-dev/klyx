@@ -1,5 +1,6 @@
 package com.klyx.core.file
 
+import androidx.compose.runtime.Immutable
 import arrow.core.None
 import arrow.core.Some
 import com.klyx.core.process.getenv
@@ -19,6 +20,7 @@ import kotlinx.serialization.Transient
  *
  * @property rootFile the root file of the worktree.
  */
+@Immutable
 @Serializable
 data class Worktree(val rootFile: KxFile) {
     @Transient

@@ -71,7 +71,7 @@ import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolve
 import com.klyx.di.LocalFileTreeViewModel
 import com.klyx.ui.component.menu.PopupMenu
-import com.klyx.worktreeDrawerWidth
+import com.klyx.ui.page.main.worktreeDrawerWidth
 
 private inline fun <K, V> LazyListScope.items(
     items: Map<K, V>,
