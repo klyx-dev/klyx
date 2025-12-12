@@ -1,19 +1,21 @@
 package com.klyx.core.settings
 
-import com.klyx.core.Environment
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
-import com.klyx.core.file.KxFile
+import com.klyx.core.io.Paths
+import com.klyx.core.io.fs
+import com.klyx.core.io.globalSettingsFile
+import com.klyx.core.io.settingsFile
+import com.klyx.core.logging.log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.io.buffered
+import kotlinx.io.readString
+import kotlinx.io.writeString
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
-import kotlin.experimental.ExperimentalTypeInference
-import kotlin.jvm.JvmName
-
-const val SETTINGS_FILE_NAME = "settings.json"
 
 object SettingsManager {
     @OptIn(ExperimentalSerializationApi::class)
@@ -27,30 +29,34 @@ object SettingsManager {
         allowComments = true
     }
 
-    private val settingsFile = KxFile(Environment.SettingsFilePath)
-    private val internalSettingsFile = KxFile(Environment.InternalSettingsFilePath)
+    private val settingsFile = Paths.settingsFile
+    private val globalSettingsFile = Paths.globalSettingsFile
 
     private val _settings = MutableStateFlow(AppSettings())
     val settings = _settings.asStateFlow()
 
     val defaultSettings: AppSettings
-        get() = json.decodeFromString(internalSettingsFile.readText())
+        get() = fs.source(globalSettingsFile).buffered().use {
+            json.decodeFromString(it.readString())
+        }
 
     init {
         runCatching {
-            internalSettingsFile.delete()
-            internalSettingsFile.writeText(json.encodeToString(settings.value))
+            fs.delete(globalSettingsFile, mustExist = false)
+            fs.sink(globalSettingsFile).buffered().use {
+                it.writeString(json.encodeToString(settings.value))
+            }
         }.onFailure {
             it.printStackTrace()
-            println(internalSettingsFile.absolutePath)
+            log.error { "Failed to create global settings file: $globalSettingsFile" }
             throw IllegalStateException("Failed to create internal settings file", it)
         }
     }
 
     fun load() {
-        if (settingsFile.exists) {
+        if (fs.exists(settingsFile)) {
             runCatching {
-                val text = settingsFile.readText()
+                val text = fs.source(settingsFile).buffered().use { it.readString() }
                 updateSettings { json.decodeFromString(text) }
             }.onFailure { save() }
         } else {
@@ -60,8 +66,10 @@ object SettingsManager {
 
     fun save() {
         runCatching {
-            settingsFile.delete()
-            settingsFile.writeText(json.encodeToString(settings.value))
+            fs.delete(settingsFile, mustExist = false)
+            fs.sink(settingsFile).buffered().use {
+                it.writeString(json.encodeToString(settings.value))
+            }
         }.onFailure { it.printStackTrace() }
     }
 

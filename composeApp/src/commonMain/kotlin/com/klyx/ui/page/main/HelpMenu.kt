@@ -25,15 +25,16 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.klyx.core.DOCS_URL
-import com.klyx.core.Environment
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.REPORT_ISSUE_URL
-import com.klyx.core.defaultLogsFile
 import com.klyx.core.file.shareFile
+import com.klyx.core.file.toKxFile
 import com.klyx.core.icon.Discord
 import com.klyx.core.icon.Klyx
 import com.klyx.core.icon.KlyxIcons
+import com.klyx.core.io.Paths
+import com.klyx.core.io.logFile
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
@@ -199,7 +200,7 @@ private fun KlyxMenu(
         DropdownMenuItem(
             text = { Text("Share Logs File") },
             onClick = {
-                context.shareFile(Environment.defaultLogsFile())
+                context.shareFile(Paths.logFile.toKxFile())
                 onDismissRequest()
             },
             leadingIcon = {

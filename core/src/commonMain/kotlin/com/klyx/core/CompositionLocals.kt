@@ -18,7 +18,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.file.KxFile
+import com.klyx.core.file.toKxFile
 import com.klyx.core.file.watchAndReload
+import com.klyx.core.io.Paths
+import com.klyx.core.io.settingsFile
 import com.klyx.core.notification.LocalNotificationManager
 import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.settings.SettingsManager
@@ -48,7 +51,7 @@ expect fun PlatformLocalProvider(content: @Composable () -> Unit)
 @Composable
 fun SharedLocalProvider(content: @Composable () -> Unit) {
     val settings by SettingsManager.settings.collectAsStateWithLifecycle()
-    val settingsFile = remember { KxFile(Environment.SettingsFilePath) }
+    val settingsFile = remember { Paths.settingsFile.toKxFile() }
     val scope = rememberCoroutineScope()
 
     @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)

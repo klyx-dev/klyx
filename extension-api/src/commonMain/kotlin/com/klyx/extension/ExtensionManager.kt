@@ -1,7 +1,6 @@
 package com.klyx.extension
 
 import androidx.compose.runtime.mutableStateListOf
-import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.extension.parseExtension
@@ -13,6 +12,9 @@ import com.klyx.core.file.resolve
 import com.klyx.core.file.source
 import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toOkioPath
+import com.klyx.core.io.Paths
+import com.klyx.core.io.extensionsDir
+import com.klyx.core.io.isSymlink
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.languageIdentifiers
 import com.klyx.core.settings.AppSettings
@@ -57,7 +59,7 @@ object ExtensionManager {
             val tomlFile = directory.find("extension.toml") ?: bail("extension.toml not found")
             val info = withContext(Dispatchers.Default) { parseToml(tomlFile.source()) }
 
-            val extensionDirectory = if (isDevExtension) Environment.DevExtensionsDir else Environment.ExtensionsDir
+            val extensionDirectory = Paths.extensionsDir.toString()
             val installDirectory = KxFile(extensionDirectory, info.id)
 
             if (!installDirectory.exists) {
@@ -184,26 +186,20 @@ object ExtensionManager {
 
     suspend fun loadExtensions() = withContext(Dispatchers.IO) {
         try {
-            val dirs = listOf(
-                Environment.ExtensionsDir to false,
-                Environment.DevExtensionsDir to true
-            ).flatMap { (dirPath, isDev) ->
-                val directory = dirPath.toPath()
-                if (!fs.exists(directory)) fs.createDirectories(directory)
-                fs.list(directory)
-                    .filter { fs.metadata(it).isDirectory }
-                    .map { it to isDev }
-            }
+            val directory = Paths.extensionsDir.toOkioPath()
+            if (!fs.exists(directory)) fs.createDirectories(directory)
+            val dirs = fs.list(directory)
+                .filter { fs.metadata(it).isDirectory }
 
             _loadingState.update { 0 to dirs.size }
 
             coroutineScope {
                 dirs.chunked(4).map { chunk ->
                     async {
-                        chunk.map { (child, isDev) ->
+                        chunk.map { child ->
                             async(Dispatchers.IO) {
                                 try {
-                                    loadExtension(child.toKxFile(), isDev)
+                                    loadExtension(child.toKxFile(), child.isSymlink())
                                 } finally {
                                     _loadingState.update { (loaded, total) -> (loaded + 1) to total }
                                 }

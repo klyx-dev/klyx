@@ -1,9 +1,9 @@
 package com.klyx.extension
 
-import com.klyx.core.Environment
 import com.klyx.core.extension.Extension
 import com.klyx.core.file.source
 import com.klyx.core.io.Paths
+import com.klyx.core.io.homeDir
 import com.klyx.core.io.root
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
@@ -35,7 +35,7 @@ import kotlinx.io.readString
 import kotlin.jvm.JvmSynthetic
 
 object ExtensionLoader {
-    private val home = Environment.DeviceHomeDir
+    private val home = homeDir().toString()
 
     @OptIn(ExperimentalWasmApi::class, ExperimentalWasiApi::class)
     suspend fun loadExtension(

@@ -1,8 +1,8 @@
 package com.klyx.core.file.archive
 
-import com.klyx.core.file.fs
-import com.klyx.core.file.okioFs
 import com.klyx.core.file.toOkioPath
+import com.klyx.core.io.fs
+import com.klyx.core.io.okioFs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.io.asInputStream

@@ -9,8 +9,8 @@ import com.klyx.core.extension.ExtensionInfo
 import com.klyx.core.extension.fetchAllExtensions
 import com.klyx.core.file.KxFile
 import com.klyx.core.logging.logger
-import com.klyx.core.string
-import com.klyx.core.value
+import com.klyx.core.util.string
+import com.klyx.core.util.value
 import com.klyx.extension.ExtensionManager
 import com.klyx.res.Res.string
 import com.klyx.res.extension_install_failed

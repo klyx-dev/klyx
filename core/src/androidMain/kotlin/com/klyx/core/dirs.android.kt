@@ -5,6 +5,7 @@ import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.some
+import com.klyx.core.file.toKotlinxIoPath
 import kotlinx.io.files.Path
 import java.io.File
 
@@ -69,5 +70,24 @@ actual object dirs {
 
     actual val videoDir: Option<Path> by lazy {
         externalDir(Environment.DIRECTORY_MOVIES)
+    }
+
+    /**
+     * Retrieve, creating if needed, a new directory in which the application
+     * can place its own custom data files. You can use the returned [Path]
+     * object to create and access files in this directory. Note that files
+     * created through a [Path] object will only be accessible by klyx app;
+     *
+     * Apps require no extra permissions to read or write to the returned path,
+     * since this path lives in the app's private storage.
+     *
+     * @param name Name of the directory to retrieve.
+     *
+     * @return A [Path] object for the requested directory. The directory
+     * will have been created if it does not already exist.
+     */
+    fun getDir(name: String) = withAndroidContext {
+        val dir = checkNotNull(getDir(name, 0)) { "`getDir` returned null for name '$name'" }
+        dir.toKotlinxIoPath()
     }
 }

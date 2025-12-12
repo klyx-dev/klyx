@@ -8,9 +8,9 @@ import com.klyx.core.file.archive.ArchiveType
 import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.archive.extractZip
 import com.klyx.core.file.downloadFile
-import com.klyx.core.file.fs
 import com.klyx.core.io.Paths
 import com.klyx.core.io.emptyPath
+import com.klyx.core.io.fs
 import com.klyx.core.io.intoPath
 import com.klyx.core.io.join
 import com.klyx.core.io.root

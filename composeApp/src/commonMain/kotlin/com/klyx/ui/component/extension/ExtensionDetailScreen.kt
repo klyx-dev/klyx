@@ -45,7 +45,7 @@ import com.klyx.core.extension.fetchLastUpdated
 import com.klyx.core.formatDateTime
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
-import com.klyx.core.string
+import com.klyx.core.util.string
 import com.klyx.di.LocalExtensionViewModel
 import com.klyx.extension.ExtensionManager
 import com.klyx.res.Res.string

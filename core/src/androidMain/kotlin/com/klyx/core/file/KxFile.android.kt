@@ -95,7 +95,9 @@ actual open class KxFile(internal val raw: DocumentFile) : KoinComponent {
 
     actual fun readBytes(): ByteArray = source().buffered().readByteArray()
 
-    actual fun readText(charset: String): String = source().buffered().readString(Charset.forName(charset))
+    actual fun readText(charset: String): String = source()
+        .buffered()
+        .use { it.readString(Charset.forName(charset)) }
 
     actual fun writeBytes(bytes: ByteArray) {
         sink().buffered().write(bytes)

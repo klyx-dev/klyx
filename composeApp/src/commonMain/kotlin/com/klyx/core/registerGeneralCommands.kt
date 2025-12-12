@@ -17,6 +17,7 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toKxFiles
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
+import com.klyx.core.util.string
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.res.Res

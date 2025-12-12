@@ -2,10 +2,11 @@ package com.klyx.core.extension
 
 import com.akuleshov7.ktoml.Toml
 import com.akuleshov7.ktoml.TomlInputConfig
-import com.klyx.core.Environment
 import com.klyx.core.fetchBody
 import com.klyx.core.fetchText
 import com.klyx.core.file.KxFile
+import com.klyx.core.io.Paths
+import com.klyx.core.io.extensionsDir
 import com.klyx.core.logging.logger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -108,7 +109,7 @@ suspend fun installExtension(toml: ExtensionInfo): Result<KxFile> = withContext(
     } catch (e: Exception) {
         return@withContext Result.failure(e)
     }
-    val internalDir = KxFile("${Environment.ExtensionsDir}/${toml.id}")
+    val internalDir = KxFile("${Paths.extensionsDir}/${toml.id}")
 
     zip.extractRepoZip(internalDir)
     Result.success(internalDir)

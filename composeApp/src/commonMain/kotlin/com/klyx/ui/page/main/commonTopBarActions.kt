@@ -39,7 +39,7 @@ import com.klyx.core.PlatformContext
 import com.klyx.core.file.Project
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
-import com.klyx.core.value
+import com.klyx.core.util.value
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.res.Res.string
 import com.klyx.res.notification_no_active_file
@@ -66,7 +66,7 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
     val fileSaver = rememberFileSaverLauncher { file ->
         if (file != null) {
             val saved = editorViewModel.saveCurrentAs(file.toKxFile())
-            if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
+            if (saved) notifier.toast(com.klyx.core.util.string(string.notification_saved))
         }
     }
 

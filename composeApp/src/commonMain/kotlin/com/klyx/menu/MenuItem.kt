@@ -1,7 +1,7 @@
 package com.klyx.menu
 
 import com.klyx.core.cmd.key.KeyShortcut
-import com.klyx.core.string
+import com.klyx.core.util.string
 import org.jetbrains.compose.resources.StringResource
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind

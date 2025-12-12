@@ -2,6 +2,7 @@ package com.klyx.core.io
 
 import com.klyx.core.dirs
 import com.klyx.core.expect
+import com.klyx.core.file.toOkioPath
 import com.klyx.core.platform.Os
 import com.klyx.core.platform.currentOs
 import com.klyx.core.process.systemUserName
@@ -28,13 +29,21 @@ expect object Paths {
 }
 
 inline val Paths.logFile get() = logsDir.join("Klyx.log")
+inline val Paths.oldLogFile get() = logsDir.join("Klyx.log.old")
+
 inline val Paths.settingsFile: Path get() = configDir.join("settings.json")
+inline val Paths.globalSettingsFile: Path get() = configDir.join("global_settings.json")
+inline val Paths.settingsBackupFile: Path get() = configDir.join("settings_backup.json")
 inline val Paths.extensionsDir: Path get() = dataDir.join("extensions")
 
 inline val Paths.lastProjectFile: Path get() = tempDir.join("last_project.json")
 
 fun Path.makeAbsolute(): Path {
     return if (isAbsolute) this else Path("/").join(this)
+}
+
+fun Path.isInside(other: Path): Boolean {
+    return other.isAbsolute && other.toString().startsWith(this.toString())
 }
 
 @Suppress("NOTHING_TO_INLINE")
@@ -113,3 +122,5 @@ val Paths.localVSCodeTasksFileRelativePath by lazy {
     Path(".vscode/tasks.json")
 }
 
+fun okio.Path.isSymlink() = okioFs.metadataOrNull(this)?.symlinkTarget != null
+fun Path.isSymlink() = this.toOkioPath().isSymlink()

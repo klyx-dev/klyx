@@ -120,15 +120,18 @@ class TerminalClient(
     }
 
     override fun logInfo(tag: String?, message: String?) {
-        Log.i(tag.toString(), message.toString())
+        val tag = tag ?: "Terminal"
+        if (Log.isLoggable(tag, Log.INFO)) Log.i(tag, message.toString())
     }
 
     override fun logDebug(tag: String?, message: String?) {
-        Log.d(tag.toString(), message.toString())
+        val tag = tag ?: "Terminal"
+        if (Log.isLoggable(tag, Log.DEBUG)) Log.d(tag, message.toString())
     }
 
     override fun logVerbose(tag: String?, message: String?) {
-        Log.v(tag.toString(), message.toString())
+        val tag = tag ?: "Terminal"
+        if (Log.isLoggable(tag, Log.VERBOSE)) Log.v(tag, message.toString())
     }
 
     override fun logStackTraceWithMessage(tag: String?, message: String?, e: Exception?) {

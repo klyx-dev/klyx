@@ -3,19 +3,20 @@ package com.klyx
 import android.app.Application
 import android.content.Intent
 import android.os.Build
+import android.os.StrictMode
 import android.util.Log
 import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
 import com.klyx.activities.CrashActivity
 import com.klyx.core.App
-import com.klyx.core.Environment
-import com.klyx.core.defaultLogsFile
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.rawFile
 import com.klyx.core.file.toKxFile
+import com.klyx.core.io.Paths
+import com.klyx.core.io.logFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.core.terminal.klyxBinDir
@@ -26,6 +27,11 @@ import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
+import java.io.FileOutputStream
+import java.io.PrintStream
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
@@ -34,13 +40,6 @@ import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
-import java.io.File
-import java.io.FileOutputStream
-import java.io.PrintStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -57,24 +56,34 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         super.onCreate()
         instance = this
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectAll()
+                .penaltyLog()
+                .build()
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder().apply {
+                detectAll()
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
+                        Log.e("Klyx", "StrictMode VmPolicy violation", violation)
+                        //throw violation
+                    }
+                }
+
+                penaltyLog()
+                penaltyDeath()
+            }.build()
+        )
+
         initKoin(commonModule) {
             androidLogger()
             androidContext(this@KlyxApplication)
         }
 
         launch { App.init() }
-
-        try {
-            Environment.init()
-        } catch (e: Exception) {
-            Log.e("Klyx", "Failed to initialize environment", e)
-            handleUncaughtException(Thread.currentThread(), e)
-        }
-
-        launch {
-            Environment.defaultLogsFile().delete()
-            //redirectPrintlnToFile(Environment.defaultLogsFile())
-        }
 
         @Suppress("SimplifyBooleanWithConstants")
         if (BuildConfig.BUILD_TYPE == "release") {
@@ -162,7 +171,7 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
 
 @OptIn(ExperimentalTime::class)
 private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
-    val logFile = File(Environment.LogsDir, "log_${Clock.System.now().toEpochMilliseconds()}.txt")
+    val logFile = Paths.logFile.toKxFile()
     val externalLogFile = android.os.Environment.getExternalStorageDirectory().resolve("klyx/Logs/Klyx.log")
     FileUtils.createFileByDeleteOldFile(externalLogFile)
 
@@ -170,7 +179,7 @@ private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
         val logString = buildLogString(thread, throwable)
         logFile.writeText(logString)
         externalLogFile.writeText(logString)
-        logFile.toKxFile()
+        logFile
     } else {
         Log.e("Klyx", "Failed to save crash logs")
         null

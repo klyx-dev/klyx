@@ -11,7 +11,6 @@ import android.provider.DocumentsContract.Root
 import android.provider.DocumentsProvider
 import android.webkit.MimeTypeMap
 import com.klyx.R
-import com.klyx.core.Environment
 import com.klyx.core.terminal.SAFUtils
 import com.klyx.core.terminal.userHomeDir
 import java.io.File
@@ -77,7 +76,7 @@ class TerminalDocumentsProvider : DocumentsProvider() {
                 Root.FLAG_SUPPORTS_CREATE or Root.FLAG_SUPPORTS_RECENTS or Root.FLAG_SUPPORTS_SEARCH or Root.FLAG_SUPPORTS_IS_CHILD
             )
             add(Root.COLUMN_ICON, R.mipmap.ic_launcher)
-            add(Root.COLUMN_TITLE, Environment.AppName)
+            add(Root.COLUMN_TITLE, context?.getString(R.string.app_name) ?: R.string.app_name)
             add(Root.COLUMN_SUMMARY, null)
             add(Root.COLUMN_DOCUMENT_ID, SAFUtils.ROOT_DOCUMENT_ID)
             home?.let { add(Root.COLUMN_AVAILABLE_BYTES, it.freeSpace) }

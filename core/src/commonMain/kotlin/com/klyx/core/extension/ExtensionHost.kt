@@ -6,9 +6,9 @@ package com.klyx.core.extension
 import arrow.core.Option
 import arrow.core.none
 import arrow.core.some
-import com.klyx.core.file.fs
 import com.klyx.core.io.Paths
 import com.klyx.core.io.extensionsDir
+import com.klyx.core.io.fs
 import com.klyx.core.io.join
 import com.klyx.core.noderuntime.NodeRuntime
 import kotlinx.atomicfu.atomic
@@ -28,7 +28,7 @@ interface WasmHost {
 
 val WasmHost.nodeRuntime
     get() = ExtensionHost.nodeRuntime.getOrNull()
-        ?: error("Node.js runtime not initialized. Did you forget call ExtensionHost.init() before using this function?")
+        ?: error("Node.js runtime not initialized. Did you forget call ExtensionHost.init() before using `nodeRuntime`?")
 
 object ExtensionHost {
     var nodeRuntime: Option<NodeRuntime> by atomic(none())

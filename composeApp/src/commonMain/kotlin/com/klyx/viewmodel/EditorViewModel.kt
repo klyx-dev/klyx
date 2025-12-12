@@ -7,7 +7,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.klyx.core.Environment
 import com.klyx.core.Notifier
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.io.FileCloseEvent
@@ -21,10 +20,14 @@ import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.isValidUtf8
 import com.klyx.core.file.sink
+import com.klyx.core.file.toKxFile
+import com.klyx.core.io.Paths
 import com.klyx.core.io.R_OK
 import com.klyx.core.io.W_OK
+import com.klyx.core.io.globalSettingsFile
+import com.klyx.core.io.settingsFile
 import com.klyx.core.settings.SettingsManager
-import com.klyx.core.string
+import com.klyx.core.util.string
 import com.klyx.editor.ComposeEditorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
@@ -553,11 +556,11 @@ class EditorViewModel(
 internal expect suspend fun onCloseFileTab(worktree: Worktree?, file: KxFile)
 internal expect suspend fun onSaveFile(worktree: Worktree?, file: KxFile)
 
-fun EditorViewModel.openSettings() = openFile(KxFile(Environment.SettingsFilePath))
+fun EditorViewModel.openSettings() = openFile(Paths.settingsFile.toKxFile())
 
 fun EditorViewModel.openDefaultSettings() {
     openFile(
-        KxFile(Environment.InternalSettingsFilePath),
+        Paths.globalSettingsFile.toKxFile(),
         tabTitle = string(string.tab_title_default_settings),
         isInternal = true
     )

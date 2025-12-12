@@ -73,7 +73,7 @@ fun FileMenu(
     val fileSaver = rememberFileSaverLauncher { file ->
         if (file != null) {
             val saved = editorViewModel.saveCurrentAs(file.toKxFile())
-            if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
+            if (saved) notifier.toast(com.klyx.core.util.string(string.notification_saved))
         }
         onDismissRequest()
     }
@@ -179,7 +179,7 @@ fun FileMenu(
                     onClick = {
                         val file = activeFile
                         if (file == null) {
-                            notifier.notify(com.klyx.core.string(string.notification_no_active_file))
+                            notifier.notify(com.klyx.core.util.string(string.notification_no_active_file))
                             return@DropdownMenuItem
                         }
 
@@ -187,7 +187,7 @@ fun FileMenu(
                             fileSaver.launch(file.name)
                         } else {
                             val saved = editorViewModel.saveCurrent()
-                            if (saved) notifier.toast(com.klyx.core.string(string.notification_saved))
+                            if (saved) notifier.toast(com.klyx.core.util.string(string.notification_saved))
                         }
                         onDismissRequest()
                     },
@@ -206,7 +206,7 @@ fun FileMenu(
                     onClick = {
                         val file = activeFile
                         if (file == null) {
-                            notifier.notify(com.klyx.core.string(string.notification_no_active_file))
+                            notifier.notify(com.klyx.core.util.string(string.notification_no_active_file))
                             onDismissRequest()
                             return@DropdownMenuItem
                         }
@@ -226,14 +226,14 @@ fun FileMenu(
                     onClick = {
                         val results = editorViewModel.saveAll()
                         if (results.isEmpty()) {
-                            notifier.notify(com.klyx.core.string(string.notification_no_files_to_save))
+                            notifier.notify(com.klyx.core.util.string(string.notification_no_files_to_save))
                         } else {
                             val failedFiles = results.filter { !it.value }.keys
                             if (failedFiles.isEmpty()) {
-                                notifier.toast(com.klyx.core.string(string.notification_all_files_saved))
+                                notifier.toast(com.klyx.core.util.string(string.notification_all_files_saved))
                             } else {
                                 notifier.error(
-                                    com.klyx.core.string(
+                                    com.klyx.core.util.string(
                                         string.notification_failed_to_save,
                                         failedFiles.joinToString(", ")
                                     )

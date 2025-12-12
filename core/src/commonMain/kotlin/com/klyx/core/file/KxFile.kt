@@ -1,7 +1,7 @@
 package com.klyx.core.file
 
-import com.klyx.core.Environment
 import com.klyx.core.io.R_OK
+import com.klyx.core.io.homeDir
 import com.klyx.core.logging.logger
 import io.github.irgaly.kfswatch.KfsDirectoryWatcher
 import io.github.irgaly.kfswatch.KfsEvent
@@ -139,7 +139,7 @@ fun Collection<PlatformFile>.toKxFiles() = map { it.toKxFile() }
  */
 fun String.toKxFile() = KxFile(this)
 
-val KxFile.isHomeDirectory get() = this.absolutePath == Environment.DeviceHomeDir
+val KxFile.isHomeDirectory get() = this.absolutePath == homeDir().toString()
 fun KxFile.resolveName() = if (isHomeDirectory) "Home" else name
 
 expect fun KxFile.isPermissionRequired(permissionFlags: Int = R_OK): Boolean
