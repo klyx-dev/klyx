@@ -111,7 +111,6 @@ kotlin {
                 implementation(libs.koin.android)
                 implementation(libs.kotlinx.coroutines.android)
                 implementation(libs.material)
-                implementation(libs.ktor.client.okhttp)
 
                 implementation(projects.terminal.terminalEmulator)
                 implementation(projects.terminal.terminalView)
