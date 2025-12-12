@@ -74,7 +74,6 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
                 }
 
                 penaltyLog()
-                penaltyDeath()
             }.build()
         )
 
