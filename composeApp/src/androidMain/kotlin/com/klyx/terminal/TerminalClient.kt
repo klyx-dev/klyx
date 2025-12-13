@@ -1,11 +1,15 @@
 package com.klyx.terminal
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.util.Log
 import android.view.KeyEvent
 import android.view.MotionEvent
-import com.blankj.utilcode.util.ClipboardUtils
+import androidx.lifecycle.lifecycleScope
 import com.klyx.activities.TerminalActivity
 import com.klyx.core.terminal.extrakey.SpecialButton
+import com.klyx.core.withAndroidContext
 import com.klyx.ui.component.terminal.extraKeysView
 import com.termux.shared.view.KeyboardUtils
 import com.termux.terminal.TerminalEmulator
@@ -13,6 +17,7 @@ import com.termux.terminal.TerminalSession
 import com.termux.terminal.TerminalSessionClient
 import com.termux.view.TerminalView
 import com.termux.view.TerminalViewClient
+import kotlinx.coroutines.launch
 
 class TerminalClient(
     val terminal: TerminalView,
@@ -57,7 +62,9 @@ class TerminalClient(
                 if (service.sessionList.isEmpty()) {
                     activity.finish()
                 } else {
-                    changeSession(activity, terminal, service.sessionList.first())
+                    activity.lifecycleScope.launch {
+                        changeSession(activity, terminal, service.sessionList.first())
+                    }
                 }
             }
             return true
@@ -156,13 +163,22 @@ class TerminalClient(
     }
 
     override fun onCopyTextToClipboard(session: TerminalSession, text: String) {
-        ClipboardUtils.copyText("Terminal", text)
+        withAndroidContext {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("Terminal", text))
+        }
     }
 
     override fun onPasteTextFromClipboard(session: TerminalSession?) {
-        val clip = ClipboardUtils.getText().toString()
-        if (clip.trim { it <= ' ' }.isNotEmpty() && terminal.mEmulator != null) {
-            terminal.mEmulator.paste(clip)
+        withAndroidContext {
+            val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            val clip = cm.primaryClip?.let {
+                if (it.itemCount > 0) it.getItemAt(0).coerceToText(this) ?: return else return
+            } ?: return
+
+            if (clip.trim { it <= ' ' }.isNotEmpty() && terminal.mEmulator != null) {
+                terminal.mEmulator.paste(clip.toString())
+            }
         }
     }
 

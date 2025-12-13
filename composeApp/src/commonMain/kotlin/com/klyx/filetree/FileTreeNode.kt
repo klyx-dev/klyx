@@ -18,7 +18,6 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.file.Project
 import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolveName
-import com.klyx.core.file.toKxFile
 import com.klyx.core.icon.FolderOpen
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.language.C
@@ -40,12 +39,17 @@ import com.klyx.core.icon.language.Toml
 import com.klyx.core.icon.language.TypeScript
 import com.klyx.core.icon.language.Xml
 import com.klyx.core.icon.language.Yaml
-import io.github.vinceglb.filekit.PlatformFile
+import io.itsvks.anyhow.anyhow
+import io.itsvks.anyhow.getOrElse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.withContext
 
 data class FileTreeNode(
     val file: KxFile,
     val name: String = file.resolveName(),
-    val isDirectory: Boolean = file.isDirectory
+    val isDirectory: Boolean = file.isDirectory,
+    val isExecutable: Boolean = anyhow { file.canExecute }.getOrElse { false },
 ) {
     override fun hashCode(): Int {
         var result = isDirectory.hashCode()
@@ -68,13 +72,11 @@ data class FileTreeNode(
     }
 }
 
-fun KxFile.toFileTreeNode() = FileTreeNode(this)
-fun PlatformFile.toFileTreeNode() = FileTreeNode(this.toKxFile())
-fun List<KxFile>.toFileTreeNodes() = map { it.toFileTreeNode() }
+suspend fun KxFile.toFileTreeNode() = withContext(Dispatchers.IO) { FileTreeNode(this@toFileTreeNode) }
+suspend fun List<KxFile>.toFileTreeNodes() = map { it.toFileTreeNode() }
 
-fun Project.toFileTreeNodes() = worktrees.associateWith { it.asFileTreeNode() }
-
-fun Worktree.asFileTreeNode() = FileTreeNode(rootFile)
+suspend fun Project.toFileTreeNodes() = worktrees.associateWith { it.asFileTreeNode() }
+suspend fun Worktree.asFileTreeNode() = withContext(Dispatchers.IO) { FileTreeNode(rootFile) }
 
 internal fun FileTreeNode.resolveFileIcon(): ImageVector {
     return when (file.extension) {
@@ -106,7 +108,7 @@ internal fun FileTreeNode.resolveFileIcon(): ImageVector {
         "mp4", "avi", "mov", "mkv" -> Icons.Default.VideoFile
         "mp3", "wav", "flac", "ogg" -> Icons.Default.AudioFile
         "java", "h", "hpp", "cs" -> Icons.Default.Code
-        else -> if (runCatching { file.canExecute }.getOrElse { false }) {
+        else -> if (isExecutable) {
             Icons.Outlined.Terminal
         } else {
             Icons.AutoMirrored.Filled.InsertDriveFile

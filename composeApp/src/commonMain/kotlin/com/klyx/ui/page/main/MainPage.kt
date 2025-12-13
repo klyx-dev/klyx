@@ -1,5 +1,6 @@
 package com.klyx.ui.page.main
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.DriveFolderUpload
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +45,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -85,6 +88,7 @@ import com.klyx.editor.CursorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
 import com.klyx.filetree.FileTree
+import com.klyx.filetree.FileTreeNode
 import com.klyx.filetree.toFileTreeNodes
 import com.klyx.isWidthAtLeastMediumOrExpanded
 import com.klyx.res.Res
@@ -382,6 +386,7 @@ private fun WorkspaceDrawer(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun DrawerContent(
     project: Project,
@@ -391,29 +396,49 @@ private fun DrawerContent(
     onDismissRequest: suspend () -> Unit
 ) {
     if (project.isEmpty()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.statusBars),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            TextButtonWithShortcut(
-                text = stringResource(Res.string.open_a_project),
-                modifier = Modifier.padding(top = 20.dp),
-                shortcut = keyShortcutOf(ctrl = true, key = Key.O)
-            ) {
-                directoryPicker.launch()
+        DirectoryPickerButton(directoryPicker)
+        return
+    }
+
+    val nodes by produceState<Map<Worktree, FileTreeNode>?>(null) {
+        value = project.toFileTreeNodes()
+    }
+
+    when (val tree = nodes) {
+        null -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ContainedLoadingIndicator()
             }
         }
-    } else {
-        FileTree(
-            rootNodes = project.toFileTreeNodes(),
-            modifier = Modifier.fillMaxSize(),
-            onFileClick = { file, worktree ->
-                onFileClick(file, worktree)
-                scope.launch { onDismissRequest() }
-            }
-        )
+
+        else -> {
+            FileTree(
+                rootNodes = tree,
+                modifier = Modifier.fillMaxSize(),
+                onFileClick = { file, worktree ->
+                    onFileClick(file, worktree)
+                    scope.launch { onDismissRequest() }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DirectoryPickerButton(directoryPicker: PickerResultLauncher) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextButtonWithShortcut(
+            text = stringResource(Res.string.open_a_project),
+            modifier = Modifier.padding(top = 20.dp),
+            shortcut = keyShortcutOf(ctrl = true, key = Key.O)
+        ) {
+            directoryPicker.launch()
+        }
     }
 }
 

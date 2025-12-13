@@ -11,8 +11,10 @@ import com.klyx.core.Notifier
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.uri
 import com.klyx.core.runner.CodeRunner
-import com.klyx.terminal.TerminalCommand
 import com.klyx.core.terminal.klyxBinDir
+import com.klyx.terminal.TerminalCommand
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -61,13 +63,16 @@ class UniversalRunner : CodeRunner, KoinComponent {
         with(context) {
             startActivity(Intent(this, TerminalActivity::class.java).apply {
                 putExtra(
-                    "command", TerminalCommand(
-                        cmd = "/bin/bash",
-                        args = arrayOf(klyxBinDir.resolve("universal_runner").absolutePath, file.absolutePath),
-                        id = "universal_runner",
-                        terminatePreviousSession = true,
-                        cwd = file.parentFile?.absolutePath ?: "/"
-                    )
+                    "command",
+                    withContext(Dispatchers.Default) {
+                        TerminalCommand(
+                            cmd = "/bin/bash",
+                            args = arrayOf(klyxBinDir.resolve("universal_runner").absolutePath, file.absolutePath),
+                            id = "universal_runner",
+                            terminatePreviousSession = true,
+                            cwd = file.parentFile?.absolutePath ?: "/"
+                        )
+                    }
                 )
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             })

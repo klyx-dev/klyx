@@ -10,7 +10,11 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.absolutePath
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 import kotlinx.io.files.Path
@@ -161,28 +165,29 @@ private fun KxFile.watcher(dispatcher: CoroutineDispatcher) = run {
     )
 }
 
-context(scope: CoroutineScope)
-fun KxFile.watchAndReload(
+suspend fun KxFile.watchAndReload(
     coroutineDispatcher: CoroutineDispatcher,
     onReload: suspend () -> Unit
 ) {
-    var oldContent = readText()
+    var oldContent = withContext(Dispatchers.IO) { readText() }
     val watcher = watcher(coroutineDispatcher)
 
-    scope.launch {
+    coroutineScope {
         launch {
-            watcher.onEventFlow.collect { (_, _, event) ->
-                if (event == KfsEvent.Modify) {
-                    val newContent = readText()
-                    if (!isTextEqualTo(oldContent)) {
-                        onReload()
-                        oldContent = newContent
+            launch {
+                watcher.onEventFlow.collect { (_, _, event) ->
+                    if (event == KfsEvent.Modify) {
+                        val newContent = readText()
+                        if (!isTextEqualTo(oldContent)) {
+                            onReload()
+                            oldContent = newContent
+                        }
                     }
                 }
             }
-        }
 
-        watcher.add(parentFile?.absolutePath ?: absolutePath)
+            watcher.add(parentFile?.absolutePath ?: absolutePath)
+        }
     }
 }
 

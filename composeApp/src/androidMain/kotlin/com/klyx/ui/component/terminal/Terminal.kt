@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.klyx.activities.TerminalActivity
+import com.klyx.core.allowDiskReads
 import com.klyx.core.file.DownloadableFile
 import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.downloadAll
@@ -60,6 +61,8 @@ import com.klyx.core.terminal.sandboxDir
 import com.klyx.terminal.terminalSetupNextStage
 import com.klyx.ui.theme.rememberFontFamily
 import com.termux.terminal.TerminalSession
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 internal val LocalTerminalUsername = compositionLocalOf<String> {
     error("Terminal username not provided")
@@ -100,61 +103,63 @@ private fun TerminalScreen1(activity: TerminalActivity, onSessionFinish: (Termin
     LaunchedEffect(Unit) {
         error = null
 
-        val isProotExists = klyxBinDir.resolve("proot").exists()
-        val libtallocExists = klyxLibDir.resolve("libtalloc.so").exists()
-        needsDownload = !isProotExists || !libtallocExists || !isTerminalInstalled()
+        withContext(Dispatchers.Default) {
+            val isProotExists = klyxBinDir.resolve("proot").exists()
+            val libtallocExists = klyxLibDir.resolve("libtalloc.so").exists()
+            needsDownload = !isProotExists || !libtallocExists || !isTerminalInstalled()
 
-        val filesToDownload = buildList {
-            if (!isProotExists) add(packageDownloadableFile("proot"))
-            if (!libtallocExists) add(packageDownloadableFile("libtalloc"))
+            val filesToDownload = buildList {
+                if (!isProotExists) add(packageDownloadableFile("proot"))
+                if (!libtallocExists) add(packageDownloadableFile("libtalloc"))
 
-            if (!isTerminalInstalled()) {
-                add(
-                    DownloadableFile(
-                        url = ubuntuRootFsUrl,
-                        outputPath = "${context.cacheDir.absolutePath}/sandbox.tar.gz"
+                if (!isTerminalInstalled()) {
+                    add(
+                        DownloadableFile(
+                            url = ubuntuRootFsUrl,
+                            outputPath = "${context.cacheDir.absolutePath}/sandbox.tar.gz"
+                        )
                     )
-                )
-            }
-        }
-
-        filesToDownload.downloadAll(
-            onComplete = { file ->
-                if (file.name.startsWith("proot") || file.name.startsWith("libtalloc")) {
-                    try {
-                        extractGzipTar(file.toKotlinxIoPath(), klyxFilesDir.toKotlinxIoPath())
-                    } catch (err: Throwable) {
-                        error("Failed to extract ${file.name}. ${err.message}")
-                    }
                 }
-            },
-            onFileProgress = { file, sent, totalBytes ->
-                downloaded = sent
-                currentFileName = file.name
-                total = totalBytes ?: 0L
-            },
-            onAllComplete = {
-                terminalSetupNextStage = getNextStage()
-                needsDownload = false
-            },
-            onError = { file, exception ->
-                error = exception
+            }
 
-                runCatching {
-                    if (file.absolutePath.contains(localDir.absolutePath)) {
-                        localDir.deleteRecursively()
-                    }
-
-                    if (file.name == "sandbox.tar.gz") {
-                        sandboxDir.deleteRecursively()
-
-                        with(context.cacheDir.resolve("sandbox.tar.gz")) {
-                            if (exists()) delete()
+            filesToDownload.downloadAll(
+                onComplete = { file ->
+                    if (file.name.startsWith("proot") || file.name.startsWith("libtalloc")) {
+                        try {
+                            extractGzipTar(file.toKotlinxIoPath(), klyxFilesDir.toKotlinxIoPath())
+                        } catch (err: Throwable) {
+                            error("Failed to extract ${file.name}. ${err.message}")
                         }
                     }
-                }.onFailure { it.printStackTrace() }
-            }
-        )
+                },
+                onFileProgress = { file, sent, totalBytes ->
+                    downloaded = sent
+                    currentFileName = file.name
+                    total = totalBytes ?: 0L
+                },
+                onAllComplete = {
+                    terminalSetupNextStage = getNextStage()
+                    needsDownload = false
+                },
+                onError = { file, exception ->
+                    error = exception
+
+                    runCatching {
+                        if (file.absolutePath.contains(localDir.absolutePath)) {
+                            localDir.deleteRecursively()
+                        }
+
+                        if (file.name == "sandbox.tar.gz") {
+                            sandboxDir.deleteRecursively()
+
+                            with(context.cacheDir.resolve("sandbox.tar.gz")) {
+                                if (exists()) delete()
+                            }
+                        }
+                    }.onFailure { it.printStackTrace() }
+                }
+            )
+        }
     }
 
     val progress by remember {
@@ -201,7 +206,11 @@ private fun TerminalScreen1(activity: TerminalActivity, onSessionFinish: (Termin
             }
         }
     } else {
-        var user by remember { with(context) { mutableStateOf(currentUser) } }
+        var user by remember {
+            allowDiskReads {
+                with(context) { mutableStateOf(currentUser) }
+            }
+        }
 
         Box(
             modifier = Modifier
@@ -209,76 +218,80 @@ private fun TerminalScreen1(activity: TerminalActivity, onSessionFinish: (Termin
                 .imePadding(),
             contentAlignment = Alignment.Center
         ) {
-            if (user == null) {
-                val fontFamily = rememberFontFamily("JetBrains Mono")
+            when (user) {
+                null -> {
+                    val fontFamily = rememberFontFamily("JetBrains Mono")
 
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    var userName by remember { mutableStateOf("") }
-                    val isValid by remember {
-                        derivedStateOf {
-                            userName.matches("^[a-z][-a-z0-9_]*$".toRegex())
-                        }
-                    }
-
-                    val errorMessage by remember {
-                        derivedStateOf {
-                            if (!isValid) "Invalid username" else null
-                        }
-                    }
-
-                    val createSession = {
-                        with(context) {
-                            currentUser = userName
-                            user = userName
-                        }
-                    }
-
-                    OutlinedTextField(
-                        value = userName,
-                        onValueChange = {
-                            userName = it.lowercase().trim()
-                        },
-                        placeholder = {
-                            Text("Enter your username")
-                        },
-                        supportingText = {
-                            Text(
-                                text = errorMessage
-                                    ?: ("This will create a new user" +
-                                            " in the terminal and" +
-                                            " will be saved for future sessions."),
-                                fontFamily = fontFamily
-                            )
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { createSession() }),
-                        isError = !isValid,
-                        shape = RoundedCornerShape(12.dp),
-                    )
-
-                    //Spacer(modifier = Modifier.height(4.dp))
-
-                    Button(
-                        onClick = createSession,
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = isValid
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Create Session", fontFamily = fontFamily)
+                        var userName by remember { mutableStateOf("") }
+                        val isValid by remember {
+                            derivedStateOf {
+                                userName.matches("^[a-z][-a-z0-9_]*$".toRegex())
+                            }
+                        }
+
+                        val errorMessage by remember {
+                            derivedStateOf {
+                                if (!isValid) "Invalid username" else null
+                            }
+                        }
+
+                        val createSession = {
+                            with(context) {
+                                currentUser = userName
+                                user = userName
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = userName,
+                            onValueChange = {
+                                userName = it.lowercase().trim()
+                            },
+                            placeholder = {
+                                Text("Enter your username")
+                            },
+                            supportingText = {
+                                Text(
+                                    text = errorMessage
+                                        ?: ("This will create a new user" +
+                                                " in the terminal and" +
+                                                " will be saved for future sessions."),
+                                    fontFamily = fontFamily
+                                )
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { createSession() }),
+                            isError = !isValid,
+                            shape = RoundedCornerShape(12.dp),
+                        )
+
+                        //Spacer(modifier = Modifier.height(4.dp))
+
+                        Button(
+                            onClick = createSession,
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = isValid
+                        ) {
+                            Text("Create Session", fontFamily = fontFamily)
+                        }
                     }
                 }
-            } else {
-                CompositionLocalProvider(LocalTerminalUsername provides user!!) {
-                    TerminalScreen(
-                        modifier = Modifier.fillMaxSize(),
-                        activity = activity,
-                        user = user!!,
-                        onSessionFinish = onSessionFinish
-                    )
+
+                else -> {
+                    CompositionLocalProvider(LocalTerminalUsername provides user!!) {
+                        TerminalScreen(
+                            modifier = Modifier.fillMaxSize(),
+                            activity = activity,
+                            user = user!!,
+                            onSessionFinish = onSessionFinish
+                        )
+                    }
                 }
             }
         }

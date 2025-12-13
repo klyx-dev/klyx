@@ -1,5 +1,6 @@
 package com.klyx.activities
 
+import android.content.ClipData
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -30,11 +31,11 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.blankj.utilcode.util.ClipboardUtils
 import com.klyx.core.REPORT_ISSUE_URL
 import com.klyx.ui.theme.KlyxTheme
 
@@ -52,6 +53,7 @@ class CrashActivity : ComponentActivity() {
         setContent {
             KlyxTheme {
                 val uriHandler = LocalUriHandler.current
+                val clipboard = LocalClipboard.current
                 val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
                 Scaffold(
@@ -105,9 +107,9 @@ class CrashActivity : ComponentActivity() {
                     floatingActionButton = {
                         ExtendedFloatingActionButton(
                             onClick = {
-                                ClipboardUtils.copyText(crashLog).also {
-                                    Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
-                                }
+                                val cm = clipboard.nativeClipboard
+                                cm.setPrimaryClip(ClipData.newPlainText("Klyx", crashLog))
+                                Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                             },
                             text = { Text("Copy") },
                             icon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }

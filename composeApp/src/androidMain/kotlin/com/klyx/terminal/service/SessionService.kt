@@ -1,5 +1,6 @@
 package com.klyx.terminal.service
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -33,7 +34,7 @@ class SessionService : Service() {
     inner class SessionBinder : Binder() {
         val service get() = this@SessionService
 
-        fun createSession(
+        suspend fun createSession(
             id: TerminalSessionId,
             client: TerminalSessionClient,
             activity: TerminalActivity,
@@ -110,6 +111,7 @@ class SessionService : Service() {
         }
     }
 
+    @SuppressLint("WakelockTimeout", "Wakelock")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_EXIT -> {
@@ -186,6 +188,7 @@ class SessionService : Service() {
         notificationManager.createNotificationChannel(channel)
     }
 
+    @JvmSynthetic
     private fun updateNotification() {
         runCatching {
             val notification = createNotification()

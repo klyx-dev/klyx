@@ -19,8 +19,17 @@ import com.klyx.core.terminal.SAFUtils.getFileForDocumentId
 import com.klyx.runtimeError
 import com.klyx.unimplemented
 import com.klyx.unsupported
+import java.io.BufferedInputStream
+import java.io.BufferedReader
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
+import java.nio.charset.Charset
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
+import kotlinx.io.Source
 import kotlinx.io.asInputStream
 import kotlinx.io.asSink
 import kotlinx.io.asSource
@@ -30,14 +39,6 @@ import kotlinx.io.readString
 import kotlinx.serialization.Serializable
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.io.BufferedInputStream
-import java.io.BufferedReader
-import java.io.File
-import java.io.InputStream
-import java.io.OutputStream
-import java.nio.charset.Charset
-import java.util.zip.ZipEntry
-import java.util.zip.ZipInputStream
 
 @Serializable(with = KxFileSerializer::class)
 actual open class KxFile(internal val raw: DocumentFile) : KoinComponent {
@@ -93,14 +94,14 @@ actual open class KxFile(internal val raw: DocumentFile) : KoinComponent {
             ?: raw.listFiles().map(::KxFile).filter(filter).toTypedArray()
     }
 
-    actual fun readBytes(): ByteArray = source().buffered().readByteArray()
+    actual fun readBytes(): ByteArray = source().buffered().use(Source::readByteArray)
 
     actual fun readText(charset: String): String = source()
         .buffered()
         .use { it.readString(Charset.forName(charset)) }
 
     actual fun writeBytes(bytes: ByteArray) {
-        sink().buffered().write(bytes)
+        sink().buffered().use { it.write(bytes) }
     }
 
     actual fun writeText(text: String, charset: String) {

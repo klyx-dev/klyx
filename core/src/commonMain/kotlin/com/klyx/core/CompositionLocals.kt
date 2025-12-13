@@ -17,7 +17,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.file.watchAndReload
 import com.klyx.core.io.Paths
@@ -35,7 +34,9 @@ import com.kyant.monet.LocalTonalPalettes
 import com.kyant.monet.PaletteStyle
 import com.kyant.monet.TonalPalettes.Companion.toTonalPalettes
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 import org.koin.compose.koinInject
 
@@ -51,15 +52,15 @@ expect fun PlatformLocalProvider(content: @Composable () -> Unit)
 @Composable
 fun SharedLocalProvider(content: @Composable () -> Unit) {
     val settings by SettingsManager.settings.collectAsStateWithLifecycle()
-    val settingsFile = remember { Paths.settingsFile.toKxFile() }
     val scope = rememberCoroutineScope()
 
     @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
     DisposableEffect(Unit) {
-        SettingsManager.load()
+        scope.launch { SettingsManager.load() }
         val dispatcher = newSingleThreadContext("Settings")
 
-        with(scope) {
+        scope.launch(Dispatchers.Default) {
+            val settingsFile = Paths.settingsFile.toKxFile()
             settingsFile.watchAndReload(dispatcher) { SettingsManager.load() }
         }
 

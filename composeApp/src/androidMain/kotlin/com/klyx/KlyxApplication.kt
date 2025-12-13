@@ -4,6 +4,8 @@ import android.app.Application
 import android.content.Intent
 import android.os.Build
 import android.os.StrictMode
+import android.os.strictmode.DiskReadViolation
+import android.os.strictmode.UntaggedSocketViolation
 import android.util.Log
 import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
@@ -30,12 +32,16 @@ import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolve
 import java.io.FileOutputStream
 import java.io.PrintStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
@@ -56,26 +62,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         super.onCreate()
         instance = this
         Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
-        StrictMode.setThreadPolicy(
-            StrictMode.ThreadPolicy.Builder()
-                .detectAll()
-                .penaltyLog()
-                .build()
-        )
-        StrictMode.setVmPolicy(
-            StrictMode.VmPolicy.Builder().apply {
-                detectAll()
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
-                        Log.e("Klyx", "StrictMode VmPolicy violation", violation)
-                        //throw violation
-                    }
-                }
-
-                penaltyLog()
-            }.build()
-        )
+        setupStrictModePolicies()
 
         initKoin(commonModule) {
             androidLogger()
@@ -122,6 +109,49 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         }
     }
 
+    private fun setupStrictModePolicies() {
+        StrictMode.setThreadPolicy(
+            StrictMode.ThreadPolicy.Builder()
+                .detectAll()
+                .penaltyLog()
+                .apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
+                            if (!violation.stackTrace.any { it.className.startsWith("com.blankj.utilcode.util") }) {
+                                if (violation is DiskReadViolation &&
+                                    violation.stackTrace.any {
+                                        it.className == "java.lang.System" && it.methodName == "loadLibrary"
+                                    }
+                                ) {
+                                    return@penaltyListener
+                                }
+
+                                Log.e("Klyx", "StrictMode ThreadPolicy violation", violation)
+                                throw violation
+                            }
+                        }
+                    }
+                }
+                .build()
+        )
+        StrictMode.setVmPolicy(
+            StrictMode.VmPolicy.Builder().apply {
+                detectAll()
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
+                        if (violation !is UntaggedSocketViolation) {
+                            Log.e("Klyx", "StrictMode VmPolicy violation", violation)
+                            throw violation
+                        }
+                    }
+                }
+
+                penaltyLog()
+            }.build()
+        )
+    }
+
     private fun setupTerminalFiles() {
         listOf("init", "sandbox", "setup", "utils", "universal_runner").forEach { setupAssetFile(it) }
         with(filesDir.resolve("ubuntu")) {
@@ -149,32 +179,34 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
         return
     }
 
-    val file = runCatching { saveLogs(thread, throwable) }.getOrNull()
-    EventBus.INSTANCE.postSync(CrashEvent(thread, throwable, file))
+    MainScope().launch {
+        val file = runCatching { saveLogs(thread, throwable) }.getOrNull()
+        EventBus.INSTANCE.postSync(CrashEvent(thread, throwable, file))
 
-    if (thread.name == "main") {
-        Toast.makeText(
-            this,
-            "App Crashed. ${if (file != null) "A crash report was saved." else "Failed to save crash report."}",
-            Toast.LENGTH_LONG
-        ).show()
+        if (thread.name == "main") {
+            Toast.makeText(
+                this@handleUncaughtException,
+                "App Crashed. ${if (file != null) "A crash report was saved." else "Failed to save crash report."}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+
+        Log.e("Klyx", file?.readText() ?: buildLogString(thread, throwable))
+
+        startActivity(Intent(this@handleUncaughtException, CrashActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            putExtra(CrashActivity.EXTRA_CRASH_LOG, file?.readText() ?: buildLogString(thread, throwable))
+        })
     }
-
-    Log.e("Klyx", file?.readText() ?: buildLogString(thread, throwable))
-
-    startActivity(Intent(this, CrashActivity::class.java).apply {
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        putExtra(CrashActivity.EXTRA_CRASH_LOG, file?.readText() ?: buildLogString(thread, throwable))
-    })
 }
 
 @OptIn(ExperimentalTime::class)
-private fun saveLogs(thread: Thread, throwable: Throwable): KxFile? {
+private suspend fun saveLogs(thread: Thread, throwable: Throwable): KxFile? = withContext(Dispatchers.IO) {
     val logFile = Paths.logFile.toKxFile()
     val externalLogFile = android.os.Environment.getExternalStorageDirectory().resolve("klyx/Logs/Klyx.log")
     FileUtils.createFileByDeleteOldFile(externalLogFile)
 
-    return if (logFile.createNewFile()) {
+    if (logFile.createNewFile()) {
         val logString = buildLogString(thread, throwable)
         logFile.writeText(logString)
         externalLogFile.writeText(logString)

@@ -111,7 +111,9 @@ class FileTreeViewModel(
     }
 
     fun addRootNode(worktree: Worktree) {
-        _rootNodes.update { it + (worktree to worktree.asFileTreeNode()) }
+        viewModelScope.launch {
+            _rootNodes.update { it + (worktree to worktree.asFileTreeNode()) }
+        }
     }
 
     fun removeRootNode(worktree: Worktree) {

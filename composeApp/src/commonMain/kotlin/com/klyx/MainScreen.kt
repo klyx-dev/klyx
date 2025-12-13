@@ -13,9 +13,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -93,12 +91,10 @@ fun MainScreen() {
     }
 
     LifecycleStartEffect(Unit) {
-        val path = Paths.lastProjectFile
-
         lifecycleScope.launch(Dispatchers.Default) {
             anyhow {
                 val project: Project = withContext(Dispatchers.IO) {
-                    SystemFileSystem.source(path).buffered().use { source ->
+                    SystemFileSystem.source(Paths.lastProjectFile).buffered().use { source ->
                         Json.decodeFromString(source.readString())
                     }
                 }
@@ -111,7 +107,7 @@ fun MainScreen() {
 
         onStopOrDispose {
             lifecycleScope.launch(Dispatchers.IO) {
-                SystemFileSystem.sink(path).buffered().use { sink ->
+                SystemFileSystem.sink(Paths.lastProjectFile).buffered().use { sink ->
                     sink.writeString(Json.encodeToString(openedProject))
                 }
             }
@@ -193,12 +189,10 @@ fun MainScreen() {
             )
         }
 
-        var disclaimerAccepted by remember { mutableStateOf(DisclaimerManager.hasAccepted()) }
+        val disclaimerAccepted by DisclaimerManager.accepted.collectAsState()
 
-        if (!disclaimerAccepted) {
-            DisclaimerDialog(
-                onAccept = { DisclaimerManager.setAccepted(); disclaimerAccepted = true }
-            )
+        if (disclaimerAccepted == false) {
+            DisclaimerDialog(onAccept = DisclaimerManager::accept)
         }
 
         NotificationOverlay()

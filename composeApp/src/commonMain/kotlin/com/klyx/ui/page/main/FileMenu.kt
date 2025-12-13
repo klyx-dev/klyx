@@ -101,7 +101,7 @@ fun FileMenu(
             } else {
                 val worktree = Worktree(kx)
                 klyxViewModel.addWorktreeToProject(worktree)
-                fileTreeViewModel.selectNode(worktree.asFileTreeNode())
+                scope.launch { fileTreeViewModel.selectNode(worktree.asFileTreeNode()) }
                 openDrawerIfClosed()
             }
         }

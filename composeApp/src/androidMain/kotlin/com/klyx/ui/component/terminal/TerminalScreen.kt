@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,8 +47,10 @@ import com.klyx.terminal.TerminalClient
 import com.klyx.terminal.service.SessionService
 import com.termux.terminal.TerminalSession
 import com.termux.view.TerminalView
-import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 var extraKeysView = WeakReference<ExtraKeysView?>(null)
 
@@ -84,7 +87,7 @@ fun TerminalScreen(
     }
 }
 
-@Suppress("COMPOSE_APPLIER_CALL_MISMATCH")
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun ColumnScope.TerminalScreenInternal(
     user: String,
@@ -94,119 +97,136 @@ private fun ColumnScope.TerminalScreenInternal(
     val context = LocalContext.current
     val density = LocalDensity.current
 
-    val terminal = remember { with(context) { TerminalView(user, activity) } }
-    val extraKeysView = remember {
-        ExtraKeysView(context, terminal, with(density) { 75.dp.toPx() })
+    val terminal by produceState<TerminalView?>(null) {
+        value = with(context) { TerminalView(user, activity) }
     }
 
-    AndroidView(
-        factory = {
-            terminal.apply {
-                post {
-                    keepScreenOn = true
-                    requestFocus()
-                    isFocusableInTouchMode = true
-                }
+    when (val terminal = terminal) {
+        null -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                ContainedLoadingIndicator()
             }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .weight(1f),
-    )
+        }
 
-    val pagerState = rememberPagerState { 2 }
+        else -> {
+            val extraKeysView = remember {
+                ExtraKeysView(context, terminal, with(density) { 75.dp.toPx() })
+            }
 
-    HorizontalPager(
-        state = pagerState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(75.dp)
-    ) { page ->
-        if (page == 0) {
             AndroidView(
-                factory = { extraKeysView },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(75.dp)
-            )
-        } else if (page == 1) {
-            val scope = rememberCoroutineScope()
-            var text by rememberSaveable { mutableStateOf("") }
-
-            OutlinedTextField(
-                value = text,
-                onValueChange = {
-                    text = it
-
-                    if (pagerState.currentPage != 1) {
-                        scope.launch {
-                            pagerState.animateScrollToPage(1)
+                factory = {
+                    terminal.apply {
+                        post {
+                            keepScreenOn = true
+                            requestFocus()
+                            isFocusableInTouchMode = true
                         }
                     }
                 },
-                placeholder = { Text("Type something...") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions.Default.copy(
-                    imeAction = ImeAction.Done
-                ),
-                keyboardActions = KeyboardActions(
-                    onDone = {
-                        if (text.isEmpty()) {
-                            terminal.dispatchKeyEvent(
-                                KeyEvent(
-                                    KeyEvent.ACTION_DOWN,
-                                    KeyEvent.KEYCODE_ENTER
-                                )
-                            )
-                            terminal.dispatchKeyEvent(
-                                KeyEvent(
-                                    KeyEvent.ACTION_UP,
-                                    KeyEvent.KEYCODE_ENTER
-                                )
-                            )
-                        } else {
-                            terminal.mTermSession.write(text)
-                            text = ""
-                        }
-                    }
-                )
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
             )
+
+            val pagerState = rememberPagerState { 2 }
+
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(75.dp)
+            ) { page ->
+                if (page == 0) {
+                    AndroidView(
+                        factory = { extraKeysView },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(75.dp)
+                    )
+                } else if (page == 1) {
+                    val scope = rememberCoroutineScope()
+                    var text by rememberSaveable { mutableStateOf("") }
+
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = {
+                            text = it
+
+                            if (pagerState.currentPage != 1) {
+                                scope.launch {
+                                    pagerState.animateScrollToPage(1)
+                                }
+                            }
+                        },
+                        placeholder = { Text("Type something...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                if (text.isEmpty()) {
+                                    terminal.dispatchKeyEvent(
+                                        KeyEvent(
+                                            KeyEvent.ACTION_DOWN,
+                                            KeyEvent.KEYCODE_ENTER
+                                        )
+                                    )
+                                    terminal.dispatchKeyEvent(
+                                        KeyEvent(
+                                            KeyEvent.ACTION_UP,
+                                            KeyEvent.KEYCODE_ENTER
+                                        )
+                                    )
+                                } else {
+                                    terminal.mTermSession.write(text)
+                                    text = ""
+                                }
+                            }
+                        )
+                    )
+                }
+            }
         }
     }
 }
 
 @Suppress("MagicNumber")
 context(context: Context)
-private fun TerminalView(
+private suspend fun TerminalView(
     user: String,
     activity: TerminalActivity,
-) = TerminalView(context, null).apply {
-    defaultFocusHighlightEnabled = true
-    isFocusableInTouchMode = true
-    isVerticalScrollBarEnabled = true
-    setTextSize(24)
-    setTypeface(
-        Typeface.createFromAsset(
-            context.assets,
-            "fonts/JetBrainsMono-Regular.ttf"
-        )
-    )
-
-    val client = TerminalClient(this, activity)
-
-    val session = with(activity.sessionBinder!!) {
-        getSession(service.currentSession)
-            ?: createSession(
-                id = service.currentSession,
-                userName = user,
-                client = client,
-                activity = activity
+) = withContext(Dispatchers.Main) {
+    TerminalView(context, null).apply {
+        defaultFocusHighlightEnabled = true
+        isFocusableInTouchMode = true
+        isVerticalScrollBarEnabled = true
+        setTextSize(24)
+        setTypeface(
+            Typeface.createFromAsset(
+                context.assets,
+                "fonts/JetBrainsMono-Regular.ttf"
             )
+        )
+
+        val client = TerminalClient(this, activity)
+
+        val session = with(activity.sessionBinder!!) {
+            withContext(Dispatchers.Default) {
+                getSession(service.currentSession)
+                    ?: createSession(
+                        id = service.currentSession,
+                        userName = user,
+                        client = client,
+                        activity = activity
+                    )
+            }
+        }
+        session.updateTerminalSessionClient(client)
+        attachSession(session)
+        setTerminalViewClient(client)
     }
-    session.updateTerminalSessionClient(client)
-    attachSession(session)
-    setTerminalViewClient(client)
 }
 
 private fun ExtraKeysView(
