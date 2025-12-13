@@ -127,7 +127,6 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
                                 }
 
                                 Log.e("Klyx", "StrictMode ThreadPolicy violation", violation)
-                                throw violation
                             }
                         }
                     }
@@ -142,7 +141,6 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
                     penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
                         if (violation !is UntaggedSocketViolation) {
                             Log.e("Klyx", "StrictMode VmPolicy violation", violation)
-                            throw violation
                         }
                     }
                 }
