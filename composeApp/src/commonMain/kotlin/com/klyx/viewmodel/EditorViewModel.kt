@@ -109,6 +109,10 @@ class EditorViewModel(
         observeUndoRedoState()
     }
 
+    fun isTabOpen(predicate: (Tab) -> Boolean) = _state.map {
+        it.openTabs.any(predicate)
+    }.stateInWhileSubscribed(initialValue = false)
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun observeUndoRedoState() {
         viewModelScope.launch {

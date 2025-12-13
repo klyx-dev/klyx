@@ -346,10 +346,12 @@ private fun WorkspaceDrawer(
     val scope = rememberCoroutineScope()
 
     val project by klyxVM.openedProject.collectAsState()
+    val isFileTabOpen by editorVM.isTabOpen { it is FileTab }.collectAsState()
 
     CompositionLocalProvider(LocalDrawerState provides drawerState) {
         ModalNavigationDrawer(
             drawerState = drawerState,
+            gesturesEnabled = drawerState.isOpen || !isFileTabOpen,
             drawerContent = {
                 ModalDrawerSheet(
                     drawerState = drawerState,
