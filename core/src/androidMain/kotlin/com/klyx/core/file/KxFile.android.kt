@@ -190,7 +190,7 @@ actual fun KxFile(path: String): KxFile {
                     FLAG_GRANT_READ_URI_PERMISSION or FLAG_GRANT_WRITE_URI_PERMISSION
                 )
             }.onFailure {
-                log.error(it) { "Failed to take persistable permission for $path" }
+                log.debug { "Failed to take persistable permission for $path: $it" }
             }.onSuccess {
                 log.debug { "Successfully took persistable permission for $path" }
             }

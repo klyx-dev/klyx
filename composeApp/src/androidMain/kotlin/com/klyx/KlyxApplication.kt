@@ -117,7 +117,11 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
                 .apply {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
-                            if (!violation.stackTrace.any { it.className.startsWith("com.blankj.utilcode.util") }) {
+                            if (!violation.stackTrace.any {
+                                    it.className.startsWith("com.blankj.utilcode.util") ||
+                                            it.className.startsWith("com.oplus.uifirst")
+                                }
+                            ) {
                                 if (violation is DiskReadViolation &&
                                     violation.stackTrace.any {
                                         it.className == "java.lang.System" && it.methodName == "loadLibrary"
