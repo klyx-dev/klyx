@@ -59,17 +59,4 @@ sealed interface SettingsRoute : NavKey {
     @Serializable
     data object About : NavKey, SettingsRoute
 
-    companion object {
-        fun config() = SavedStateConfiguration {
-            serializersModule = SerializersModule {
-                polymorphic(NavKey::class) {
-                    subclass(General::class, General.serializer())
-                    subclass(Appearance::class, Appearance.serializer())
-                    subclass(DarkTheme::class, DarkTheme.serializer())
-                    subclass(Editor::class, Editor.serializer())
-                    subclass(About::class, About.serializer())
-                }
-            }
-        }
-    }
 }
