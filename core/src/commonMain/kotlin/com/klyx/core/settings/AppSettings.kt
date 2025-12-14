@@ -6,7 +6,6 @@ import com.klyx.core.theme.Contrast
 import com.klyx.core.theme.DEFAULT_SEED_COLOR
 import io.github.xn32.json5k.SerialComment
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonObject
@@ -90,8 +89,12 @@ data class AppSettings(
     @SerialComment("Status bar settings")
     val statusBar: StatusBarSettings = StatusBarSettings(),
 
-    @SerialComment("Different settings for specific languages.")
-    val languages: Map<String, JsonObject> = emptyMap(),
+    @SerialComment("The settings for a particular language.")
+    val languages: Map<String, LanguageSettings> = mapOf(
+        "JavaScript" to LanguageSettings(languageServers = listOf("!typescript-language-server", "vtsls", "...")),
+        "TypeScript" to LanguageSettings(languageServers = listOf("!typescript-language-server", "vtsls", "...")),
+        "TSX" to LanguageSettings(languageServers = listOf("!typescript-language-server", "vtsls", "...")),
+    ),
 
     @SerialComment("LSP Specific settings.")
     val lsp: Map<String, LspSettings> = mapOf(

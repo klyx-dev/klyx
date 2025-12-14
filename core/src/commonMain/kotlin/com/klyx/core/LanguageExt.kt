@@ -10,8 +10,9 @@ fun KxFile.language() = when (extension.lowercase()) {
     "clj", "cljs", "cljc", "edn" -> "Clojure"
 
     "js", "mjs", "cjs" -> "JavaScript"
-    "ts", "tsx" -> "TypeScript"
-    "jsx" -> "JavaScript React"
+    "ts", "mts", "cts" -> "TypeScript"
+    "tsx" -> "TSX"
+    "jsx" -> "JSX"
     "html", "htm", "xhtml" -> "HTML"
     "css" -> "CSS"
     "scss", "sass" -> "Sass/SCSS"

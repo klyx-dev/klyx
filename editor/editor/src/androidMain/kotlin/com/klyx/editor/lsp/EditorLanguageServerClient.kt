@@ -8,6 +8,7 @@ import androidx.compose.runtime.CompositionContext
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
 import com.klyx.core.language
+import com.klyx.core.language.LanguageName
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
 import com.klyx.editor.KlyxEditor
@@ -120,7 +121,7 @@ internal class EditorLanguageServerClient(
 
         coroutineScope.launch(Dispatchers.IO) {
             LanguageServerManager
-                .tryConnectLspIfAvailable(worktree, file.language(), settings)
+                .tryConnectLspIfAvailable(worktree, LanguageName(file.language()), settings)
                 .onSuccess { client ->
                     serverClient = client
                     withContext(Dispatchers.Main) {

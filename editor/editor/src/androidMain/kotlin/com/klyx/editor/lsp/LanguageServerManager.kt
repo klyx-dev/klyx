@@ -1,26 +1,42 @@
 package com.klyx.editor.lsp
 
+import com.klyx.core.backgroundScope
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
+import com.klyx.core.io.intoPath
+import com.klyx.core.language.BinaryStatus
+import com.klyx.core.language.CachedLspAdapter
+import com.klyx.core.language.LanguageId
+import com.klyx.core.language.LanguageName
+import com.klyx.core.language.LanguageRegistry
+import com.klyx.core.language.LspAdapterDelegate
+import com.klyx.core.lsp.LanguageServerBinary
+import com.klyx.core.lsp.LanguageServerBinaryOptions
+import com.klyx.core.lsp.LanguageServerName
+import com.klyx.core.project.makeLspAdapterDelegate
 import com.klyx.core.settings.AppSettings
+import com.klyx.core.settings.LspSettings
 import com.klyx.core.toJson
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
 import com.klyx.editor.lsp.util.languageId
-import com.klyx.editor.lsp.util.toCommand
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.ExtensionManager
-import io.itsvks.anyhow.Err
-import io.itsvks.anyhow.Ok
+import io.itsvks.anyhow.anyhow
 import io.itsvks.anyhow.fold
-import io.itsvks.anyhow.getOrElse
-import io.itsvks.anyhow.ok
-import io.itsvks.anyhow.onFailure
-import io.itsvks.anyhow.onSuccess
+import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.onTimeout
+import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentColorParams
@@ -28,19 +44,17 @@ import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.services.LanguageServer
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.atomic.AtomicInteger
-
-typealias LanguageId = String
-typealias LanguageName = String
+import kotlin.time.Duration.Companion.seconds
 
 object LanguageServerManager {
-    private val languageServers = mutableMapOf<Pair<String, LanguageId>, LanguageServer>()
-    private val languageClients = mutableMapOf<Pair<String, LanguageId>, LanguageServerClient>()
+    private val languageServers = mutableMapOf<Pair<String, LanguageServerName>, LanguageServer>()
+    private val languageClients = mutableMapOf<Pair<String, LanguageServerName>, LanguageServerClient>()
 
     private val documentVersions = mutableMapOf<String, AtomicInteger>()
 
     private val scope = CoroutineScope(ForkJoinPool.commonPool().asCoroutineDispatcher())
+
+    val SERVER_DOWNLOAD_TIMEOUT = 10.seconds
 
     internal fun nextVersion(uri: String): Int {
         val counter = documentVersions.getOrPut(uri) { AtomicInteger(0) }
@@ -64,92 +78,137 @@ object LanguageServerManager {
                 }
 
                 for ((_, client) in matchingClients) {
-                    val jsonConfig = newSettings.toJson()
-                    client.changeWorkspaceConfiguration(jsonConfig)
+                    val jsonConfig = newSettings.settings
+                    client.changeWorkspaceConfiguration(jsonConfig?.toJson() ?: "{}")
                 }
             }
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun tryConnectLspIfAvailable(
         worktree: Worktree,
         languageName: LanguageName,
         appSettings: AppSettings
-    ) = withContext(Dispatchers.IO) lsp@{
-        if (!ExtensionManager.isExtensionAvailableForLanguage(languageName)) {
-            return@lsp Err("No language server extension available for language: $languageName")
-        }
+    ) = anyhow {
+        withContext(Dispatchers.IO) lsp@{
+            val languageServerName = ExtensionManager.getLanguageServerNameForLanguage(languageName)
+                ?: bail("No language server found for language: $languageName")
 
-        val languageServerId = ExtensionManager.getLanguageServerIdForLanguage(languageName, appSettings)
-            ?: return@lsp Err("No language server found for language: $languageName")
+            val languages = LanguageRegistry.INSTANCE
+            val adapter = languages.adapterForName(languageServerName)
+                ?: bail("No adapter found for language server: $languageServerName")
 
-        val languageId = ExtensionManager.getLanguageIdForLanguage(languageName)
-            ?: return@lsp Err("No language ID found for language: $languageName")
+            val languageId = ExtensionManager.getLanguageIdForLanguage(languageName)
+                ?: bail("No language id found for language: $languageName")
+            val delegate = makeLspAdapterDelegate(worktree)
 
-        val extension = ExtensionManager.getExtensionForLanguage(languageName)
-            ?: return@lsp Err("No extension found for language: $languageName")
+            val key = worktree.uriString to languageId
 
-        val key = worktree.uriString to languageId
-
-        if (languageServers.containsKey(key)) {
-            return@lsp Ok(languageClients[key]!!)
-        }
-
-        appSettings.lsp[languageServerId]?.let { (binary, initializationOptions) ->
-            if (binary != null) {
-                val options = initializationOptions?.toJson()
-                val command = binary.toCommand()
-
-                if (command != null) {
-                    val client = LanguageServerClient(extension.logger)
-
-                    client.initialize(command, worktree, options).onSuccess {
-                        languageClients[key] = client
-                        languageServers[key] = client.languageServer
-
-                        extension.languageServerWorkspaceConfiguration(languageServerId, worktree)
-                            .onSuccess { configs ->
-                                configs.onSome {
-                                    client.changeWorkspaceConfiguration(it)
-                                }
-                            }
-                    }.onFailure {
-                        return@lsp Err("Failed to initialize language server: $it")
-                    }
-
-                    return@lsp Ok(client)
-                }
+            if (languageServers.containsKey(key)) {
+                return@lsp languageClients[key]!!
             }
-        }
 
-        extension.languageServerCommand(languageServerId, worktree).fold(
-            ok = { command ->
-                val client = LanguageServerClient(extension.logger)
-                val initializationOptions = extension.languageServerInitializationOptions(
-                    languageServerId = languageServerId,
-                    worktree = worktree
-                ).ok()?.getOrNull()
+            val settings = appSettings.lsp[languageServerName] ?: LspSettings()
+            val binary = getLanguageServerBinary(
+                adapter = adapter,
+                settings = settings,
+                delegate = delegate,
+                allowBinaryDownload = true
+            ).bind()
 
-                client.initialize(command, worktree, initializationOptions).onSuccess {
+            val client = LanguageServerClient()
+            val initializationOptions = adapter.adapter
+                .initializationOptions(delegate).bind()
+
+            client.initialize(binary, worktree, initializationOptions?.toString()).fold(
+                ok = { initializeResult ->
                     languageClients[key] = client
                     languageServers[key] = client.languageServer
 
-                    extension.languageServerWorkspaceConfiguration(languageServerId, worktree).onSuccess { configs ->
-                        configs.onSome {
-                            client.changeWorkspaceConfiguration(it)
+                    val workspaceConfig = adapter.adapter.workspaceConfiguration(delegate).bind()
+                    client.changeWorkspaceConfiguration(workspaceConfig.toString())
+                },
+                err = { bail("Failed to initialize language server: $it") }
+            )
+
+            client
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private suspend fun getLanguageServerBinary(
+        adapter: CachedLspAdapter,
+        settings: LspSettings,
+        delegate: LspAdapterDelegate,
+        allowBinaryDownload: Boolean
+    ) = anyhow {
+        settings.binary?.let { settings ->
+            if (settings.path != null) {
+                return@anyhow withContext(Dispatchers.Default) {
+                    val env = delegate.shellEnv()
+                    settings.env?.let { env.putAll(it) }
+
+                    LanguageServerBinary(
+                        path = settings.path!!.intoPath(),
+                        env = env,
+                        arguments = settings.arguments.orEmpty()
+                    )
+                }
+            }
+        }
+
+        val (existingBinary, maybeDownloadBinary) = adapter.getLanguageServerCommand(
+            delegate,
+            LanguageServerBinaryOptions(
+                allowPathLookup = true,
+                allowBinaryDownload = allowBinaryDownload
+            )
+        )()
+
+        delegate.updateStatus(adapter.name, BinaryStatus.None)
+
+        val binary = coroutineScope {
+            when {
+                maybeDownloadBinary == null -> existingBinary.bind()
+                existingBinary.isErr -> maybeDownloadBinary().bind()
+                else -> {
+                    val existing = existingBinary.bind()
+                    val downloader = async(start = CoroutineStart.UNDISPATCHED) {
+                        maybeDownloadBinary()
+                    }
+
+                    select {
+                        downloader.onAwait { result ->
+                            result.bind()
+                        }
+
+                        onTimeout(SERVER_DOWNLOAD_TIMEOUT) {
+                            backgroundScope.launch {
+                                downloader.await()
+                            }
+                            existing
                         }
                     }
-                }.onFailure {
-                    return@lsp Err("Failed to initialize language server: $it")
                 }
-
-                Ok(client)
-            },
-            err = {
-                extension.logger.error { it }
-                Err(it)
             }
-        )
+        }
+
+        val shellEnv = delegate.shellEnv()
+        binary.env?.let { shellEnv.putAll(it) }
+
+        settings.binary?.let { settings ->
+            settings.arguments?.let { args ->
+                binary.arguments = args
+            }
+
+            settings.env?.let { env ->
+                shellEnv.putAll(env)
+            }
+        }
+
+        binary.env = shellEnv
+        binary
     }
 
     suspend fun openDocument(worktree: Worktree, file: KxFile) = withClient(worktree, file) {

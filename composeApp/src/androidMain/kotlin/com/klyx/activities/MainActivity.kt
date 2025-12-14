@@ -27,11 +27,15 @@ import com.klyx.core.event.subscribe
 import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
+import com.klyx.core.language.LanguageName
+import com.klyx.core.language.LanguageRegistry
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -47,6 +51,13 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
         subscribe()
+
+        lifecycleScope.launch(Dispatchers.Default) {
+            delay(10000)
+
+            println(LanguageRegistry.INSTANCE.state.lspAdapters)
+            println(LanguageRegistry.INSTANCE.state.allLspAdapters)
+        }
     }
 
     @Composable

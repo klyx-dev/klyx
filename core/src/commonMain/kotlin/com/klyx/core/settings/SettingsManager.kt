@@ -40,18 +40,14 @@ object SettingsManager {
     private val _settings = MutableStateFlow(AppSettings())
     val settings = _settings.asStateFlow()
 
-    val defaultSettings: AppSettings by lazy {
-        fs.source(globalSettingsFile).buffered().use {
-            json.decodeFromString(it.readString())
-        }
-    }
+    val defaultSettings: AppSettings by lazy { AppSettings() }
 
     init {
         backgroundScope.launch(Dispatchers.IO) {
             runCatching {
                 fs.delete(globalSettingsFile, mustExist = false)
                 fs.sink(globalSettingsFile).buffered().use {
-                    it.writeString(json.encodeToString(settings.value))
+                    it.writeString(json.encodeToString(AppSettings()))
                 }
             }.onFailure {
                 it.printStackTrace()

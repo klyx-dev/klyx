@@ -14,6 +14,7 @@ class Command(val command: String) {
     private var directory: Path? = null
 
     val args: List<String> get() = _args
+    val env: Map<String, String> get() = _env
 
     companion object {
         @JvmStatic
@@ -25,6 +26,15 @@ class Command(val command: String) {
         @JvmStatic
         fun newCommand(command: String) = Command(command)
     }
+
+    @Suppress("NOTHING_TO_INLINE")
+    inline operator fun component1() = command
+
+    @Suppress("NOTHING_TO_INLINE")
+    inline operator fun component2() = args
+
+    @Suppress("NOTHING_TO_INLINE")
+    inline operator fun component3() = env
 
     fun arg(arg: String) = apply {
         _args += arg

@@ -3,6 +3,7 @@ package com.klyx.editor.lsp.util
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
 import com.klyx.core.language
+import com.klyx.core.language.LanguageName
 import com.klyx.extension.ExtensionManager
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.TextRange
@@ -18,7 +19,7 @@ val Worktree.uriString get() = uri.toString()
 val KxFile.uri: URI get() = File(absolutePath).toURI()
 val KxFile.uriString get() = uri.toString()
 
-val KxFile.languageId get() = ExtensionManager.getLanguageIdForLanguage(language()) ?: "invalid"
+val KxFile.languageId get() = ExtensionManager.getLanguageIdForLanguage(LanguageName(language())) ?: "invalid"
 
 fun String.asTextDocumentIdentifier() = TextDocumentIdentifier(this)
 

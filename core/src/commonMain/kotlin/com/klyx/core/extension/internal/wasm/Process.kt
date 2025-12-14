@@ -1,7 +1,8 @@
 @file:OptIn(ExperimentalWasmApi::class)
 
-package com.klyx.extension.api
+package com.klyx.core.extension.internal.wasm
 
+import com.klyx.core.extension.util.readResult
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.type.HasWasmReader
@@ -19,7 +20,8 @@ import com.klyx.wasm.type.str
 import com.klyx.wasm.type.tuple2
 import com.klyx.wasm.type.u8
 
-@OptIn(ExperimentalWasmApi::class)
+typealias EnvVars = list<tuple2<str, str>>
+
 data class Command(
     val command: str,
     val args: list<str>,
@@ -81,7 +83,6 @@ data class Command(
     }
 }
 
-@OptIn(ExperimentalWasmApi::class)
 fun WasmMemory.readCommandResult(pointer: Int) = readResult(
     pointer = pointer,
     readOk = Command.reader::read,

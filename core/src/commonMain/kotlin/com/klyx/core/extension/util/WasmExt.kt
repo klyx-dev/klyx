@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalWasmApi::class)
 
-package com.klyx.extension.api
+package com.klyx.core.extension.util
 
 import arrow.core.None
 import arrow.core.Option

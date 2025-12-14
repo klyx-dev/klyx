@@ -3,6 +3,7 @@ package com.klyx.extension
 import androidx.compose.runtime.mutableStateListOf
 import com.klyx.core.extension.Extension
 import com.klyx.core.extension.ExtensionInfo
+import com.klyx.core.extension.WasmExtension
 import com.klyx.core.extension.parseExtension
 import com.klyx.core.extension.parseToml
 import com.klyx.core.file.KxFile
@@ -15,9 +16,13 @@ import com.klyx.core.file.toOkioPath
 import com.klyx.core.io.Paths
 import com.klyx.core.io.extensionsDir
 import com.klyx.core.io.isSymlink
+import com.klyx.core.language.LanguageId
+import com.klyx.core.language.LanguageName
+import com.klyx.core.language.LanguageRegistry
+import com.klyx.core.language.languageIdentifiers
 import com.klyx.core.logging.logger
-import com.klyx.core.lsp.languageIdentifiers
-import com.klyx.core.settings.AppSettings
+import com.klyx.core.lsp.LanguageServerName
+import com.klyx.core.settings.LanguageSettings
 import com.klyx.wasm.ExperimentalWasmApi
 import io.itsvks.anyhow.Err
 import io.itsvks.anyhow.Ok
@@ -31,9 +36,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import okio.Buffer
 import okio.FileSystem
 import okio.Path
@@ -45,7 +47,7 @@ import okio.use
 
 object ExtensionManager {
     val installedExtensions = mutableStateListOf<Extension>()
-    val loadedExtensions = mutableStateListOf<LocalExtension>()
+    val loadedExtensions = mutableStateListOf<WasmExtension>()
 
     private val _loadingState = MutableStateFlow(0 to 0) // (loaded, total)
     val loadingState = _loadingState.asStateFlow()
@@ -132,36 +134,38 @@ object ExtensionManager {
         }
     }
 
-    fun getLanguageServerIdForLanguage(languageName: String, settings: AppSettings): String? {
-        settings.languages[languageName]?.let { languageSettings ->
-            (languageSettings["language_servers"] as? JsonArray)?.let { languageServers ->
-                return runCatching { languageServers.firstOrNull()?.jsonPrimitive?.contentOrNull }.getOrNull()
-            }
+    fun getLanguageServerNameForLanguage(languageName: LanguageName): LanguageServerName? {
+        LanguageSettings[languageName]?.let { languageSettings ->
+            val languages = LanguageRegistry.INSTANCE
+            val availableLspAdapters = languages.lspAdapters(languageName)
+            val availableLanguageServers = availableLspAdapters.map { it.name }
+            val desiredLanguageServers = languageSettings.customizedLanguageServers(availableLanguageServers)
+            return desiredLanguageServers.firstOrNull() ?: return@let
         }
 
         return loadedExtensions.firstNotNullOfOrNull { extension ->
             extension.extension.info.languageServers.entries.firstOrNull { (_, serverConfig) ->
-                languageName in serverConfig.languages ||
-                        (serverConfig.languageIds?.keys?.contains(languageName) == true) ||
-                        languageName.equals(serverConfig.language, ignoreCase = true)
+                languageName.value in serverConfig.languages ||
+                        (serverConfig.languageIds?.keys?.contains(languageName.value) == true) ||
+                        languageName.value.equals(serverConfig.language, ignoreCase = true)
             }?.key
         }
     }
 
-    fun getLanguageIdForLanguage(languageName: String): String? {
+    fun getLanguageIdForLanguage(languageName: LanguageName): LanguageId? {
         return loadedExtensions.firstNotNullOfOrNull { extension ->
             extension.extension.info.languageServers.values.firstNotNullOfOrNull { serverConfig ->
-                serverConfig.languageIds?.get(languageName) ?: if (
-                    languageName in serverConfig.languages ||
-                    languageName.equals(serverConfig.language, ignoreCase = true)
+                serverConfig.languageIds?.get(languageName.value) ?: if (
+                    languageName.value in serverConfig.languages ||
+                    languageName.value.equals(serverConfig.language, ignoreCase = true)
                 ) {
-                    languageIdentifiers[languageName] ?: languageName.lowercase()
+                    languageIdentifiers[languageName.value] ?: languageName.value.lowercase()
                 } else null
             }
-        } ?: languageIdentifiers[languageName]
+        } ?: languageIdentifiers[languageName.value]
     }
 
-    fun getExtensionsForLanguage(languageName: String): List<LocalExtension> {
+    fun getExtensionsForLanguage(languageName: String): List<WasmExtension> {
         return loadedExtensions.filter { extension ->
             extension.extension.info.languageServers.values.any { serverConfig ->
                 languageName in serverConfig.languages || languageName.equals(serverConfig.language, ignoreCase = true)

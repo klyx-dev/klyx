@@ -1,13 +1,11 @@
-package com.klyx.extension
+package com.klyx.core.extension
 
 import com.klyx.core.DefaultScope
-import com.klyx.core.extension.Extension
-import com.klyx.core.file.Worktree
+import com.klyx.core.extension.internal.wasm.readCommandResult
+import com.klyx.core.extension.util.readResult
+import com.klyx.core.extension.util.readStringOption
 import com.klyx.core.logging.KxLogger
-import com.klyx.extension.api.readCommandResult
-import com.klyx.extension.api.readResult
-import com.klyx.extension.api.readStringOption
-import com.klyx.extension.internal.Command
+import com.klyx.core.process.Command
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmInstance
 import com.klyx.wasm.WasmMemory
@@ -18,7 +16,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalWasmApi::class)
-data class LocalExtension(
+class WasmExtension(
     val extension: Extension,
     val logger: KxLogger,
     internal val instance: WasmInstance,
@@ -26,6 +24,8 @@ data class LocalExtension(
     private val memory by lazy { instance.memory }
 
     private val coroutineContext = Dispatchers.Default + SupervisorJob()
+
+    fun manifest() = extension.info
 
     /**
      * Initializes the extension.
@@ -50,17 +50,16 @@ data class LocalExtension(
     /**
      * Returns the command used to start up the language server.
      */
-    suspend fun languageServerCommand(languageServerId: String, worktree: Worktree) = withContext(coroutineContext) {
-        val fn = instance.function("language-server-command")
-        val result = fn(languageServerId, worktree)[0]
-        memory.readCommandResult(result.asInt()).map { (command, args, env) ->
-            Command(
-                command = command.toString(memory),
-                args = args.map { it.toString(memory) },
-                env = env.associate { (k, v) -> k.toString(memory) to v.toString(memory) }
-            )
+    suspend fun languageServerCommand(languageServerId: String, worktree: WorktreeDelegate) =
+        withContext(coroutineContext) {
+            val fn = instance.function("language-server-command")
+            val result = fn(languageServerId, worktree)[0]
+            memory.readCommandResult(result.asInt()).map { (command, args, env) ->
+                Command.newCommand(command.toString(memory))
+                    .args(args.map { it.toString(memory) })
+                    .env(env.associate { (k, v) -> k.toString(memory) to v.toString(memory) })
+            }
         }
-    }
 
     /**
      * Returns the initialization options to pass to the language server on startup.
@@ -69,7 +68,7 @@ data class LocalExtension(
      */
     suspend fun languageServerInitializationOptions(
         languageServerId: String,
-        worktree: Worktree
+        worktree: WorktreeDelegate
     ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-initialization-options")
         val result = fn(languageServerId, worktree)[0]
@@ -81,7 +80,7 @@ data class LocalExtension(
      */
     suspend fun languageServerWorkspaceConfiguration(
         languageServerId: String,
-        worktree: Worktree
+        worktree: WorktreeDelegate
     ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-workspace-configuration")
         val result = fn(languageServerId, worktree)[0]
@@ -94,7 +93,7 @@ data class LocalExtension(
     suspend fun languageServerAdditionalInitializationOptions(
         languageServerId: String,
         targetLanguageServerId: String,
-        worktree: Worktree
+        worktree: WorktreeDelegate
     ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-additional-initialization-options")
         val result = fn(languageServerId, targetLanguageServerId, worktree)[0]
@@ -107,7 +106,7 @@ data class LocalExtension(
     suspend fun languageServerAdditionalWorkspaceConfiguration(
         languageServerId: String,
         targetLanguageServerId: String,
-        worktree: Worktree
+        worktree: WorktreeDelegate
     ) = withContext(coroutineContext) {
         val fn = instance.function("language-server-additional-workspace-configuration")
         val result = fn(languageServerId, targetLanguageServerId, worktree)[0]
@@ -120,5 +119,7 @@ data class LocalExtension(
         readErr = WasmMemory::readLengthPrefixedUtf8String
     )
 
-    override fun close() {}
+    override fun close() {
+        //
+    }
 }

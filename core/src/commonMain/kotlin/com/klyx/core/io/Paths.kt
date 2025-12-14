@@ -34,7 +34,15 @@ inline val Paths.oldLogFile get() = logsDir.join("Klyx.log.old")
 inline val Paths.settingsFile: Path get() = configDir.join("settings.json")
 inline val Paths.globalSettingsFile: Path get() = configDir.join("global_settings.json")
 inline val Paths.settingsBackupFile: Path get() = configDir.join("settings_backup.json")
+
 inline val Paths.extensionsDir: Path get() = dataDir.join("extensions")
+
+/**
+ * Returns the path to the languages directory.
+ *
+ * This is where language servers are downloaded to for languages built-in to Zed.
+ */
+inline val Paths.languagesDir: Path get() = dataDir.join("languages")
 
 inline val Paths.lastProjectFile: Path get() = tempDir.join("last_project.json")
 

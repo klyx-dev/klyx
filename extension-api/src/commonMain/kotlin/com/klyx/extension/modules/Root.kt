@@ -5,12 +5,13 @@ package com.klyx.extension.modules
 import arrow.core.getOrElse
 import arrow.core.toOption
 import com.klyx.core.Notifier
-import com.klyx.core.file.Worktree
+import com.klyx.core.extension.WorktreeDelegate
 import com.klyx.core.file.archive.extractGzip
 import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.archive.extractZip
 import com.klyx.core.file.humanBytes
 import com.klyx.core.file.toKotlinxIoPath
+import com.klyx.core.io.intoPath
 import com.klyx.core.io.resolveToSandbox
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.settings.LspSettings
@@ -42,6 +43,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
+import kotlinx.serialization.json.put
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.SYSTEM
@@ -72,33 +74,33 @@ class Root(
     }
 
     @HostFunction("[method]worktree.read-text-file")
-    fun WasmMemory.worktreeReadTextFile(ptr: Int, path: String, retPtr: Int) {
-        val worktree = ptr.asPointer().value<Worktree>()
-        val result = worktree.readTextFile(path).toWasmResult()
+    suspend fun WasmMemory.worktreeReadTextFile(ptr: Int, path: String, retPtr: Int) {
+        val worktree = ptr.asPointer().value<WorktreeDelegate>()
+        val result = worktree.readTextFile(path.intoPath()).toWasmResult()
         write(retPtr, result.toBuffer())
     }
 
     @HostFunction("[method]worktree.id")
-    fun worktreeId(ptr: Int) = ptr.asPointer().value<Worktree>().id
+    fun worktreeId(ptr: Int) = ptr.asPointer().value<WorktreeDelegate>().id()
 
     @HostFunction("[method]worktree.root-path")
     fun WasmMemory.worktreeRootPath(ptr: Int, retPtr: Int) {
-        val worktree = ptr.asPointer().value<Worktree>()
-        val rootPath = worktree.rootFile.absolutePath.toWasm()
+        val worktree = ptr.asPointer().value<WorktreeDelegate>()
+        val rootPath = worktree.rootPath().toWasm()
         write(retPtr, rootPath.toBuffer())
     }
 
     @HostFunction("[method]worktree.which")
     suspend fun WasmMemory.worktreeWhich(ptr: Int, binaryName: String, retPtr: Int) {
-        val worktree = ptr.asPointer().value<Worktree>()
+        val worktree = ptr.asPointer().value<WorktreeDelegate>()
         val result = worktree.which(binaryName).toWasmOption()
         write(retPtr, result.toBuffer())
     }
 
     @HostFunction("[method]worktree.shell-env")
     suspend fun WasmMemory.worktreeShellEnv(ptr: Int, retPtr: Int) {
-        val worktree = ptr.asPointer().value<Worktree>()
-        val envVars = worktree.shellEnv().toWasmList()
+        val worktree = ptr.asPointer().value<WorktreeDelegate>()
+        val envVars = worktree.shellEnv().toList().toWasmList()
         write(retPtr, envVars.toBuffer())
     }
 
@@ -241,9 +243,7 @@ class Root(
 
                 val s = languageSettings.map { settings ->
                     buildJsonObject {
-                        if (settings != null) {
-                            settings["tab_size"]?.let { put("tab_size", it) }
-                        }
+                        settings?.tabSize?.let { put("tab_size", it.toInt()) }
                     }.toJson()
                 }
 

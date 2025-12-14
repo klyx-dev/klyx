@@ -2,6 +2,7 @@
 
 package com.klyx.core
 
+import arrow.core.Either
 import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
@@ -50,3 +51,17 @@ infix fun <A> Option<A>.or(other: Option<A>) = orElse { other }
 
 fun <T> T?.orNone(): Option<T> = this?.let { Some(it) } ?: None
 
+fun <T, L, R> Iterable<T>.partitionMap(
+    f: (T) -> Either<L, R>
+): Pair<List<L>, List<R>> {
+    val left = mutableListOf<L>()
+    val right = mutableListOf<R>()
+
+    for (x in this) {
+        when (val r = f(x)) {
+            is Either.Left -> left.add(r.value)
+            is Either.Right -> right.add(r.value)
+        }
+    }
+    return left to right
+}

@@ -1,10 +1,14 @@
 package com.klyx.extension
 
 import com.klyx.core.extension.Extension
+import com.klyx.core.extension.WasmExtension
 import com.klyx.core.file.source
 import com.klyx.core.io.Paths
 import com.klyx.core.io.homeDir
 import com.klyx.core.io.root
+import com.klyx.core.language.LanguageName
+import com.klyx.core.language.LanguageRegistry
+import com.klyx.core.language.extension.ExtensionLspAdapter
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager
@@ -42,7 +46,7 @@ object ExtensionLoader {
         extension: Extension,
         shouldCallInit: Boolean = false,
         vararg extraHostModules: HostModule
-    ): LocalExtension? {
+    ): WasmExtension? {
         val logger = logger(extension.info.id)
 
         withContext(Dispatchers.IO) {
@@ -93,15 +97,29 @@ object ExtensionLoader {
             }
         }
 
-        val localExtension = LocalExtension(extension, logger, instance)
+        val wasmExtension = WasmExtension(extension, logger, instance)
 
-        if (shouldCallInit) {
-            withContext(Dispatchers.Default) {
-                localExtension.initialize()
+        val languages = LanguageRegistry.INSTANCE
+        for ((languageServerId, languageServerConfig) in extension.info.languageServers) {
+            for (language in languageServerConfig.languages) {
+                languages.registerLspAdapter(
+                    LanguageName(language),
+                    ExtensionLspAdapter(
+                        wasmExtension,
+                        languageServerId,
+                        LanguageName(language)
+                    )
+                )
             }
         }
 
-        return localExtension
+        if (shouldCallInit) {
+            withContext(Dispatchers.Default) {
+                wasmExtension.initialize()
+            }
+        }
+
+        return wasmExtension
     }
 }
 

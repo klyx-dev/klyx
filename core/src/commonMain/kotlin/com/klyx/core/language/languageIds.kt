@@ -1,4 +1,4 @@
-package com.klyx.core.lsp
+package com.klyx.core.language
 
 /**
  * https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#textDocumentItem
@@ -28,6 +28,7 @@ val languageIdentifiers = mapOf(
     "Java" to "java",
     "JavaScript" to "javascript",
     "JavaScript React" to "javascriptreact",
+    "JSX" to "javascriptreact",
     "JSON" to "json",
     "LaTeX" to "latex",
     "Less" to "less",
@@ -55,6 +56,7 @@ val languageIdentifiers = mapOf(
     "Swift" to "swift",
     "TypeScript" to "typescript",
     "TypeScript React" to "typescriptreact",
+    "TSX" to "typescriptreact",
     "TeX" to "tex",
     "Visual Basic" to "vb",
     "XML" to "xml",

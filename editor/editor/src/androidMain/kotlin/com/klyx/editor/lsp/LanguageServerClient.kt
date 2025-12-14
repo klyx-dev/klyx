@@ -3,18 +3,23 @@ package com.klyx.editor.lsp
 import android.content.Context
 import com.klyx.core.Notifier
 import com.klyx.core.file.Worktree
+import com.klyx.core.language.LanguageId
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
+import com.klyx.core.lsp.LanguageServerBinary
 import com.klyx.core.process.InternalProcessApi
 import com.klyx.core.process.Signal
+import com.klyx.core.process.asJavaProcessBuilder
 import com.klyx.core.process.systemProcess
 import com.klyx.editor.lsp.util.asTextDocumentIdentifier
-import com.klyx.extension.internal.Command
 import io.itsvks.anyhow.Err
 import io.itsvks.anyhow.Ok
 import io.itsvks.anyhow.mapError
 import io.itsvks.anyhow.runCatching
 import io.matthewnelson.kmp.process.changeDir
+import java.io.File
+import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
@@ -68,9 +73,6 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
-import java.io.File
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 
 class LanguageServerClient(
     private val logger: KxLogger = logger("LanguageServerClient")
@@ -97,25 +99,18 @@ class LanguageServerClient(
 
     @OptIn(InternalProcessApi::class)
     suspend fun initialize(
-        serverCommand: Command,
+        binary: LanguageServerBinary,
         worktree: Worktree,
         initializationOptions: String? = null
     ) = withContext(Dispatchers.IO) {
         try {
             with(context) {
-                val (cmd, args, env) = serverCommand
-                val builder = systemProcess(cmd, *args.toTypedArray()) {
-                    environment { putAll(env) }
+                val (cmd, args, env) = binary
+                val builder = systemProcess(cmd.toString(), *args.toTypedArray()) {
+                    environment { env?.let { putAll(it) } }
                     changeDir(File(worktree.rootFile.absolutePath))
                     destroySignal(Signal.SIGKILL)
-                }.spawn().raw.let { p ->
-                    ProcessBuilder(p.command, *p.args.toTypedArray()).apply {
-                        environment().putAll(p.environment)
-                        p.cwd?.let { dir -> directory(dir) }
-                    }.also {
-                        p.destroy()
-                    }
-                }
+                }.asJavaProcessBuilder()
 
                 process = builder.start()
 
