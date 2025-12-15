@@ -54,16 +54,6 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
         subscribe()
-
-        lifecycleScope.launch(Dispatchers.Default) {
-            delay(10000)
-//            println(SettingsManager.defaultSettings.toJson())
-//            println(SettingsManager.settings.value.toJson())
-            println(ExtraKeys.toJson())
-
-            println(LanguageRegistry.INSTANCE.state.lspAdapters)
-            println(LanguageRegistry.INSTANCE.state.allLspAdapters)
-        }
     }
 
     @Composable
