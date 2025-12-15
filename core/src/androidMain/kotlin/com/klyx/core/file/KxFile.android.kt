@@ -16,12 +16,12 @@ import com.klyx.core.ContextHolder
 import com.klyx.core.logging.log
 import com.klyx.core.terminal.SAFUtils.getDocumentIdForUri
 import com.klyx.core.terminal.SAFUtils.getFileForDocumentId
-import com.klyx.runtimeError
 import com.klyx.unimplemented
 import com.klyx.unsupported
 import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
@@ -222,12 +222,12 @@ actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
 }
 
 actual fun KxFile.source(): RawSource {
-    val input = inputStream() ?: runtimeError("Failed to open input stream for $absolutePath")
+    val input = inputStream() ?: throw IOException("Failed to open input stream for $absolutePath")
     return input.asSource()
 }
 
 actual fun KxFile.sink(): RawSink {
-    val output = outputStream() ?: runtimeError("Failed to open output stream for $absolutePath")
+    val output = outputStream() ?: throw IOException("Failed to open output stream for $absolutePath")
     return output.asSink()
 }
 
