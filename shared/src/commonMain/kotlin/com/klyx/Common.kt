@@ -7,5 +7,5 @@ fun unimplemented(exception: Throwable? = null): Nothing = throw exception ?: No
 fun runtimeError(message: String): Nothing = throw RuntimeException(message)
 fun unsupported(message: String? = null): Nothing = throw UnsupportedOperationException(message)
 
-fun unreachable(): Nothing = throw IllegalStateException("Unreachable code")
-fun unreachable(message: String): Nothing = throw IllegalStateException(message)
+fun unreachable(): Nothing = unreachable("Unreachable code")
+fun unreachable(message: String): Nothing = error(message)

@@ -56,13 +56,15 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
 
     @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
     DisposableEffect(Unit) {
-        scope.launch { SettingsManager.load() }
         val dispatcher = newSingleThreadContext("Settings")
 
-        scope.launch(Dispatchers.Default) {
-            val settingsFile = Paths.settingsFile.toKxFile()
-            settingsFile.watchAndReload(dispatcher) { SettingsManager.load() }
-        }
+        scope.launch { SettingsManager.load() }
+            .invokeOnCompletion {
+                scope.launch(Dispatchers.Default) {
+                    val settingsFile = Paths.settingsFile.toKxFile()
+                    settingsFile.watchAndReload(dispatcher) { SettingsManager.load() }
+                }
+            }
 
         onDispose { dispatcher.close() }
     }
