@@ -2,6 +2,7 @@ package com.klyx.editor.lsp
 
 import android.content.Context
 import com.klyx.core.Notifier
+import com.klyx.core.backgroundScope
 import com.klyx.core.file.Worktree
 import com.klyx.core.language.LanguageId
 import com.klyx.core.logging.KxLogger
@@ -114,15 +115,13 @@ class LanguageServerClient(
 
                 process = builder.start()
 
-                mainScope.launch {
-                    withContext(Dispatchers.IO) {
-                        try {
-                            process.errorStream.bufferedReader().forEachLine {
-                                logger.error { it.ifEmpty { "-----------------" } }
-                            }
-                        } catch (e: IOException) {
-                            logger.warn(e) { "LSP error stream closed or an error occurred while reading." }
+                backgroundScope.launch {
+                    try {
+                        process.errorStream.bufferedReader().forEachLine {
+                            logger.info { it.ifEmpty { "-----------------" } }
                         }
+                    } catch (e: IOException) {
+                        logger.warn(e) { "LSP error stream closed or an error occurred while reading." }
                     }
                 }
 

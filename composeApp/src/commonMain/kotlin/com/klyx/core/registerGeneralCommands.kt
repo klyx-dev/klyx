@@ -36,6 +36,9 @@ import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
+import io.github.vinceglb.filekit.name
+import io.itsvks.anyhow.onFailure
+import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.launch
 
 @Suppress("ComposableNaming")
@@ -55,8 +58,11 @@ internal fun registerGeneralCommands() {
 
     val fileSaver = rememberFileSaverLauncher { savedFile ->
         if (savedFile != null) {
-            val saved = editorViewModel.saveCurrentAs(savedFile.toKxFile())
-            if (saved) notifier.toast(string(Res.string.notification_saved))
+            editorViewModel.saveCurrentAs(savedFile.toKxFile())
+                .onSuccess { notifier.toast(string(Res.string.notification_saved)) }
+                .onFailure {
+                    notifier.error(string(Res.string.notification_failed_to_save, savedFile.name))
+                }
         }
     }
 
@@ -147,8 +153,9 @@ internal fun registerGeneralCommands() {
                     if (file.path == "/untitled") {
                         fileSaver.launch(file.name)
                     } else {
-                        val saved = editorViewModel.saveCurrent()
-                        if (saved) notifier.toast(string(Res.string.notification_saved))
+                        editorViewModel.saveCurrent()
+                            .onSuccess { notifier.toast(string(Res.string.notification_saved)) }
+                            .onFailure { notifier.error(string(Res.string.notification_failed_to_save, file.name)) }
                     }
                 }
             },

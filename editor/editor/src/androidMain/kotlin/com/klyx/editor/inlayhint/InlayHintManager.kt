@@ -99,13 +99,17 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
     }
 
     fun requestInlayHint(position: CharPosition) {
-        val flow = getOrCreateInlayHintRequestFlow(client.coroutineScope, client.file.uriString)
-        flow.tryEmit(InlayHintRequest(client.editor, position))
+        client.coroutineScope.launch(Dispatchers.IO) {
+            val flow = getOrCreateInlayHintRequestFlow(client.coroutineScope, client.file.uriString)
+            flow.tryEmit(InlayHintRequest(client.editor, position))
+        }
     }
 
     fun requestDocumentColor() {
-        val flow = getOrCreateDocumentColorRequestFlow(client.coroutineScope, client.file)
-        flow.tryEmit(DocumentColorRequest(client.editor, client.file))
+        client.coroutineScope.launch(Dispatchers.IO) {
+            val flow = getOrCreateDocumentColorRequestFlow(client.coroutineScope, client.file)
+            flow.tryEmit(DocumentColorRequest(client.editor, client.file))
+        }
     }
 
     private suspend fun processDocumentColorRequest(request: DocumentColorRequest) {

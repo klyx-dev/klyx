@@ -8,6 +8,7 @@ import com.klyx.core.io.intoPath
 import com.klyx.core.language.BinaryStatus
 import com.klyx.core.language.LanguageRegistry
 import com.klyx.core.language.LspAdapterDelegate
+import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerName
 import com.klyx.core.util.asHashMap
 import kotlinx.io.files.Path
@@ -28,7 +29,17 @@ class LocalLspAdapterDelegate(
         language: LanguageServerName,
         status: BinaryStatus
     ) {
-        //
+        val logger = logger(language)
+
+        when(status) {
+            BinaryStatus.CheckingForUpdate -> logger.progress { "checking for updates" }
+            BinaryStatus.Downloading -> logger.progress { "downloading" }
+            is BinaryStatus.Failed -> logger.error { "[$language] failed: ${status.error}" }
+            BinaryStatus.None -> logger.info { "" }
+            BinaryStatus.Starting -> logger.progress { "starting" }
+            BinaryStatus.Stopped -> logger.info { "" }
+            BinaryStatus.Stopping -> logger.progress { "stopping" }
+        }
     }
 
     override suspend fun languageServerDownloadDir(name: LanguageServerName): Path? {

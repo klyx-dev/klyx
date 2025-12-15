@@ -23,6 +23,7 @@ import com.klyx.core.LocalNotifier
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
+import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toKxFiles
@@ -46,6 +47,9 @@ import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
+import io.github.vinceglb.filekit.name
+import io.itsvks.anyhow.onFailure
+import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.launch
 
 @Composable
@@ -72,8 +76,9 @@ fun FileMenu(
 
     val fileSaver = rememberFileSaverLauncher { file ->
         if (file != null) {
-            val saved = editorViewModel.saveCurrentAs(file.toKxFile())
-            if (saved) notifier.toast(com.klyx.core.util.string(string.notification_saved))
+            editorViewModel.saveCurrentAs(file.toKxFile())
+                .onSuccess { notifier.toast(com.klyx.core.util.string(string.notification_saved)) }
+                .onFailure { notifier.error(com.klyx.core.util.string(string.notification_failed_to_save, file.name)) }
         }
         onDismissRequest()
     }
@@ -183,11 +188,12 @@ fun FileMenu(
                             return@DropdownMenuItem
                         }
 
-                        if (file.path == "/untitled") {
+                        if (file.isKlyxTempFile()) {
                             fileSaver.launch(file.name)
                         } else {
-                            val saved = editorViewModel.saveCurrent()
-                            if (saved) notifier.toast(com.klyx.core.util.string(string.notification_saved))
+                            editorViewModel.saveCurrent()
+                                .onSuccess { notifier.toast(com.klyx.core.util.string(string.notification_saved)) }
+                                .onFailure { notifier.error(com.klyx.core.util.string(string.notification_failed_to_save, file.name)) }
                         }
                         onDismissRequest()
                     },

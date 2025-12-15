@@ -42,12 +42,16 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.util.value
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.res.Res.string
+import com.klyx.res.notification_failed_to_save
 import com.klyx.res.notification_no_active_file
 import com.klyx.res.notification_saved
 import com.klyx.res.settings
 import com.klyx.runner.CodeRunner
 import com.klyx.tab.FileTab
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
+import io.github.vinceglb.filekit.name
+import io.itsvks.anyhow.onFailure
+import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -65,8 +69,9 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
 
     val fileSaver = rememberFileSaverLauncher { file ->
         if (file != null) {
-            val saved = editorViewModel.saveCurrentAs(file.toKxFile())
-            if (saved) notifier.toast(com.klyx.core.util.string(string.notification_saved))
+            editorViewModel.saveCurrentAs(file.toKxFile())
+                .onSuccess { notifier.toast(com.klyx.core.util.string(string.notification_saved)) }
+                .onFailure { notifier.error(com.klyx.core.util.string(string.notification_failed_to_save, file.name)) }
         }
     }
 
@@ -117,8 +122,16 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
                     if (file.path == "/untitled") {
                         fileSaver.launch(file.name)
                     } else {
-                        val saved = editorViewModel.saveCurrent()
-                        if (saved) notifier.toast(string.notification_saved.value)
+                        editorViewModel.saveCurrent()
+                            .onSuccess { notifier.toast(string.notification_saved.value) }
+                            .onFailure {
+                                notifier.error(
+                                    com.klyx.core.util.string(
+                                        string.notification_failed_to_save,
+                                        file.name
+                                    )
+                                )
+                            }
                     }
                 }
             )

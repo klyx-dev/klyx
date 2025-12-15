@@ -29,7 +29,10 @@ import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.language.LanguageName
 import com.klyx.core.language.LanguageRegistry
+import com.klyx.core.settings.SettingsManager
+import com.klyx.core.terminal.ExtraKeys
 import com.klyx.core.theme.LocalIsDarkMode
+import com.klyx.core.toJson
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.viewmodel.EditorViewModel
 import io.github.vinceglb.filekit.FileKit
@@ -54,6 +57,9 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
 
         lifecycleScope.launch(Dispatchers.Default) {
             delay(10000)
+//            println(SettingsManager.defaultSettings.toJson())
+//            println(SettingsManager.settings.value.toJson())
+            println(ExtraKeys.toJson())
 
             println(LanguageRegistry.INSTANCE.state.lspAdapters)
             println(LanguageRegistry.INSTANCE.state.allLspAdapters)

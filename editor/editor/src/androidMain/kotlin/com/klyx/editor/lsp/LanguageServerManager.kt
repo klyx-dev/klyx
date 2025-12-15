@@ -12,6 +12,7 @@ import com.klyx.core.language.LanguageId
 import com.klyx.core.language.LanguageName
 import com.klyx.core.language.LanguageRegistry
 import com.klyx.core.language.LspAdapterDelegate
+import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerBinary
 import com.klyx.core.lsp.LanguageServerBinaryOptions
 import com.klyx.core.lsp.LanguageServerName
@@ -85,7 +86,6 @@ object LanguageServerManager {
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun tryConnectLspIfAvailable(
         worktree: Worktree,
         languageName: LanguageName,
@@ -117,7 +117,7 @@ object LanguageServerManager {
                 allowBinaryDownload = true
             ).bind()
 
-            val client = LanguageServerClient()
+            val client = LanguageServerClient(logger(languageServerName))
             val initializationOptions = adapter.adapter
                 .initializationOptions(delegate).bind()
 
@@ -277,5 +277,5 @@ object LanguageServerManager {
         worktree: Worktree,
         file: KxFile,
         crossinline block: suspend (LanguageServerClient) -> T
-    ) = block(client(worktree, file.languageId))
+    ) = withContext(Dispatchers.Default) { block(client(worktree, file.languageId)) }
 }

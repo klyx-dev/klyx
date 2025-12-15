@@ -186,7 +186,8 @@ fun createInitializeParams(
 
     this.initializationOptions = if (!initializationOptions.isNullOrBlank()) {
         println(initializationOptions)
-        val json = Json.parseToJsonElement(initializationOptions)
-        if (json is JsonObject) json.toMap() else null
+//        val json = Json.parseToJsonElement(initializationOptions)
+//        if (json is JsonObject) json.toMap() else null
+        initializationOptions
     } else null
 }

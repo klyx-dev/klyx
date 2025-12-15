@@ -47,6 +47,7 @@ import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.ui.component.log.LogViewerScreen
 import com.klyx.ui.page.createWelcomePage
 import com.klyx.viewmodel.util.stateInWhileSubscribed
+import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
@@ -434,83 +435,90 @@ class EditorViewModel(
         return _state.value.openTabs.any { it is FileTab && it.isInternal && it.id == tabId }
     }
 
-    fun saveCurrent(): Boolean {
+    fun saveCurrent() = anyhow {
         val current = _state.value
-        val tab = current.openTabs.find { it.id == current.activeTabId } ?: return false
+        val tab = current.openTabs.find { it.id == current.activeTabId } ?: bail("no active tab")
 
-        return if (tab is FileTab) {
+        if (tab is FileTab) {
             val state = tab.editorState
             val file = tab.file
 
-            if (file.path == "untitled") return false
+            if (file.path == "untitled") bail("invalid")
 
-            if (file.canWrite) {
-                when (state) {
-                    is ComposeEditorState -> {
-                        state.state.content.writeToSink(file.sink())
+            viewModelScope.launch(Dispatchers.IO) {
+                if (file.canWrite) {
+                    when (state) {
+                        is ComposeEditorState -> {
+                            state.state.content.writeToSink(file.sink())
+                        }
+
+                        is SoraEditorState -> {
+                            val content by state.state
+                            file.writeText(content)
+                        }
                     }
+                    tab.markAsSaved()
 
-                    is SoraEditorState -> {
-                        val content by state.state
-                        file.writeText(content)
+                    kotlinx.coroutines.withContext(Dispatchers.Default) {
+                        onSaveFile(tab.worktree, file)
+                        EventBus.INSTANCE.post(FileSaveEvent(file, tab.worktree?.rootFile))
                     }
+                } else {
+                    bail("file is not writable")
                 }
-                tab.markAsSaved()
-
-                viewModelScope.launch(Dispatchers.Default) {
-                    onSaveFile(tab.worktree, file)
-                    EventBus.INSTANCE.post(FileSaveEvent(file, tab.worktree?.rootFile))
-                }
-
-                true
-            } else false
-        } else false
+            }
+        } else {
+            bail("invalid state; tab is not FileTab")
+        }
     }
 
-    fun saveCurrentAs(newFile: KxFile): Boolean {
-        val currentTabId = _state.value.activeTabId ?: return false
-        return saveAs(currentTabId, newFile)
+    fun saveCurrentAs(newFile: KxFile) = anyhow {
+        val currentTabId = _state.value.activeTabId ?: bail("no active tab")
+        saveAs(currentTabId, newFile).bind()
     }
 
-    fun saveAs(tabId: TabId, newFile: KxFile): Boolean {
-        val tab = _state.value.openTabs.find { it.id == tabId } ?: return false
+    fun saveAs(tabId: TabId, newFile: KxFile) = anyhow {
+        val tab = _state.value.openTabs.find { it.id == tabId } ?: bail("no tab found with id: $tabId")
 
-        return if (tab is FileTab) {
+        if (tab is FileTab) {
             val editorState = tab.editorState
 
-            try {
-                when (editorState) {
-                    is ComposeEditorState -> {
-                        editorState.state.content.writeToSink(newFile.sink())
-                    }
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    when (editorState) {
+                        is ComposeEditorState -> {
+                            editorState.state.content.writeToSink(newFile.sink())
+                        }
 
-                    is SoraEditorState -> {
-                        val text by editorState.state
-                        newFile.writeText(text)
+                        is SoraEditorState -> {
+                            val text by editorState.state
+                            newFile.writeText(text)
+                        }
                     }
+                } catch (e: Exception) {
+                    notifier.error(e.message.orEmpty())
+                    bail(e)
                 }
-            } catch (e: Exception) {
-                notifier.error(e.message.orEmpty())
-                return false
+
+                val newTab = FileTab(
+                    id = newFile.id,
+                    name = newFile.name,
+                    file = newFile,
+                    worktree = tab.worktree,
+                    editorState = editorState.copy()
+                )
+
+                replaceTab(tab.id, newTab)
+                tab.markAsSaved()
+
+                kotlinx.coroutines.withContext(Dispatchers.Default) {
+                    onSaveFile(tab.worktree, newFile)
+                    EventBus.INSTANCE.post(FileSaveEvent(newFile, tab.worktree?.rootFile))
+                }
             }
-
-            val newTab = FileTab(
-                id = newFile.id,
-                name = newFile.name,
-                file = newFile,
-                worktree = tab.worktree,
-                editorState = editorState.copy()
-            )
-
-            replaceTab(tab.id, newTab)
-            tab.markAsSaved()
-
-            viewModelScope.launch(Dispatchers.Default) {
-                onSaveFile(tab.worktree, newFile)
-                EventBus.INSTANCE.post(FileSaveEvent(newFile, tab.worktree?.rootFile))
-            }
-            true
-        } else false
+        } else {
+            bail("invalid state; tab is not FileTab")
+        }
     }
 
     fun saveAll(): Map<String, Boolean> {

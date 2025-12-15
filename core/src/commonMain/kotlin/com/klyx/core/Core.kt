@@ -15,7 +15,7 @@ fun generateId() = Uuid.random().toHexString()
 expect fun Any?.identityHashCode(): Int
 
 inline fun <reified T> T.toJson() = run {
-    val json = Json { prettyPrint = true }
+    val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false }
     json.encodeToString(this)
 }
 
