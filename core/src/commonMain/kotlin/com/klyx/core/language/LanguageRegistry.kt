@@ -7,13 +7,13 @@ import kotlinx.atomicfu.locks.reentrantLock
 import kotlinx.atomicfu.locks.withLock
 import kotlinx.io.files.Path
 
- data class LanguageRegistryState(
+private data class LanguageRegistryState(
     val lspAdapters: HashMap<LanguageName, MutableList<CachedLspAdapter>> = hashMapOf(),
     val allLspAdapters: HashMap<LanguageServerName, CachedLspAdapter> = hashMapOf()
 )
 
 class LanguageRegistry private constructor(
-     val state: LanguageRegistryState = LanguageRegistryState(),
+    private val state: LanguageRegistryState = LanguageRegistryState(),
     private var languageServerDownloadDir: Path? = null
 ) {
     private val lock = reentrantLock()

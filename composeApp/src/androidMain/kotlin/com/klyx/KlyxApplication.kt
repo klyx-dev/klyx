@@ -10,17 +10,20 @@ import android.util.Log
 import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
 import com.klyx.activities.CrashActivity
-import com.klyx.core.App
+import com.klyx.core.KlyxBuildConfig
+import com.klyx.core.app.App
+import com.klyx.core.app.CrashReport
+import com.klyx.core.app.setupCrashHandler
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.rawFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.io.Paths
 import com.klyx.core.io.logFile
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
+import com.klyx.core.process.Thread
 import com.klyx.core.terminal.klyxBinDir
 import com.klyx.core.terminal.sandboxDir
 import com.klyx.di.commonModule
@@ -29,11 +32,6 @@ import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
-import java.io.FileOutputStream
-import java.io.PrintStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -61,8 +59,11 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
     override fun onCreate() {
         super.onCreate()
         instance = this
-        Thread.setDefaultUncaughtExceptionHandler(::handleUncaughtException)
-        setupStrictModePolicies()
+        setupCrashHandler(::handleUncaughtException)
+
+        if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
+            setupStrictModePolicies()
+        }
 
         initKoin(commonModule) {
             androidLogger()
@@ -71,8 +72,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
         launch { App.init() }
 
-        @Suppress("SimplifyBooleanWithConstants")
-        if (BuildConfig.BUILD_TYPE == "release") {
+        if (!KlyxBuildConfig.IS_DEBUG) {
             LoggerConfig.Default = LoggerConfig(
                 minimumLevel = Level.Info
             )
@@ -170,6 +170,11 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
             writeBytes(assets.open("terminal/$fileName.sh").use { it.readBytes() })
         }
     }
+
+    override fun onTerminate() {
+        super.onTerminate()
+        App.shutdown(reason = "Application terminated.")
+    }
 }
 
 @JvmSynthetic
@@ -181,35 +186,42 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
         return
     }
 
-    MainScope().launch {
-        val file = runCatching { saveLogs(thread, throwable) }.getOrNull()
+    MainScope().launch(Dispatchers.IO) {
+        val report = CrashReport(thread, throwable)
+        val file = runCatching { saveCrashReport(report) }.getOrNull()
         EventBus.INSTANCE.postSync(CrashEvent(thread, throwable, file))
 
         if (thread.name == "main") {
-            Toast.makeText(
-                this@handleUncaughtException,
-                "App Crashed. ${if (file != null) "A crash report was saved." else "Failed to save crash report."}",
-                Toast.LENGTH_LONG
-            ).show()
+            withContext(Dispatchers.Main.immediate) {
+                Toast.makeText(
+                    this@handleUncaughtException,
+                    "App Crashed. ${if (file != null) "A crash report was saved." else "Failed to save crash report."}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
 
-        Log.e("Klyx", file?.readText() ?: buildLogString(thread, throwable))
+        Log.e("Klyx", report.toString())
 
-        startActivity(Intent(this@handleUncaughtException, CrashActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            putExtra(CrashActivity.EXTRA_CRASH_LOG, file?.readText() ?: buildLogString(thread, throwable))
-        })
+        withContext(Dispatchers.Main) {
+            startActivity(Intent(this@handleUncaughtException, CrashActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                putExtra(CrashActivity.EXTRA_CRASH_LOG, report.toString())
+            })
+        }
     }
+
+    App.shutdown("Crash")
 }
 
 @OptIn(ExperimentalTime::class)
-private suspend fun saveLogs(thread: Thread, throwable: Throwable): KxFile? = withContext(Dispatchers.IO) {
+private suspend fun saveCrashReport(report: CrashReport): KxFile? = withContext(Dispatchers.IO) {
     val logFile = Paths.logFile.toKxFile()
     val externalLogFile = android.os.Environment.getExternalStorageDirectory().resolve("klyx/Logs/Klyx.log")
     FileUtils.createFileByDeleteOldFile(externalLogFile)
 
     if (logFile.createNewFile()) {
-        val logString = buildLogString(thread, throwable)
+        val logString = report.toString()
         logFile.writeText(logString)
         externalLogFile.writeText(logString)
         logFile
@@ -217,44 +229,4 @@ private suspend fun saveLogs(thread: Thread, throwable: Throwable): KxFile? = wi
         Log.e("Klyx", "Failed to save crash logs")
         null
     }
-}
-
-private fun buildLogString(thread: Thread, throwable: Throwable): String = buildString {
-    appendLine("=== Crash Log ===")
-    appendLine("Time: ${Date()}")
-
-    val id = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
-        thread.threadId()
-    } else {
-        @Suppress("DEPRECATION")
-        thread.id
-    }
-
-    appendLine("Thread: ${thread.name} (id=$id)")
-    appendLine("Exception: ${throwable::class.qualifiedName}")
-    appendLine("Message: ${throwable.message}")
-    appendLine()
-    appendLine("Stack Trace:")
-    throwable.stackTrace.forEach { trace ->
-        appendLine("\tat $trace")
-    }
-}
-
-@JvmSynthetic
-private fun redirectPrintlnToFile(logFile: KxFile) {
-    val originalOut = System.out
-    val timestampFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.US)
-
-    val fileStream = FileOutputStream(logFile.rawFile(), true)
-    val printStream = object : PrintStream(fileStream, true) {
-        override fun println(x: Any?) {
-            val timestamp = timestampFormat.format(Date())
-            val line = "[$timestamp] $x"
-            super.println(line)
-            originalOut.println(line)
-        }
-    }
-
-    System.setOut(printStream)
-    System.setErr(printStream)
 }

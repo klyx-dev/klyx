@@ -390,7 +390,7 @@ naming:
       - 'mingwX64'
       - 'linuxX64'
   MemberNameEqualsClassName:
-    active: true
+    active: false
     ignoreOverridden: true
   NoNameShadowing:
     active: false

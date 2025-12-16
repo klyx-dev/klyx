@@ -1,8 +1,6 @@
 package com.klyx.core
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.klyx.core.app.Application
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.Json
@@ -19,8 +17,12 @@ inline fun <reified T> T.toJson() = run {
     json.encodeToString(this)
 }
 
-val DefaultScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-inline val backgroundScope get() = DefaultScope
+/**
+ * A delegated property providing access to a background coroutine scope.
+ * This is typically used for non-UI related asynchronous tasks that require
+ * a managed lifecycle tied to the application's background operations.
+ */
+inline val backgroundScope get() = Application.scope
 
 expect val currentThreadName: String
 

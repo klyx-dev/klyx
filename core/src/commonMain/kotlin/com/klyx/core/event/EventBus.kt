@@ -4,15 +4,17 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.klyx.core.atomic.atomicMapOf
+import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
@@ -27,8 +29,16 @@ class EventBus private constructor() {
         val INSTANCE by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) { EventBus() }
     }
 
-    private val eventChannels = atomicMapOf<KClass<*>, Channel<Any>>()
-    private val eventFlows = atomicMapOf<KClass<*>, SharedFlow<Any>>()
+    private val lock = SynchronizedObject()
+    private val eventChannels = hashMapOf<KClass<*>, Channel<Any>>()
+    private val eventFlows = hashMapOf<KClass<*>, SharedFlow<Any>>()
+
+    @PublishedApi
+    internal val globalEvents = MutableSharedFlow<Any>(
+        replay = 0,
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     @PublishedApi
     internal val subscribers = hashMapOf<KClass<*>, Job>()
@@ -45,6 +55,7 @@ class EventBus private constructor() {
      * Post an event to all subscribers
      */
     suspend fun post(event: Any) {
+        globalEvents.emit(event)
         val eventClass = event::class
         getOrCreateChannel(eventClass).send(event)
     }
@@ -53,6 +64,7 @@ class EventBus private constructor() {
      * Post an event synchronously (non-blocking)
      */
     fun postSync(event: Any) {
+        globalEvents.tryEmit(event)
         scope.launch { post(event) }
     }
 
@@ -93,6 +105,13 @@ class EventBus private constructor() {
         return scope.launch(dispatcher) {
             subscribe<T>().collect { onEvent(it) }
         }.also { addSubscriber<T>(it) }
+    }
+
+    inline fun subscribeAll(
+        dispatcher: CoroutineDispatcher = Dispatchers.Default,
+        crossinline onEvent: suspend (Any) -> Unit
+    ): Job = scope.launch(dispatcher) {
+        globalEvents.collect { onEvent(it) }
     }
 
     /**

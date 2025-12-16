@@ -1,5 +1,7 @@
 package com.klyx.platform
 
+import com.klyx.unsupported
+
 expect object PlatformInfo {
     val name: String
     val version: String
@@ -81,14 +83,14 @@ val PlatformInfo.supportsBiometrics: Boolean
  * Platform-specific execution helper
  */
 inline fun <T> platformSpecific(
-    android: () -> T = { throw UnsupportedOperationException("Android not supported") },
-    ios: () -> T = { throw UnsupportedOperationException("iOS not supported") },
-    desktop: () -> T = { throw UnsupportedOperationException("Desktop not supported") },
-    web: () -> T = { throw UnsupportedOperationException("Web not supported") }
+    android: () -> T = { unsupported("Android not supported") },
+    ios: () -> T = { unsupported("iOS not supported") },
+    desktop: () -> T = { unsupported("Desktop not supported") },
+    web: () -> T = { unsupported("Web not supported") }
 ): T = when {
     PlatformInfo.isAndroid -> android()
     PlatformInfo.isIOS -> ios()
     PlatformInfo.isDesktop -> desktop()
     PlatformInfo.isWeb -> web()
-    else -> throw UnsupportedOperationException("Unknown platform")
+    else -> unsupported("Unknown platform")
 }

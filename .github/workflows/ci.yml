@@ -44,6 +44,33 @@ jobs:
       - name: Generate Tree-sitter grammar
         run: ./gradlew generateTsGrammar
       - name: Build Android APK
+        env:
+          CI: true
+          CI_PROVIDER: github
+
+          CI_WORKFLOW: ${{ github.workflow }}
+          CI_JOB: ${{ github.job }}
+          CI_RUN_ID: ${{ github.run_id }}
+          CI_RUN_NUMBER: ${{ github.run_number }}
+          CI_ATTEMPT: ${{ github.run_attempt }}
+          CI_ACTOR: ${{ github.actor }}
+          CI_EVENT: ${{ github.event_name }}
+
+          GIT_COMMIT: ${{ github.sha }}
+          GIT_BRANCH: ${{ github.ref_name }}
+          GIT_REF: ${{ github.ref }}
+          GIT_REF_TYPE: ${{ github.ref_type }}
+          GIT_REPO: ${{ github.repository }}
+          GIT_REPO_OWNER: ${{ github.repository_owner }}
+
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+
+          BUILD_TIMESTAMP: ${{ github.run_started_at }}
+          CI_OS: ${{ runner.os }}
+          CI_ARCH: ${{ runner.arch }}
+
+          ENABLE_STRICT_MODE: false
+          ENABLE_EXPERIMENTAL: true
         run: |
           if ./gradlew tasks --all | grep -q "assembleRelease"; then
             ./gradlew assembleRelease

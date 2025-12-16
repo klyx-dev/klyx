@@ -1,6 +1,6 @@
 package com.klyx.core.extension
 
-import com.klyx.core.DefaultScope
+import com.klyx.core.backgroundScope
 import com.klyx.core.extension.internal.wasm.readCommandResult
 import com.klyx.core.extension.util.readResult
 import com.klyx.core.extension.util.readStringOption
@@ -40,7 +40,7 @@ class WasmExtension(
      * Uninitializes the extension.
      */
     fun dispose() {
-        DefaultScope.launch {
+        backgroundScope.launch {
             instance.call("uninstall")
         }.invokeOnCompletion {
             close()

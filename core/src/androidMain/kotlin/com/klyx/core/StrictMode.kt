@@ -14,11 +14,15 @@ import androidx.annotation.MainThread
  */
 @MainThread
 inline fun <T> allowDiskReads(block: () -> T): T {
-    val old = StrictMode.allowThreadDiskReads()
-    return try {
-        block()
-    } finally {
-        StrictMode.setThreadPolicy(old)
+    if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
+        val old = StrictMode.allowThreadDiskReads()
+        return try {
+            block()
+        } finally {
+            StrictMode.setThreadPolicy(old)
+        }
+    } else {
+        return block()
     }
 }
 
@@ -33,11 +37,15 @@ inline fun <T> allowDiskReads(block: () -> T): T {
  */
 @MainThread
 inline fun <T> allowDiskWrites(block: () -> T): T {
-    val old = StrictMode.allowThreadDiskWrites()
-    return try {
-        block()
-    } finally {
-        StrictMode.setThreadPolicy(old)
+    if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
+        val old = StrictMode.allowThreadDiskWrites()
+        return try {
+            block()
+        } finally {
+            StrictMode.setThreadPolicy(old)
+        }
+    } else {
+        return block()
     }
 }
 
@@ -52,11 +60,15 @@ inline fun <T> allowDiskWrites(block: () -> T): T {
  */
 @MainThread
 inline fun <T> allowDiskReadsWrites(block: () -> T): T {
-    val old = StrictMode.allowThreadDiskWrites()
-    StrictMode.allowThreadDiskReads()
-    return try {
-        block()
-    } finally {
-        StrictMode.setThreadPolicy(old)
+    if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
+        val old = StrictMode.allowThreadDiskWrites()
+        StrictMode.allowThreadDiskReads()
+        return try {
+            block()
+        } finally {
+            StrictMode.setThreadPolicy(old)
+        }
+    } else {
+        return block()
     }
 }
