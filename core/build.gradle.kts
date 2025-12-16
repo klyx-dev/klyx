@@ -195,7 +195,7 @@ buildkonfig {
         buildConfigField(
             Type.LONG,
             "BUILD_TIMESTAMP",
-            (env("BUILD_TIMESTAMP") ?: System.currentTimeMillis().toString()),
+            System.currentTimeMillis().toString(),
             const = true
         )
 
@@ -204,7 +204,17 @@ buildkonfig {
 
         buildConfigField(Type.STRING, "KOTLIN_VERSION", libs.versions.kotlin.get(), const = true)
 
-        buildConfigField(Type.BOOLEAN, "ENABLE_STRICT_MODE", (env("ENABLE_STRICT_MODE") != "false").toString(), const = true)
-        buildConfigField(Type.BOOLEAN, "ENABLE_EXPERIMENTAL", (env("ENABLE_EXPERIMENTAL") == "true").toString(), const = true)
+        buildConfigField(
+            Type.BOOLEAN,
+            "ENABLE_STRICT_MODE",
+            (env("ENABLE_STRICT_MODE") != "false").toString(),
+            const = true
+        )
+        buildConfigField(
+            Type.BOOLEAN,
+            "ENABLE_EXPERIMENTAL",
+            (env("ENABLE_EXPERIMENTAL") == "true").toString(),
+            const = true
+        )
     }
 }

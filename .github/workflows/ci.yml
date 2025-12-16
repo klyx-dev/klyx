@@ -65,7 +65,6 @@ jobs:
 
           IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
 
-          BUILD_TIMESTAMP: ${{ github.run_started_at }}
           CI_OS: ${{ runner.os }}
           CI_ARCH: ${{ runner.arch }}
 
