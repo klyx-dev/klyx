@@ -1,39 +1,13 @@
-import com.klyx.Configs
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.kmp.library)
-    alias(libs.plugins.compose.multiplatform)
-    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.klyx.multiplatform)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlinx.atomicfu)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 kotlin {
-
-    jvmToolchain(21)
-
-    androidLibrary {
-        namespace = "com.klyx.extension"
-        compileSdk = Configs.Android.COMPILE_SDK_VERSION
-        minSdk = Configs.Android.MIN_SDK_VERSION
-    }
-
-    jvm()
-
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "extensionApi"
-        }
-    }
-
-    applyDefaultHierarchyTemplate()
+    android { namespace = "com.klyx.extension" }
 
     sourceSets {
         val commonJvmAndroid by creating {
@@ -48,11 +22,6 @@ kotlin {
         jvmMain.get().dependsOn(commonJvmAndroid)
 
         commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-
             implementation(libs.kotlinx.datetime)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
@@ -60,10 +29,6 @@ kotlin {
             implementation(projects.core)
             implementation(projects.shared)
             implementation(projects.wasm)
-        }
-
-        commonTest.dependencies {
-            implementation(libs.kotlin.test)
         }
 
         androidMain.dependencies {

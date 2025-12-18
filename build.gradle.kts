@@ -11,27 +11,18 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.multiplatform) apply false
+    alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.android.kmp.library) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlinx.atomicfu) apply false
+    alias(libs.plugins.kotest) apply false
     alias(libs.plugins.detekt)
+    alias(libs.plugins.klyx.root)
 }
 
 allprojects {
     apply {
         plugin("io.gitlab.arturbosch.detekt")
-    }
-
-    plugins.withId("org.jetbrains.kotlin.multiplatform") {
-        extensions.configure<KotlinMultiplatformExtension> {
-            sourceSets.matching { it.name == "commonMain" }.all {
-                languageSettings {
-                    compilerOptions {
-                        freeCompilerArgs.addAll("-Xexpect-actual-classes", "-Xcontext-parameters")
-                    }
-                }
-            }
-        }
     }
 
     detekt {

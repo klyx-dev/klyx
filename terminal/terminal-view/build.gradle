@@ -1,9 +1,7 @@
-import com.klyx.Configs
-
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion Configs.Android.COMPILE_SDK_VERSION
+    compileSdkVersion 36
     namespace "com.termux.view"
 
     dependencies {
@@ -12,7 +10,7 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion Configs.Android.MIN_SDK_VERSION
+        minSdkVersion 26
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
 

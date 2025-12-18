@@ -5,6 +5,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     includeBuild("ktreesitter-plugin")
+    includeBuild("build-logic")
 
     repositories {
         google {
@@ -38,7 +39,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-include(":composeApp")
+include(":klyxApp", ":androidApp")
 include(":shared")
 include(":core")
 include(":mcp")

@@ -236,7 +236,7 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
         }
     }
 
-    suspend fun npmInstallPackages(directory: Path, packages: Map<String, String>) = anyhow {
+    suspend fun npmInstallPackages(directory: Path, packages: Map<String, String>): AnyhowResult<Unit> = anyhow {
         if (packages.isEmpty()) return anyhow.ok(Unit)
 
         val packages = packages.map { (name, version) -> "$name@$version" }

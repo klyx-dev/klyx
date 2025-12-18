@@ -1,5 +1,5 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.klyx.jvmLibrary)
 }
 
 dependencies {

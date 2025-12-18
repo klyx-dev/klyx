@@ -62,7 +62,7 @@ class KxProcess @PublishedApi internal constructor(internal val builder: KxProce
 
     fun spawn(): KxProcess {
         if (!isSpawned) {
-            process = builder.spawn()
+            process = builder.createProcess()
         }
         return this
     }
@@ -73,10 +73,10 @@ class KxProcess @PublishedApi internal constructor(internal val builder: KxProce
     fun pid() = withProcess { pid() }
 
     suspend fun output() =
-        withContext(Dispatchers.Default) { builder.output { timeoutMillis = 5000 } }
+        withContext(Dispatchers.Default) { builder.createOutput { timeoutMillis = 5000 } }
 
     suspend fun output(block: Output.Options.Builder.() -> Unit) =
-        withContext(Dispatchers.Default) { builder.output(block) }
+        withContext(Dispatchers.Default) { builder.createOutput(block) }
 
     suspend fun waitFor() = withProcess { waitForAsync() }
     suspend fun waitFor(duration: Duration) = withProcess { waitForAsync(duration) }

@@ -1,32 +1,18 @@
-import com.klyx.Configs
-
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.compose.multiplatform)
-    alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.klyx.multiplatform)
+    alias(libs.plugins.klyx.multiplatform.compose)
     alias(libs.plugins.kotlinx.atomicfu)
 }
 
 kotlin {
+    android {
+        namespace = "com.klyx.editor"
 
-    jvmToolchain(21)
-
-    androidTarget()
-    jvm()
-
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach {
-        it.binaries.framework {
-            baseName = "editor"
+        @Suppress("UnstableApiUsage")
+        androidResources {
+            enable = true
         }
     }
-
-    applyDefaultHierarchyTemplate()
 
     sourceSets {
         val nonAndroidMain by creating {
@@ -41,13 +27,8 @@ kotlin {
                 implementation(libs.koin.core)
                 implementation(libs.koin.compose)
 
-                implementation(libs.compose.runtime)
-                implementation(libs.compose.foundation)
-                implementation(libs.compose.material3)
                 implementation(libs.compose.material.icons.extended)
-                implementation(libs.compose.ui)
                 implementation(libs.compose.components.resources)
-                implementation(libs.compose.ui.tooling.preview)
 
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtime.compose)
@@ -66,13 +47,6 @@ kotlin {
 //                rootProject.project("tree-sitter").subprojects.forEach {
 //                    implementation(project(":tree-sitter:${it.name}"))
 //                }
-            }
-        }
-
-        commonTest {
-            dependencies {
-                implementation(libs.kotlin.test)
-                implementation(libs.kotlinx.coroutines.test)
             }
         }
 
@@ -105,38 +79,6 @@ kotlin {
                 implementation(libs.jetbrains.skiko)
             }
         }
-    }
-}
-
-android {
-    namespace = "com.klyx.editor"
-    compileSdk = Configs.Android.COMPILE_SDK_VERSION
-
-    defaultConfig {
-        minSdk = Configs.Android.MIN_SDK_VERSION
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles("consumer-rules.pro")
-    }
-
-    buildTypes {
-        release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
-        }
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
-    }
-
-    buildFeatures {
-        compose = true
-        viewBinding = true
     }
 }
 

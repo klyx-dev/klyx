@@ -7,6 +7,8 @@
 
 Klyx is a lightweight, high-performance code editor built for Android. It provides a seamless coding experience on mobile devices with powerful features similar to desktop code editors like [Zed](https://zed.dev), but optimized specifically for Android.
 
+> **Alpha Software** – Klyx is under active development. APIs may change between releases.
+
 ## Features
 
 - [x] Syntax Highlighting

@@ -1,14 +1,12 @@
-import com.klyx.Configs
-
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion Configs.Android.COMPILE_SDK_VERSION
+    compileSdkVersion 36
     ndkVersion = "28.0.13004108"
     namespace = "com.termux.terminal"
 
     defaultConfig {
-        minSdkVersion Configs.Android.MIN_SDK_VERSION
+        minSdkVersion 26
 
         externalNativeBuild {
             ndkBuild {
