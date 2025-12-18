@@ -2,10 +2,10 @@
 # AGP and tools should be updated together
 androidGradlePlugin = "8.12.0"
 androidTools = "31.13.2"
-androidx-activity = "1.12.1"
+androidx-activity = "1.12.2"
 androidx-core = "1.17.0"
-androidx-lifecycle = "2.10.0-alpha06"
-androidx-adaptive = "1.3.0-alpha02"
+androidx-lifecycle = "2.10.0-alpha07"
+androidx-adaptive = "1.3.0-alpha03"
 androidxLintGradle = "1.0.0-alpha05"
 anyhowkt = "1.0.1"
 chasm = "1.2.0"
@@ -44,10 +44,10 @@ espressoCore = "3.7.0"
 ksp = "2.3.3"
 detekt = "1.23.8"
 filekit = "0.12.0"
-arrow = "2.2.0"
+arrow = "2.2.1.1"
 runner = "1.7.0"
 core = "1.7.0"
-kotest = "6.0.5"
+kotest = "6.0.7"
 compose-material3 = "1.10.0-alpha05"
 androidx-nav3 = "1.0.0-alpha06"
 jetbrains-skiko = "0.9.37.3"
@@ -168,7 +168,6 @@ kotlinx-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version = "0.30.0-be
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
-buildkonfig = { id = "com.codingfeline.buildkonfig", version.ref = "buildkonfig" }
 
 # Plugins defined by this project
 klyx-android-application = { id = "klyx.android.application" }

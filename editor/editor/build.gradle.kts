@@ -79,6 +79,10 @@ kotlin {
                 implementation(libs.jetbrains.skiko)
             }
         }
+
+        commonTest.dependencies {
+            implementation(libs.kotlinx.coroutines.test)
+        }
     }
 }
 

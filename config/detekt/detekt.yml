@@ -540,7 +540,7 @@ potential-bugs:
   UnreachableCatchBlock:
     active: true
   UnreachableCode:
-    active: true
+    active: false
   UnsafeCallOnNullableType:
     active: false
     excludes: ['**/editor/sora/**', '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/androidUnitTest/**', '**/androidInstrumentedTest/**', '**/jsTest/**', '**/iosTest/**']

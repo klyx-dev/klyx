@@ -7,8 +7,8 @@ import androidx.compose.ui.window.rememberWindowState
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.EventBus
 import com.klyx.di.commonModule
-import com.klyx.res.Res
-import com.klyx.res.klyx_logo
+import com.klyx.resources.Res
+import com.klyx.resources.klyx_logo
 import org.jetbrains.compose.resources.painterResource
 
 fun main() {
