@@ -27,8 +27,8 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
 
             implementation(projects.core)
-            implementation(projects.shared)
             implementation(projects.wasm)
+            implementation(projects.feature.extension)
         }
 
         androidMain.dependencies {

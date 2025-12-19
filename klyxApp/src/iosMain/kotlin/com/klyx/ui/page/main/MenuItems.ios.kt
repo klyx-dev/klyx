@@ -1,7 +1,7 @@
 package com.klyx.ui.page.main
 
 import com.klyx.core.PlatformContext
-import com.klyx.unsupported
+import com.klyx.core.unsupported
 import kotlin.system.exitProcess
 
 internal actual fun openNewWindow(context: PlatformContext) {

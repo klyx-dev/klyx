@@ -73,12 +73,12 @@ kotlin {
 
             implementation(libs.semver)
 
-            api(projects.shared)
             api(projects.core)
             api(projects.editor.editor)
             api(projects.extensionApi)
             api(projects.wasm)
-            api(projects.mcp)
+
+            api(projects.feature.mcp)
         }
 
         desktopMain.dependencies {

@@ -1,14 +1,12 @@
 package com.klyx.extension
 
 import com.klyx.core.extension.Extension
-import com.klyx.core.extension.WasmExtension
 import com.klyx.core.file.source
 import com.klyx.core.io.Paths
 import com.klyx.core.io.homeDir
 import com.klyx.core.io.root
 import com.klyx.core.language.LanguageName
 import com.klyx.core.language.LanguageRegistry
-import com.klyx.core.language.extension.ExtensionLspAdapter
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.theme.ThemeManager

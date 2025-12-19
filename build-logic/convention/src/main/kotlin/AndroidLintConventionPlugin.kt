@@ -1,4 +1,5 @@
 import com.android.build.api.dsl.ApplicationExtension
+import com.android.build.api.dsl.LibraryExtension
 import com.android.build.api.dsl.Lint
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -10,7 +11,7 @@ class AndroidLintConventionPlugin : Plugin<Project> {
         with(target) {
             when {
                 pluginManager.hasPlugin("com.android.application") -> configure<ApplicationExtension> { lint(Lint::configure) }
-                pluginManager.hasPlugin("com.android.library") -> configure<ApplicationExtension> { lint(Lint::configure) }
+                pluginManager.hasPlugin("com.android.library") -> configure<LibraryExtension> { lint(Lint::configure) }
                 else -> {
                     apply(plugin = "com.android.lint")
                     configure<Lint>(Lint::configure)

@@ -30,11 +30,11 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.klyx.core.GitHub
 import com.klyx.core.clipboard.clipEntryOf
+import com.klyx.core.internal.platform.PlatformInfo
+import com.klyx.core.platform.currentOs
 import com.klyx.core.ui.component.FilledButtonWithIcon
 import com.klyx.core.ui.component.OutlinedButtonChip
 import com.klyx.core.ui.component.OutlinedButtonWithIcon
-import com.klyx.platform
-import com.klyx.platform.PlatformInfo
 import com.klyx.resources.Res
 import com.klyx.resources.release
 import kotlinx.coroutines.launch
@@ -50,7 +50,7 @@ fun InfoDialog(onDismissRequest: () -> Unit) {
         buildString {
             appendLine("Klyx | ${PlatformInfo.appVersion} (${PlatformInfo.buildNumber})")
             appendLine("${PlatformInfo.name} ${PlatformInfo.version} | ${PlatformInfo.deviceModel}")
-            appendLine("${platform().os} | ${PlatformInfo.architecture}")
+            appendLine("${currentOs()} | ${PlatformInfo.architecture}")
         }
     }
 

@@ -1,6 +1,6 @@
 package com.klyx.core.process
 
-import com.klyx.unsupported
+import com.klyx.core.unsupported
 import kotlinx.io.files.Path
 
 actual val SystemPathSeparator: Char = ':'

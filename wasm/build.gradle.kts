@@ -26,7 +26,7 @@ kotlin {
                 implementation(libs.kotlinx.io.core)
                 implementation(libs.anyhowkt)
 
-                implementation(projects.shared)
+                implementation(projects.core)
             }
         }
 

@@ -28,7 +28,7 @@ import com.klyx.core.LocalNotifier
 import com.klyx.core.clipboard.clipEntryOf
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceItem
-import com.klyx.platform.PlatformInfo
+import com.klyx.core.internal.platform.PlatformInfo
 import com.klyx.resources.Res
 import com.klyx.resources.about
 import com.klyx.resources.readme

@@ -16,8 +16,8 @@ import com.klyx.core.ContextHolder
 import com.klyx.core.logging.log
 import com.klyx.core.terminal.SAFUtils.getDocumentIdForUri
 import com.klyx.core.terminal.SAFUtils.getFileForDocumentId
-import com.klyx.unimplemented
-import com.klyx.unsupported
+import com.klyx.core.unimplemented
+import com.klyx.core.unsupported
 import java.io.BufferedInputStream
 import java.io.BufferedReader
 import java.io.File

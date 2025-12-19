@@ -51,12 +51,11 @@ kotlin {
                 api(libs.arrow.core)
                 api(libs.arrow.fx.coroutines)
 
-                api(libs.kfswatch)
-                implementation(libs.semver)
+                implementation(libs.kfswatch)
+                api(libs.semver)
                 implementation(libs.multiplatform.settings.no.arg)
 
-                implementation(projects.shared)
-                implementation(projects.wasm)
+                //implementation(projects.wasm)
             }
         }
 

@@ -2,7 +2,7 @@
 
 package com.klyx.wasm.internal
 
-import com.klyx.pointer.Pointer
+import com.klyx.core.internal.pointer.Pointer
 
 /** Returns the [Float] value corresponding to a given bit representation. */
 fun floatFromBits(bits: Int): Float = Float.fromBits(bits)

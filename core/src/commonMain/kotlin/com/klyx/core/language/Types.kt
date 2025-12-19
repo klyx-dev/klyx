@@ -1,10 +1,12 @@
 package com.klyx.core.language
 
+import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline
 
 typealias LanguageId = String
 
 @JvmInline
+@Serializable
 value class LanguageName(val value: String) : CharSequence by value {
     override fun toString(): String = value
 

@@ -10,7 +10,6 @@ import com.klyx.editor.compose.moveCursorAtEndOfLine
 import com.klyx.editor.compose.moveCursorAtStartOfLine
 import com.klyx.editor.compose.text.KeyCommand
 import com.klyx.editor.compose.text.platformDefaultKeyMapping
-import com.klyx.lineSeparator
 
 internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
     if (event.type != KeyEventType.KeyDown) return
@@ -62,7 +61,7 @@ internal fun CodeEditorState.handleKeyEvent(event: KeyEvent) {
         KeyCommand.SELECT_LINE_LEFT -> {}
         KeyCommand.SELECT_LINE_RIGHT -> {}
         KeyCommand.DESELECT -> collapseSelection()
-        KeyCommand.NEW_LINE -> insert(lineSeparator)
+        KeyCommand.NEW_LINE -> insert("\n")
         KeyCommand.TAB -> insert("    ")
         KeyCommand.CHARACTER_PALETTE -> {}
 

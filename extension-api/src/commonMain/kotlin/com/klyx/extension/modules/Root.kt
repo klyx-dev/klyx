@@ -24,9 +24,9 @@ import com.klyx.extension.api.parseSettingsLocation
 import com.klyx.extension.internal.asOption
 import com.klyx.extension.internal.toWasmOption
 import com.klyx.extension.internal.toWasmResult
-import com.klyx.pointer.asPointer
-import com.klyx.pointer.dropPtr
-import com.klyx.pointer.value
+import com.klyx.core.internal.pointer.asPointer
+import com.klyx.core.internal.pointer.dropPtr
+import com.klyx.core.internal.pointer.value
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction

@@ -2,9 +2,9 @@
 
 package com.klyx.extension.modules
 
-import com.klyx.core.extension.internal.wasm.Output
 import com.klyx.core.process.systemProcess
 import com.klyx.extension.internal.toWasmOutput
+import com.klyx.extension.internal.wasm.Output
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction

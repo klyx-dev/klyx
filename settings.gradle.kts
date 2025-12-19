@@ -40,9 +40,7 @@ plugins {
 }
 
 include(":klyxApp", ":androidApp")
-include(":shared")
 include(":core")
-include(":mcp")
 include(
     ":editor:editor",
     ":editor:tree-sitter"
@@ -54,6 +52,10 @@ include(
     ":terminal:terminal-emulator",
     ":terminal:termux-shared"
 )
+
+include(":feature:mcp")
+include(":feature:lsp")
+include(":feature:extension")
 
 //file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
 //    include(":tree-sitter:${it.name}")

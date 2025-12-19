@@ -1,6 +1,6 @@
 package com.klyx.wasm
 
-import com.klyx.borrow.ref
+import com.klyx.core.internal.borrow.ref
 import com.klyx.wasm.internal.InternalExperimentalWasmApi
 import com.klyx.wasm.internal.asExecutionValue
 import com.klyx.wasm.internal.toUtf8ByteArray

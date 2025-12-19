@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.klyx.core.extension.ExtensionFilter
-import com.klyx.spacedName
+import com.klyx.core.spacedName
 
 @Composable
 fun ExtensionFilterButtons(

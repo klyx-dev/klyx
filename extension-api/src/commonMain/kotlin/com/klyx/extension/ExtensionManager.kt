@@ -3,7 +3,6 @@ package com.klyx.extension
 import androidx.compose.runtime.mutableStateListOf
 import com.klyx.core.extension.Extension
 import com.klyx.core.extension.ExtensionInfo
-import com.klyx.core.extension.WasmExtension
 import com.klyx.core.extension.parseExtension
 import com.klyx.core.extension.parseToml
 import com.klyx.core.file.KxFile

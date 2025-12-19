@@ -2,15 +2,15 @@
 
 package com.klyx.extension.modules
 
-import com.klyx.borrow.ref
+import com.klyx.core.internal.borrow.ref
 import com.klyx.extension.api.http.HttpResponseStream
 import com.klyx.extension.api.http.RedirectPolicy
 import com.klyx.extension.api.http.parseHttpRequest
 import com.klyx.extension.api.http.toExtensionHttpResponse
 import com.klyx.extension.api.http.toKtorHttpMethod
-import com.klyx.pointer.asPointer
-import com.klyx.pointer.dropPtr
-import com.klyx.pointer.value
+import com.klyx.core.internal.pointer.asPointer
+import com.klyx.core.internal.pointer.dropPtr
+import com.klyx.core.internal.pointer.value
 import com.klyx.wasm.ExperimentalWasmApi
 import com.klyx.wasm.WasmMemory
 import com.klyx.wasm.annotations.HostFunction

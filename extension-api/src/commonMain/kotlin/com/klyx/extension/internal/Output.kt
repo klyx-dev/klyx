@@ -14,7 +14,7 @@ data class Output(
 
 @OptIn(ExperimentalWasmApi::class)
 context(memory: WasmMemory)
-fun Output.toWasmOutput() = com.klyx.core.extension.internal.wasm.Output(
+fun Output.toWasmOutput() = com.klyx.extension.internal.wasm.Output(
     status = Some(status.wasm),
     stdout = stdout.asWasmU8Array(),
     stderr = stderr.asWasmU8Array()
