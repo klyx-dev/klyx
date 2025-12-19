@@ -42,7 +42,6 @@ sora-editor = "0.24.3"
 lsp4j = "0.24.0"
 espressoCore = "3.7.0"
 ksp = "2.3.3"
-detekt = "1.23.8"
 filekit = "0.12.0"
 arrow = "2.2.1.1"
 runner = "1.7.0"
@@ -166,7 +165,6 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlinx-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version = "0.30.0-beta" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
 
 # Plugins defined by this project

@@ -54,7 +54,3 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
         dependsOn("kspCommonMainKotlinMetadata")
     }
 }
-
-tasks.withType<io.gitlab.arturbosch.detekt.Detekt>().configureEach {
-    dependsOn("kspCommonMainKotlinMetadata")
-}

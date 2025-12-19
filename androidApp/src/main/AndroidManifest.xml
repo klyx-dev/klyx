@@ -20,7 +20,7 @@
         android:maxSdkVersion="29" />
 
     <application
-        android:name=".KlyxApplication"
+        android:name="com.klyx.KlyxApplication"
         android:allowBackup="true"
         android:appCategory="productivity"
         android:enableOnBackInvokedCallback="true"
@@ -34,7 +34,7 @@
         tools:targetApi="33">
 
         <activity
-            android:name=".activities.MainActivity"
+            android:name="com.klyx.activities.MainActivity"
             android:alwaysRetainTaskState="true"
             android:configChanges="orientation"
             android:exported="true"
@@ -67,15 +67,15 @@
         </activity>
 
         <activity
-            android:name=".activities.TestActivity"
+            android:name="com.klyx.activities.TestActivity"
             android:exported="true" />
 
         <activity
-            android:name=".activities.CrashActivity"
+            android:name="com.klyx.activities.CrashActivity"
             android:exported="false" />
 
         <activity
-            android:name=".activities.TerminalActivity"
+            android:name="com.klyx.activities.TerminalActivity"
             android:exported="false" />
 
         <profileable
@@ -105,7 +105,7 @@
         </provider>
 
         <service
-            android:name=".terminal.service.SessionService"
+            android:name="com.klyx.terminal.service.SessionService"
             android:foregroundServiceType="specialUse" />
 
     </application>

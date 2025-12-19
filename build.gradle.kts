@@ -1,4 +1,3 @@
-import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 
 plugins {
@@ -16,27 +15,7 @@ plugins {
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlinx.atomicfu) apply false
     alias(libs.plugins.kotest) apply false
-    alias(libs.plugins.detekt)
     alias(libs.plugins.klyx.root)
-}
-
-allprojects {
-    apply {
-        plugin("io.gitlab.arturbosch.detekt")
-    }
-
-    detekt {
-        config.from(rootProject.files("config/detekt/detekt.yml"))
-        buildUponDefaultConfig = true
-        ignoreFailures = false
-    }
-
-    tasks.withType<Detekt>().configureEach {
-        exclude("**/build/**")
-        exclude {
-            it.file.relativeTo(projectDir).startsWith("build")
-        }
-    }
 }
 
 tasks.register("printTargets") {
@@ -52,12 +31,6 @@ tasks.register("printTargets") {
             }
         }
         println(targets.joinToString(","))
-    }
-}
-
-tasks.register("detektAll") {
-    allprojects {
-        this@register.dependsOn(tasks.withType<Detekt>())
     }
 }
 
