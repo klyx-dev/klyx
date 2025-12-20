@@ -3,7 +3,7 @@ plugins {
 }
 
 kotlin {
-    android { namespace = "com.klyx.lsp" }
+    android { namespace = "com.klyx.lsp.api" }
 
     sourceSets {
         val commonMain by getting {

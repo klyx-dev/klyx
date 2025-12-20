@@ -54,8 +54,6 @@ kotlin {
                 implementation(libs.kfswatch)
                 api(libs.semver)
                 implementation(libs.multiplatform.settings.no.arg)
-
-                //implementation(projects.wasm)
             }
         }
 

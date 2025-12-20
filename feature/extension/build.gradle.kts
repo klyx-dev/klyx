@@ -12,7 +12,7 @@ kotlin {
 
                 implementation(projects.core)
                 implementation(projects.wasm)
-                implementation(projects.feature.lsp)
+                implementation(projects.lsp.api)
             }
         }
     }

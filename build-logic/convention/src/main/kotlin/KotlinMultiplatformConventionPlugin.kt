@@ -45,6 +45,10 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
                 applyDefaultHierarchyTemplate()
 
                 sourceSets {
+                    commonMain.dependencies {
+                        implementation(libs.findLibrary("kotlinx-coroutines-core").get())
+                    }
+
                     commonTest.dependencies {
                         implementation(libs.findLibrary("kotlin-test").get())
                         implementation(libs.findLibrary("kotest-framework-engine").get())
