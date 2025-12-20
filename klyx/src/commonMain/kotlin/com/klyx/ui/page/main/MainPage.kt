@@ -129,7 +129,7 @@ fun MainPage(modifier: Modifier = Modifier) {
     WorkspaceDrawer(editorVM = editorViewModel, klyxVM = klyxViewModel) {
         val drawerState = LocalDrawerState.current
 
-        val openDrawerIfClosed = @IgnorableReturnValue {
+        val openDrawerIfClosed = fun() {
             scope.launch {
                 if (drawerState.isClosed) drawerState.open()
             }

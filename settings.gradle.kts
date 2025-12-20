@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-rootProject.name = "Klyx"
+rootProject.name = "KlyxEditor"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
@@ -39,7 +39,7 @@ plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-include(":klyxApp", ":androidApp")
+include(":klyx", ":androidApp")
 include(":core")
 include(
     ":editor:editor",

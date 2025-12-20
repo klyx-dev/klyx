@@ -29,5 +29,5 @@ android {
 dependencies {
     debugImplementation(libs.compose.ui.tooling.preview)
 
-    implementation(projects.klyxApp)
+    implementation(projects.klyx)
 }

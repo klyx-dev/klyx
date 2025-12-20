@@ -1119,110 +1119,112 @@ internal class PieceTreeBase {
         return result
     }
 
-    fun insert(offset: Int, text: String, lineBreakNormalized: Boolean = false) = lock.withLock {
-        this.lineBreakNormalized = this.lineBreakNormalized && lineBreakNormalized
-        this.lastVisitedLine.lineNumber = 0
-        this.lastVisitedLine.value = ""
+    fun insert(offset: Int, text: String, lineBreakNormalized: Boolean = false) {
+        lock.withLock {
+            this.lineBreakNormalized = this.lineBreakNormalized && lineBreakNormalized
+            this.lastVisitedLine.lineNumber = 0
+            this.lastVisitedLine.value = ""
 
-        var value = text
+            var value = text
 
-        if (root !== Sentinel) {
-            val (node, remainder, nodeStartOffset) = nodeAt(offset)
-            val piece = node.piece
-            val bufferIndex = piece.bufferIndex
-            val insertPosInBuffer = node.positionInBuffer(remainder)
-            if (node.piece.bufferIndex == 0 &&
-                piece.end.line == lastChangeBufferPosition.line &&
-                piece.end.column == lastChangeBufferPosition.column &&
-                (nodeStartOffset + piece.length == offset) &&
-                value.length < AverageBufferSize
-            ) {
-                // changed buffer
-                node.append(value)
-                computeBufferMetadata()
-                return@insert
-            }
-
-            if (nodeStartOffset == offset) {
-                node.insertContentLeft(value)
-                searchCache.validate(offset)
-            } else if (nodeStartOffset + node.piece.length > offset) {
-                // we are inserting into the middle of a node.
-                val nodesToDel = mutableListOf<TreeNode>()
-                var newRightPiece = Piece(
-                    bufferIndex = piece.bufferIndex,
-                    start = insertPosInBuffer,
-                    end = piece.end,
-                    lineFeedCnt = getLineFeedCnt(piece.bufferIndex, insertPosInBuffer, piece.end),
-                    length = offsetInBuffer(bufferIndex, piece.end) - offsetInBuffer(bufferIndex, insertPosInBuffer)
-                )
-
-                if (shouldCheckCRLF() && value.endWithCR()) {
-                    val headOfRight = node.charCodeAt(remainder)
-                    /** \n */
-                    if (headOfRight == CharCode.LineFeed) {
-                        val newStart = BufferCursor(newRightPiece.start.line + 1, 0)
-                        newRightPiece = Piece(
-                            bufferIndex = newRightPiece.bufferIndex,
-                            start = newStart,
-                            end = newRightPiece.end,
-                            lineFeedCnt = getLineFeedCnt(
-                                newRightPiece.bufferIndex,
-                                newStart,
-                                newRightPiece.end
-                            ),
-                            length = newRightPiece.length - 1
-                        )
-
-                        value += "\n"
-                    }
+            if (root !== Sentinel) {
+                val (node, remainder, nodeStartOffset) = nodeAt(offset)
+                val piece = node.piece
+                val bufferIndex = piece.bufferIndex
+                val insertPosInBuffer = node.positionInBuffer(remainder)
+                if (node.piece.bufferIndex == 0 &&
+                    piece.end.line == lastChangeBufferPosition.line &&
+                    piece.end.column == lastChangeBufferPosition.column &&
+                    (nodeStartOffset + piece.length == offset) &&
+                    value.length < AverageBufferSize
+                ) {
+                    // changed buffer
+                    node.append(value)
+                    computeBufferMetadata()
+                    return
                 }
 
-                // reuse node for content before insertion point.
-                if (shouldCheckCRLF() && value.startWithLF()) {
-                    val tailOfLeft = node.charCodeAt(remainder - 1)
-                    /** \r */
-                    if (tailOfLeft == CharCode.CarriageReturn) {
-                        val previousPos = node.positionInBuffer(remainder - 1)
-                        node.deleteTail(previousPos)
-                        value = '\r' + value
+                if (nodeStartOffset == offset) {
+                    node.insertContentLeft(value)
+                    searchCache.validate(offset)
+                } else if (nodeStartOffset + node.piece.length > offset) {
+                    // we are inserting into the middle of a node.
+                    val nodesToDel = mutableListOf<TreeNode>()
+                    var newRightPiece = Piece(
+                        bufferIndex = piece.bufferIndex,
+                        start = insertPosInBuffer,
+                        end = piece.end,
+                        lineFeedCnt = getLineFeedCnt(piece.bufferIndex, insertPosInBuffer, piece.end),
+                        length = offsetInBuffer(bufferIndex, piece.end) - offsetInBuffer(bufferIndex, insertPosInBuffer)
+                    )
 
-                        if (node.piece.length == 0) {
-                            nodesToDel.add(node)
+                    if (shouldCheckCRLF() && value.endWithCR()) {
+                        val headOfRight = node.charCodeAt(remainder)
+                        /** \n */
+                        if (headOfRight == CharCode.LineFeed) {
+                            val newStart = BufferCursor(newRightPiece.start.line + 1, 0)
+                            newRightPiece = Piece(
+                                bufferIndex = newRightPiece.bufferIndex,
+                                start = newStart,
+                                end = newRightPiece.end,
+                                lineFeedCnt = getLineFeedCnt(
+                                    newRightPiece.bufferIndex,
+                                    newStart,
+                                    newRightPiece.end
+                                ),
+                                length = newRightPiece.length - 1
+                            )
+
+                            value += "\n"
+                        }
+                    }
+
+                    // reuse node for content before insertion point.
+                    if (shouldCheckCRLF() && value.startWithLF()) {
+                        val tailOfLeft = node.charCodeAt(remainder - 1)
+                        /** \r */
+                        if (tailOfLeft == CharCode.CarriageReturn) {
+                            val previousPos = node.positionInBuffer(remainder - 1)
+                            node.deleteTail(previousPos)
+                            value = '\r' + value
+
+                            if (node.piece.length == 0) {
+                                nodesToDel.add(node)
+                            }
+                        } else {
+                            node.deleteTail(insertPosInBuffer)
                         }
                     } else {
                         node.deleteTail(insertPosInBuffer)
                     }
+
+                    val newPieces = createNewPieces(value)
+
+                    if (newRightPiece.length > 0) {
+                        rbInsertRight(node, newRightPiece)
+                    }
+
+                    var tmpNode = node
+                    for (k in 0..<newPieces.size) {
+                        tmpNode = rbInsertRight(tmpNode, newPieces[k])
+                    }
+                    deleteNodes(nodesToDel)
                 } else {
-                    node.deleteTail(insertPosInBuffer)
+                    node.insertContentRight(value)
                 }
-
-                val newPieces = createNewPieces(value)
-
-                if (newRightPiece.length > 0) {
-                    rbInsertRight(node, newRightPiece)
-                }
-
-                var tmpNode = node
-                for (k in 0..<newPieces.size) {
-                    tmpNode = rbInsertRight(tmpNode, newPieces[k])
-                }
-                deleteNodes(nodesToDel)
             } else {
-                node.insertContentRight(value)
-            }
-        } else {
-            // insert new node
-            val pieces = createNewPieces(value)
-            var node = rbInsertLeft(NullTreeNode, pieces[0])
+                // insert new node
+                val pieces = createNewPieces(value)
+                var node = rbInsertLeft(NullTreeNode, pieces[0])
 
-            for (k in 1..<pieces.size) {
-                node = rbInsertRight(node, pieces[k])
+                for (k in 1..<pieces.size) {
+                    node = rbInsertRight(node, pieces[k])
+                }
             }
+
+            // todo, this is too brutal. Total line feed count should be updated the same way as lfLeft
+            computeBufferMetadata()
         }
-
-        // todo, this is too brutal. Total line feed count should be updated the same way as lfLeft
-        computeBufferMetadata()
     }
 
     fun delete(offset: Int, count: Int) = lock.withLock {
