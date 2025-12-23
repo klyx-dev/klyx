@@ -1,4 +1,4 @@
-package com.klyx.lsp.language
+package com.klyx.lsp
 
 import kotlinx.serialization.Serializable
 import kotlin.jvm.JvmInline

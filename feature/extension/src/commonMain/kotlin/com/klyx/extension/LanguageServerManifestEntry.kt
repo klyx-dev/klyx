@@ -1,7 +1,7 @@
 package com.klyx.extension
 
 import com.klyx.core.language.LanguageName
-import com.klyx.lsp.language.CodeActionKind
+import com.klyx.lsp.CodeActionKind
 import kotlinx.serialization.Serializable
 
 @Serializable
