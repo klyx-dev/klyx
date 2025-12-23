@@ -30,7 +30,7 @@ class ComposeDesktopConventionPlugin : Plugin<Project> {
                             vendor = "Klyx"
 
                             linux {
-                                iconFile.set(rootProject.file("klyxApp/src/commonMain/resources/icon.png"))
+                                iconFile.set(rootProject.file("klyx/src/commonMain/resources/icon.png"))
                                 packageName = "klyx"
                                 menuGroup = "Development"
                                 appCategory = "Development"
@@ -39,7 +39,7 @@ class ComposeDesktopConventionPlugin : Plugin<Project> {
                             }
 
                             windows {
-                                iconFile.set(rootProject.file("klyxApp/src/commonMain/resources/icon.png"))
+                                iconFile.set(rootProject.file("klyx/src/commonMain/resources/icon.png"))
                                 packageName = "Klyx"
                                 dirChooser = true
                                 perUserInstall = true
@@ -47,7 +47,7 @@ class ComposeDesktopConventionPlugin : Plugin<Project> {
                             }
 
                             macOS {
-                                iconFile.set(rootProject.file("klyxApp/src/commonMain/resources/icon.png"))
+                                iconFile.set(rootProject.file("klyx/src/commonMain/resources/icon.png"))
                                 packageName = "Klyx"
                                 dmgPackageVersion = currentStableVersion()
                                 packageBuildVersion = currentVersionCode().toString()
