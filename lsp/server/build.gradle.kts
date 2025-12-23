@@ -3,12 +3,12 @@ plugins {
 }
 
 kotlin {
-    android { namespace = "com.klyx.lsp.api" }
+    android { namespace = "com.klyx.lsp.server" }
 
     sourceSets {
         val commonMain by getting {
             dependencies {
-                api(libs.kotlinx.serialization.json)
+                api(projects.lsp.api)
             }
         }
     }

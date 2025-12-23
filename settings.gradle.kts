@@ -55,7 +55,7 @@ include(
 
 include(":feature:mcp")
 include(":feature:extension")
-include(":lsp:api")
+include(":lsp:api", ":lsp:server")
 
 //file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
 //    include(":tree-sitter:${it.name}")
