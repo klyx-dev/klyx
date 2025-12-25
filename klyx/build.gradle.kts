@@ -77,6 +77,7 @@ kotlin {
             api(projects.editor.editor)
             api(projects.extensionApi)
             api(projects.wasm)
+            api(projects.lsp.server)
 
             api(projects.feature.mcp)
         }

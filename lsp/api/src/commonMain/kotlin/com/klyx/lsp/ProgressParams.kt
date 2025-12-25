@@ -1,9 +1,11 @@
 package com.klyx.lsp
 
+import com.klyx.lsp.types.LSPAny
+import com.klyx.lsp.types.OneOf
 import kotlinx.serialization.Serializable
 
 @Serializable
-sealed interface ProgressParams<T> {
+sealed interface ProgressParams {
     /**
      * The progress token provided by the client or server.
      */
@@ -12,6 +14,5 @@ sealed interface ProgressParams<T> {
     /**
      * The progress data.
      */
-    @Serializable
-    val value: T
+    val value: OneOf<WorkDoneProgressNotification, LSPAny>
 }

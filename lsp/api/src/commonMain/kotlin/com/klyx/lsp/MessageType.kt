@@ -1,11 +1,13 @@
 package com.klyx.lsp
 
 import kotlinx.serialization.Serializable
+import kotlin.jvm.JvmInline
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#messageType)
  */
 @Serializable
+@JvmInline
 value class MessageType private constructor(private val value: Int) {
     companion object {
         /**

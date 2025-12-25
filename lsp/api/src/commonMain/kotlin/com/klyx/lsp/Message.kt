@@ -5,16 +5,21 @@ import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
 import com.klyx.lsp.types.NumberOrString
 import com.klyx.lsp.types.OneOf
+import com.klyx.lsp.types.asLeft
+import com.klyx.lsp.types.asRight
+import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonContentPolymorphicSerializer
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.jsonObject
 
-const val JSON_RPC_VERSION = "2.0"
-const val CONTENT_LEN_HEADER = "Content-Length: "
+internal const val JSON_RPC_VERSION = "2.0"
 
 /**
  * A general message as defined by JSON-RPC. The language server
  * protocol always uses “2.0” as the jsonrpc version.
  */
-@Serializable
+@Serializable(MessageSerializer::class)
 sealed interface Message {
     val jsonrpc: String
 }
@@ -42,6 +47,12 @@ data class RequestMessage(
  * The request id.
  */
 typealias RequestId = NumberOrString
+
+@Suppress("FunctionName")
+fun IntRequestId(id: Int): RequestId = id.asLeft()
+
+@Suppress("FunctionName")
+fun StringRequestId(id: String): RequestId = id.asRight()
 
 @Serializable
 data class ResponseMessage(
@@ -84,16 +95,16 @@ data class ResponseError(
 
 @Serializable
 data class NotificationMessage(
-    override val jsonrpc: String,
     /**
      * The method to be invoked.
      */
     val method: String,
-
     /**
      * The notification's params.
      */
     val params: LSPAny? = null,
+
+    override val jsonrpc: String = JSON_RPC_VERSION,
 ) : Message
 
 @Serializable
@@ -104,3 +115,15 @@ data class CancelParams(
     val id: RequestId
 )
 
+internal object MessageSerializer : JsonContentPolymorphicSerializer<Message>(Message::class) {
+    override fun selectDeserializer(element: JsonElement): DeserializationStrategy<Message> {
+        val obj = element.jsonObject
+
+        return when {
+            "result" in obj || "error" in obj -> ResponseMessage.serializer()
+            "id" in obj && "method" in obj -> RequestMessage.serializer()
+            "method" in obj -> NotificationMessage.serializer()
+            else -> error("Invalid JSON-RPC message: $obj")
+        }
+    }
+}

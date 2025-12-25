@@ -5,6 +5,9 @@ import kotlinx.serialization.Serializable
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#initializeResult)
+ *
+ * @property capabilities The capabilities the language server provides.
+ * @property serverInfo Information about the server.
  */
 @Serializable
 data class InitializeResult(

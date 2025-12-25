@@ -88,6 +88,8 @@ fun <A, B> OneOf<A, B>.isRight(): Boolean {
     return this is Right
 }
 
+fun <A, B> OneOf<A, B>.value() = if (isLeft()) left else right
+
 /**
  * Represents a value that can be one of two types: [A] or [B].
  *
