@@ -17,6 +17,8 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlin.contracts.InvocationKind
+import kotlin.contracts.contract
 
 /**
  * Value-object describing what options formatting should use.
@@ -93,6 +95,24 @@ data class FormattingOptions(
      */
     fun withStringProperty(key: String, value: String): FormattingOptions =
         copy(additionalProperties = additionalProperties + (key to JsonPrimitive(value)))
+}
+
+/**
+ * Creates [FormattingOptions].
+ *
+ * @param tabSize Size of a tab in spaces.
+ * @param insertSpaces Prefer spaces over tabs.
+ * @param block Additional properties to set on the [FormattingOptions].
+ */
+inline fun FormattingOptions(
+    tabSize: Int,
+    insertSpaces: Boolean,
+    block: FormattingOptions.() -> Unit = {}
+): FormattingOptions {
+    contract {
+        callsInPlace(block, InvocationKind.EXACTLY_ONCE)
+    }
+    return FormattingOptions(tabSize.toUInt(), insertSpaces).apply(block)
 }
 
 internal object FormattingOptionsSerializer : KSerializer<FormattingOptions> {

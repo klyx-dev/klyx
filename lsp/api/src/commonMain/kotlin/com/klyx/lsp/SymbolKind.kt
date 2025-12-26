@@ -36,5 +36,34 @@ value class SymbolKind private constructor(private val value: Int) {
         val Event = SymbolKind(24)
         val Operator = SymbolKind(25)
         val TypeParameter = SymbolKind(26)
+
+        val entries = listOf(
+            File,
+            Module,
+            Namespace,
+            Package,
+            Class,
+            Method,
+            Property,
+            Field,
+            Constructor,
+            Enum,
+            Interface,
+            Function,
+            Variable,
+            Constant,
+            String,
+            Number,
+            Boolean,
+            Array,
+            Object,
+            Key,
+            Null,
+            EnumMember,
+            Struct,
+            Event,
+            Operator,
+            TypeParameter,
+        )
     }
 }

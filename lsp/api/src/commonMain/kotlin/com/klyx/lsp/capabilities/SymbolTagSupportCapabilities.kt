@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * @since 3.16.0
  */
 @Serializable
-data class SymbolTagSupportClientCapabilities(
+data class SymbolTagSupportCapabilities(
     /**
      * The tags supported by the client.
      */

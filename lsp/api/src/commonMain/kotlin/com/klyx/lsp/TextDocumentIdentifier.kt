@@ -7,29 +7,22 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocumentIdentifier)
  */
 @Serializable
-sealed interface TextDocumentIdentifier {
+data class TextDocumentIdentifier(
     /**
      * The text document's URI.
      */
     val uri: DocumentUri
-}
-
-@Serializable
-internal data class TextDocumentIdentifierImpl(override val uri: DocumentUri) : TextDocumentIdentifier
-
-/**
- * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocumentIdentifier)
- *
- * @param uri The text document's URI.
- */
-fun TextDocumentIdentifier(uri: DocumentUri): TextDocumentIdentifier = TextDocumentIdentifierImpl(uri)
+)
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#versionedTextDocumentIdentifier)
  */
 @Serializable
 data class VersionedTextDocumentIdentifier(
-    override val uri: DocumentUri,
+    /**
+     * The text document's URI.
+     */
+    val uri: DocumentUri,
 
     /**
      * The version number of this document.
@@ -38,14 +31,17 @@ data class VersionedTextDocumentIdentifier(
      * including undo/redo. The number doesn't need to be consecutive.
      */
     val version: Int
-) : TextDocumentIdentifier
+)
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#optionalVersionedTextDocumentIdentifier)
  */
 @Serializable
 data class OptionalVersionedTextDocumentIdentifier(
-    override val uri: DocumentUri,
+    /**
+     * The text document's URI.
+     */
+    val uri: DocumentUri,
 
     /**
      * The version number of this document. If an optional versioned text document
@@ -59,4 +55,4 @@ data class OptionalVersionedTextDocumentIdentifier(
      * including undo/redo. The number doesn't need to be consecutive.
      */
     val version: Int? = null
-) : TextDocumentIdentifier
+)

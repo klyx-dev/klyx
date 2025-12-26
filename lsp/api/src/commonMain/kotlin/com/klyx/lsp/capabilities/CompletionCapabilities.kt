@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completionClientCapabilities)
  */
 @Serializable
-data class CompletionClientCapabilities(
+data class CompletionCapabilities(
     /**
      * Whether completion supports dynamic registration.
      */
@@ -18,7 +18,7 @@ data class CompletionClientCapabilities(
      * The client supports the following `CompletionItem` specific
      * capabilities.
      */
-    var completionItem: CompletionItemClientCapabilities? = null,
+    var completionItem: CompletionItemCapabilities? = null,
 
     var completionItemKind: CompletionItemKindClientCapabilities? = null,
 

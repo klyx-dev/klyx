@@ -53,14 +53,14 @@ data class DidChangeTextDocumentParams(
 @Serializable
 data class TextDocumentContentChangeEvent(
     /**
-     * The range of the document that changed.
-     */
-    val range: Range?,
-
-    /**
      * The new text for the provided range.
      */
     val text: String,
+
+    /**
+     * The range of the document that changed.
+     */
+    var range: Range? = null,
 
     /**
      * The optional length of the range that got replaced.

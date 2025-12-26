@@ -18,29 +18,29 @@ data class WorkspaceClientCapabilities(
     /**
      * Capabilities specific to [WorkspaceEdit]s
      */
-    var workspaceEdit: WorkspaceEditClientCapabilities? = null,
+    var workspaceEdit: WorkspaceEditCapabilities? = null,
 
     /**
      * Capabilities specific to the `workspace/didChangeConfiguration`
      * notification.
      */
-    var didChangeConfiguration: DidChangeConfigurationClientCapabilities? = null,
+    var didChangeConfiguration: DidChangeConfigurationCapabilities? = null,
 
     /**
      * Capabilities specific to the `workspace/didChangeWatchedFiles`
      * notification.
      */
-    var didChangeWatchedFiles: DidChangeWatchedFilesClientCapabilities? = null,
+    var didChangeWatchedFiles: DidChangeWatchedFilesCapabilities? = null,
 
     /**
      * Capabilities specific to the `workspace/symbol` request.
      */
-    var symbol: WorkspaceSymbolClientCapabilities? = null,
+    var symbol: WorkspaceSymbolCapabilities? = null,
 
     /**
      * Capabilities specific to the `workspace/executeCommand` request.
      */
-    var executeCommand: ExecuteCommandClientCapabilities? = null,
+    var executeCommand: ExecuteCommandCapabilities? = null,
 
     /**
      * The client has support for workspace folders.

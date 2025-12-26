@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#documentSymbolClientCapabilities)
  */
 @Serializable
-data class DocumentSymbolClientCapabilities(
+data class DocumentSymbolCapabilities(
     /**
      * Whether document symbol supports dynamic registration.
      */
@@ -16,7 +16,7 @@ data class DocumentSymbolClientCapabilities(
      * Specific capabilities for the `SymbolKind` in the
      * `textDocument/documentSymbol` request.
      */
-    var symbolKind: SymbolKindClientCapabilities? = null,
+    var symbolKind: SymbolKindCapabilities? = null,
 
     /**
      * The client supports hierarchical document symbols.
@@ -30,7 +30,7 @@ data class DocumentSymbolClientCapabilities(
      *
      * @since 3.16.0
      */
-    var tagSupport: SymbolTagSupportClientCapabilities? = null,
+    var tagSupport: SymbolTagSupportCapabilities? = null,
 
     /**
      * The client supports an additional label presented in the UI when

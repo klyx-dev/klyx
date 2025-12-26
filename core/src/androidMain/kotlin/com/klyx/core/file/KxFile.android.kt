@@ -13,6 +13,7 @@ import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
 import com.klyx.core.ContextHolder
+import com.klyx.core.allowDiskReads
 import com.klyx.core.logging.log
 import com.klyx.core.terminal.SAFUtils.getDocumentIdForUri
 import com.klyx.core.terminal.SAFUtils.getFileForDocumentId
@@ -218,7 +219,7 @@ actual fun KxFile(path: String): KxFile {
 }
 
 actual fun KxFile.isPermissionRequired(permissionFlags: Int): Boolean {
-    return requiresPermission(ContextHolder.context, permissionFlags)
+    return allowDiskReads { requiresPermission(ContextHolder.context, permissionFlags) }
 }
 
 actual fun KxFile.source(): RawSource {

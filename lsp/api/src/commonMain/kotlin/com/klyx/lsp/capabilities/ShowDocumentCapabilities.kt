@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  * @since 3.16.0
  */
 @Serializable
-data class ShowDocumentClientCapabilities(
+data class ShowDocumentCapabilities(
     /**
      * The client has support for the show document
      * request.

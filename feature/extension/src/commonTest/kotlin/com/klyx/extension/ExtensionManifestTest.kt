@@ -1,14 +1,9 @@
 package com.klyx.extension
 
-import com.akuleshov7.ktoml.Toml
-import com.akuleshov7.ktoml.TomlInputConfig
 import com.klyx.extension.capabilities.ProcessExecCapability
 import io.itsvks.anyhow.AnyhowResult
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeTrue
-import io.kotest.matchers.shouldBe
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 
 class ExtensionManifestTest : FunSpec() {
     init {

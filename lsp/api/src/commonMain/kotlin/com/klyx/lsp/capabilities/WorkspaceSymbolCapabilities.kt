@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspace_symbol)
  */
 @Serializable
-data class WorkspaceSymbolClientCapabilities(
+data class WorkspaceSymbolCapabilities(
     /**
      * Symbol request supports dynamic registration.
      */
@@ -16,7 +16,7 @@ data class WorkspaceSymbolClientCapabilities(
      * Specific capabilities for the `SymbolKind` in the `workspace/symbol`
      * request.
      */
-    var symbolKind: SymbolKindClientCapabilities? = null,
+    var symbolKind: SymbolKindCapabilities? = null,
 
     /**
      * The client supports tags on `SymbolInformation` and `WorkspaceSymbol`.
@@ -24,7 +24,7 @@ data class WorkspaceSymbolClientCapabilities(
      *
      * @since 3.16.0
      */
-    var tagSupport: SymbolTagSupportClientCapabilities? = null,
+    var tagSupport: SymbolTagSupportCapabilities? = null,
 
     /**
      * The client supports partial workspace symbols. The client will send the
@@ -33,5 +33,5 @@ data class WorkspaceSymbolClientCapabilities(
      *
      * @since 3.17.0 - proposedState
      */
-    var resolveSupport: ResolveSupportClientCapabilities? = null
+    var resolveSupport: ResolveSupportCapabilities? = null
 ) : DynamicRegistrationCapabilities

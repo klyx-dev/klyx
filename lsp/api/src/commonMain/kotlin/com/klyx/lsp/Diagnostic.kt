@@ -80,6 +80,15 @@ data class Diagnostic(
 @JvmInline
 @Serializable
 value class DiagnosticSeverity private constructor(private val value: Int) {
+    val name: String
+        get() = when (this) {
+            Error -> "Error"
+            Warning -> "Warning"
+            Information -> "Information"
+            Hint -> "Hint"
+            else -> error("Unknown diagnostic severity: $this")
+        }
+
     companion object {
         /**
          * Reports an error.

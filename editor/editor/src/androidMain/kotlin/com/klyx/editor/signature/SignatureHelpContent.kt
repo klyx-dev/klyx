@@ -39,12 +39,14 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mikepenz.markdown.compose.components.markdownComponents
+import com.klyx.lsp.MarkupContent
+import com.klyx.lsp.SignatureHelp
+import com.klyx.lsp.SignatureInformation
+import com.klyx.lsp.types.OneOf
+import com.klyx.lsp.types.fold
+import com.klyx.lsp.types.isLeft
+import com.klyx.lsp.types.isRight
 import com.mikepenz.markdown.m3.Markdown
-import org.eclipse.lsp4j.MarkupContent
-import org.eclipse.lsp4j.SignatureHelp
-import org.eclipse.lsp4j.SignatureInformation
-import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 @Composable
 internal fun SignatureHelpContent(
@@ -55,9 +57,9 @@ internal fun SignatureHelpContent(
 ) {
     if (signatureHelp == null) return
 
-    val activeSignatureIndex = (signatureHelp.activeSignature ?: 0).coerceAtLeast(0)
-    val activeParameterIndex = signatureHelp.activeParameter ?: -1
-    val signatures = signatureHelp.signatures.orEmpty()
+    val activeSignatureIndex = (signatureHelp.activeSignature?.toInt() ?: 0).coerceAtLeast(0)
+    val activeParameterIndex = signatureHelp.activeParameter?.toInt() ?: -1
+    val signatures = signatureHelp.signatures
 
     if (signatures.isEmpty()) return
 
@@ -184,7 +186,7 @@ private fun HighlightedSignatureLabel(
 
             parameters.forEachIndexed { index, param ->
                 val (start, end) = when {
-                    param.label.isLeft -> {
+                    param.label.isLeft() -> {
                         val paramLabel = param.label.left
                         val startIndex = label.indexOf(paramLabel, lastEnd)
                         if (startIndex >= 0) {
@@ -194,10 +196,10 @@ private fun HighlightedSignatureLabel(
                         }
                     }
 
-                    param.label.isRight -> {
+                    param.label.isRight() -> {
                         val range = param.label.right
-                        val s = (range.first ?: lastEnd).coerceAtLeast(lastEnd)
-                        val e = (range.second ?: s).coerceAtLeast(s)
+                        val s = range.start.coerceAtLeast(lastEnd)
+                        val e = range.end.coerceAtLeast(s)
                         s to e
                     }
 
@@ -260,23 +262,22 @@ private fun HighlightedSignatureLabel(
 }
 
 @Composable
-private fun DocumentationContent(documentation: Either<String, MarkupContent>) {
-    when {
-        documentation.isLeft -> {
+private fun DocumentationContent(documentation: OneOf<String, MarkupContent>) {
+    documentation.fold(
+        leftFn = {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 modifier = Modifier.padding(8.dp),
-                text = documentation.left,
+                text = it,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
+        },
+        rightFn = {
+            val content = it.value
 
-        documentation.isRight -> {
-            val content = documentation.right.value
-
-            if (!content.equals("```\n\n```\n")) {
+            if (content != "```\n\n```\n") {
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Markdown(
@@ -285,5 +286,5 @@ private fun DocumentationContent(documentation: Either<String, MarkupContent>) {
                 )
             }
         }
-    }
+    )
 }

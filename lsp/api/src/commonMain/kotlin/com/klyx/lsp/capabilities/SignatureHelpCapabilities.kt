@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signatureHelpClientCapabilities)
  */
 @Serializable
-data class SignatureHelpClientCapabilities(
+data class SignatureHelpCapabilities(
     /**
      * Whether signature help supports dynamic registration.
      */
@@ -16,7 +16,7 @@ data class SignatureHelpClientCapabilities(
      * The client supports the following `SignatureInformation`
      * specific properties.
      */
-    var signatureInformation: SignatureInformationClientCapabilities? = null,
+    var signatureInformation: SignatureInformationCapabilities? = null,
 
     /**
      * The client supports sending additional context information for a

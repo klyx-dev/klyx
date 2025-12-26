@@ -31,12 +31,12 @@ data class CodeActionContext(
      * Actions not of this kind are filtered out by the client before being
      * shown, so servers can omit computing them.
      */
-    val only: List<CodeActionKind>?,
+    var only: List<CodeActionKind>? = null,
 
     /**
      * The reason why code actions were requested.
      *
      * @since 3.17.0
      */
-    val triggerKind: CodeActionTriggerKind?
+    var triggerKind: CodeActionTriggerKind? = null
 )

@@ -5,11 +5,10 @@ import com.klyx.core.file.Worktree
 import com.klyx.core.language
 import com.klyx.core.language.LanguageName
 import com.klyx.extension.ExtensionManager
+import com.klyx.lsp.Position
+import com.klyx.lsp.Range
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.TextRange
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.TextDocumentIdentifier
 import java.io.File
 import java.net.URI
 
@@ -20,8 +19,6 @@ val KxFile.uri: URI get() = File(absolutePath).toURI()
 val KxFile.uriString get() = uri.toString()
 
 val KxFile.languageId get() = ExtensionManager.getLanguageIdForLanguage(LanguageName(language())) ?: "invalid"
-
-fun String.asTextDocumentIdentifier() = TextDocumentIdentifier(this)
 
 fun createRange(start: Position, end: Position): Range {
     return Range(start, end)

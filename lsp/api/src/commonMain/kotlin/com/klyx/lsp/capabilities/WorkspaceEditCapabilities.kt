@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspaceEditClientCapabilities)
  */
 @Serializable
-data class WorkspaceEditClientCapabilities(
+data class WorkspaceEditCapabilities(
     /**
      * The client supports versioned document changes in [WorkspaceEdit]s.
      */
@@ -47,7 +47,7 @@ data class WorkspaceEditClientCapabilities(
      *
      * @since 3.16.0
      */
-    var changeAnnotationSupport: ChangeAnnotationWorkspaceEditClientCapabilities? = null,
+    var changeAnnotationSupport: ChangeAnnotationSupportCapabilities? = null,
 
     /**
      * Whether the client supports `WorkspaceEditMetadata` in `WorkspaceEdit`s.
@@ -73,7 +73,7 @@ data class WorkspaceEditClientCapabilities(
  * @since 3.16.0
  */
 @Serializable
-data class ChangeAnnotationWorkspaceEditClientCapabilities(
+data class ChangeAnnotationSupportCapabilities(
     /**
      * Whether the client groups edits with equal labels into tree nodes,
      * for instance all edits labelled with "Changes in Strings" would

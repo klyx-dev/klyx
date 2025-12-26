@@ -12,7 +12,7 @@ data class TextDocumentClientCapabilities(
     /**
      * Defines which synchronization capabilities the client supports.
      */
-    var synchronization: TextDocumentSyncClientCapabilities? = null,
+    var synchronization: SynchronizationCapabilities? = null,
 
     /**
      * Defines which filters the client supports.
@@ -24,17 +24,17 @@ data class TextDocumentClientCapabilities(
     /**
      * Capabilities specific to the `textDocument/completion` request.
      */
-    var completion: CompletionClientCapabilities? = null,
+    var completion: CompletionCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/hover` request.
      */
-    var hover: HoverClientCapabilities? = null,
+    var hover: HoverCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/signatureHelp` request.
      */
-    var signatureHelp: SignatureHelpClientCapabilities? = null,
+    var signatureHelp: SignatureHelpCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/declaration` request.
@@ -46,7 +46,7 @@ data class TextDocumentClientCapabilities(
     /**
      * Capabilities specific to the `textDocument/definition` request.
      */
-    var definition: DefinitionClientCapabilities? = null,
+    var definition: DefinitionCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/typeDefinition` request.
@@ -75,12 +75,12 @@ data class TextDocumentClientCapabilities(
     /**
      * Capabilities specific to the `textDocument/documentSymbol` request.
      */
-    var documentSymbol: DocumentSymbolClientCapabilities? = null,
+    var documentSymbol: DocumentSymbolCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/codeAction` request.
      */
-    var codeAction: CodeActionClientCapabilities? = null,
+    var codeAction: CodeActionCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/codeLens` request.
@@ -103,29 +103,29 @@ data class TextDocumentClientCapabilities(
     /**
      * Capabilities specific to the `textDocument/formatting` request.
      */
-    var formatting: DocumentFormattingClientCapabilities? = null,
+    var formatting: FormattingCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/rangeFormatting` and
      * `textDocument/rangesFormatting requests.
      */
-    var rangeFormatting: DocumentRangeFormattingClientCapabilities? = null,
+    var rangeFormatting: RangeFormattingCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/onTypeFormatting` request.
      */
-    var onTypeFormatting: DocumentOnTypeFormattingClientCapabilities? = null,
+    var onTypeFormatting: OnTypeFormattingCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/rename` request.
      */
-    var rename: RenameClientCapabilities? = null,
+    var rename: RenameCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/publishDiagnostics`
      * notification.
      */
-    var publishDiagnostics: PublishDiagnosticsClientCapabilities? = null,
+    var publishDiagnostics: PublishDiagnosticsCapabilities? = null,
 
     /**
      * Capabilities specific to the `textDocument/foldingRange` request.

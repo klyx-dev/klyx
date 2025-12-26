@@ -8,18 +8,18 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#window_showMessageRequest)
  */
 @Serializable
-data class ShowMessageRequestClientCapabilities(
+data class ShowMessageRequestCapabilities(
     /**
      * Capabilities specific to the `MessageActionItem` type.
      */
-    var messageActionItem: MessageActionItemClientCapabilities? = null
+    var messageActionItem: MessageActionItemCapabilities? = null
 )
 
 /**
  * Capabilities specific to the `MessageActionItem` type.
  */
 @Serializable
-data class MessageActionItemClientCapabilities(
+data class MessageActionItemCapabilities(
     /**
      * Whether the client supports additional attributes which
      * are preserved and sent back to the server in the

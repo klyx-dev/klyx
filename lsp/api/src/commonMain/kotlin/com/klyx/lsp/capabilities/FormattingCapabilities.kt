@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#documentFormattingClientCapabilities)
  */
 @Serializable
-data class DocumentFormattingClientCapabilities(
+data class FormattingCapabilities(
     /**
      * Whether formatting supports dynamic registration.
      */

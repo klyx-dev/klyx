@@ -20,14 +20,18 @@ import com.klyx.core.project.makeLspAdapterDelegate
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.settings.LspSettings
 import com.klyx.core.toJson
-import com.klyx.editor.lsp.util.asTextDocumentIdentifier
 import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.ExtensionManager
+import com.klyx.lsp.Diagnostic
+import com.klyx.lsp.DocumentColorParams
+import com.klyx.lsp.InlayHintParams
+import com.klyx.lsp.Position
+import com.klyx.lsp.Range
+import com.klyx.lsp.TextDocumentIdentifier
+import com.klyx.lsp.server.LanguageServer
 import io.itsvks.anyhow.anyhow
 import io.itsvks.anyhow.fold
-import java.util.concurrent.ForkJoinPool
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -39,12 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.onTimeout
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DocumentColorParams
-import org.eclipse.lsp4j.InlayHintParams
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.services.LanguageServer
+import java.util.concurrent.ForkJoinPool
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
 object LanguageServerManager {
@@ -80,7 +80,7 @@ object LanguageServerManager {
 
                 for ((_, client) in matchingClients) {
                     val jsonConfig = newSettings.settings
-                    client.changeWorkspaceConfiguration(jsonConfig?.toJson() ?: "{}")
+                    jsonConfig?.let { client.changeWorkspaceConfiguration(it) }
                 }
             }
         }
@@ -121,13 +121,14 @@ object LanguageServerManager {
             val initializationOptions = adapter.adapter
                 .initializationOptions(delegate).bind()
 
-            client.initialize(binary, worktree, initializationOptions?.toString()).fold(
+            client.initialize(binary, worktree, initializationOptions).fold(
                 ok = { initializeResult ->
                     languageClients[key] = client
                     languageServers[key] = client.languageServer
 
                     val workspaceConfig = adapter.adapter.workspaceConfiguration(delegate).bind()
-                    client.changeWorkspaceConfiguration(workspaceConfig.toString())
+                    println("Workspace config: ${workspaceConfig}")
+                    client.changeWorkspaceConfiguration(workspaceConfig)
                 },
                 err = { bail("Failed to initialize language server: $it") }
             )
@@ -259,12 +260,12 @@ object LanguageServerManager {
     }
 
     suspend fun inlayHint(worktree: Worktree, file: KxFile, range: Range) = withClient(worktree, file) { client ->
-        val params = InlayHintParams(file.uriString.asTextDocumentIdentifier(), range)
+        val params = InlayHintParams(TextDocumentIdentifier(file.uriString), range)
         client.inlayHint(params)
     }
 
     suspend fun documentColor(worktree: Worktree, file: KxFile) = withClient(worktree, file) {
-        it.documentColor(DocumentColorParams(file.uriString.asTextDocumentIdentifier()))
+        it.documentColor(DocumentColorParams(TextDocumentIdentifier(file.uriString)))
     }
 
     private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {

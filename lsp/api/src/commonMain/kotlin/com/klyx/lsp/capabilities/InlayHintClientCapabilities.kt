@@ -20,5 +20,5 @@ data class InlayHintClientCapabilities(
      * Indicates which properties a client can resolve lazily on an inlay
      * hint.
      */
-    var resolveSupport: ResolveSupportClientCapabilities? = null
+    var resolveSupport: ResolveSupportCapabilities? = null
 ) : DynamicRegistrationCapabilities

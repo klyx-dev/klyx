@@ -12,68 +12,77 @@ import com.klyx.core.process.InternalProcessApi
 import com.klyx.core.process.Signal
 import com.klyx.core.process.asJavaProcessBuilder
 import com.klyx.core.process.systemProcess
-import com.klyx.editor.lsp.util.asTextDocumentIdentifier
+import com.klyx.lsp.ApplyWorkspaceEditParams
+import com.klyx.lsp.ApplyWorkspaceEditResult
+import com.klyx.lsp.CodeActionContext
+import com.klyx.lsp.CodeActionParams
+import com.klyx.lsp.CompletionParams
+import com.klyx.lsp.ConfigurationParams
+import com.klyx.lsp.Diagnostic
+import com.klyx.lsp.DidChangeConfigurationParams
+import com.klyx.lsp.DidChangeTextDocumentParams
+import com.klyx.lsp.DidCloseTextDocumentParams
+import com.klyx.lsp.DidOpenTextDocumentParams
+import com.klyx.lsp.DidSaveTextDocumentParams
+import com.klyx.lsp.DocumentColorParams
+import com.klyx.lsp.DocumentFormattingParams
+import com.klyx.lsp.DocumentRangeFormattingParams
+import com.klyx.lsp.ExecuteCommandParams
+import com.klyx.lsp.FormattingOptions
+import com.klyx.lsp.HoverParams
+import com.klyx.lsp.InitializedParams
+import com.klyx.lsp.InlayHintParams
+import com.klyx.lsp.LogMessageParams
+import com.klyx.lsp.MessageActionItem
+import com.klyx.lsp.MessageType
+import com.klyx.lsp.Position
+import com.klyx.lsp.ProgressParams
+import com.klyx.lsp.PublishDiagnosticsParams
+import com.klyx.lsp.Range
+import com.klyx.lsp.ShowMessageParams
+import com.klyx.lsp.ShowMessageRequestParams
+import com.klyx.lsp.SignatureHelpParams
+import com.klyx.lsp.TextDocumentContentChangeEvent
+import com.klyx.lsp.TextDocumentIdentifier
+import com.klyx.lsp.TextDocumentItem
+import com.klyx.lsp.VersionedTextDocumentIdentifier
+import com.klyx.lsp.WorkDoneProgressBegin
+import com.klyx.lsp.WorkDoneProgressCreateParams
+import com.klyx.lsp.WorkDoneProgressEnd
+import com.klyx.lsp.WorkDoneProgressKind
+import com.klyx.lsp.WorkDoneProgressReport
+import com.klyx.lsp.capabilities.ServerCapabilities
+import com.klyx.lsp.server.LanguageClient
+import com.klyx.lsp.server.LanguageServer
+import com.klyx.lsp.server.createLanguageServer
+import com.klyx.lsp.types.LSPAny
+import com.klyx.lsp.types.LSPArray
+import com.klyx.lsp.types.LSPObject
+import com.klyx.lsp.types.OneOf
+import com.klyx.lsp.types.fold
+import com.klyx.lsp.types.isFirst
+import com.klyx.lsp.types.isLeft
 import io.itsvks.anyhow.Err
 import io.itsvks.anyhow.Ok
 import io.itsvks.anyhow.mapError
 import io.itsvks.anyhow.runCatching
 import io.matthewnelson.kmp.process.changeDir
-import java.io.File
-import java.io.IOException
-import java.util.concurrent.CompletableFuture
 import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams
-import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
-import org.eclipse.lsp4j.CodeActionContext
-import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.lsp4j.CompletionParams
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DidChangeConfigurationParams
-import org.eclipse.lsp4j.DidChangeTextDocumentParams
-import org.eclipse.lsp4j.DidCloseTextDocumentParams
-import org.eclipse.lsp4j.DidOpenTextDocumentParams
-import org.eclipse.lsp4j.DidSaveTextDocumentParams
-import org.eclipse.lsp4j.DocumentColorParams
-import org.eclipse.lsp4j.DocumentFormattingParams
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.FormattingOptions
-import org.eclipse.lsp4j.HoverParams
-import org.eclipse.lsp4j.InitializedParams
-import org.eclipse.lsp4j.InlayHintParams
-import org.eclipse.lsp4j.MessageActionItem
-import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.ProgressParams
-import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.ServerCapabilities
-import org.eclipse.lsp4j.ShowMessageRequestParams
-import org.eclipse.lsp4j.SignatureHelpParams
-import org.eclipse.lsp4j.TextDocumentContentChangeEvent
-import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j.TextDocumentItem
-import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
-import org.eclipse.lsp4j.WorkDoneProgressBegin
-import org.eclipse.lsp4j.WorkDoneProgressCreateParams
-import org.eclipse.lsp4j.WorkDoneProgressEnd
-import org.eclipse.lsp4j.WorkDoneProgressKind
-import org.eclipse.lsp4j.WorkDoneProgressReport
-import org.eclipse.lsp4j.jsonrpc.Launcher
-import org.eclipse.lsp4j.services.LanguageClient
-import org.eclipse.lsp4j.services.LanguageServer
+import kotlinx.io.asSink
+import kotlinx.io.asSource
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
+import java.io.File
+import java.io.IOException
 
 class LanguageServerClient(
     private val logger: KxLogger = logger("LanguageServerClient")
@@ -94,7 +103,7 @@ class LanguageServerClient(
     var onDiagnostics: (List<Diagnostic>) -> Unit = {}
     var onApplyWorkspaceEdit: (ApplyWorkspaceEditParams) -> Unit = {}
 
-    var onShowMessage: (MessageParams) -> Unit = { params ->
+    var onShowMessage: (ShowMessageParams) -> Unit = { params ->
         notifier.toast(params.message)
     }
 
@@ -102,7 +111,7 @@ class LanguageServerClient(
     suspend fun initialize(
         binary: LanguageServerBinary,
         worktree: Worktree,
-        initializationOptions: String? = null
+        initializationOptions: LSPAny? = null
     ) = withContext(Dispatchers.IO) {
         try {
             with(context) {
@@ -125,24 +134,20 @@ class LanguageServerClient(
                     }
                 }
 
-                val launcher = Launcher.createLauncher(
+                languageServer = createLanguageServer(
                     this@LanguageServerClient,
-                    LanguageServer::class.java,
-                    process.inputStream,
-                    process.outputStream
+                    process.inputStream.asSource(),
+                    process.outputStream.asSink()
                 )
-
-                languageServer = launcher.remoteProxy
-                launcher.startListening()
 
                 val result = languageServer.initialize(
                     createInitializeParams(
                         worktree = worktree,
                         initializationOptions = initializationOptions
                     )
-                ).get()
+                )
 
-                languageServer.initialized(InitializedParams())
+                languageServer.initialized(InitializedParams)
                 serverCapabilities = result.capabilities
 
                 logger.debug { "Language Server initialized: ${result.capabilities}" }
@@ -155,19 +160,13 @@ class LanguageServerClient(
         }
     }
 
-    suspend fun changeWorkspaceConfiguration(configuration: String) = withContext(Dispatchers.IO) {
+    suspend fun changeWorkspaceConfiguration(configuration: LSPAny) = withContext(Dispatchers.IO) {
         runCatching {
             check(isInitialized) { "Language server not initialized" }
 
-            if (configuration.isNotEmpty()) {
-                val json = Json.parseToJsonElement(configuration)
-
-                if (json is JsonObject) {
-                    val params = DidChangeConfigurationParams(json.toMap())
-                    languageServer.workspaceService.didChangeConfiguration(params)
-                    // logger.debug { "Changed workspace configuration: $configuration" }
-                }
-            }
+            val params = DidChangeConfigurationParams(configuration)
+            languageServer.workspace.didChangeConfiguration(params)
+            // logger.debug { "Changed workspace configuration: $configuration" }
         }
     }
 
@@ -184,7 +183,7 @@ class LanguageServerClient(
             }
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, languageId, version, text))
-            languageServer.textDocumentService.didOpen(params)
+            languageServer.textDocument.didOpen(params)
             openDocuments.add(uri)
 
             // logger.debug { "Opened document: $uri, version: $version" }
@@ -202,7 +201,7 @@ class LanguageServerClient(
             }
 
             val params = DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
-            languageServer.textDocumentService.didClose(params)
+            languageServer.textDocument.didClose(params)
             openDocuments.remove(uri)
             // logger.debug { "Closed document: $uri" }
             Ok(Unit)
@@ -223,7 +222,7 @@ class LanguageServerClient(
                 VersionedTextDocumentIdentifier(uri, version),
                 listOf(TextDocumentContentChangeEvent(newText))
             )
-            languageServer.textDocumentService.didChange(params)
+            languageServer.textDocument.didChange(params)
 
             // logger.debug { "Changed document: $uri, version: $version" }
             Ok(Unit)
@@ -240,7 +239,7 @@ class LanguageServerClient(
             }
 
             val params = DidSaveTextDocumentParams(TextDocumentIdentifier(uri), text)
-            languageServer.textDocumentService.didSave(params)
+            languageServer.textDocument.didSave(params)
             // logger.debug { "Saved document: $uri" }
             Ok(Unit)
         } catch (e: Exception) {
@@ -258,16 +257,11 @@ class LanguageServerClient(
                 TextDocumentIdentifier(uri),
                 Position(line, character)
             )
-            val result = languageServer.textDocumentService.completion(params).get()
+            val result = languageServer.textDocument.completion(params)
+                ?: return@withContext Err("No completion result")
             //logger.debug { "Completion result: $result" }
 
-            if (result.isLeft) {
-                Ok(result.left)
-            } else if (result.isRight) {
-                Ok(result.right.items)
-            } else {
-                Err("Unknown completion result: $result")
-            }
+            Ok(result.fold({ it }, { it.items }))
         } catch (e: Exception) {
             // logger.error(e) { "Error getting completion: $uri" }
             Err(e.message ?: "Error getting completion: $uri")
@@ -289,7 +283,7 @@ class LanguageServerClient(
                 FormattingOptions(tabSize, insertSpaces)
             )
 
-            val result = languageServer.textDocumentService.formatting(params).get()
+            val result = languageServer.textDocument.formatting(params)
             //logger.debug { "Formatting result: $result" }
             Ok(result.orEmpty())
         } catch (e: Exception) {
@@ -308,12 +302,12 @@ class LanguageServerClient(
             require(openDocuments.contains(uri)) { "Document not opened: $uri" }
 
             val params = DocumentRangeFormattingParams(
-                uri.asTextDocumentIdentifier(),
-                FormattingOptions(tabSize, insertSpaces),
-                range
+                textDocument = TextDocumentIdentifier(uri),
+                range = range,
+                options = FormattingOptions(tabSize, insertSpaces),
             )
 
-            val result = languageServer.textDocumentService.rangeFormatting(params).get()
+            val result = languageServer.textDocument.rangeFormatting(params)
             Ok(result.orEmpty())
         } catch (e: Exception) {
             Err(e.message ?: "Error range formatting document: $uri")
@@ -324,23 +318,23 @@ class LanguageServerClient(
         try {
             require(openDocuments.contains(uri)) { "Document not opened: $uri" }
 
-            val params = CodeActionParams().apply {
-                textDocument = TextDocumentIdentifier(uri)
-                range = diagnostic.range
+            val params = CodeActionParams(
+                textDocument = TextDocumentIdentifier(uri),
+                range = diagnostic.range,
                 context = CodeActionContext(listOf(diagnostic))
-            }
+            )
 
-            val result = languageServer.textDocumentService.codeAction(params).get()
+            val result = languageServer.textDocument.codeAction(params)
             Ok(result.orEmpty())
         } catch (e: Exception) {
             Err(e.message ?: "Error getting code actions: $uri")
         }
     }
 
-    suspend fun executeCommand(command: String, args: List<Any>) = withContext(Dispatchers.IO) {
+    suspend fun executeCommand(command: String, args: List<LSPAny>) = withContext(Dispatchers.IO) {
         try {
             val params = ExecuteCommandParams(command, args)
-            val result = languageServer.workspaceService.executeCommand(params).get()
+            val result = languageServer.workspace.executeCommand(params)
             Ok(result)
         } catch (e: Exception) {
             Err(e.message ?: "Error executing command: $command")
@@ -351,12 +345,13 @@ class LanguageServerClient(
         try {
             require(openDocuments.contains(uri)) { "Document not opened: $uri" }
 
-            val params = SignatureHelpParams().apply {
-                textDocument = uri.asTextDocumentIdentifier()
-                this.position = position
-            }
+            val params = SignatureHelpParams(
+                textDocument = TextDocumentIdentifier(uri),
+                position = position
+            )
 
-            val result = languageServer.textDocumentService.signatureHelp(params).get()
+            val result = languageServer.textDocument.signatureHelp(params)
+                ?: return@withContext Err("No signature help result")
             Ok(result)
         } catch (e: Exception) {
             Err(e.message ?: "Error getting signature help: $uri")
@@ -367,16 +362,19 @@ class LanguageServerClient(
         runCatching {
             require(openDocuments.contains(uri)) { "Document not opened: $uri" }
 
-            val params = HoverParams(uri.asTextDocumentIdentifier(), position)
-            languageServer.textDocumentService.hover(params).get()
+            val params = HoverParams(TextDocumentIdentifier(uri), position)
+            languageServer.textDocument.hover(params) ?: error("No hover result")
         }.mapError { it.message ?: "Error getting hover: $uri" }
     }
 
     suspend fun inlayHint(params: InlayHintParams) = withContext(Dispatchers.IO) {
         runCatching {
-            if (serverCapabilities.inlayHintProvider?.left == true || serverCapabilities.inlayHintProvider?.right != null) {
-                val inlayHintFuture = languageServer.textDocumentService.inlayHint(params)
-                withTimeout(2000) { inlayHintFuture.get().orEmpty() }
+            val provider = serverCapabilities.inlayHintProvider
+            val isSupported = provider != null && provider.isFirst()
+            if (isSupported) {
+                withTimeout(2000) {
+                    languageServer.textDocument.inlayHint(params).orEmpty()
+                }
             } else {
                 error("Inlay hints not supported by server")
             }
@@ -385,30 +383,71 @@ class LanguageServerClient(
 
     suspend fun documentColor(params: DocumentColorParams) = withContext(Dispatchers.IO) {
         runCatching {
-            if (serverCapabilities.colorProvider?.left == true || serverCapabilities.colorProvider?.right != null) {
-                val documentColorFuture = languageServer.textDocumentService.documentColor(params)
-                withTimeout(1000) { documentColorFuture.get().orEmpty() }
+            val provider = serverCapabilities.colorProvider
+            val isSupported = provider != null && provider.isFirst()
+            if (isSupported) {
+                withTimeout(1000) {
+                    languageServer.textDocument.documentColor(params)
+                }
             } else {
                 error("Document colors not supported by server")
             }
         }.mapError { it.message ?: "Error getting document colors" }
     }
 
-    override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {
-        onApplyWorkspaceEdit(params)
-        return CompletableFuture.completedFuture(ApplyWorkspaceEditResponse(true))
+    override suspend fun notifyProgress(params: ProgressParams) {
+        val value = params.value
+
+        if (value.isLeft()) {
+            val notification = value.value
+
+            when (notification.kind) {
+                WorkDoneProgressKind.Begin -> {
+                    val begin = (notification as WorkDoneProgressBegin)
+                    logger.progress(begin.percentage?.toInt()) { "${begin.title}${if (!begin.message.isNullOrBlank()) ": ${begin.message}" else ""}" }
+                }
+
+                WorkDoneProgressKind.Report -> {
+                    val report = (notification as WorkDoneProgressReport)
+                    if (!report.message.isNullOrBlank()) logger.progress(report.percentage?.toInt()) { report.message!! }
+                }
+
+                WorkDoneProgressKind.End -> {
+                    val end = (notification as WorkDoneProgressEnd)
+                    if (!end.message.isNullOrBlank()) {
+                        logger.progress { end.message!! }
+                    } else {
+                        logger.info { "" }
+                    }
+                }
+            }
+        }
     }
 
-    override fun telemetryEvent(`object`: Any?) {
-        logger.debug { "Telemetry event: $`object`" }
+    @OptIn(DelicateCoroutinesApi::class)
+    override fun close() {
+        mainScope.cancel("Language server client closed")
+
+        if (::languageServer.isInitialized) {
+            GlobalScope.launch {
+                try {
+                    languageServer.shutdown()
+                    languageServer.exit()
+                } catch (err: Exception) {
+                    logger.warn(err) { "Error during server shutdown" }
+                }
+            }
+        }
+
+        if (::process.isInitialized) process.destroyForcibly()
     }
 
-    override fun publishDiagnostics(params: PublishDiagnosticsParams) {
+    override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
         // logger.debug { "Diagnostics for ${params.uri}: ${params.diagnostics.size} items" }
         mainScope.launch { onDiagnostics(params.diagnostics) }
     }
 
-    override fun showMessage(params: MessageParams) {
+    override suspend fun showMessage(params: ShowMessageParams) {
         mainScope.launch { onShowMessage(params) }
 
         when (params.type) {
@@ -419,44 +458,11 @@ class LanguageServerClient(
         }
     }
 
-    override fun showMessageRequest(requestParams: ShowMessageRequestParams): CompletableFuture<MessageActionItem> {
-        return CompletableFuture.completedFuture(null)
+    override suspend fun showMessageRequest(params: ShowMessageRequestParams): MessageActionItem? {
+        return null
     }
 
-    override fun createProgress(params: WorkDoneProgressCreateParams): CompletableFuture<Void> {
-        return CompletableFuture.completedFuture(null)
-    }
-
-    override fun notifyProgress(params: ProgressParams) {
-        val value = params.value
-
-        if (value.isLeft) {
-            val notification = value.left
-
-            when (notification.kind) {
-                WorkDoneProgressKind.begin -> {
-                    val begin = (notification as WorkDoneProgressBegin)
-                    logger.progress(begin.percentage) { "${begin.title}${if (!begin.message.isNullOrBlank()) ": ${begin.message}" else ""}" }
-                }
-
-                WorkDoneProgressKind.report -> {
-                    val report = (notification as WorkDoneProgressReport)
-                    if (!report.message.isNullOrBlank()) logger.progress(report.percentage) { report.message }
-                }
-
-                WorkDoneProgressKind.end -> {
-                    val end = (notification as WorkDoneProgressEnd)
-                    if (!end.message.isNullOrBlank()) {
-                        logger.progress { end.message }
-                    } else {
-                        logger.info { "" }
-                    }
-                }
-            }
-        }
-    }
-
-    override fun logMessage(params: MessageParams) {
+    override suspend fun logMessage(params: LogMessageParams) {
         when (params.type) {
             MessageType.Error -> logger.error { params.message }
             MessageType.Warning -> logger.warn { params.message }
@@ -465,18 +471,20 @@ class LanguageServerClient(
         }
     }
 
-    override fun close() {
-        mainScope.cancel("Language server client closed")
+    override suspend fun telemetryEvent(params: OneOf<LSPObject, LSPArray>) {
+        logger.debug { "Telemetry event: $params" }
+    }
 
-        if (::languageServer.isInitialized) {
-            try {
-                languageServer.shutdown().get()
-                languageServer.exit()
-            } catch (err: Exception) {
-                logger.warn(err) { "Error during server shutdown" }
-            }
-        }
+    override suspend fun applyEdit(params: ApplyWorkspaceEditParams): ApplyWorkspaceEditResult {
+        onApplyWorkspaceEdit(params)
+        return ApplyWorkspaceEditResult(true)
+    }
 
-        if (::process.isInitialized) process.destroyForcibly()
+    override suspend fun createProgress(params: WorkDoneProgressCreateParams) {
+        // logger.debug { "Creating progress: ${params.token}" }
+    }
+
+    override suspend fun configuration(params: ConfigurationParams): List<LSPAny> {
+        return emptyList()
     }
 }

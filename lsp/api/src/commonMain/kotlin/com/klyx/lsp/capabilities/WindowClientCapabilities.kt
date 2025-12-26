@@ -25,12 +25,12 @@ data class WindowClientCapabilities(
      *
      * @since 3.16.0
      */
-    var showMessage: ShowMessageRequestClientCapabilities? = null,
+    var showMessage: ShowMessageRequestCapabilities? = null,
 
     /**
      * Client capabilities for the show document request.
      *
      * @since 3.16.0
      */
-    var showDocument: ShowDocumentClientCapabilities? = null
+    var showDocument: ShowDocumentCapabilities? = null
 )

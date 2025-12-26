@@ -16,5 +16,5 @@ data class NotebookDocumentClientCapabilities(
      *
      * @since 3.17.0
      */
-    var synchronization: NotebookDocumentSyncClientCapabilities? = null
+    var synchronization: NotebookDocumentSyncCapabilities? = null
 )

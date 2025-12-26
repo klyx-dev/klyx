@@ -17,7 +17,7 @@ data class ApplyWorkspaceEditResult(
      * This may be used by the server for diagnostic logging or to provide
      * a suitable error for a request that triggered the edit.
      */
-    val failureReason: String?,
+    var failureReason: String? = null,
 
     /**
      * Depending on the client's failure handling strategy, `failedChange`
@@ -25,5 +25,5 @@ data class ApplyWorkspaceEditResult(
      * only available if the client signals a `failureHandling` strategy
      * in its client capabilities.
      */
-    val failedChange: UInt?
+    var failedChange: UInt? = null
 )

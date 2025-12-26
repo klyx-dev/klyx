@@ -280,7 +280,7 @@ fun <A, B, C> OneOf<A, B>.mapRight(transform: (B) -> C): OneOf<A, C> =
  * @param rightFn The function to apply to a right value
  * @return The result of applying the appropriate function
  */
-fun <A, B, C> OneOf<A, B>.fold(leftFn: (A) -> C, rightFn: (B) -> C): C =
+inline fun <A, B, C> OneOf<A, B>.fold(leftFn: (A) -> C, rightFn: (B) -> C): C =
     when (this) {
         is Left -> leftFn(value)
         is Right -> rightFn(value)

@@ -10,24 +10,22 @@ import kotlinx.io.Source
 import kotlinx.io.readString
 import kotlinx.serialization.json.Json
 
-internal class JsonRpcReader(val input: Source, val json: Json) {
+internal class JsonRpcReader(
+    private val input: Source,
+    private val json: Json
+) {
     suspend fun readMessage(): Message? = withContext(Dispatchers.IO) {
         try {
-            val buffer = Buffer()
-            buffer.clear()
-            readHeaders(input, buffer)
+            val headerBuffer = Buffer()
+            readHeaders(input, headerBuffer)
 
-            val headers = buffer.readString()
-            val messageLength = headers
-                .split('\n')
-                .find { it.startsWith(CONTENT_LEN_HEADER) }
-                ?.removePrefix(CONTENT_LEN_HEADER)
-                ?.trimEnd()
-                ?.toLongOrNull()
-                ?: throw JsonRpcException("invalid LSP message header $headers")
+            val headers = headerBuffer.readString()
+            val contentLength = parseContentLength(headers)
 
-            input.readAtMostTo(buffer, messageLength)
-            parseMessage(buffer.readString())
+            val bodyBuffer = Buffer()
+            readFully(input, bodyBuffer, contentLength)
+
+            json.decodeFromString(bodyBuffer.readString())
         } catch (_: EOFException) {
             null
         } catch (e: Throwable) {
@@ -35,8 +33,25 @@ internal class JsonRpcReader(val input: Source, val json: Json) {
         }
     }
 
-    private fun parseMessage(message: String): Message {
-        return json.decodeFromString(message)
+    private fun parseContentLength(headers: String): Long {
+        return headers
+            .lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.startsWith(CONTENT_LEN_HEADER, ignoreCase = true) }
+            ?.substringAfter(':')
+            ?.trim()
+            ?.toLongOrNull()
+            ?: throw JsonRpcException("invalid LSP message header $headers")
     }
 }
 
+private fun readFully(source: Source, buffer: Buffer, byteCount: Long) {
+    var remaining = byteCount
+    while (remaining > 0) {
+        val read = source.readAtMostTo(buffer, remaining)
+        if (read == -1L) {
+            throw EOFException("Unexpected EOF while reading LSP message body")
+        }
+        remaining -= read
+    }
+}

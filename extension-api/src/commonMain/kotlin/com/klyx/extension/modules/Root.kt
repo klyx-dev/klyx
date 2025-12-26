@@ -62,6 +62,10 @@ class Root(
     private val json = Json {
         namingStrategy = JsonNamingStrategy.SnakeCase
         isLenient = true
+        explicitNulls = false
+        encodeDefaults = true
+        prettyPrint = true
+        prettyPrintIndent = "  "
     }
 
     @HostFunction("[resource-drop]worktree")

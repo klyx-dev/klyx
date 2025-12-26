@@ -8,7 +8,6 @@ kotlin {
     android {
         namespace = "com.klyx.editor"
 
-        @Suppress("UnstableApiUsage")
         androidResources {
             enable = true
         }
@@ -41,6 +40,7 @@ kotlin {
                 implementation(libs.androidx.collection)
 
                 implementation(projects.core)
+                implementation(projects.lsp.server)
                 implementation(projects.extensionApi)
 
 //                rootProject.project("tree-sitter").subprojects.forEach {
@@ -57,9 +57,6 @@ kotlin {
                 api(libs.sora.editor)
                 implementation(libs.sora.oniguruma.native)
                 implementation(libs.sora.language.textmate)
-
-                implementation(libs.lsp4j)
-                implementation(libs.lsp4j.jsonrpc)
 
                 implementation(libs.androidx.emoji2)
 

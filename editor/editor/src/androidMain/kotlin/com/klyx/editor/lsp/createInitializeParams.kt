@@ -1,82 +1,75 @@
 package com.klyx.editor.lsp
 
 import android.os.Process
+import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.file.Worktree
-import com.klyx.core.logging.logger
 import com.klyx.editor.lsp.util.uriString
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import org.eclipse.lsp4j.ClientCapabilities
-import org.eclipse.lsp4j.ClientInfo
-import org.eclipse.lsp4j.CodeActionCapabilities
-import org.eclipse.lsp4j.CodeActionKind
-import org.eclipse.lsp4j.CodeActionKindCapabilities
-import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities
-import org.eclipse.lsp4j.CompletionCapabilities
-import org.eclipse.lsp4j.CompletionItemCapabilities
-import org.eclipse.lsp4j.DefinitionCapabilities
-import org.eclipse.lsp4j.DidChangeConfigurationCapabilities
-import org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities
-import org.eclipse.lsp4j.DocumentSymbolCapabilities
-import org.eclipse.lsp4j.ExecuteCommandCapabilities
-import org.eclipse.lsp4j.FailureHandlingKind
-import org.eclipse.lsp4j.FormattingCapabilities
-import org.eclipse.lsp4j.HoverCapabilities
-import org.eclipse.lsp4j.InitializeParams
-import org.eclipse.lsp4j.MarkupKind
-import org.eclipse.lsp4j.OnTypeFormattingCapabilities
-import org.eclipse.lsp4j.ParameterInformationCapabilities
-import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
-import org.eclipse.lsp4j.RangeFormattingCapabilities
-import org.eclipse.lsp4j.RenameCapabilities
-import org.eclipse.lsp4j.ResourceOperationKind
-import org.eclipse.lsp4j.ShowDocumentCapabilities
-import org.eclipse.lsp4j.SignatureHelpCapabilities
-import org.eclipse.lsp4j.SignatureInformationCapabilities
-import org.eclipse.lsp4j.SymbolCapabilities
-import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.lsp4j.SymbolKindCapabilities
-import org.eclipse.lsp4j.SynchronizationCapabilities
-import org.eclipse.lsp4j.TextDocumentClientCapabilities
-import org.eclipse.lsp4j.WindowClientCapabilities
-import org.eclipse.lsp4j.WindowShowMessageRequestActionItemCapabilities
-import org.eclipse.lsp4j.WindowShowMessageRequestCapabilities
-import org.eclipse.lsp4j.WorkspaceClientCapabilities
-import org.eclipse.lsp4j.WorkspaceEditCapabilities
-import org.eclipse.lsp4j.WorkspaceFolder
+import com.klyx.lsp.ClientInfo
+import com.klyx.lsp.CodeActionKind
+import com.klyx.lsp.FailureHandlingKind
+import com.klyx.lsp.InitializeParams
+import com.klyx.lsp.MarkupKind
+import com.klyx.lsp.ResourceOperationKind
+import com.klyx.lsp.SymbolKind
+import com.klyx.lsp.WorkspaceFolder
+import com.klyx.lsp.capabilities.ClientCapabilities
+import com.klyx.lsp.capabilities.CodeActionCapabilities
+import com.klyx.lsp.capabilities.CodeActionKindCapabilities
+import com.klyx.lsp.capabilities.CodeActionLiteralSupportCapabilities
+import com.klyx.lsp.capabilities.CompletionCapabilities
+import com.klyx.lsp.capabilities.CompletionItemCapabilities
+import com.klyx.lsp.capabilities.DefinitionCapabilities
+import com.klyx.lsp.capabilities.DidChangeConfigurationCapabilities
+import com.klyx.lsp.capabilities.DidChangeWatchedFilesCapabilities
+import com.klyx.lsp.capabilities.DocumentSymbolCapabilities
+import com.klyx.lsp.capabilities.ExecuteCommandCapabilities
+import com.klyx.lsp.capabilities.FormattingCapabilities
+import com.klyx.lsp.capabilities.HoverCapabilities
+import com.klyx.lsp.capabilities.MessageActionItemCapabilities
+import com.klyx.lsp.capabilities.OnTypeFormattingCapabilities
+import com.klyx.lsp.capabilities.ParameterInformationCapabilities
+import com.klyx.lsp.capabilities.PublishDiagnosticsCapabilities
+import com.klyx.lsp.capabilities.RangeFormattingCapabilities
+import com.klyx.lsp.capabilities.RenameCapabilities
+import com.klyx.lsp.capabilities.ShowDocumentCapabilities
+import com.klyx.lsp.capabilities.ShowMessageRequestCapabilities
+import com.klyx.lsp.capabilities.SignatureHelpCapabilities
+import com.klyx.lsp.capabilities.SignatureInformationCapabilities
+import com.klyx.lsp.capabilities.SymbolKindCapabilities
+import com.klyx.lsp.capabilities.SynchronizationCapabilities
+import com.klyx.lsp.capabilities.TextDocumentClientCapabilities
+import com.klyx.lsp.capabilities.WindowClientCapabilities
+import com.klyx.lsp.capabilities.WorkspaceClientCapabilities
+import com.klyx.lsp.capabilities.WorkspaceEditCapabilities
+import com.klyx.lsp.capabilities.WorkspaceSymbolCapabilities
+import com.klyx.lsp.types.LSPAny
 
-@Suppress("DEPRECATION")
 fun createInitializeParams(
     worktree: Worktree,
-    initializationOptions: String? = null
-) = InitializeParams().apply {
-    processId = Process.myPid()
-    clientInfo = ClientInfo("Klyx")
-
+    initializationOptions: LSPAny? = null
+) = InitializeParams(
+    processId = Process.myPid(),
+    clientInfo = ClientInfo("Klyx", KlyxBuildConfig.VERSION_NAME),
     // some older language servers still expect rootUri
-    rootUri = worktree.uriString
-    logger().verbose { "Root URI: $rootUri" }
-
+    rootUri = worktree.uriString,
     workspaceFolders = listOf(
-        WorkspaceFolder().apply {
-            uri = worktree.uriString
+        WorkspaceFolder(
+            uri = worktree.uriString,
             name = worktree.name
-        }
-    )
-
-    capabilities = ClientCapabilities().apply {
-        textDocument = TextDocumentClientCapabilities().apply {
-            synchronization = SynchronizationCapabilities().apply {
-                dynamicRegistration = true
-                willSave = true
-                willSaveWaitUntil = true
+        )
+    ),
+    capabilities = ClientCapabilities(
+        textDocument = TextDocumentClientCapabilities(
+            synchronization = SynchronizationCapabilities(
+                dynamicRegistration = true,
+                willSave = true,
+                willSaveWaitUntil = true,
                 didSave = true
-            }
-            codeAction = CodeActionCapabilities().apply {
-                dynamicRegistration = true
-                isPreferredSupport = true
-                codeActionLiteralSupport = CodeActionLiteralSupportCapabilities().apply {
-                    dynamicRegistration = true
+            ),
+            codeAction = CodeActionCapabilities(
+                dynamicRegistration = true,
+                isPreferredSupport = true,
+                codeActionLiteralSupport = CodeActionLiteralSupportCapabilities(
                     codeActionKind = CodeActionKindCapabilities(
                         listOf(
                             CodeActionKind.QuickFix,
@@ -86,108 +79,76 @@ fun createInitializeParams(
                             CodeActionKind.RefactorRewrite,
                             CodeActionKind.Source,
                             CodeActionKind.SourceOrganizeImports,
-                            CodeActionKind.SourceFixAll,
+                            CodeActionKind.SourceFixAll
                         )
                     )
-                }
-            }
-            completion = CompletionCapabilities().apply {
-                dynamicRegistration = true
-                completionItem = CompletionItemCapabilities().apply {
-                    snippetSupport = true
-                    commitCharactersSupport = true
-                    documentationFormat = listOf(MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT)
-                    deprecatedSupport = true
+                )
+            ),
+            completion = CompletionCapabilities(
+                dynamicRegistration = true,
+                completionItem = CompletionItemCapabilities(
+                    snippetSupport = true,
+                    commitCharactersSupport = true,
+                    documentationFormat = listOf(MarkupKind.Markdown, MarkupKind.PlainText),
+                    deprecatedSupport = true,
                     preselectSupport = true
-                }
-            }
-            hover = HoverCapabilities().apply {
-                dynamicRegistration = true
-                contentFormat = listOf(MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT)
-            }
-            signatureHelp = SignatureHelpCapabilities().apply {
-                dynamicRegistration = true
-                signatureInformation = SignatureInformationCapabilities().apply {
-                    documentationFormat = listOf(MarkupKind.MARKDOWN, MarkupKind.PLAINTEXT)
-                    parameterInformation = ParameterInformationCapabilities().apply {
-                        labelOffsetSupport = true
-                    }
-                }
+                )
+            ),
+            hover = HoverCapabilities(
+                dynamicRegistration = true,
+                contentFormat = listOf(MarkupKind.Markdown, MarkupKind.PlainText)
+            ),
+            signatureHelp = SignatureHelpCapabilities(
+                dynamicRegistration = true,
+                signatureInformation = SignatureInformationCapabilities(
+                    documentationFormat = listOf(MarkupKind.Markdown, MarkupKind.PlainText),
+                    parameterInformation = ParameterInformationCapabilities(labelOffsetSupport = true)
+                ),
                 contextSupport = true
-            }
-            definition = DefinitionCapabilities().apply {
-                dynamicRegistration = true
-            }
-            documentSymbol = DocumentSymbolCapabilities().apply {
-                dynamicRegistration = true
-                symbolKind = SymbolKindCapabilities().apply {
-                    valueSet = SymbolKind.entries
-                }
-            }
-            formatting = FormattingCapabilities().apply {
-                dynamicRegistration = true
-            }
-            rangeFormatting = RangeFormattingCapabilities().apply {
-                dynamicRegistration = true
-            }
-            onTypeFormatting = OnTypeFormattingCapabilities().apply {
-                dynamicRegistration = true
-            }
-            rename = RenameCapabilities().apply {
-                dynamicRegistration = true
+            ),
+            definition = DefinitionCapabilities(dynamicRegistration = true),
+            documentSymbol = DocumentSymbolCapabilities(
+                dynamicRegistration = true,
+                symbolKind = SymbolKindCapabilities(valueSet = SymbolKind.entries)
+            ),
+            formatting = FormattingCapabilities(dynamicRegistration = true),
+            rangeFormatting = RangeFormattingCapabilities(dynamicRegistration = true),
+            onTypeFormatting = OnTypeFormattingCapabilities(dynamicRegistration = true),
+            rename = RenameCapabilities(
+                dynamicRegistration = true,
                 prepareSupport = true
-            }
-            publishDiagnostics = PublishDiagnosticsCapabilities().apply {
-                relatedInformation = true
+            ),
+            publishDiagnostics = PublishDiagnosticsCapabilities(
+                relatedInformation = true,
                 versionSupport = true
-            }
-        }
-
-        workspace = WorkspaceClientCapabilities().apply {
-            applyEdit = true
-            workspaceEdit = WorkspaceEditCapabilities().apply {
-                documentChanges = true
+            )
+        ),
+        workspace = WorkspaceClientCapabilities(
+            applyEdit = true,
+            workspaceEdit = WorkspaceEditCapabilities(
+                documentChanges = true,
                 resourceOperations = listOf(
                     ResourceOperationKind.Create,
                     ResourceOperationKind.Rename,
                     ResourceOperationKind.Delete
-                )
+                ),
                 failureHandling = FailureHandlingKind.TextOnlyTransactional
-            }
-            didChangeConfiguration = DidChangeConfigurationCapabilities().apply {
-                dynamicRegistration = true
-            }
-            didChangeWatchedFiles = DidChangeWatchedFilesCapabilities().apply {
-                dynamicRegistration = true
-            }
-            symbol = SymbolCapabilities().apply {
-                dynamicRegistration = true
-                symbolKind = SymbolKindCapabilities().apply {
-                    valueSet = SymbolKind.entries
-                }
-            }
-            executeCommand = ExecuteCommandCapabilities().apply {
-                dynamicRegistration = true
-            }
-        }
-        window = WindowClientCapabilities().apply {
-            showMessage = WindowShowMessageRequestCapabilities().apply {
-                messageActionItem = WindowShowMessageRequestActionItemCapabilities().apply {
-                    additionalPropertiesSupport = true
-                }
-            }
-            showDocument = ShowDocumentCapabilities().apply {
-                isSupport = true
-            }
+            ),
+            didChangeConfiguration = DidChangeConfigurationCapabilities(dynamicRegistration = true),
+            didChangeWatchedFiles = DidChangeWatchedFilesCapabilities(dynamicRegistration = true),
+            symbol = WorkspaceSymbolCapabilities(
+                dynamicRegistration = true,
+                symbolKind = SymbolKindCapabilities(valueSet = SymbolKind.entries)
+            ),
+            executeCommand = ExecuteCommandCapabilities(dynamicRegistration = true)
+        ),
+        window = WindowClientCapabilities(
+            showMessage = ShowMessageRequestCapabilities(
+                messageActionItem = MessageActionItemCapabilities(additionalPropertiesSupport = true)
+            ),
+            showDocument = ShowDocumentCapabilities(support = true),
             workDoneProgress = true
-        }
-        experimental = mapOf<String, Any>()
-    }
-
-    this.initializationOptions = if (!initializationOptions.isNullOrBlank()) {
-        println(initializationOptions)
-//        val json = Json.parseToJsonElement(initializationOptions)
-//        if (json is JsonObject) json.toMap() else null
-        initializationOptions
-    } else null
-}
+        )
+    ),
+    initializationOptions = initializationOptions
+)

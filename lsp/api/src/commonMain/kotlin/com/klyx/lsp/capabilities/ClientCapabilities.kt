@@ -1,7 +1,7 @@
 package com.klyx.lsp.capabilities
 
+import com.klyx.lsp.types.LSPAny
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#clientCapabilities)
@@ -47,6 +47,6 @@ data class ClientCapabilities(
     /**
      * Experimental client capabilities.
      */
-    var experimental: JsonElement? = null
+    var experimental: LSPAny? = null
 )
 

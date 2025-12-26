@@ -12,13 +12,14 @@ import com.klyx.core.language.ServerBinaryCache
 import com.klyx.core.lsp.LanguageServerBinary
 import com.klyx.core.lsp.LanguageServerBinaryOptions
 import com.klyx.core.lsp.LanguageServerName
+import com.klyx.core.unreachable
 import com.klyx.core.util.asHashMap
 import com.klyx.core.util.emptyJsonObject
-import com.klyx.core.unreachable
 import io.itsvks.anyhow.AnyhowResult
 import io.itsvks.anyhow.anyhow
 import kotlinx.io.files.Path
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -42,6 +43,12 @@ class ExtensionLspAdapter(
 
     override val isExtension: Boolean = true
 
+    private val json = Json {
+        explicitNulls = false
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
     override fun languageIds(): HashMap<LanguageName, String> {
         return extension.manifest()
             .languageServers[languageServerId]
@@ -58,7 +65,13 @@ class ExtensionLspAdapter(
         when (jsonOptions) {
             is Some -> {
                 withContext("failed to parse initialization_options from extension: ${jsonOptions.value}") {
-                    Json.decodeFromString(jsonOptions.value)
+                    val obj: JsonObject = json.decodeFromString(jsonOptions.value)
+
+                    JsonObject(
+                        obj.mapValues { (_, value) ->
+                            if (value is JsonNull) emptyJsonObject() else value
+                        }
+                    )
                 }
             }
 
@@ -75,7 +88,13 @@ class ExtensionLspAdapter(
         when (jsonOptions) {
             is Some -> {
                 withContext("failed to parse workspace_configuration from extension: ${jsonOptions.value}") {
-                    Json.decodeFromString(jsonOptions.value)
+                    val obj: JsonObject = json.decodeFromString(jsonOptions.value)
+
+                    JsonObject(
+                        obj.mapValues { (_, value) ->
+                            if (value is JsonNull) emptyJsonObject() else value
+                        }
+                    )
                 }
             }
 

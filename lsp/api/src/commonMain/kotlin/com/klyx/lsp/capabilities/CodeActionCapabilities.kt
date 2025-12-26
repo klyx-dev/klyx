@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#codeActionClientCapabilities)
  */
 @Serializable
-data class CodeActionClientCapabilities(
+data class CodeActionCapabilities(
     /**
      * Whether code action supports dynamic registration.
      */
@@ -19,7 +19,7 @@ data class CodeActionClientCapabilities(
      *
      * @since 3.8.0
      */
-    var codeActionLiteralSupport: CodeActionLiteralSupportClientCapabilities? = null,
+    var codeActionLiteralSupport: CodeActionLiteralSupportCapabilities? = null,
 
     /**
      * Whether code action supports the `isPreferred` property.
@@ -50,7 +50,7 @@ data class CodeActionClientCapabilities(
      *
      * @since 3.16.0
      */
-    var resolveSupport: ResolveSupportClientCapabilities? = null,
+    var resolveSupport: ResolveSupportCapabilities? = null,
 
     /**
      * Whether the client honors the change annotations in
@@ -87,12 +87,12 @@ data class CodeActionClientCapabilities(
  * @since 3.8.0
  */
 @Serializable
-data class CodeActionLiteralSupportClientCapabilities(
+data class CodeActionLiteralSupportCapabilities(
     /**
      * The code action kind is supported with the following value
      * set.
      */
-    val codeActionKind: CodeActionKindLiteralSupportClientCapabilities
+    val codeActionKind: CodeActionKindCapabilities
 )
 
 /**
@@ -100,7 +100,7 @@ data class CodeActionLiteralSupportClientCapabilities(
  * set.
  */
 @Serializable
-data class CodeActionKindLiteralSupportClientCapabilities(
+data class CodeActionKindCapabilities(
     /**
      * The code action kind values the client supports. When this
      * property exists the client also guarantees that it will

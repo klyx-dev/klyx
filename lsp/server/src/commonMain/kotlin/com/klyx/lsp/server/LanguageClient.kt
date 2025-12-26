@@ -193,7 +193,7 @@ interface LanguageClient {
      *
      * @since 3.6.0
      */
-    suspend fun configuration(params: ConfigurationParams): List<LSPAny>
+    suspend fun configuration(params: ConfigurationParams): List<LSPAny> = emptyList()
 
     /**
      * The `workspace/workspaceFolders` request is sent from the server to the client to fetch the current

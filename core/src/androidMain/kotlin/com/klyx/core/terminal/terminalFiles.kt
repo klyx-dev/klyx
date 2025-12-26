@@ -1,6 +1,7 @@
 package com.klyx.core.terminal
 
 import android.content.Context
+import com.klyx.core.allowDiskReads
 import com.klyx.core.withAndroidContext
 import java.io.File
 
@@ -9,7 +10,9 @@ val sandboxHomeDir get() = sandboxDir.resolve("home")
 
 context(context: Context)
 val sandboxDir
-    get() = File(context.dataDir, "sandbox").also { if (!it.exists()) it.mkdirs() }
+    get() = allowDiskReads {
+        File(context.dataDir, "sandbox").also { if (!it.exists()) it.mkdirs() }
+    }
 
 context(context: Context)
 val userHomeDir get() = if (currentUser == null) null else sandboxHomeDir.resolve(currentUser!!)

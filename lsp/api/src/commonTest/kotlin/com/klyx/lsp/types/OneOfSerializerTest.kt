@@ -1,5 +1,7 @@
 package com.klyx.lsp.types
 
+import com.klyx.lsp.OffsetRange
+import com.klyx.lsp.SignatureHelp
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -22,6 +24,8 @@ class OneOfSerializerTest : FunSpec({
     val json = Json {
         prettyPrint = false
         isLenient = true
+        explicitNulls = false
+        encodeDefaults = true
     }
 
     context("OneOf.Left serialization") {
@@ -145,5 +149,19 @@ class OneOfSerializerTest : FunSpec({
             decoded.shouldBeInstanceOf<OneOf.Left<TypeA>>()
             decoded.value shouldBe TypeA(42)
         }
+    }
+
+    test("signature help") {
+        val raw =
+            "{\"signatures\":[{\"label\":\"log(...data: any[]): void\",\"parameters\":[{\"label\":[4,18]}],\"documentation\":{\"kind\":\"markdown\",\"value\":\"The **`console.log()`** static method outputs a message to the console.\\n\\n[MDN Reference](https://developer.mozilla.org/docs/Web/API/console/log_static)\"}}],\"activeParameter\":0,\"activeSignature\":0}"
+
+        val decoded = json.decodeFromString<SignatureHelp>(raw)
+
+        decoded.signatures.size shouldBe 1
+        decoded.signatures[0].label shouldBe "log(...data: any[]): void"
+        decoded.signatures[0].parameters?.size shouldBe 1
+        decoded.signatures[0].parameters?.get(0)?.label?.right shouldBe OffsetRange(4, 18)
+        decoded.activeParameter shouldBe 0u
+        decoded.activeSignature shouldBe 0u
     }
 })

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#didChangeWatchedFilesClientCapabilities)
  */
 @Serializable
-data class DidChangeWatchedFilesClientCapabilities(
+data class DidChangeWatchedFilesCapabilities(
     /**
      * Did change watched files notification supports dynamic registration.
      * Please note that the current protocol doesn't support static

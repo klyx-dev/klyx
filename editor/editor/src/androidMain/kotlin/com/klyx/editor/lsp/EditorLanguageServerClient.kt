@@ -18,6 +18,15 @@ import com.klyx.editor.lsp.event.LspEditorContentChangeEvent
 import com.klyx.editor.lsp.event.LspEditorScrollEvent
 import com.klyx.editor.lsp.util.asLspPosition
 import com.klyx.editor.signature.SignatureHelpWindow
+import com.klyx.lsp.Diagnostic
+import com.klyx.lsp.DiagnosticSeverity
+import com.klyx.lsp.Position
+import com.klyx.lsp.SignatureHelp
+import com.klyx.lsp.TextEdit
+import com.klyx.lsp.WorkspaceEdit
+import com.klyx.lsp.types.fold
+import com.klyx.lsp.types.isLeft
+import com.klyx.lsp.types.leftOr
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.EditorReleaseEvent
 import io.github.rosemoe.sora.event.ScrollEvent
@@ -60,12 +69,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import org.eclipse.lsp4j.Diagnostic
-import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.SignatureHelp
-import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.WorkspaceEdit
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.util.concurrent.atomic.AtomicInteger
@@ -226,11 +229,11 @@ internal class EditorLanguageServerClient(
         return DiagnosticRegion(
             diagnostic.range.start.calculatePositionIndex(editor),
             diagnostic.range.end.calculatePositionIndex(editor),
-            diagnostic.severity.toEditorLevel(),
+            diagnostic.severity?.toEditorLevel() ?: DiagnosticRegion.SEVERITY_ERROR,
             idx.toLong(),
             DiagnosticDetail(
-                diagnostic.severity.name,
-                diagnostic.message,
+                diagnostic.severity?.name ?: "Error",
+                diagnostic.message.leftOr { diagnostic.message.right.value },
                 quickfixes,
                 null
             )
@@ -261,10 +264,10 @@ internal class EditorLanguageServerClient(
     }
 
     private fun Position.calculatePositionIndex(editor: CodeEditor): Int {
-        val safeLine = (this.line).coerceAtMost(editor.lineCount - 1)
+        val safeLine = (this.line.toInt()).coerceAtMost(editor.lineCount - 1)
         return runCatching {
             val columnCount = editor.text.getColumnCount(safeLine)
-            val safeColumn = this.character.coerceAtMost(columnCount)
+            val safeColumn = this.character.toInt().coerceAtMost(columnCount)
             editor.text.getCharIndex(safeLine, safeColumn)
         }.getOrElse { 0 }
     }
@@ -274,6 +277,7 @@ internal class EditorLanguageServerClient(
             DiagnosticSeverity.Hint, DiagnosticSeverity.Information -> DiagnosticRegion.SEVERITY_TYPO
             DiagnosticSeverity.Error -> DiagnosticRegion.SEVERITY_ERROR
             DiagnosticSeverity.Warning -> DiagnosticRegion.SEVERITY_WARNING
+            else -> error("Unknown diagnostic severity: $this")
         }
     }
 
@@ -295,11 +299,17 @@ internal class EditorLanguageServerClient(
             .requestQuickFixes(worktree, file, diagnostic)
             .getOrElse { return emptyList() }
 
-        return result.mapNotNull { either ->
-            when {
-                either.isRight -> {
-                    val action = either.right
-                    Quickfix(action.title ?: "Quickfix") {
+        return result.map {
+            it.fold(
+                leftFn = { command ->
+                    Quickfix(command.title) {
+                        coroutineScope.launch(Dispatchers.Default) {
+                            serverClient?.executeCommand(command.command, listOfNotNull(command.arguments))
+                        }
+                    }
+                },
+                rightFn = { action ->
+                    Quickfix(action.title) {
                         action.edit?.let { edit ->
                             coroutineScope.launch(Dispatchers.Default) {
                                 applyWorkspaceEdit(edit)
@@ -307,18 +317,7 @@ internal class EditorLanguageServerClient(
                         }
                     }
                 }
-
-                either.isLeft -> {
-                    val command = either.left
-                    Quickfix(command.title) {
-                        coroutineScope.launch(Dispatchers.Default) {
-                            serverClient?.executeCommand(command.command, command.arguments)
-                        }
-                    }
-                }
-
-                else -> null
-            }
+            )
         }
     }
 
@@ -333,8 +332,13 @@ internal class EditorLanguageServerClient(
         }
 
         edit.documentChanges?.forEach { docChange ->
-            if (docChange.isLeft) {
-                changes.addAll(docChange.left.edits)
+            if (docChange.isLeft()) {
+                changes.addAll(docChange.value.edits.map { edit ->
+                    edit.fold(
+                        leftFn = { it },
+                        rightFn = { TextEdit(it.range, it.snippet.value) }
+                    )
+                })
             }
         }
 
@@ -371,9 +375,9 @@ internal class EditorLanguageServerClient(
                 val range = textEdit.range
                 val text = textEdit.newText
 
-                val startIndex = content.getCharIndex(range.start.line, range.start.character)
-                val endLine = range.end.line.coerceAtMost(content.lineCount - 1)
-                val endIndex = content.getCharIndex(endLine, range.end.character)
+                val startIndex = content.getCharIndex(range.start.line.toInt(), range.start.character.toInt())
+                val endLine = range.end.line.toInt().coerceAtMost(content.lineCount - 1)
+                val endIndex = content.getCharIndex(endLine, range.end.character.toInt())
 
                 if (startIndex in 0..endIndex) {
                     content.replace(startIndex, endIndex, text)

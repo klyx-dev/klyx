@@ -6,11 +6,11 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#documentRangeFormattingClientCapabilities)
  */
 @Serializable
-data class DocumentRangeFormattingClientCapabilities(
+data class RangeFormattingCapabilities(
     /**
      * Whether formatting supports dynamic registration.
      */
-    override val dynamicRegistration: Boolean? = null,
+    override var dynamicRegistration: Boolean? = null,
 
     /**
      * Whether the client supports formatting multiple ranges at once.

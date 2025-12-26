@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
  * specific properties.
  */
 @Serializable
-data class SignatureInformationClientCapabilities(
+data class SignatureInformationCapabilities(
     /**
      * Client supports the following content formats for the documentation
      * property. The order describes the preferred format of the client.
@@ -18,7 +18,7 @@ data class SignatureInformationClientCapabilities(
     /**
      * Client capabilities specific to parameter information.
      */
-    var parameterInformation: SignatureParameterInformationClientCapabilities? = null,
+    var parameterInformation: ParameterInformationCapabilities? = null,
 
     /**
      * The client supports the `activeParameter` property on
@@ -42,7 +42,7 @@ data class SignatureInformationClientCapabilities(
  * Client capabilities specific to parameter information.
  */
 @Serializable
-data class SignatureParameterInformationClientCapabilities(
+data class ParameterInformationCapabilities(
     /**
      * The client supports processing label offsets instead of a
      * simple label string.

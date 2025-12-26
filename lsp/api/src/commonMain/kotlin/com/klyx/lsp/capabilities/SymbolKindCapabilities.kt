@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
  * Specific capabilities for the [SymbolKind].
  */
 @Serializable
-data class SymbolKindClientCapabilities(
+data class SymbolKindCapabilities(
     /**
      * The symbol kind values the client supports. When this
      * property exists, the client also guarantees that it will

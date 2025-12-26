@@ -1,16 +1,17 @@
 package com.klyx.editor.lsp.completion
 
+import com.klyx.lsp.CompletionItem
+import com.klyx.lsp.InsertTextFormat
+import com.klyx.lsp.Position
+import com.klyx.lsp.Range
+import com.klyx.lsp.TextEdit
+import com.klyx.lsp.types.fold
 import io.github.rosemoe.sora.lang.completion.CompletionItemKind
 import io.github.rosemoe.sora.lang.completion.SimpleCompletionIconDrawer
 import io.github.rosemoe.sora.lang.completion.snippet.parser.CodeSnippetParser
 import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.Content
 import io.github.rosemoe.sora.widget.CodeEditor
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.InsertTextFormat
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.TextEdit
 
 class LspCompletionItem(
     val item: CompletionItem,
@@ -18,6 +19,7 @@ class LspCompletionItem(
 ) : io.github.rosemoe.sora.lang.completion.CompletionItem(item.label, item.detail) {
 
     init {
+        item.textEdit
         this.prefixLength = prefixLength
         kind = item.kind?.let { CompletionItemKind.valueOf(it.name) } ?: CompletionItemKind.Text
         sortText = item.sortText
@@ -26,15 +28,10 @@ class LspCompletionItem(
     }
 
     override fun performCompletion(editor: CodeEditor, text: Content, position: CharPosition) {
-        val edit = when {
-            item.textEdit?.isLeft == true -> item.textEdit.left
-            item.textEdit?.isRight == true -> {
-                val ire = item.textEdit.right
-                TextEdit(ire.insert, ire.newText)
-            }
-
-            else -> null
-        }
+        val edit = item.textEdit?.fold(
+            { it },
+            { TextEdit(it.insert, it.newText) }
+        )
 
         val insertText = edit?.newText ?: item.insertText ?: item.label
 
@@ -47,19 +44,19 @@ class LspCompletionItem(
             val codeSnippet = CodeSnippetParser.parse(insertText)
 
             text.delete(
-                range.start.line, range.start.character,
-                range.end.line, range.end.character
+                range.start.line.toInt(), range.start.character.toInt(),
+                range.end.line.toInt(), range.end.character.toInt()
             )
 
             editor.snippetController.startSnippet(
-                text.getCharIndex(range.start.line, range.start.character),
+                text.getCharIndex(range.start.line.toInt(), range.start.character.toInt()),
                 codeSnippet,
                 ""
             )
         } else {
             editor.text.replace(
-                range.start.line, range.start.character,
-                range.end.line, range.end.character, insertText
+                range.start.line.toInt(), range.start.character.toInt(),
+                range.end.line.toInt(), range.end.character.toInt(), insertText
             )
         }
     }

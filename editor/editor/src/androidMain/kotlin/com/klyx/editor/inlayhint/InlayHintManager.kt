@@ -7,6 +7,9 @@ import com.klyx.editor.lsp.EditorLanguageServerClient
 import com.klyx.editor.lsp.LanguageServerManager
 import com.klyx.editor.lsp.util.createRange
 import com.klyx.editor.lsp.util.uriString
+import com.klyx.lsp.ColorInformation
+import com.klyx.lsp.InlayHint
+import com.klyx.lsp.types.fold
 import io.github.rosemoe.sora.graphics.inlayHint.ColorInlayHintRenderer
 import io.github.rosemoe.sora.graphics.inlayHint.TextInlayHintRenderer
 import io.github.rosemoe.sora.lang.styling.color.ConstColor
@@ -24,8 +27,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.eclipse.lsp4j.ColorInformation
-import org.eclipse.lsp4j.InlayHint
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.math.min
@@ -193,21 +194,21 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
         editor.inlayHints = inlayHintsContainer
     }
 
-    private fun List<InlayHint>.inlayHintToDisplay() = map {
-        val text = if (it.label.isLeft) it.label.left else it.label.right.joinToString(separator = "") { labelPart -> labelPart.value }
-        TextInlayHint(it.position.line, it.position.character, text)
+    private fun List<InlayHint>.inlayHintToDisplay() = map { inlayHint ->
+        val text = inlayHint.label.fold({ it }, { it.joinToString(separator = "") { labelPart -> labelPart.value } })
+        TextInlayHint(inlayHint.position.line.toInt(), inlayHint.position.character.toInt(), text)
     }
 
     private fun List<ColorInformation>.colorInfoToDisplay() = map {
         ColorInlayHint(
-            it.range.start.line,
-            it.range.start.character,
+            it.range.start.line.toInt(),
+            it.range.start.character.toInt(),
             ConstColor(
                 Color.argb(
-                    it.color.alpha.toFloat(),
-                    it.color.red.toFloat(),
-                    it.color.green.toFloat(),
-                    it.color.blue.toFloat()
+                    it.color.alpha,
+                    it.color.red,
+                    it.color.green,
+                    it.color.blue
                 )
             )
         )

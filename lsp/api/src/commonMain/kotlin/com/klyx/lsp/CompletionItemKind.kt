@@ -11,6 +11,36 @@ import kotlin.jvm.JvmInline
 @JvmInline
 @Serializable
 value class CompletionItemKind private constructor(private val value: Int) {
+    val name: String
+        get() = when (this) {
+            Text -> "Text"
+            Method -> "Method"
+            Function -> "Function"
+            Constructor -> "Constructor"
+            Field -> "Field"
+            Variable -> "Variable"
+            Class -> "Class"
+            Interface -> "Interface"
+            Module -> "Module"
+            Property -> "Property"
+            Unit -> "Unit"
+            Value -> "Value"
+            Enum -> "Enum"
+            Keyword -> "Keyword"
+            Snippet -> "Snippet"
+            Color -> "Color"
+            File -> "File"
+            Reference -> "Reference"
+            Folder -> "Folder"
+            EnumMember -> "EnumMember"
+            Constant -> "Constant"
+            Struct -> "Struct"
+            Event -> "Event"
+            Operator -> "Operator"
+            TypeParameter -> "TypeParameter"
+            else -> "Unknown"
+        }
+
     companion object {
         val Text = CompletionItemKind(1)
         val Method = CompletionItemKind(2)

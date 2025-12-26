@@ -28,6 +28,13 @@ data class CompletionItem(
     val labelDetails: CompletionItemLabelDetails?,
 
     /**
+     * The kind of this completion item. Based on the kind,
+     * an icon is chosen by the editor. The standardized set
+     * of available values is defined in [CompletionItemKind].
+     */
+    val kind: CompletionItemKind?,
+
+    /**
      * Tags for this completion item.
      *
      * @since 3.15.0

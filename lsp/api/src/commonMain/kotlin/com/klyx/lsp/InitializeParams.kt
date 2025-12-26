@@ -2,6 +2,7 @@ package com.klyx.lsp
 
 import com.klyx.lsp.capabilities.ClientCapabilities
 import com.klyx.lsp.types.DocumentUri
+import com.klyx.lsp.types.LSPAny
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 
@@ -62,7 +63,7 @@ data class InitializeParams(
     /**
      * User provided initialization options.
      */
-    var initializationOptions: JsonElement? = null,
+    var initializationOptions: LSPAny? = null,
 
     /**
      * The initial trace setting. If omitted trace is disabled ([TraceValue.Off]).

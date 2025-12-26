@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocumentSyncClientCapabilities)
  */
 @Serializable
-data class TextDocumentSyncClientCapabilities(
+data class SynchronizationCapabilities(
     /**
      * Whether text document synchronization supports dynamic registration.
      */

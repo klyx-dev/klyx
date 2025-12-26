@@ -1,6 +1,5 @@
 package com.klyx.editor.signature
 
-import android.graphics.Rect
 import android.view.View
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
@@ -11,7 +10,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.klyx.editor.KlyxEditor
 import com.klyx.editor.compose.ComposeInfoPopup
-import org.eclipse.lsp4j.SignatureHelp
+import com.klyx.lsp.SignatureHelp
 
 class SignatureHelpWindow(
     editor: KlyxEditor,
@@ -35,7 +34,7 @@ class SignatureHelpWindow(
     }
 
     fun show(signatureHelp: SignatureHelp) {
-        if (signatureHelp.signatures == null || signatureHelp.activeSignature == null || signatureHelp.activeParameter == null) {
+        if (signatureHelp.activeSignature == null || signatureHelp.activeParameter == null) {
             dismiss()
             return
         }

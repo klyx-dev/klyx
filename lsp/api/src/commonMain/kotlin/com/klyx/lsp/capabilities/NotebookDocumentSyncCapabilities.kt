@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  * @since 3.17.0
  */
 @Serializable
-data class NotebookDocumentSyncClientCapabilities(
+data class NotebookDocumentSyncCapabilities(
     /**
      * Whether implementation supports dynamic registration. If this is
      * set to `true`, the client supports the new

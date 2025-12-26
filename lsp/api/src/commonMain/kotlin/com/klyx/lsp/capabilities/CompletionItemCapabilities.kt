@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  * capabilities.
  */
 @Serializable
-data class CompletionItemClientCapabilities(
+data class CompletionItemCapabilities(
     /**
      * Client supports snippets as insert text.
      *

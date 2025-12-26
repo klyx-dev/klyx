@@ -48,7 +48,7 @@ data class SignatureHelp(
      * Since version 3.16.0 the [SignatureInformation] itself provides a
      * `activeParameter` property and it should be used instead of this one.
      */
-    val activeParameter: UInt?
+    val activeParameter: UInt? = null
 )
 
 /**
@@ -116,7 +116,7 @@ data class ParameterInformation(
      * signature label. Its intended use case is to highlight the parameter
      * label part in the [SignatureInformation.label].
      */
-    val label: OneOf<String, Pair<Int, Int>>,
+    val label: OneOf<String, OffsetRange>,
 
     /**
      * The human-readable doc-comment of this parameter. Will be shown

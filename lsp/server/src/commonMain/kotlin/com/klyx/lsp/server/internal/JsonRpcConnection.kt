@@ -131,6 +131,7 @@ internal class JsonRpcConnection(
                 }
             }
             val request = RequestMessage(id, method, requestParams)
+            println("sendRequest: $request")
             writer.writeMessage(request)
 
             return withTimeout(LSP_REQUEST_TIMEOUT) {
@@ -168,7 +169,7 @@ internal class JsonRpcConnection(
                     appendLine("LSP request returned null result for non-nullable type.")
                     appendLine("Method: $method")
                     appendLine("Expected type: $expectedType")
-                    appendLine("Params: ${encodedParams ?: "null"}")
+                    appendLine("Params: $encodedParams")
                     appendLine("Raw response: $response")
                     if (response.error != null) {
                         appendLine(
@@ -187,8 +188,9 @@ internal class JsonRpcConnection(
                     appendLine("Failed to decode LSP response.")
                     appendLine("Method: $method")
                     appendLine("Expected type: $expectedType")
-                    appendLine("Params: ${encodedParams ?: "null"}")
+                    appendLine("Params: $encodedParams")
                     appendLine("Raw result: ${response.result}")
+                    appendLine("Error: $e")
                 },
                 e
             )
@@ -198,6 +200,7 @@ internal class JsonRpcConnection(
     suspend fun sendNotification(method: String, params: LSPAny? = null) {
         check(started) { "Connection not started" }
         val notification = NotificationMessage(method, params)
+        println("sendNotification: $notification")
         writer.writeMessage(notification)
     }
 
@@ -289,6 +292,7 @@ internal class JsonRpcConnection(
     }
 
     private suspend fun handleResponse(response: ResponseMessage) {
+        println("handleResponse: $response")
         val id = response.id ?: return
         val deferred = pendingRequests.withLock { it.remove(id) } ?: return
 
@@ -306,8 +310,9 @@ internal class JsonRpcConnection(
                 handler(null, notification)
             }
         } catch (err: Throwable) {
-            println("Error handling notification ${notification.method}: ${err.message}")
-            err.printStackTrace()
+            //println("Error handling notification ${notification.method}: ${err.message}")
+            //err.printStackTrace()
+            throw err as? JsonRpcException ?: JsonRpcException("Error handling notification", err)
         }
     }
 
@@ -328,6 +333,7 @@ private fun LanguageClient.registerServerNotificationHandlers() {
     fun handleNotification(method: String, handler: suspend (NotificationMessage) -> Unit) {
         connection.handleServerNotification(method) { _, notification ->
             handler(notification)
+            println("handleNotification: $notification")
         }
     }
 

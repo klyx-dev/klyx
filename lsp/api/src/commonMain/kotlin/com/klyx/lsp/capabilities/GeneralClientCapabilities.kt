@@ -18,21 +18,21 @@ data class GeneralClientCapabilities(
      *
      * @since 3.17.0
      */
-    var staleRequestSupport: StaleRequestSupportClientCapabilities? = null,
+    var staleRequestSupport: StaleRequestSupportCapabilities? = null,
 
     /**
      * Client capabilities specific to regular expressions.
      *
      * @since 3.16.0
      */
-    var regularExpressions: RegularExpressionsClientCapabilities? = null,
+    var regularExpressions: RegularExpressionsCapabilities? = null,
 
     /**
      * Client capabilities specific to the client's markdown parser.
      *
      * @since 3.16.0
      */
-    var markdown: MarkdownClientCapabilities? = null,
+    var markdown: MarkdownCapabilities? = null,
 
     /**
      * The position encodings supported by the client. Client and server
@@ -66,7 +66,7 @@ data class GeneralClientCapabilities(
  * @since 3.17.0
  */
 @Serializable
-data class StaleRequestSupportClientCapabilities(
+data class StaleRequestSupportCapabilities(
     /**
      * The client will actively cancel the request.
      */
