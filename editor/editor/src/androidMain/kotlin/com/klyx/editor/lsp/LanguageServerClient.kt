@@ -370,7 +370,7 @@ class LanguageServerClient(
     suspend fun inlayHint(params: InlayHintParams) = withContext(Dispatchers.IO) {
         runCatching {
             val provider = serverCapabilities.inlayHintProvider
-            val isSupported = provider != null && provider.isFirst()
+            val isSupported = provider != null && provider.isFirst() && provider.value
             if (isSupported) {
                 withTimeout(2000) {
                     languageServer.textDocument.inlayHint(params).orEmpty()
@@ -384,7 +384,7 @@ class LanguageServerClient(
     suspend fun documentColor(params: DocumentColorParams) = withContext(Dispatchers.IO) {
         runCatching {
             val provider = serverCapabilities.colorProvider
-            val isSupported = provider != null && provider.isFirst()
+            val isSupported = provider != null && provider.isFirst() && provider.value
             if (isSupported) {
                 withTimeout(1000) {
                     languageServer.textDocument.documentColor(params)

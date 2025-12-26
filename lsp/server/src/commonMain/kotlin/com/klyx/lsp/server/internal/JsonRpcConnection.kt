@@ -131,7 +131,6 @@ internal class JsonRpcConnection(
                 }
             }
             val request = RequestMessage(id, method, requestParams)
-            println("sendRequest: $request")
             writer.writeMessage(request)
 
             return withTimeout(LSP_REQUEST_TIMEOUT) {
@@ -200,7 +199,6 @@ internal class JsonRpcConnection(
     suspend fun sendNotification(method: String, params: LSPAny? = null) {
         check(started) { "Connection not started" }
         val notification = NotificationMessage(method, params)
-        println("sendNotification: $notification")
         writer.writeMessage(notification)
     }
 
@@ -292,7 +290,6 @@ internal class JsonRpcConnection(
     }
 
     private suspend fun handleResponse(response: ResponseMessage) {
-        println("handleResponse: $response")
         val id = response.id ?: return
         val deferred = pendingRequests.withLock { it.remove(id) } ?: return
 
@@ -333,7 +330,6 @@ private fun LanguageClient.registerServerNotificationHandlers() {
     fun handleNotification(method: String, handler: suspend (NotificationMessage) -> Unit) {
         connection.handleServerNotification(method) { _, notification ->
             handler(notification)
-            println("handleNotification: $notification")
         }
     }
 
