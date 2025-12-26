@@ -11,7 +11,11 @@ open class CodeLensOptions(
      * Code lens has a resolve provider as well.
      */
     var resolveProvider: Boolean? = null
-) : WorkDoneProgressOptions()
+) : WorkDoneProgressOptions() {
+    override fun toString(): String {
+        return "CodeLensOptions(resolveProvider=$resolveProvider, workDoneProgress=$workDoneProgress)"
+    }
+}
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#codeLensRegistrationOptions)

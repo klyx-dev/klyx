@@ -22,7 +22,7 @@ internal inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() 
     }.apply {
         freeCompilerArgs.addAll(
             // Enable experimental coroutines APIs, including Flow
-            "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+            //"-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
             // Enable experimental UUID APIs
             "-opt-in=kotlin.uuid.ExperimentalUuidApi",
             // Enable experimental contracts APIs

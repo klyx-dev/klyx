@@ -13,7 +13,7 @@ internal class NotebookDocumentServiceImpl(
     val json: Json
 ) : NotebookDocumentService {
 
-    private suspend fun sendNotification(method: String, params: Any? = null) {
+    private suspend inline fun <reified Params> sendNotification(method: String, params: Params? = null) {
         connection.sendNotification("notebookDocument/$method", json.encodeToJsonElement(params))
     }
 

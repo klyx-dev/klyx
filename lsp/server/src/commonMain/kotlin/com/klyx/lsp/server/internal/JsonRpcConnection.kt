@@ -150,11 +150,13 @@ internal class JsonRpcConnection(
         }
     }
 
-    suspend inline fun <reified T> sendRequest(
+    suspend inline fun <reified T, reified P> sendRequest(
         method: String,
-        params: Any? = null
+        params: P?
     ): T {
-        val encodedParams = params?.let { json.encodeToJsonElement(it) }
+        val encodedParams = params?.let {
+            json.encodeToJsonElement(it)
+        } ?: JsonNull
         val response = sendRequest(method, encodedParams)
 
         val expectedType = typeOf<T>()
@@ -343,6 +345,9 @@ private fun LanguageClient.registerServerNotificationHandlers() {
         handleNotification("telemetry/event") {
             telemetryEvent(json.decodeFromJsonElement(it.params!!))
         }
+        handleNotification("textDocument/publishDiagnostics") {
+            publishDiagnostics(json.decodeFromJsonElement(it.params!!))
+        }
     }
 }
 
@@ -384,9 +389,6 @@ private fun LanguageClient.registerServerRequestHandlers() {
         }
         handleRequest("workspace/textDocumentContent/refresh") { id, params ->
             handleVoidRequest(id, params, ::refreshTextDocumentContent)
-        }
-        handleRequest("textDocument/publishDiagnostics") { id, params ->
-            handleVoidRequest(id, params, ::publishDiagnostics)
         }
         handleRequest("workspace/configuration") { id, params ->
             try {

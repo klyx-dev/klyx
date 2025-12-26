@@ -23,11 +23,11 @@ import kotlinx.serialization.json.encodeToJsonElement
 
 internal class WorkspaceServiceImpl(val connection: JsonRpcConnection, val json: Json) : WorkspaceService {
 
-    private suspend inline fun <reified T> sendRequest(method: String, params: Any? = null): T {
+    private suspend inline fun <reified T, reified Params> sendRequest(method: String, params: Params? = null): T {
         return connection.sendRequest("workspace/$method", params)
     }
 
-    private suspend fun sendNotification(method: String, params: Any? = null) {
+    private suspend inline fun <reified Params> sendNotification(method: String, params: Params? = null) {
         connection.sendNotification("workspace/$method", json.encodeToJsonElement(params))
     }
 

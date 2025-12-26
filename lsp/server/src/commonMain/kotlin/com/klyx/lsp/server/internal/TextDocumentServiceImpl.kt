@@ -84,11 +84,11 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 
 internal class TextDocumentServiceImpl(val connection: JsonRpcConnection, val json: Json) : TextDocumentService {
-    private suspend inline fun <reified T> sendRequest(method: String, params: Any? = null): T {
+    private suspend inline fun <reified T, reified Params> sendRequest(method: String, params: Params? = null): T {
         return connection.sendRequest("textDocument/$method", params)
     }
 
-    private suspend fun sendNotification(method: String, params: Any? = null) {
+    private suspend inline fun <reified Params> sendNotification(method: String, params: Params? = null) {
         connection.sendNotification("textDocument/$method", json.encodeToJsonElement(params))
     }
 

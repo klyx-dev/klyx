@@ -4,6 +4,7 @@ import com.klyx.lsp.InitializeParams
 import com.klyx.lsp.InitializeResult
 import com.klyx.lsp.SetTraceParams
 import com.klyx.lsp.ErrorCodes.InvalidRequest
+import com.klyx.lsp.InitializedParams
 import com.klyx.lsp.WorkDoneProgressCancelParams
 
 /**
@@ -65,7 +66,7 @@ interface LanguageServer {
      * example, to dynamically register capabilities. The `initialized`
      * notification may only be sent once.
      */
-    suspend fun initialized(params: InitializeParams)
+    suspend fun initialized(params: InitializedParams)
 
     /**
      * A notification that should be used by the client to modify the trace setting of the server.

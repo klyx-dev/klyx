@@ -17,3 +17,7 @@ kotlin {
         }
     }
 }
+
+atomicfu {
+    transformJvm = false
+}

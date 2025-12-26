@@ -2,6 +2,7 @@ package com.klyx.lsp.server.internal
 
 import com.klyx.lsp.InitializeParams
 import com.klyx.lsp.InitializeResult
+import com.klyx.lsp.InitializedParams
 import com.klyx.lsp.SetTraceParams
 import com.klyx.lsp.WorkDoneProgressCancelParams
 import com.klyx.lsp.server.LanguageClient
@@ -55,7 +56,7 @@ internal class LanguageServerImpl(val connection: JsonRpcConnection, val json: J
         return connection.sendRequest("initialize", params)
     }
 
-    override suspend fun initialized(params: InitializeParams) {
+    override suspend fun initialized(params: InitializedParams) {
         connection.sendNotification("initialized", json.encodeToJsonElement(params))
         isInitialized = true
     }
