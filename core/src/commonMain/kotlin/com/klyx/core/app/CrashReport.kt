@@ -33,12 +33,6 @@ data class CrashReport(
         appendLine("Exception: $exception")
         appendLine("Message: ${message ?: "No message"}")
 
-        if (breadcrumbs.isNotEmpty()) {
-            appendLine()
-            appendLine("=== Breadcrumbs ===")
-            breadcrumbs.forEach { appendLine(it) }
-        }
-
         appendLine()
         appendLine("=== Build Info ===")
         appendLine("Commit: ${buildInfo.gitCommit ?: "unknown"}")
@@ -48,6 +42,13 @@ data class CrashReport(
         appendLine()
         appendLine("Stack Trace:")
         appendLine(stacktrace)
+        appendLine()
+
+        if (breadcrumbs.isNotEmpty()) {
+            appendLine()
+            appendLine("=== Breadcrumbs ===")
+            appendLine(breadcrumbs.joinToString(" -> ") { "($it)" })
+        }
     }
 
     companion object {

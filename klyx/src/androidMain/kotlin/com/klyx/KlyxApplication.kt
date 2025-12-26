@@ -32,18 +32,16 @@ import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
-import java.util.concurrent.Executors
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
+import java.util.concurrent.Executors
 import kotlin.time.ExperimentalTime
 
 @OptIn(DelicateCoroutinesApi::class)
@@ -179,14 +177,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
 @JvmSynthetic
 private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: Throwable) {
-    if (throwable is ResponseErrorException &&
-        (throwable.message?.contains("content modified") == true ||
-                throwable.message?.contains("server cancelled") == true)
-    ) {
-        return
-    }
-
-    MainScope().launch(Dispatchers.IO) {
+    launch(Dispatchers.IO) {
         val report = CrashReport(thread, throwable)
         val file = runCatching { saveCrashReport(report) }.getOrNull()
         EventBus.INSTANCE.postSync(CrashEvent(thread, throwable, file))

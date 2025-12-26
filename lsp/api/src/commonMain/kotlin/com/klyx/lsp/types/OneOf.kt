@@ -62,6 +62,7 @@ fun <A> A.asRight() = Right(this)
 fun <A, B> OneOf<A, B>.isLeft(): Boolean {
     contract {
         returns(true) implies (this@isLeft is Left)
+        returns(false) implies (this@isLeft is Right)
     }
     return this is Left
 }
@@ -84,6 +85,7 @@ fun <A, B> OneOf<A, B>.isLeft(): Boolean {
 fun <A, B> OneOf<A, B>.isRight(): Boolean {
     contract {
         returns(true) implies (this@isRight is Right)
+        returns(false) implies (this@isRight is Left)
     }
     return this is Right
 }

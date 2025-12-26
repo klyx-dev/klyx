@@ -76,6 +76,7 @@ fun <C> C.asThird() = Third(this)
 fun <A, B, C> OneOfThree<A, B, C>.isFirst(): Boolean {
     contract {
         returns(true) implies (this@isFirst is First)
+        returns(false) implies (this@isFirst is Second || this@isFirst is Third)
     }
     return this is First
 }
@@ -98,6 +99,7 @@ fun <A, B, C> OneOfThree<A, B, C>.isFirst(): Boolean {
 fun <A, B, C> OneOfThree<A, B, C>.isSecond(): Boolean {
     contract {
         returns(true) implies (this@isSecond is Second)
+        returns(false) implies (this@isSecond is First || this@isSecond is Third)
     }
     return this is Second
 }
@@ -120,6 +122,7 @@ fun <A, B, C> OneOfThree<A, B, C>.isSecond(): Boolean {
 fun <A, B, C> OneOfThree<A, B, C>.isThird(): Boolean {
     contract {
         returns(true) implies (this@isThird is Third)
+        returns(false) implies (this@isThird is First || this@isThird is Second)
     }
     return this is Third
 }
@@ -395,7 +398,7 @@ fun <A, B, C, D> OneOfThree<A, B, C>.mapThird(transform: (C) -> D): OneOfThree<A
  * @param thirdFn The function to apply to a third value
  * @return The result of applying the appropriate function
  */
-fun <A, B, C, D> OneOfThree<A, B, C>.fold(
+inline fun <A, B, C, D> OneOfThree<A, B, C>.fold(
     firstFn: (A) -> D,
     secondFn: (B) -> D,
     thirdFn: (C) -> D
