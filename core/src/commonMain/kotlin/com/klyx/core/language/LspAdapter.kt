@@ -38,7 +38,7 @@ abstract class AbstractLspAdapter<BinaryVersion> : LspAdapter, LspInstaller<Bina
         preRelease: Boolean
     ) = anyhow {
         val name = name()
-        log.debug { "fetching latest version of language server $name" }
+        log.info { "fetching latest version of language server $name" }
         delegate.updateStatus(name, BinaryStatus.CheckingForUpdate)
 
         val latestVersion = fetchLatestServerVersion(delegate, preRelease).bind()
@@ -47,7 +47,7 @@ abstract class AbstractLspAdapter<BinaryVersion> : LspAdapter, LspInstaller<Bina
             delegate.updateStatus(name, BinaryStatus.None)
             binary
         } ?: run {
-            log.debug { "downloading language server $name" }
+            log.info { "downloading language server $name" }
             delegate.updateStatus(name, BinaryStatus.Downloading)
             val binary = fetchServerBinary(latestVersion, containerDir, delegate).bind()
             delegate.updateStatus(name, BinaryStatus.None)

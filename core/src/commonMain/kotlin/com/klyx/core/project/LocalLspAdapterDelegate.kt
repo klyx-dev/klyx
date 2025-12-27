@@ -32,8 +32,8 @@ class LocalLspAdapterDelegate(
         val logger = logger(language)
 
         when(status) {
-            BinaryStatus.CheckingForUpdate -> logger.progress { "checking for updates" }
-            BinaryStatus.Downloading -> logger.progress { "downloading" }
+            BinaryStatus.CheckingForUpdate -> logger.progress { "[$language] checking for updates" }
+            BinaryStatus.Downloading -> logger.progress { "downloading language server '$language'" }
             is BinaryStatus.Failed -> logger.error { "[$language] failed: ${status.error}" }
             BinaryStatus.None -> logger.info { "" }
             BinaryStatus.Starting -> logger.progress { "starting" }

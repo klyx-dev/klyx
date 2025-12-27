@@ -12,7 +12,7 @@ import kotlinx.atomicfu.locks.synchronized
  * Must never throw, even during OOM or fatal crashes.
  */
 object Breadcrumbs : SynchronizedObject() {
-    private const val MAX = 30
+    private const val MAX = 20
     private val breadcrumbs = ArrayDeque<String>(MAX)
 
     init {
