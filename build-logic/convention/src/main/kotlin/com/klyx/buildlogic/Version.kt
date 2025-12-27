@@ -3,16 +3,13 @@ package com.klyx.buildlogic
 import io.github.z4kn4fein.semver.Version
 import io.github.z4kn4fein.semver.withoutSuffixes
 
-private val currentVersion = Version(2, 0, 0, preRelease = null, buildMetadata = "preview")
+private val currentVersion = Version(2, 0, 1, preRelease = null, buildMetadata = "preview")
 
 private val currentVersionCode by lazy {
-    val major = currentVersion.major
-    val minor = currentVersion.minor
-    val patch = currentVersion.patch
-    val preRelease = currentVersion.preRelease ?: ""
+    val (minor, major, patch, preRelease) = currentVersion
 
     val regex = Regex("""([a-zA-Z]+)(\d+)?""")
-    val match = regex.matchEntire(preRelease)
+    val match = regex.matchEntire(preRelease.orEmpty())
 
     val preType = match?.groups?.get(1)?.value ?: ""
     val preNum = match?.groups?.get(2)?.value?.toIntOrNull() ?: 0
