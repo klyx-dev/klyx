@@ -20,7 +20,7 @@ futures.workspace = true
 async-fs = "2.2.0"
 futures-util = "0.3"
 thiserror = "2.0.17"
-wasm-encoder = "0.243.0"
+wasm-encoder = "0.244.0"
 wasmparser = "0.243.0"
 wasmtime = { version = "33", default-features = false, features = [
     "async",
