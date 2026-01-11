@@ -5,15 +5,6 @@ plugins {
 }
 
 android {
-    applicationVariants.all {
-        val variant = this
-        outputs.all {
-            if (this is ApkVariantOutputImpl) {
-                outputFileName = "klyx-${variant.name}-v${versionName}.apk"
-            }
-        }
-    }
-
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
@@ -22,6 +13,27 @@ android {
         debug {
             // signingConfig = signingConfigs.getByName("debug")
             signingConfig = signingConfigs.getByName("release")
+        }
+    }
+
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "x86_64")
+            isUniversalApk = true
+        }
+    }
+
+    defaultConfig {
+        ndk.abiFilters += setOf("arm64-v8a", "x86_64")
+    }
+
+    applicationVariants.configureEach {
+        outputs.configureEach {
+            (this as? ApkVariantOutputImpl)?.let {
+                outputFileName = outputFileName.replace(project.name, "klyx")
+            }
         }
     }
 }

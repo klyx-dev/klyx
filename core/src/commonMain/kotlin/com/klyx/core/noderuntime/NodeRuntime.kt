@@ -4,20 +4,20 @@ import arrow.core.None
 import arrow.core.Option
 import arrow.core.Some
 import arrow.core.identity
+import arrow.core.raise.either
+import arrow.core.raise.ensure
+import arrow.core.raise.result
 import com.klyx.core.file.archive.ArchiveType
 import com.klyx.core.file.archive.extractGzipTar
 import com.klyx.core.file.archive.extractZip
 import com.klyx.core.file.downloadFile
 import com.klyx.core.io.Paths
-import com.klyx.core.io.emptyPath
 import com.klyx.core.io.fs
-import com.klyx.core.io.intoPath
-import com.klyx.core.io.join
 import com.klyx.core.io.root
 import com.klyx.core.io.stripSandboxRoot
 import com.klyx.core.logging.Level
 import com.klyx.core.logging.log
-import com.klyx.core.logging.logErr
+import com.klyx.core.logging.logerror
 import com.klyx.core.logging.logger
 import com.klyx.core.platform.Architecture
 import com.klyx.core.platform.Os
@@ -29,20 +29,10 @@ import com.klyx.core.process.SystemPathSeparator
 import com.klyx.core.process.getenv
 import com.klyx.core.process.which
 import com.klyx.core.unwrapOrDefault
+import com.klyx.core.util.emptyPath
+import com.klyx.core.util.intoPath
+import com.klyx.core.util.join
 import io.github.z4kn4fein.semver.Version
-import io.itsvks.anyhow.AnyhowError
-import io.itsvks.anyhow.AnyhowResult
-import io.itsvks.anyhow.Ok
-import io.itsvks.anyhow.UnsafeResultApi
-import io.itsvks.anyhow.anyhow
-import io.itsvks.anyhow.context
-import io.itsvks.anyhow.flatten
-import io.itsvks.anyhow.fold
-import io.itsvks.anyhow.map
-import io.itsvks.anyhow.mapError
-import io.itsvks.anyhow.ok
-import io.itsvks.anyhow.onSuccess
-import io.itsvks.anyhow.zip
 import io.ktor.client.HttpClient
 import io.ktor.http.URLBuilder
 import io.ktor.http.Url
@@ -112,18 +102,18 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
         options.usePaths?.let { (node, npm) ->
             val instance = SystemNodeRuntime(node, npm)
                 .fold(
-                    ok = { instance ->
+                    onSuccess = { instance ->
                         log.info { "using Node.js from `node.path` in settings: $instance" }
                         instance
                     },
-                    err = { err ->
+                    onFailure = { err ->
                         // failure case not cached, since it's cheap to check again
                         return UnavailableNodeRuntime(
                             error = "failure checking Node.js from `node.path` in settings ($node): $err"
                         )
                     }
                 )
-            state.instance = instance.copy()
+            state.instance = instance
             state.lastOptions = options
             return instance
         }
@@ -132,13 +122,13 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
             state.shellEnvLoaded.await()
             SystemNodeRuntime.detect()
                 .fold(
-                    ok = { instance ->
+                    ifRight = { instance ->
                         log.info { "using Node.js found on PATH: $instance" }
                         state.instance = instance.copy()
                         state.lastOptions = options
                         return instance
                     },
-                    ::identity
+                    ifLeft = ::identity
                 )
         } else null
 
@@ -151,14 +141,14 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
 
             ManagedNodeRuntime.installIfNeeded(state.http)
                 .fold(
-                    ok = { instance ->
+                    onSuccess = { instance ->
                         log.log(
                             logLevel,
                             "using Klyx managed Node.js at ${instance.installationPath} since $whyUsingManaged"
                         )
                         instance
                     },
-                    err = { err ->
+                    onFailure = { err ->
                         // failure case is cached, since downloading + installing may be expensive. The
                         // downside of this is that it may fail due to an intermittent network issue.
                         //
@@ -191,7 +181,7 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
 
     suspend fun binaryPath() = instance().binaryPath()
 
-    suspend fun runNpmSubcommand(directory: Path, subcommand: String, args: Array<out String>): AnyhowResult<Output> {
+    suspend fun runNpmSubcommand(directory: Path, subcommand: String, args: Array<out String>): Result<Output> {
         val instance = instance()
         return withState { (http) ->
             instance.runNpmSubcommand(directory, null, subcommand, args)
@@ -202,11 +192,11 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
         instance().npmPackageInstalledVersion(localPackageDirectory, name)
 
     @OptIn(ExperimentalSerializationApi::class)
-    suspend fun npmPackageLatestVersion(name: String): AnyhowResult<String> {
+    suspend fun npmPackageLatestVersion(name: String): Result<String> {
         val instance = instance()
 
         return withState { (http) ->
-            anyhow {
+            result {
                 val output = instance.runNpmSubcommand(
                     directory = null,
                     proxy = null,
@@ -231,13 +221,13 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
                 val info = json.decodeFromString(NpmInfo.serializer(), output.stdout)
                 info.distTags.latest
                     ?: info.versions.removeLastOrNull()
-                    ?: bail("no version found for npm package $name")
+                    ?: raise(RuntimeException("no version found for npm package $name"))
             }
         }
     }
 
-    suspend fun npmInstallPackages(directory: Path, packages: Map<String, String>): AnyhowResult<Unit> = anyhow {
-        if (packages.isEmpty()) return anyhow.ok(Unit)
+    suspend fun npmInstallPackages(directory: Path, packages: Map<String, String>): Result<Unit> = result {
+        if (packages.isEmpty()) return Result.success(Unit)
 
         val packages = packages.map { (name, version) -> "$name@$version" }
         val arguments = packages.toMutableList()
@@ -271,8 +261,8 @@ data class NodeRuntime private constructor(private val state: NodeRuntimeState) 
         if (fs.metadataOrNull(localExecutablePath) == null) return true
 
         val version = npmPackageInstalledVersion(localPackageDirectory, packageName)
-            .logErr()
-            .ok() ?: return true
+            .logerror()
+            .getOrNull() ?: return true
 
         val installedVersion = try {
             Version.parse(version)
@@ -340,33 +330,37 @@ fun NodeRuntime(
 
 interface INodeRuntime {
     suspend fun copy(): INodeRuntime
-    suspend fun binaryPath(): AnyhowResult<Path>
+    suspend fun binaryPath(): Result<Path>
 
     suspend fun runNpmSubcommand(
         directory: Path?,
         proxy: Url?,
         subcommand: String,
         args: Array<out String>
-    ): AnyhowResult<Output>
+    ): Result<Output>
 
     suspend fun npmPackageInstalledVersion(
         localPackageDirectory: Path,
         name: String
-    ): AnyhowResult<String?>
+    ): Result<String?>
 }
 
-data class UnavailableNodeRuntime(private val error: String) : INodeRuntime {
+data class UnavailableNodeRuntime(private val error: Throwable) : INodeRuntime {
+
+    constructor(error: String) : this(Throwable(error))
+
     override suspend fun copy() = copy(error = error)
-    override suspend fun binaryPath() = anyhow(error)
+    override suspend fun binaryPath() = Result.failure<Nothing>(error)
 
     override suspend fun runNpmSubcommand(
         directory: Path?,
         proxy: Url?,
         subcommand: String,
         args: Array<out String>
-    ) = anyhow(error)
+    ) = Result.failure<Nothing>(error)
 
-    override suspend fun npmPackageInstalledVersion(localPackageDirectory: Path, name: String) = anyhow(error)
+    override suspend fun npmPackageInstalledVersion(localPackageDirectory: Path, name: String) =
+        Result.failure<Nothing>(error)
 }
 
 @JvmSynthetic
@@ -428,13 +422,13 @@ fun Url.forceLocalhostToIp(): Url {
 private suspend fun readPackageInstalledVersion(
     nodeModuleDirectory: Path,
     name: String
-): AnyhowResult<String?> = anyhow {
+): Result<String?> = result {
     val packageJsonPath = nodeModuleDirectory.join(name, "package.json")
 
     val source = try {
         fs.source(packageJsonPath)
     } catch (_: FileNotFoundException) {
-        return anyhow.ok(null)
+        return Result.success(null)
     } catch (err: Throwable) {
         raise(err)
     }
@@ -462,25 +456,24 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
         return copy(installationPath = installationPath)
     }
 
-    override suspend fun binaryPath(): AnyhowResult<Path> {
-        return Ok(installationPath.join(NODE_PATH))
+    override suspend fun binaryPath(): Result<Path> {
+        return Result.success(installationPath.join(NODE_PATH))
     }
 
-    @OptIn(UnsafeResultApi::class)
     override suspend fun runNpmSubcommand(
         directory: Path?,
         proxy: Url?,
         subcommand: String,
         args: Array<out String>
-    ) = anyhow {
+    ) = result {
         val attempt = suspend {
-            anyhow {
+            result {
                 val nodeBinary = installationPath.join(NODE_PATH)
                 val npmFile = installationPath.join(NPM_PATH)
                 val envPath = pathWithNodeBinaryPrepended(nodeBinary).unwrapOrDefault { "" }
 
-                ensure(fs.exists(Paths.root.join(nodeBinary))) { "missing node binary file" }
-                ensure(fs.exists(Paths.root.join(npmFile))) { "missing npm file" }
+                ensure(fs.exists(Paths.root.join(nodeBinary))) { RuntimeException("missing node binary file") }
+                ensure(fs.exists(Paths.root.join(npmFile))) { RuntimeException("missing npm file") }
 
                 val nodeCaCerts = getenv(NODE_CA_CERTS_ENV_VAR).orEmpty()
 
@@ -499,14 +492,19 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
 
         var output = attempt()
 
-        if (output.isErr) {
+        if (output.isFailure) {
             output = attempt()
-            ensure(output.isOk) { "failed to launch npm subcommand $subcommand subcommand\nerr: ${output.error}" }
+            ensure(output.isSuccess) {
+                RuntimeException(
+                    "failed to launch npm subcommand $subcommand subcommand\nerr: ${output.exceptionOrNull()?.message}",
+                    output.exceptionOrNull()
+                )
+            }
         }
 
         output.onSuccess { output ->
             ensure(output.isSuccess) {
-                "failed to execute npm $subcommand subcommand:\nstdout: ${output.stdout}\nstderr: ${output.stderr}"
+                RuntimeException("failed to execute npm $subcommand subcommand:\nstdout: ${output.stdout}\nstderr: ${output.stderr}")
             }
         }
 
@@ -530,19 +528,19 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
             else -> Paths.dataDir.join("node")
         }
 
-        suspend fun installIfNeeded(http: HttpClient) = anyhow {
+        suspend fun installIfNeeded(http: HttpClient) = result {
             val (os, arch) = currentPlatform()
             val osStr = when (os) {
                 Os.Android, Os.Linux -> "linux"
                 Os.Mac, Os.iOS -> "darwin"
                 Os.Windows -> "win32"
-                else -> bail("Running on unsupported os: $os")
+                else -> raise(RuntimeException("Running on unsupported os: $os"))
             }
 
             val archStr = when (arch) {
                 Architecture.Aarch64 -> "arm64"
                 Architecture.X8664 -> "x64"
-                else -> bail("Running on unsupported architecture: $arch")
+                else -> raise(RuntimeException("Running on unsupported architecture: $arch"))
             }
 
             val folderName = "node-$VERSION-$osStr-$archStr"
@@ -568,7 +566,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                     .output(1.minutes)
 
                 result.fold(
-                    ok = { output ->
+                    onSuccess = { output ->
                         if (output.isSuccess) {
                             true
                         } else {
@@ -578,9 +576,9 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                             false
                         }
                     },
-                    err = { err ->
-                        log.warn {
-                            "Klyx managed Node.js binary at $nodeBinary failed check, so re-downloading it. Error: $err"
+                    onFailure = { err ->
+                        log.warn(err) {
+                            "Klyx managed Node.js binary at $nodeBinary failed check, so re-downloading it. Error: ${err.message}"
                         }
                         false
                     }
@@ -589,14 +587,12 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
 
             if (!valid) {
                 fs.delete(nodeContainingDir, mustExist = false)
-                anyhow { fs.createDirectories(nodeContainingDir) }
-                    .context("error creating node containing dir")
-                    .bind()
+                result { fs.createDirectories(nodeContainingDir) }.bind()
 
                 val archiveType = when (os) {
                     Os.Windows -> ArchiveType.Zip
                     Os.Mac, Os.Android, Os.Linux -> ArchiveType.TarGz
-                    else -> bail("Running on unsupported os: $os")
+                    else -> raise(RuntimeException("Running on unsupported os: $os"))
                 }
 
                 val fileName = "node-$VERSION-$osStr-$archStr.$archiveType"
@@ -605,7 +601,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                 val downloadPath = nodeContainingDir.join("node.tar.gz")
                 log.info { "Downloading Node.js binary from $url" }
 
-                anyhow {
+                result {
                     downloadFile(
                         url = url,
                         outputPath = downloadPath.toString(),
@@ -614,7 +610,7 @@ private data class ManagedNodeRuntime private constructor(val installationPath: 
                             log.info { "[Node.js] Downloaded $sent bytes of $total" }
                         }
                     )
-                }.context("error downloading Node binary tarball").bind()
+                }.bind()
 
                 when (archiveType) {
                     ArchiveType.TarGz -> extractGzipTar(downloadPath, nodeContainingDir)
@@ -643,14 +639,14 @@ private data class SystemNodeRuntime(
         return copy(node = node, npm = npm, globalNodeModules = globalNodeModules, scratchDir = scratchDir)
     }
 
-    override suspend fun binaryPath() = Ok(node)
+    override suspend fun binaryPath() = Result.success(node)
 
     override suspend fun runNpmSubcommand(
         directory: Path?,
         proxy: Url?,
         subcommand: String,
         args: Array<out String>
-    ) = anyhow {
+    ) = result {
         val nodeCaCerts = getenv(NODE_CA_CERTS_ENV_VAR).orEmpty()
         val command = Command.newCommand(npm)
         val path = pathWithNodeBinaryPrepended(node).unwrapOrDefault()
@@ -664,7 +660,7 @@ private data class SystemNodeRuntime(
         val output = command.output(1.minutes).bind()
 
         ensure(output.isSuccess) {
-            "failed to execute npm $subcommand subcommand:\nstdout: ${output.stdout}\nstderr: ${output.stderr}"
+            RuntimeException("failed to execute npm $subcommand subcommand:\nstdout: ${output.stdout}\nstderr: ${output.stderr}")
         }
         output
     }
@@ -677,40 +673,47 @@ private data class SystemNodeRuntime(
     companion object {
         val MIN_VERSION = Version(22, 0, 0)
 
-        suspend fun detect() = run {
-            zip(
-                { which("node").mapError(DetectError::NotInPath) },
-                { which("npm").mapError(DetectError::NotInPath) }
-            ) { node, npm ->
-                SystemNodeRuntime(node, npm).mapError(DetectError::Other)
-            }.flatten()
+        suspend fun detect() = either {
+            val node = try {
+                which("node").getOrThrow()
+            } catch (e: Throwable) {
+                raise(DetectError.NotInPath(e))
+            }
+
+            val npm = try {
+                which("npm").getOrThrow()
+            } catch (e: Throwable) {
+                raise(DetectError.NotInPath(e))
+            }
+
+            SystemNodeRuntime(node, npm)
+                .onFailure { raise(DetectError.Other(it)) }
+                .getOrThrow()
         }
     }
 }
 
 @Suppress("FunctionName")
 @JvmSynthetic
-private suspend fun SystemNodeRuntime(node: Path, npm: Path) = anyhow {
-    val output = withContext("running node from $node") {
-        Command.newCommand(node)
-            .arg("--version")
-            .output(30.seconds)
-            .bind()
-    }
+private suspend fun SystemNodeRuntime(node: Path, npm: Path) = result {
+    val output = Command.newCommand(node)
+        .arg("--version")
+        .output(30.seconds)
+        .bind()
 
     if (!output.isSuccess) {
-        bail("failed to run node --version. stdout: ${output.stdout}, stderr: ${output.stderr}")
+        raise(RuntimeException("failed to run node --version. stdout: ${output.stdout}, stderr: ${output.stderr}"))
     }
 
     val versionStr = output.stdout
     val version = Version.parse(versionStr.trim().trimStart { it == 'v' })
     if (version < SystemNodeRuntime.MIN_VERSION) {
-        bail("node at $node is too old. want: ${SystemNodeRuntime.MIN_VERSION}, got: $version")
+        raise(RuntimeException("node at $node is too old. want: ${SystemNodeRuntime.MIN_VERSION}, got: $version"))
     }
 
     val scratchDir = Paths.dataDir.join("node")
-    anyhow { fs.createDirectories(scratchDir) }.ok()
-    anyhow { fs.createDirectories(scratchDir.join("cache")) }.ok()
+    result { fs.createDirectories(scratchDir) }.bind()
+    result { fs.createDirectories(scratchDir.join("cache")) }.bind()
 
     val runtime = SystemNodeRuntime(node, npm, globalNodeModules = emptyPath(), scratchDir)
     runtime.runNpmSubcommand(null, null, "root", arrayOf("-g"))
@@ -722,13 +725,13 @@ private suspend fun SystemNodeRuntime(node: Path, npm: Path) = anyhow {
 private sealed interface DetectError {
     val error: Throwable
 
-    data class NotInPath(override val error: AnyhowError) : DetectError {
+    data class NotInPath(override val error: Throwable) : DetectError {
         override fun toString(): String {
             return "system Node.js wasn't found on PATH: $error"
         }
     }
 
-    data class Other(override val error: AnyhowError) : DetectError {
+    data class Other(override val error: Throwable) : DetectError {
         override fun toString(): String {
             return "checking system Node.js failed with error: $error"
         }

@@ -1,6 +1,6 @@
 package com.klyx.extension
 
-import com.klyx.core.language.LanguageName
+import com.klyx.editor.language.LanguageName
 import com.klyx.lsp.CodeActionKind
 import kotlinx.serialization.Serializable
 
@@ -14,7 +14,7 @@ data class LanguageServerManifestEntry(
      * The list of languages this language server should work with.
      */
     val languages: List<LanguageName> = emptyList(),
-    val languageIds: HashMap<LanguageName, String> = hashMapOf(),
+    val languageIds: MutableMap<LanguageName, String> = mutableMapOf(),
     val codeActionKinds: List<CodeActionKind>? = null
 ) {
 

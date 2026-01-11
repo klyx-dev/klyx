@@ -1,3 +1,5 @@
+@file:Suppress("DEPRECATION")
+
 package com.klyx.lsp.server
 
 import com.klyx.lsp.CreateFilesParams

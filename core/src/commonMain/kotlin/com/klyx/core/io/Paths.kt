@@ -2,22 +2,12 @@ package com.klyx.core.io
 
 import com.klyx.core.dirs
 import com.klyx.core.expect
-import com.klyx.core.file.toOkioPath
 import com.klyx.core.platform.Os
 import com.klyx.core.platform.currentOs
 import com.klyx.core.process.systemUserName
+import com.klyx.core.util.intoPath
+import com.klyx.core.util.join
 import kotlinx.io.files.Path
-
-fun Path.join(vararg paths: String): Path {
-    return Path(this, parts = paths)
-}
-
-fun Path.join(vararg paths: Path) = join(paths = paths.map(Path::toString).toTypedArray())
-
-@Suppress("NOTHING_TO_INLINE")
-inline fun emptyPath() = Path("")
-
-fun String.intoPath() = Path(this)
 
 fun homeDir(): Path = dirs.homeDir.expect { "failed to determine home directory" }
 
@@ -45,14 +35,6 @@ inline val Paths.extensionsDir: Path get() = dataDir.join("extensions")
 inline val Paths.languagesDir: Path get() = dataDir.join("languages")
 
 inline val Paths.lastProjectFile: Path get() = tempDir.join("last_project.json")
-
-fun Path.makeAbsolute(): Path {
-    return if (isAbsolute) this else Path("/").join(this)
-}
-
-fun Path.isInside(other: Path): Boolean {
-    return other.isAbsolute && other.toString().startsWith(this.toString())
-}
 
 @Suppress("NOTHING_TO_INLINE")
 inline fun String.stripSandboxRoot(): String = Path(this).stripSandboxRoot().toString()
@@ -130,5 +112,5 @@ val Paths.localVSCodeTasksFileRelativePath by lazy {
     Path(".vscode/tasks.json")
 }
 
-fun okio.Path.isSymlink() = okioFs.metadataOrNull(this)?.symlinkTarget != null
-fun Path.isSymlink() = this.toOkioPath().isSymlink()
+fun okio.Path.extension() = toString().substringAfterLast('.')
+fun Path.extension() = toString().substringAfterLast('.')

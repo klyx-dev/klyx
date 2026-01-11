@@ -360,7 +360,7 @@ class TextEditTest : FunSpec({
             if (docEdit.edits[0].isLeft()) {
                 val edit = docEdit.edits[0].left
                 edit.shouldBeInstanceOf<AnnotatedTextEdit>()
-                (edit as AnnotatedTextEdit).annotationId shouldBe "ann-1"
+                edit.annotationId shouldBe "ann-1"
             }
         }
     }

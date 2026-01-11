@@ -1,5 +1,7 @@
 package com.klyx.core.platform
 
+import kotlin.system.exitProcess
+
 actual fun currentOs(): Os {
     val name = System.getProperty("os.name")?.lowercase() ?: ""
 
@@ -34,3 +36,5 @@ fun <R> selectByOs(
     os.contains("nix") || os.contains("nux") || os.contains("freebsd") -> linux?.invoke() ?: default()
     else -> default()
 }
+
+actual fun Platform.quit(): Nothing = exitProcess(0)

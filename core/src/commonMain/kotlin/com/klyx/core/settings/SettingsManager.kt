@@ -1,6 +1,6 @@
 package com.klyx.core.settings
 
-import com.klyx.core.backgroundScope
+import com.klyx.core.app.App
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.io.Paths
@@ -8,6 +8,7 @@ import com.klyx.core.io.fs
 import com.klyx.core.io.globalSettingsFile
 import com.klyx.core.io.settingsFile
 import com.klyx.core.logging.log
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,8 +43,8 @@ object SettingsManager {
 
     val defaultSettings: AppSettings by lazy { AppSettings() }
 
-    init {
-        backgroundScope.launch(Dispatchers.IO) {
+    fun init(cx: App) {
+        cx.backgroundScope.launch(Dispatchers.IO) {
             runCatching {
                 fs.delete(globalSettingsFile, mustExist = false)
                 fs.sink(globalSettingsFile).buffered().use {
@@ -68,11 +69,13 @@ object SettingsManager {
         }
     }
 
-    fun save() {
+    suspend fun save() {
         runCatching {
-            fs.delete(settingsFile, mustExist = false)
-            fs.sink(settingsFile).buffered().use {
-                it.writeString(json.encodeToString(settings.value))
+            withContext(Dispatchers.IO) {
+                fs.delete(settingsFile, mustExist = false)
+                fs.sink(settingsFile).buffered().use {
+                    it.writeString(json.encodeToString(settings.value))
+                }
             }
         }.onFailure { it.printStackTrace() }
     }
@@ -80,7 +83,7 @@ object SettingsManager {
     fun updateSettings(function: (AppSettings) -> AppSettings) {
         val oldSettings = settings.value.copy()
         _settings.update { function(settings.value) }
-        EventBus.INSTANCE.postSync(SettingsChangeEvent(oldSettings, settings.value))
-        save()
+        EventBus.INSTANCE.tryPost(SettingsChangeEvent(oldSettings, settings.value))
+        CoroutineScope(Dispatchers.Default).launch { save() }
     }
 }

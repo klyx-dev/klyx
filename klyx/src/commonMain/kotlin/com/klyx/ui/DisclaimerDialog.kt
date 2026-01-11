@@ -14,6 +14,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.DialogProperties
+import com.klyx.core.app.App
+import com.klyx.core.app.LocalApp
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
 import com.klyx.resources.Res
@@ -25,7 +27,9 @@ import com.klyx.ui.page.main.quitApp
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-fun DisclaimerDialog(onAccept: () -> Unit) {
+fun DisclaimerDialog(onAccept: (App) -> Unit) {
+    val app = LocalApp.current
+
     AlertDialog(
         onDismissRequest = { },
         properties = DialogProperties(
@@ -41,7 +45,7 @@ fun DisclaimerDialog(onAccept: () -> Unit) {
                 }
             }
         },
-        confirmButton = { ConfirmButton(stringResource(Res.string.i_agree), onClick = onAccept) },
+        confirmButton = { ConfirmButton(stringResource(Res.string.i_agree), onClick = { onAccept(app) }) },
         dismissButton = { DismissButton(stringResource(Res.string.exit), ::quitApp) }
     )
 }

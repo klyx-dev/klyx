@@ -41,24 +41,26 @@ plugins {
 
 include(":klyx", ":androidApp")
 include(":core")
+include(":project")
+include(":util")
 include(
     ":editor:editor",
+    ":editor:language",
+    ":editor:languages",
     ":editor:tree-sitter"
 )
-include(":extension-api")
-include(":wasm", ":wasm-ksp")
 include(
     ":terminal:terminal-view",
     ":terminal:terminal-emulator",
     ":terminal:termux-shared"
 )
-
-include(":feature:mcp")
-include(":feature:extension")
 include(
-    ":lsp:api",
-    ":lsp:server"
+    ":feature:mcp",
+    ":feature:extension",
+    ":feature:language-extension",
+    ":feature:settings"
 )
+include(":lsp:api", ":lsp:server")
 
 //file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
 //    include(":tree-sitter:${it.name}")

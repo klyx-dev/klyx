@@ -1,7 +1,9 @@
 package com.klyx.core.process
 
+import arrow.core.raise.result
 import com.klyx.core.io.stripSandboxRoot
-import io.itsvks.anyhow.anyhow
+import io.matthewnelson.kmp.process.Stdio
+import io.matthewnelson.kmp.process.Stdio.Pipe
 import kotlinx.io.files.Path
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmStatic
@@ -12,6 +14,10 @@ class Command(val command: String) {
     private val _args = mutableListOf<String>()
     private val _env = mutableMapOf<String, String>()
     private var directory: Path? = null
+
+    private var stdin: Stdio = Pipe
+    private var stdout: Stdio = Pipe
+    private var stderr: Stdio = Pipe
 
     val args: List<String> get() = _args
     val env: Map<String, String> get() = _env
@@ -35,6 +41,10 @@ class Command(val command: String) {
 
     @Suppress("NOTHING_TO_INLINE")
     inline operator fun component3() = env
+
+    fun stdin(stdin: Stdio) = apply { this.stdin = stdin }
+    fun stdout(stdout: Stdio) = apply { this.stdout = stdout }
+    fun stderr(stderr: Stdio) = apply { this.stderr = stderr }
 
     fun arg(arg: String) = apply {
         _args += arg
@@ -87,16 +97,19 @@ class Command(val command: String) {
     suspend fun output(timeout: Duration) = output(timeout.inWholeMilliseconds)
 
     @JvmName("outputWithTimeout")
-    suspend fun output(timeoutMillis: Long) = anyhow {
+    suspend fun output(timeoutMillis: Long) = result {
         val raw = systemProcess(command, *_args.toTypedArray()) {
             environment { putAll(_env) }
             directory?.let { changeDir(it) }
+            stdin(stdin)
+            stdout(stdout)
+            stderr(stderr)
         }.output {
             this.timeoutMillis = timeoutMillis.toInt()
         }
 
         if (raw.processError != null) {
-            systemProcessLogger.warn { "Process error: ${raw.processError}" }
+            systemProcessLogger.warn { "Process error: ${raw.processError}\nCommand: ${this@Command}" }
         }
 
         Output(

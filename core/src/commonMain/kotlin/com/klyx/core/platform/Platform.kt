@@ -1,5 +1,9 @@
 package com.klyx.core.platform
 
+import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlin.jvm.JvmInline
 
 /**
@@ -18,6 +22,16 @@ expect fun currentOs(): Os
 expect fun currentArchitecture(): Architecture
 
 /**
+ * A [CoroutineScope] designated for background operations.
+ */
+typealias BackgroundScope = CoroutineScope
+
+/**
+ * A [CoroutineScope] intended for UI-bound or main-thread operations.
+ */
+typealias ForegroundScope = CoroutineScope
+
+/**
  * Represents a platform defined by an operating system and an architecture.
  *
  * This class is used to identify the specific combination of OS and architecture
@@ -31,10 +45,64 @@ data class Platform(val os: Os, val arch: Architecture) {
         return "$os ($arch)"
     }
 
+    /**
+     * A [CoroutineScope] designated for background operations.
+     *
+     * This scope uses [Dispatchers.Default] for executing CPU-bound tasks and includes a [SupervisorJob],
+     * ensuring that the failure of one child coroutine does not cancel the entire scope or other siblings.
+     */
+    val backgroundScope: BackgroundScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    /**
+     * A [CoroutineScope] intended for UI-bound or main-thread operations.
+     *
+     * This scope uses [Dispatchers.Main] and is supervised by a [SupervisorJob],
+     * meaning failure of one child coroutine will not cancel the others.
+     */
+    val foregroundScope: ForegroundScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
     companion object {
+        /**
+         * Retrieves the [Platform] instance representing the current runtime environment.
+         *
+         * @see currentPlatform
+         */
         inline val Current get() = currentPlatform()
     }
 }
+
+/**
+ * Gracefully quit the application via the platform's standard routine.
+ */
+expect fun Platform.quit(): Nothing
+
+/**
+ * A [CompositionLocal] that provides the current [Platform] to the Compose hierarchy.
+ *
+ * @see Platform
+ * @see currentPlatform
+ */
+val LocalPlatform = staticCompositionLocalOf { currentPlatform() }
+
+/**
+ * A [CompositionLocal] that provides the current operating system ([Os])
+ * to the Compose hierarchy.
+ *
+ * @see Os
+ * @see currentOs
+ * @see LocalPlatform
+ */
+val LocalOs = staticCompositionLocalOf { currentOs() }
+
+/**
+ * A [CompositionLocal] that provides the current CPU [Architecture]
+ * to the Compose hierarchy.
+ *
+ * @see Architecture
+ * @see currentArchitecture
+ * @see LocalPlatform
+ */
+val LocalArchitecture = staticCompositionLocalOf { currentArchitecture() }
 
 /**
  * Determines the platform on which the application is currently running.
@@ -118,3 +186,5 @@ value class Architecture private constructor(val value: Int) {
         val X8664 = Architecture(2)
     }
 }
+
+val ExeSuffix = if (currentOs() == Os.Windows) ".exe" else ""

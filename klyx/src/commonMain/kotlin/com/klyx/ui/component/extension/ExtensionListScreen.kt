@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -35,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,11 +47,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
-import com.klyx.core.extension.ExtensionInfo
+import com.klyx.core.LocalNotifier
+import com.klyx.core.app.LocalApp
 import com.klyx.core.file.toKxFile
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
 import com.klyx.di.LocalExtensionViewModel
+import com.klyx.extension.ExtensionManifest
+import com.klyx.extension.host.ExtensionStore
 import com.klyx.resources.Res.string
 import com.klyx.resources.extension_install_dev_button
 import com.klyx.resources.extension_screen_title
@@ -57,35 +62,37 @@ import com.klyx.resources.extension_search_placeholder
 import com.klyx.resources.no_extensions
 import com.klyx.resources.no_internet_connection
 import com.klyx.ui.theme.DefaultKlyxShape
-import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
-import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.cancel
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExtensionListScreen(
     modifier: Modifier = Modifier,
-    onExtensionItemClick: (ExtensionInfo) -> Unit
+    onExtensionItemClick: (ExtensionManifest) -> Unit
 ) {
-    var showDevExtensionInstallSheet by remember { mutableStateOf(false) }
+    val notifier = LocalNotifier.current
     val viewModel = LocalExtensionViewModel.current
     val state by viewModel.extensionListState.collectAsState()
+    val app = LocalApp.current
+    val store = remember { ExtensionStore.global(app) }
 
+    var installTask by remember { mutableStateOf<Deferred<Unit>?>(null) }
     val selectDir = rememberDirectoryPickerLauncher { file ->
         if (file != null) {
-            viewModel.installDevFromDirectory(file.toKxFile())
-        }
-    }
-
-    val selectZip = rememberFilePickerLauncher(
-        type = FileKitType.File("zip")
-    ) { file ->
-        if (file != null) {
-            viewModel.installDevFromZip(file.toKxFile())
+            installTask = app.backgroundSpawn {
+                viewModel.installDevFromDirectory(file.toKxFile(), store)
+            }
         }
     }
 
     val networkState by rememberNetworkState()
+
+    LaunchedEffect(Unit) {
+        if (networkState.isNotConnected) notifier.toast("No internet")
+        viewModel.loadExtensions(store)
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -99,7 +106,7 @@ fun ExtensionListScreen(
             )
 
             Button(
-                onClick = { showDevExtensionInstallSheet = true },
+                onClick = { selectDir.launch() },
                 shape = DefaultKlyxShape
             ) {
                 Text(
@@ -168,14 +175,14 @@ fun ExtensionListScreen(
 
         if (filteredExtensions.isNotEmpty()) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(filteredExtensions) { extension ->
+                items(filteredExtensions) { manifest ->
                     ExtensionCard(
-                        extension = extension,
+                        manifest = manifest,
                         modifier = Modifier
                             .fillMaxWidth()
                             .animateItem(),
-                        isInstalled = extension.id in installedIds,
-                        onClick = { onExtensionItemClick(extension) }
+                        isInstalled = manifest.id in installedIds,
+                        onClick = { onExtensionItemClick(manifest) }
                     )
                 }
             }
@@ -205,17 +212,21 @@ fun ExtensionListScreen(
         }
     }
 
-    if (showDevExtensionInstallSheet) {
-        InstallSheet(
-            onDismiss = { showDevExtensionInstallSheet = false },
-            onPick = { type ->
-                showDevExtensionInstallSheet = false
+    installTask?.let {
+        LaunchedEffect(Unit) {
+            it.await()
+            installTask = null
+        }
 
-                when (type) {
-                    InstallationType.Directory -> selectDir.launch()
-                    InstallationType.Zip -> selectZip.launch()
-                }
-            }
+        AlertDialog(
+            onDismissRequest = {
+                installTask!!.cancel("Dialog dismissed")
+                notifier.toast("Installation cancelled")
+                installTask = null
+            },
+            title = { Text("Installing...") },
+            text = { Text("Please wait while the extension is being installed.") },
+            confirmButton = {}
         )
     }
 }

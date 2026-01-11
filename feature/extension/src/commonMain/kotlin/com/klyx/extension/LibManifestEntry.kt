@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class LibManifestEntry(
-    val kind: ExtensionLibraryKind? = null,
-    val version: Version? = null
+    var kind: ExtensionLibraryKind? = null,
+    var version: Version? = null
 )

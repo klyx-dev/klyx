@@ -14,7 +14,11 @@ plugins {
     alias(libs.plugins.android.kmp.library) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.kotlinx.atomicfu) apply false
+    alias(libs.plugins.kotlin.atomicfu) apply false
     alias(libs.plugins.kotest) apply false
+    alias(libs.plugins.ksp) apply false
+    alias(libs.plugins.gobley.cargo) apply false
+    alias(libs.plugins.gobley.uniffi) apply false
     alias(libs.plugins.klyx.root)
 }
 

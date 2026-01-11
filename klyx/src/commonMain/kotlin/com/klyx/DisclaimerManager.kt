@@ -1,6 +1,6 @@
 package com.klyx
 
-import com.klyx.core.backgroundScope
+import com.klyx.core.app.App
 import com.russhwolf.settings.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -16,14 +16,14 @@ object DisclaimerManager {
     private val _accepted = MutableStateFlow<Boolean?>(null)
     val accepted = _accepted.asStateFlow()
 
-    init {
-        backgroundScope.launch(Dispatchers.IO) {
+    fun init(cx: App) {
+        cx.backgroundScope.launch(Dispatchers.IO) {
             _accepted.update { settings.getBoolean(KEY_ACCEPTED, false) }
         }
     }
 
-    fun accept() {
-        backgroundScope.launch(Dispatchers.IO) {
+    fun accept(cx: App) {
+        cx.backgroundScope.launch(Dispatchers.IO) {
             settings.putBoolean(KEY_ACCEPTED, true)
             _accepted.update { true }
         }

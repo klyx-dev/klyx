@@ -84,12 +84,6 @@ fun MainScreen() {
         }
     }
 
-    LaunchedEffect(appSettings.loadExtensionsOnStartup) {
-        if (appSettings.loadExtensionsOnStartup) {
-//            ExtensionManager.loadExtensions()
-        }
-    }
-
     LifecycleStartEffect(Unit) {
         lifecycleScope.launch(Dispatchers.Default) {
             anyhow {

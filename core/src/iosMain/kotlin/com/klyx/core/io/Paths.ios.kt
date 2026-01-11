@@ -1,5 +1,6 @@
 package com.klyx.core.io
 
+import com.klyx.core.util.join
 import kotlinx.cinterop.BooleanVar
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc

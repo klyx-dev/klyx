@@ -5,7 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.zip.ZipInputStream
 
-internal actual suspend fun ByteArray.extractRepoZip(targetDir: KxFile) = withContext(Dispatchers.IO) {
+ actual suspend fun ByteArray.extractRepoZip(targetDir: KxFile) = withContext(Dispatchers.IO) {
     ZipInputStream(inputStream()).use { input ->
         var entry = input.nextEntry
 

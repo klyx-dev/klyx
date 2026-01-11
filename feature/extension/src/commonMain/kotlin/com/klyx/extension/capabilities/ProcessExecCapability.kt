@@ -15,7 +15,7 @@ data class ProcessExecCapability(
     /**
      * Returns whether the capability allows the given command and arguments.
      */
-    fun allows(desiredCommand: String, desiredArgs: Array<out String>): Boolean {
+    fun allows(desiredCommand: String, desiredArgs: List<String>): Boolean {
         if (command != desiredCommand && command != "*") return false
 
         for ((ix, arg) in args.withIndex()) {

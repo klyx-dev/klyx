@@ -63,9 +63,10 @@ class EventBus private constructor() {
     /**
      * Post an event synchronously (non-blocking)
      */
-    fun postSync(event: Any) {
+    fun tryPost(event: Any) {
         globalEvents.tryEmit(event)
-        scope.launch { post(event) }
+        val eventClass = event::class
+        getOrCreateChannel(eventClass).trySend(event)
     }
 
     /**

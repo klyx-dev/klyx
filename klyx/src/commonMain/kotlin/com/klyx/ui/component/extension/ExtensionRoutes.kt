@@ -2,7 +2,7 @@ package com.klyx.ui.component.extension
 
 import androidx.navigation3.runtime.NavKey
 import androidx.savedstate.serialization.SavedStateConfiguration
-import com.klyx.core.extension.ExtensionInfo
+import com.klyx.extension.ExtensionManifest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -13,7 +13,7 @@ sealed interface ExtensionRoutes : NavKey {
     data object ExtensionList : ExtensionRoutes, NavKey
 
     @Serializable
-    data class ExtensionDetail(val extensionInfo: ExtensionInfo) : ExtensionRoutes, NavKey
+    data class ExtensionDetail(val manifest: ExtensionManifest) : ExtensionRoutes, NavKey
 
     companion object {
         fun config() = SavedStateConfiguration {

@@ -5,7 +5,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.outlined._60fpsSelect
 import androidx.compose.material3.AlertDialog
@@ -69,16 +68,6 @@ fun GeneralPreferences() {
                     onClick = { showFps ->
                         appSettings.update { it.copy(showFps = showFps) }
                     }
-                )
-            }
-
-            item {
-                PreferenceSwitch(
-                    title = "Load Extensions on Startup",
-                    icon = Icons.Outlined.Extension,
-                    description = "If disabled, extensions will be loaded at runtime instead of on the splash screen.",
-                    isChecked = appSettings.loadExtensionsOnStartup,
-                    onClick = { appSettings.update { settings -> settings.copy(loadExtensionsOnStartup = it) } }
                 )
             }
 

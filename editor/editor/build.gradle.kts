@@ -14,12 +14,14 @@ kotlin {
     }
 
     sourceSets {
+        val desktopMain by getting
+
         val nonAndroidMain by creating {
             dependsOn(commonMain.get())
         }
 
         iosMain.get().dependsOn(nonAndroidMain)
-        jvmMain.get().dependsOn(nonAndroidMain)
+        desktopMain.dependsOn(nonAndroidMain)
 
         commonMain {
             dependencies {
@@ -41,7 +43,9 @@ kotlin {
 
                 implementation(projects.core)
                 implementation(projects.lsp.server)
-                implementation(projects.extensionApi)
+                implementation(projects.project)
+                implementation(projects.editor.language)
+                implementation(projects.feature.extension)
 
 //                rootProject.project("tree-sitter").subprojects.forEach {
 //                    implementation(project(":tree-sitter:${it.name}"))
@@ -59,6 +63,7 @@ kotlin {
                 implementation(libs.sora.language.textmate)
 
                 implementation(libs.androidx.emoji2)
+                implementation(projects.feature.extension)
 
                 //implementation(libs.ktreesitter)
             }
@@ -70,10 +75,8 @@ kotlin {
             }
         }
 
-        jvmMain {
-            dependencies {
-                implementation(libs.jetbrains.skiko)
-            }
+        desktopMain.dependencies {
+            implementation(libs.jetbrains.skiko)
         }
 
         commonTest.dependencies {

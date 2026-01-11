@@ -18,10 +18,12 @@ multiplatformMarkdownRenderer = "0.39.0"
 multiplatformSettingsNoArg = "1.3.0"
 kmp-process = "0.5.0"
 semver = "3.0.0"
+tomlkt = "0.5.0"
 wasip1Bindings = "0.6.0"
 compose-multiplatform = "1.10.0-rc02"
 junit = "4.13.2"
 kotlin = "2.3.0"
+kotlinx-atomicfu = "0.30.0-beta"
 kotlinx-coroutines = "1.10.2"
 kotlinx-datetime = "0.7.1"
 kotlinx-io = "0.8.2"
@@ -29,7 +31,7 @@ ktor = "3.3.3"
 commons-compress = "1.28.0"
 documentfile = "1.1.0"
 json5k = "0.3.0"
-kotlinx-serialization = "1.9.0"
+kotlinx-serialization = "1.10.0-RC"
 ktoml = "0.7.1"
 ktreesitter = "0.24.1"
 okio = "3.16.4"
@@ -50,6 +52,8 @@ compose-material3 = "1.10.0-alpha05"
 androidx-nav3 = "1.0.0-alpha06"
 jetbrains-skiko = "0.9.37.3"
 buildkonfig = "0.17.1"
+gobley = "0.3.7"
+jna = "5.18.1"
 
 [libraries]
 anyhowkt = { module = "io.github.itsvks19:anyhowkt", version.ref = "anyhowkt" }
@@ -82,6 +86,7 @@ multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-mark
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettingsNoArg" }
 kmp-process = { module = "io.matthewnelson.kmp-process:process", version.ref = "kmp-process" }
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
+tomlkt = { module = "net.peanuuutz.tomlkt:tomlkt", version.ref = "tomlkt" }
 wasip1-host = { module = "at.released.weh:host", version.ref = "wasip1Bindings" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 json5k = { module = "io.github.xn32:json5k", version.ref = "json5k" }
@@ -92,7 +97,7 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 kotlinx-io-okio = { module = "org.jetbrains.kotlinx:kotlinx-io-okio", version.ref = "kotlinx-io" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-ktoml-core = { module = "com.akuleshov7:ktoml-core", version.ref = "ktoml" }
+kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 ktreesitter = { module = "io.github.tree-sitter:ktreesitter", version.ref = "ktreesitter" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "androidx-material3" }
@@ -149,6 +154,8 @@ ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devto
 buildkonfig-gradlePlugin = { group = "com.codingfeline.buildkonfig", name = "buildkonfig-gradle-plugin", version.ref = "buildkonfig" }
 buildkonfig-compiler = { group = "com.codingfeline.buildkonfig", name = "buildkonfig-compiler", version.ref = "buildkonfig" }
 
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 android-library = { id = "com.android.library", version.ref = "androidGradlePlugin" }
@@ -160,9 +167,12 @@ kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-kotlinx-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version = "0.30.0-beta" }
+kotlinx-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "kotlinx-atomicfu" }
+kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
+gobley-cargo = { id = "dev.gobley.cargo", version.ref = "gobley" }
+gobley-uniffi = { id = "dev.gobley.uniffi", version.ref = "gobley" }
 
 # Plugins defined by this project
 klyx-android-application = { id = "klyx.android.application" }
@@ -174,3 +184,4 @@ klyx-multiplatform = { id = "klyx.multiplatform" }
 klyx-multiplatform-compose = { id = "klyx.multiplatform.compose" }
 klyx-compose-desktop = { id = "klyx.compose.desktop" }
 klyx-buildConfig = { id = "klyx.buildConfig" }
+klyx-rust = { id = "klyx.rust" }

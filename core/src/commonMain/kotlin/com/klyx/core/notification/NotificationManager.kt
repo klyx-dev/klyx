@@ -1,6 +1,7 @@
 package com.klyx.core.notification
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -10,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@Immutable
 class NotificationManager {
     private val _notifications = mutableStateListOf<Notification>()
     val notifications: List<Notification> = _notifications

@@ -1,0 +1,11 @@
+id = "cpp-lsp"
+name = "C++ Language Server"
+version = "0.1.0"
+schema_version = 1
+authors = ["Vivek"]
+description = "C++ language support using clangd for Klyx editor"
+repository = ""
+
+[language_servers.clangd]
+name = "clangd"
+languages = ["C++", "C", "Objective-C", "Objective-C++"]

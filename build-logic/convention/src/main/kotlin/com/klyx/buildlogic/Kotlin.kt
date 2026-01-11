@@ -27,6 +27,8 @@ internal inline fun <reified T : KotlinBaseExtension> Project.configureKotlin() 
             "-opt-in=kotlin.uuid.ExperimentalUuidApi",
             // Enable experimental contracts APIs
             "-opt-in=kotlin.contracts.ExperimentalContracts",
+            // Enable experimental unsigned types APIs
+            "-opt-in=kotlin.ExperimentalUnsignedTypes",
             // Enable context parameters feature for Kotlin
             "-Xcontext-parameters",
             // Enable unused return value checker

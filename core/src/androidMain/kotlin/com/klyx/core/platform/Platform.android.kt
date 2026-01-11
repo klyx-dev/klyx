@@ -1,6 +1,7 @@
 package com.klyx.core.platform
 
 import android.os.Build
+import com.klyx.core.WindowManager
 
 actual fun currentOs(): Os {
     return Os.Android
@@ -15,3 +16,5 @@ actual fun currentArchitecture(): Architecture {
         else -> Architecture.X8664
     }
 }
+
+actual fun Platform.quit(): Nothing = WindowManager.closeAllWindowsAndQuit()

@@ -1,13 +1,12 @@
 package com.klyx.core.extension
 
-import io.itsvks.anyhow.AnyhowResult
 import kotlinx.io.files.Path
 
 interface WorktreeDelegate {
-    fun id(): Long
+    fun id(): ULong
     fun rootPath(): String
 
-    suspend fun readTextFile(path: Path): AnyhowResult<String>
+    suspend fun readTextFile(path: Path): Result<String>
     suspend fun which(binaryName: String): String?
     suspend fun shellEnv(): Map<String, String>
 }

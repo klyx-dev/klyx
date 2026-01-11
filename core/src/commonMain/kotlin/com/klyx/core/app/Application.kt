@@ -1,84 +1,69 @@
 package com.klyx.core.app
 
 import com.klyx.core.KlyxBuildConfig
-import com.klyx.core.extension.ExtensionHost
-import com.klyx.core.httpClient
-import com.klyx.core.io.Paths
-import com.klyx.core.io.languagesDir
-import com.klyx.core.language.LanguageRegistry
-import com.klyx.core.languages.Languages
-import com.klyx.core.noderuntime.NodeBinaryOptions
-import com.klyx.core.noderuntime.NodeRuntime
-import kotlinx.atomicfu.atomic
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.DisposableHandle
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import com.klyx.core.platform.BackgroundScope
+import com.klyx.core.platform.ForegroundScope
+import com.klyx.core.platform.currentPlatform
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import org.koin.dsl.koinApplication
+import org.koin.mp.KoinPlatformTools
 import kotlin.jvm.JvmStatic
 
-/**
- * Type alias for the [Application] class.
- *
- * This provides a shorter and more convenient way to refer to the [Application] class
- * throughout the codebase.
- */
-typealias App = Application
+@RequiresOptIn(
+    message = """
+    Do NOT access GlobalApp directly.
+    Prefer receiving App via constructor or function parameters.
+    This global is intended for framework/bootstrap code only.
+    """,
+    level = RequiresOptIn.Level.ERROR
+)
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.PROPERTY)
+annotation class UnsafeGlobalAccess
 
 /**
- * Singleton object representing the core application context and lifecycle management.
+ * A global, lazily-initialized reference to the active [App] instance.
  *
- * The `Application` object is designed to manage application-level operations
- * such as initialization, coroutine scope handling, and application shutdown.
+ * **WARNING:** Accessing this property before the application has been initialized will throw an [IllegalStateException].
+ * It is strongly recommended to inject the [App] instance via constructor parameters instead
+ * of relying on this global state, which is primarily intended for framework or bootstrap code.
+ *
+ * @throws IllegalStateException if accessed before the Application is initialized.
  */
-object Application : DisposableHandle {
+@UnsafeGlobalAccess
+val GlobalApp: App by lazy(mode = KoinPlatformTools.defaultLazyMode()) {
+    (KoinPlatformTools
+        .defaultContext()
+        .getOrNull() ?: error("Koin is not started"))
+        .getOrNull() ?: error("GlobalApp was accessed before the application was initialized.")
+}
 
-    private val appJob = SupervisorJob()
+/**
+ * A reference to a Klyx application.
+ * You won't interact with this type much outside of initial configuration and startup.
+ */
+class Application internal constructor(val app: App) {
+    /**
+     * A handle to the [BackgroundScope] associated with this app, which can be used to run tasks in the background.
+     */
+    val backgroundScope: BackgroundScope = app.backgroundScope
 
     /**
-     * A default [CoroutineScope] with the [Dispatchers.Default] context and a [SupervisorJob].
+     * A handle to the [ForegroundScope] associated with this app, which can be used to run tasks in the foreground.
      */
-    val scope = CoroutineScope(Dispatchers.Default + appJob)
+    val foregroundScope: ForegroundScope = app.foregroundScope
+}
 
-    private var initialized by atomic(false)
+private fun application() = KoinPlatformTools
+    .defaultContext()
+    .getOrNull()
+    ?.getOrNull<Application>()
 
-    /**
-     * Initializes the application runtime environment including language server configuration,
-     * extension host setup, and environment variables. This method ensures the initialization
-     * logic is executed only once during the application lifecycle.
-     *
-     * Note: This method is thread-safe and should not cause side effects if called redundantly.
-     */
-    suspend fun init() {
-        if (initialized) return
-
-        trace("Application.init")
-
-        withContext(Dispatchers.Default) {
-            val shellEnvLoaded = CompletableDeferred(Unit)
-            // TODO: expose node settings
-            val options = MutableStateFlow(NodeBinaryOptions())
-
-            val nodeRuntime = NodeRuntime(httpClient, shellEnvLoaded, options.asStateFlow())
-            val languageRegistry = LanguageRegistry.INSTANCE
-            languageRegistry.setLanguageServerDownloadDir(Paths.languagesDir)
-            Languages.init(languageRegistry, nodeRuntime)
-            ExtensionHost.init(nodeRuntime)
-        }
-
-        initialized = true
-    }
-
-    fun shutdown(reason: String) {
-        if (!appJob.isCancelled) appJob.cancel(reason)
-    }
-
-    override fun dispose() = shutdown("Application disposed.")
+fun Application(): Application {
+    application()?.let { return it }
+    val globalKoin = KoinPlatformTools.defaultContext().get()
+    val app = App(currentPlatform(), koinApplication()).also(globalKoin::declare)
+    return Application(app).also(globalKoin::declare)
 }
 
 /**
@@ -86,9 +71,10 @@ object Application : DisposableHandle {
  *
  * @param block The suspending block of code to execute when the debug mode is active.
  */
+@OptIn(UnsafeGlobalAccess::class)
 inline fun debug(crossinline block: suspend () -> Unit) {
     if (KlyxBuildConfig.IS_DEBUG) {
-        Application.scope.launch { block() }
+        GlobalApp.backgroundScope.launch { block() }
     }
 }
 

@@ -9,18 +9,14 @@ kotlin {
     android {
         namespace = "com.klyx"
 
-        @Suppress("UnstableApiUsage")
         androidResources {
             enable = true
         }
     }
 
     sourceSets {
-        val desktopMain by creating {
-            dependsOn(commonMain.get())
-        }
-
-        jvmMain.get().dependsOn(desktopMain)
+        val commonMain by getting
+        val desktopMain by getting
 
         androidMain.dependencies {
             api(libs.androidx.activityCompose)
@@ -39,44 +35,35 @@ kotlin {
         commonMain.dependencies {
             implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.components.resources)
-
             implementation(libs.androidx.material3.adaptive)
             implementation(libs.androidx.material3.adaptive.nav3)
-
             implementation(libs.fuzzywuzzy.kotlin)
-
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtime.compose)
             implementation(libs.androidx.lifecycle.viewmodel.nav3)
-
             //implementation(libs.androidx.nav3.runtime)
             implementation(libs.androidx.nav3.ui)
-
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
             implementation(libs.koin.compose.viewmodel)
-
             implementation(libs.coil.compose)
             implementation(libs.coil.svg)
-
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
-
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs)
             implementation(libs.filekit.dialogs.compose)
-
             implementation(libs.multiplatform.settings.no.arg)
-
             implementation(libs.semver)
 
             api(projects.core)
-            api(projects.editor.editor)
-            api(projects.extensionApi)
-            api(projects.wasm)
             api(projects.lsp.server)
-
             api(projects.feature.mcp)
+            api(projects.feature.extension)
+            api(projects.feature.languageExtension)
+            api(projects.editor.editor)
+            api(projects.editor.language)
+            api(projects.editor.languages)
         }
 
         desktopMain.dependencies {

@@ -5,14 +5,15 @@ import android.os.Bundle
 import android.util.LruCache
 import android.view.View
 import androidx.compose.runtime.CompositionContext
+import com.klyx.core.app.App
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
 import com.klyx.core.language
-import com.klyx.core.language.LanguageName
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
 import com.klyx.editor.KlyxEditor
 import com.klyx.editor.inlayhint.InlayHintManager
+import com.klyx.editor.language.LanguageName
 import com.klyx.editor.lsp.completion.LspCompletionItem
 import com.klyx.editor.lsp.event.LspEditorContentChangeEvent
 import com.klyx.editor.lsp.event.LspEditorScrollEvent
@@ -118,13 +119,13 @@ internal class EditorLanguageServerClient(
         val extraArguments: Bundle
     )
 
-    fun initialize(localView: View, compositionContext: CompositionContext) {
+    fun initialize(localView: View, compositionContext: CompositionContext, cx: App) {
         signatureHelpWindow.set(SignatureHelpWindow(editor, localView, compositionContext))
         setupFlows()
 
         coroutineScope.launch(Dispatchers.IO) {
             LanguageServerManager
-                .tryConnectLspIfAvailable(worktree, LanguageName(file.language()), settings)
+                .tryConnectLspIfAvailable(worktree, LanguageName(file.language()), settings, cx)
                 .onSuccess { client ->
                     serverClient = client
                     withContext(Dispatchers.Main) {

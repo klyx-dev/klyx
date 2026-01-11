@@ -10,9 +10,7 @@ val LocalNotifier = staticCompositionLocalOf<Notifier> {
     noLocalProvidedFor<Notifier>()
 }
 
-class Notifier(
-    private val manager: NotificationManager
-) {
+class Notifier(private val manager: NotificationManager) {
     fun notify(notification: Notification) {
         manager.show(notification)
     }
@@ -21,7 +19,7 @@ class Notifier(
         message: String,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        onClick: ((Notification) -> Unit)? = null
     ) = notifyType(NotificationType.Info, null, message, canUserDismiss, durationMillis, onClick)
 
     fun notify(
@@ -29,7 +27,7 @@ class Notifier(
         message: String,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        onClick: ((Notification) -> Unit)? = null
     ) = notifyType(NotificationType.Info, title, message, canUserDismiss, durationMillis, onClick)
 
     fun error(
@@ -37,7 +35,7 @@ class Notifier(
         title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        onClick: ((Notification) -> Unit)? = null
     ) = notifyType(NotificationType.Error, title, message, canUserDismiss, durationMillis, onClick)
 
     fun success(
@@ -45,7 +43,7 @@ class Notifier(
         title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        onClick: ((Notification) -> Unit)? = null
     ) = notifyType(NotificationType.Success, title, message, canUserDismiss, durationMillis, onClick)
 
     fun info(
@@ -53,7 +51,7 @@ class Notifier(
         title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        onClick: ((Notification) -> Unit)? = null
     ) = notifyType(NotificationType.Info, title, message, canUserDismiss, durationMillis, onClick)
 
     fun warning(
@@ -61,7 +59,7 @@ class Notifier(
         title: String? = null,
         canUserDismiss: Boolean = false,
         durationMillis: Long = 4000L,
-        onClick: (() -> Unit)? = null
+        onClick: ((Notification) -> Unit)? = null
     ) = notifyType(NotificationType.Warning, title, message, canUserDismiss, durationMillis, onClick)
 
     private fun notifyType(
@@ -70,7 +68,7 @@ class Notifier(
         message: String,
         canUserDismiss: Boolean,
         durationMillis: Long,
-        onClick: (() -> Unit)?
+        onClick: ((Notification) -> Unit)?
     ) {
         notify(
             Notification(

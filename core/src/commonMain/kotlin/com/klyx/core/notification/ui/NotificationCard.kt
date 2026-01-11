@@ -56,7 +56,7 @@ internal fun NotificationCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
         shape = RoundedCornerShape(8.dp),
         modifier = modifier.widthIn(max = with(density) { (screenSize.width * 0.6f).toDp() }),
-        onClick = { notification.onClick?.invoke() }
+        onClick = { notification.onClick?.invoke(notification) }
     ) {
         Row(
             modifier = Modifier.padding(14.dp),

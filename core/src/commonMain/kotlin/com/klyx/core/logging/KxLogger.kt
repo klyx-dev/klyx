@@ -17,6 +17,8 @@ fun <A> AnyhowResult<A>.logErr(): AnyhowResult<A> {
     return this
 }
 
+fun <T> Result<T>.logerror() = onFailure { log.error(it) { it.message } }
+
 class KxLogger private constructor(
     @PublishedApi
     internal val tag: String,

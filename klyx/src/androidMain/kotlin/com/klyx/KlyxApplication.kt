@@ -1,6 +1,5 @@
 package com.klyx
 
-import android.app.Application
 import android.content.Intent
 import android.os.Build
 import android.os.StrictMode
@@ -11,7 +10,7 @@ import android.widget.Toast
 import com.blankj.utilcode.util.FileUtils
 import com.klyx.activities.CrashActivity
 import com.klyx.core.KlyxBuildConfig
-import com.klyx.core.app.App
+import com.klyx.core.app.Application
 import com.klyx.core.app.CrashReport
 import com.klyx.core.app.setupCrashHandler
 import com.klyx.core.di.initKoin
@@ -19,6 +18,7 @@ import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
+import com.klyx.core.initializeKlyx
 import com.klyx.core.io.Paths
 import com.klyx.core.io.logFile
 import com.klyx.core.logging.Level
@@ -45,7 +45,7 @@ import java.util.concurrent.Executors
 import kotlin.time.ExperimentalTime
 
 @OptIn(DelicateCoroutinesApi::class)
-class KlyxApplication : Application(), CoroutineScope by GlobalScope {
+class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope {
     companion object {
         private lateinit var instance: KlyxApplication
         val application: KlyxApplication get() = instance
@@ -53,22 +53,28 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
     private val themeRegistry = ThemeRegistry.getInstance()
 
+    /**
+     * Klyx app instance
+     */
+    private lateinit var app: Application
+
     @Suppress("KotlinConstantConditions")
     override fun onCreate() {
         super.onCreate()
         instance = this
         setupCrashHandler(::handleUncaughtException)
 
-        if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
-            setupStrictModePolicies()
-        }
-
         initKoin(commonModule) {
             androidLogger()
             androidContext(this@KlyxApplication)
         }
 
-        launch { App.init() }
+        if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
+            setupStrictModePolicies()
+        }
+
+        app = Application()
+        launch { initializeKlyx(app) }
 
         if (!KlyxBuildConfig.IS_DEBUG) {
             LoggerConfig.Default = LoggerConfig(
@@ -111,13 +117,12 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
         StrictMode.setThreadPolicy(
             StrictMode.ThreadPolicy.Builder()
                 .detectAll()
-                .penaltyLog()
                 .apply {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                         penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
                             if (!violation.stackTrace.any {
-                                    it.className.startsWith("com.blankj.utilcode.util") ||
-                                            it.className.startsWith("com.oplus.uifirst")
+                                    it.className.contains("com.blankj.utilcode.util") ||
+                                            it.className.contains("com.oplus.uifirst")
                                 }
                             ) {
                                 if (violation is DiskReadViolation &&
@@ -131,6 +136,8 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
                                 Log.e("Klyx", "StrictMode ThreadPolicy violation", violation)
                             }
                         }
+                    } else {
+                        penaltyLog()
                     }
                 }
                 .build()
@@ -142,12 +149,12 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
                         if (violation !is UntaggedSocketViolation) {
-                            Log.e("Klyx", "StrictMode VmPolicy violation", violation)
+                            Log.e("Klyx", "StrictMode VmPolicy violation: $violation", violation)
                         }
                     }
+                } else {
+                    penaltyLog()
                 }
-
-                penaltyLog()
             }.build()
         )
     }
@@ -171,7 +178,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
     override fun onTerminate() {
         super.onTerminate()
-        App.shutdown(reason = "Application terminated.")
+        app.app.shutdown()
     }
 }
 
@@ -180,7 +187,7 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
     launch(Dispatchers.IO) {
         val report = CrashReport(thread, throwable)
         val file = runCatching { saveCrashReport(report) }.getOrNull()
-        EventBus.INSTANCE.postSync(CrashEvent(thread, throwable, file))
+        EventBus.INSTANCE.tryPost(CrashEvent(thread, throwable, file))
 
         if (thread.name == "main") {
             withContext(Dispatchers.Main.immediate) {
@@ -201,8 +208,6 @@ private fun KlyxApplication.handleUncaughtException(thread: Thread, throwable: T
             })
         }
     }
-
-    App.shutdown("Crash")
 }
 
 @OptIn(ExperimentalTime::class)

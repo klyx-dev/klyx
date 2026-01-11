@@ -16,14 +16,17 @@ import kotlinx.serialization.json.JsonClassDiscriminator
 @JsonClassDiscriminator("kind")
 sealed interface ExtensionCapability {
     @Serializable
+    @JvmInline
     @SerialName("process:exec")
-    data class ProcessExec(val capability: ProcessExecCapability) : ExtensionCapability
+    value class ProcessExec(val capability: ProcessExecCapability) : ExtensionCapability
 
     @Serializable
+    @JvmInline
     @SerialName("download_file")
-    data class DownloadFile(val capability: DownloadFileCapability) : ExtensionCapability
+    value class DownloadFile(val capability: DownloadFileCapability) : ExtensionCapability
 
     @Serializable
+    @JvmInline
     @SerialName("npm:install")
-    data class NpmInstallPackage(val capability: NpmInstallPackageCapability) : ExtensionCapability
+    value class NpmInstallPackage(val capability: NpmInstallPackageCapability) : ExtensionCapability
 }

@@ -42,3 +42,5 @@ node_modules/
 
 # GitHub App credentials
 gha-creds-*.json
+**/target/
+target/

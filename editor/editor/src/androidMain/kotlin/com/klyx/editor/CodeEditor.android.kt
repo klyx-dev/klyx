@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.klyx.core.app.LocalApp
 import com.klyx.core.file.Worktree
 import com.klyx.core.file.parentAsWorktreeOrSelf
 import com.klyx.core.language
@@ -144,6 +145,7 @@ actual fun CodeEditor(
     }
 
     val scope = rememberCoroutineScope { Dispatchers.Default }
+    val app = LocalApp.current
 
     LaunchedEffect(state.editor) {
         if (state.editor == null) return@LaunchedEffect
@@ -157,7 +159,7 @@ actual fun CodeEditor(
         )
 
         runCatching {
-            client.initialize(view, compositionContext)
+            client.initialize(view, compositionContext, app)
         }.onFailure { err ->
             logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
         }

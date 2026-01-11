@@ -1,14 +1,11 @@
 package com.klyx.core.file
 
 import androidx.compose.runtime.Immutable
+import arrow.core.raise.result
 import com.klyx.core.extension.WorktreeDelegate
-import com.klyx.core.io.join
 import com.klyx.core.process.getenv
-import io.itsvks.anyhow.anyhow
-import io.itsvks.anyhow.context
-import io.itsvks.anyhow.fold
+import com.klyx.core.util.join
 import io.itsvks.anyhow.identity
-import io.itsvks.anyhow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -18,8 +15,6 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.readString
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
-
-typealias WorktreeId = Long
 
 /**
  * A Klyx worktree.
@@ -37,7 +32,7 @@ data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
 
     val name get() = rootFile.name
 
-    private val id: WorktreeId get() = hashCode().toLong()
+    private val id get() = hashCode().toULong()
 
     override fun id() = id
 
@@ -46,12 +41,12 @@ data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
     /**
      * Returns the textual contents of the specified file in the worktree.
      */
-    override suspend fun readTextFile(path: Path) = anyhow {
+    override suspend fun readTextFile(path: Path) = result {
         withContext(Dispatchers.IO) {
             val source = fs.source(worktreePath.join(path)).buffered()
             source.readString()
         }
-    }.context("Failed to read text file: $path in worktree $this")
+    }
 
     /**
      * Returns the path to the given binary name, if one is present on the `$PATH`.

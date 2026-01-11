@@ -25,6 +25,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -40,14 +41,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastMap
 import com.klyx.core.LocalNotifier
-import com.klyx.core.extension.ExtensionInfo
+import com.klyx.core.app.LocalApp
 import com.klyx.core.extension.fetchLastUpdated
 import com.klyx.core.formatDateTime
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.util.string
 import com.klyx.di.LocalExtensionViewModel
-import com.klyx.extension.ExtensionManager
+import com.klyx.extension.ExtensionManifest
+import com.klyx.extension.host.ExtensionStore
 import com.klyx.resources.Res.string
 import com.klyx.resources.action_install
 import com.klyx.resources.action_uninstall
@@ -61,19 +63,25 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExtensionDetailScreen(
-    extensionInfo: ExtensionInfo,
+    manifest: ExtensionManifest,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
     val notifier = LocalNotifier.current
     val viewModel = LocalExtensionViewModel.current
+    val app = LocalApp.current
+    val store = remember { ExtensionStore.global(app) }
 
     val scope = rememberCoroutineScope()
 
     val listState by viewModel.extensionListState.collectAsState()
     val installedIds = listState.installedExtensions.fastMap { it.id }.toSet()
-    val isInstalled = extensionInfo.id in installedIds
+    val isInstalled by remember {
+        derivedStateOf {
+            manifest.id in installedIds
+        }
+    }
 
     var isInstalling by remember { mutableStateOf(false) }
 
@@ -83,7 +91,7 @@ fun ExtensionDetailScreen(
     ) {
         Text(
             modifier = Modifier.padding(vertical = 8.dp),
-            text = extensionInfo.name,
+            text = manifest.name,
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.headlineMedium
         )
@@ -105,20 +113,19 @@ fun ExtensionDetailScreen(
             )
 
             Spacer(modifier = Modifier.height(4.dp))
-            Text(extensionInfo.description)
+            Text(manifest.description.orEmpty())
 
             TextWithIcon(
                 Icons.Outlined.Person,
-                text = extensionInfo.authors.joinToString(", ")
+                text = manifest.authors.joinToString(", ")
             )
 
             TextWithIcon(
                 Icons.Outlined.History,
-                text = "Version: ${extensionInfo.version}"
+                text = "Version: ${manifest.version}"
             )
 
-            val installedExt = ExtensionManager.findInstalledExtension(extensionInfo.id)
-            val isDevExtension = installedExt?.isDevExtension == true
+            val isDevExtension = store.isDevExtension(manifest.id)
 
             if (!isDevExtension) {
                 TextWithIcon(
@@ -127,7 +134,7 @@ fun ExtensionDetailScreen(
                 )
 
                 val lastUpdated by produceState("") {
-                    value = getLastUpdateText(extensionInfo.repository)
+                    value = getLastUpdateText(manifest.repository)
                 }
 
                 TextWithIcon(
@@ -139,7 +146,7 @@ fun ExtensionDetailScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row {
-                val updateAvailable = viewModel.isUpdateAvailable(extensionInfo.id)
+                val updateAvailable = viewModel.isUpdateAvailable(manifest.id)
                 var isUpdating by remember { mutableStateOf(false) }
 
                 val (icon, labelRes) = when {
@@ -162,14 +169,16 @@ fun ExtensionDetailScreen(
                     Button(
                         onClick = {
                             if (isUninstall) {
-                                viewModel.uninstallExtension(extensionInfo)
-                                notifier.notify(string(string.extension_uninstall_restart_prompt))
-                                onNavigateBack()
+                                scope.launch {
+                                    viewModel.uninstallExtension(manifest.id, store)
+                                    notifier.notify(string(string.extension_uninstall_restart_prompt))
+                                    onNavigateBack()
+                                }
                             } else {
                                 scope.launch {
                                     isInstalling = true
                                     if (updateAvailable) isUpdating = true
-                                    viewModel.installExtension(extensionInfo)
+                                    viewModel.installExtension(manifest, store)
                                 }.invokeOnCompletion {
                                     isInstalling = false
                                     isUpdating = false
@@ -196,9 +205,9 @@ fun ExtensionDetailScreen(
                     Spacer(Modifier.width(8.dp))
                 }
 
-                if (extensionInfo.repository.isNotEmpty()) {
+                if (!manifest.repository.isNullOrEmpty()) {
                     ElevatedButton(
-                        onClick = { uriHandler.openUri(extensionInfo.repository) },
+                        onClick = { uriHandler.openUri(manifest.repository!!) },
                         shape = DefaultKlyxShape
                     ) {
                         Icon(
@@ -246,9 +255,9 @@ private fun TextWithIcon(
     }
 }
 
-private suspend fun getLastUpdateText(repo: String): String {
+private suspend fun getLastUpdateText(repo: String?): String {
     return try {
-        val time = fetchLastUpdated(repo) ?: return "Last updated: unknown"
+        val time = repo?.let { fetchLastUpdated(it) } ?: return "Last updated: unknown"
         val formatted = time.formatDateTime()
         "Last updated on $formatted"
     } catch (_: Throwable) {

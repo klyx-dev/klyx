@@ -1,28 +1,28 @@
 package com.klyx.editor.lsp
 
-import com.klyx.core.backgroundScope
+import arrow.core.raise.context.bind
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.result
+import com.klyx.core.app.App
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
-import com.klyx.core.io.intoPath
-import com.klyx.core.language.BinaryStatus
-import com.klyx.core.language.CachedLspAdapter
-import com.klyx.core.language.LanguageId
-import com.klyx.core.language.LanguageName
-import com.klyx.core.language.LanguageRegistry
-import com.klyx.core.language.LspAdapterDelegate
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerBinary
 import com.klyx.core.lsp.LanguageServerBinaryOptions
 import com.klyx.core.lsp.LanguageServerName
-import com.klyx.core.project.makeLspAdapterDelegate
 import com.klyx.core.settings.AppSettings
 import com.klyx.core.settings.LspSettings
-import com.klyx.core.toJson
+import com.klyx.core.util.intoPath
+import com.klyx.editor.language.BinaryStatus
+import com.klyx.editor.language.CachedLspAdapter
+import com.klyx.editor.language.LanguageName
+import com.klyx.editor.language.LanguageRegistry
+import com.klyx.editor.language.LspAdapterDelegate
 import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.uriString
-import com.klyx.extension.ExtensionManager
+import com.klyx.extension.host.ExtensionStore
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DocumentColorParams
 import com.klyx.lsp.InlayHintParams
@@ -30,7 +30,7 @@ import com.klyx.lsp.Position
 import com.klyx.lsp.Range
 import com.klyx.lsp.TextDocumentIdentifier
 import com.klyx.lsp.server.LanguageServer
-import io.itsvks.anyhow.anyhow
+import com.klyx.project.lsp.makeLspAdapterDelegate
 import io.itsvks.anyhow.fold
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -89,18 +89,19 @@ object LanguageServerManager {
     suspend fun tryConnectLspIfAvailable(
         worktree: Worktree,
         languageName: LanguageName,
-        appSettings: AppSettings
-    ) = anyhow {
+        appSettings: AppSettings,
+        cx: App
+    ) = result {
         withContext(Dispatchers.IO) lsp@{
-            val languageServerName = ExtensionManager.getLanguageServerNameForLanguage(languageName)
-                ?: bail("No language server found for language: $languageName")
+            val languageServerName = getLanguageServerNameForLanguage(languageName, cx)
+                ?: raise(RuntimeException("No language server found for language: $languageName"))
 
             val languages = LanguageRegistry.INSTANCE
             val adapter = languages.adapterForName(languageServerName)
-                ?: bail("No adapter found for language server: $languageServerName")
+                ?: raise(RuntimeException("No adapter found for language server: $languageServerName"))
 
-            val languageId = ExtensionManager.getLanguageIdForLanguage(languageName)
-                ?: bail("No language id found for language: $languageName")
+            val languageId = getLanguageIdForLanguage(languageName, cx)
+                ?: raise(RuntimeException("No language id found for language: $languageName"))
             val delegate = makeLspAdapterDelegate(worktree)
 
             val key = worktree.uriString to languageId
@@ -127,10 +128,9 @@ object LanguageServerManager {
                     languageServers[key] = client.languageServer
 
                     val workspaceConfig = adapter.adapter.workspaceConfiguration(delegate).bind()
-                    println("Workspace config: ${workspaceConfig}")
                     client.changeWorkspaceConfiguration(workspaceConfig)
                 },
-                err = { bail("Failed to initialize language server: $it") }
+                err = { raise(RuntimeException("Failed to initialize language server: $it")) }
             )
 
             client
@@ -143,10 +143,10 @@ object LanguageServerManager {
         settings: LspSettings,
         delegate: LspAdapterDelegate,
         allowBinaryDownload: Boolean
-    ) = anyhow {
+    ) = result {
         settings.binary?.let { settings ->
             if (settings.path != null) {
-                return@anyhow withContext(Dispatchers.Default) {
+                return@result withContext(Dispatchers.Default) {
                     val env = delegate.shellEnv()
                     settings.env?.let { env.putAll(it) }
 
@@ -172,7 +172,7 @@ object LanguageServerManager {
         val binary = coroutineScope {
             when {
                 maybeDownloadBinary == null -> existingBinary.bind()
-                existingBinary.isErr -> maybeDownloadBinary().bind()
+                existingBinary.isFailure -> maybeDownloadBinary().bind()
                 else -> {
                     val existing = existingBinary.bind()
                     val downloader = async(start = CoroutineStart.UNDISPATCHED) {
@@ -185,7 +185,7 @@ object LanguageServerManager {
                         }
 
                         onTimeout(SERVER_DOWNLOAD_TIMEOUT) {
-                            backgroundScope.launch {
+                            CoroutineScope(Dispatchers.Default).launch {
                                 downloader.await()
                             }
                             existing
@@ -268,7 +268,7 @@ object LanguageServerManager {
         it.documentColor(DocumentColorParams(TextDocumentIdentifier(file.uriString)))
     }
 
-    private fun client(worktree: Worktree, languageId: LanguageId): LanguageServerClient {
+    private fun client(worktree: Worktree, languageId: String): LanguageServerClient {
         return checkNotNull(languageClients[worktree.uriString to languageId]) {
             "No language server client found for worktree: ${worktree.rootFile.absolutePath}, languageId: $languageId"
         }

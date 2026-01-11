@@ -200,7 +200,7 @@ internal class CodeEditorInputConnection(
     override fun sendKeyEvent(event: KeyEvent): Boolean {
         println("sendKeyEvent: $event")
         state.handleKeyEvent(event.asComposeKeyEvent())
-        EventBus.INSTANCE.postSync(event.asComposeKeyEvent())
+        EventBus.INSTANCE.tryPost(event.asComposeKeyEvent())
         return true
     }
 

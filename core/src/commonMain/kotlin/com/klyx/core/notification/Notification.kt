@@ -15,5 +15,5 @@ data class Notification(
     val id: NotificationId = generateId(),
     val durationMillis: Long = 4000L,
     val canUserDismiss: Boolean = true,
-    val onClick: (() -> Unit)? = null
+    val onClick: ((Notification) -> Unit)? = null
 )

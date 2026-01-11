@@ -1,6 +1,5 @@
 package com.klyx.core
 
-import com.klyx.core.app.Application
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.Json
@@ -16,13 +15,6 @@ inline fun <reified T> T.toJson() = run {
     val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false }
     json.encodeToString(this)
 }
-
-/**
- * A delegated property providing access to a background coroutine scope.
- * This is typically used for non-UI related asynchronous tasks that require
- * a managed lifecycle tied to the application's background operations.
- */
-inline val backgroundScope get() = Application.scope
 
 expect val currentThreadName: String
 

@@ -2,9 +2,7 @@ package com.klyx.editor.lsp
 
 import android.content.Context
 import com.klyx.core.Notifier
-import com.klyx.core.backgroundScope
 import com.klyx.core.file.Worktree
-import com.klyx.core.language.LanguageId
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerBinary
@@ -68,6 +66,7 @@ import io.itsvks.anyhow.mapError
 import io.itsvks.anyhow.runCatching
 import io.matthewnelson.kmp.process.changeDir
 import kotlinx.coroutines.CoroutineName
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -124,7 +123,7 @@ class LanguageServerClient(
 
                 process = builder.start()
 
-                backgroundScope.launch {
+                CoroutineScope(Dispatchers.Default).launch {
                     try {
                         process.errorStream.bufferedReader().forEachLine {
                             logger.info { it.ifEmpty { "-----------------" } }
@@ -172,7 +171,7 @@ class LanguageServerClient(
 
     suspend fun openDocument(
         uri: String,
-        languageId: LanguageId,
+        languageId: String,
         version: Int,
         text: String
     ) = withContext(Dispatchers.IO) {

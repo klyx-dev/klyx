@@ -388,7 +388,7 @@ class JsonRpcConnectionTest : FunSpec({
             setup.clientToServer.writeMessage(responseJson)
         }
 
-        val result = setup.connection.sendRequest<JsonObject>("test/method", null)
+        val result = setup.connection.sendRequest<JsonObject, LSPAny?>("test/method", null)
 
         result.toString() shouldContain "\"name\":\"Test\""
         result.toString() shouldContain "\"value\":42"

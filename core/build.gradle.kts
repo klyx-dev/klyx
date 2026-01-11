@@ -10,12 +10,15 @@ kotlin {
     android { namespace = "com.klyx.core" }
 
     sourceSets {
+        val androidMain by getting
+        val desktopMain by getting
+
         val commonJvmAndroid by creating {
             dependsOn(commonMain.get())
         }
 
-        androidMain.get().dependsOn(commonJvmAndroid)
-        jvmMain.get().dependsOn(commonJvmAndroid)
+        androidMain.dependsOn(commonJvmAndroid)
+        desktopMain.dependsOn(commonJvmAndroid)
 
         commonMain {
             dependencies {
@@ -29,7 +32,8 @@ kotlin {
 
                 api(libs.kotlinx.serialization.json)
                 implementation(libs.json5k)
-                implementation(libs.ktoml.core)
+                api(libs.tomlkt)
+                implementation(libs.kotlinx.datetime)
                 api(libs.ktor.client.core)
                 api(libs.ktor.client.cio)
                 api(libs.ktor.client.content.negotiation)

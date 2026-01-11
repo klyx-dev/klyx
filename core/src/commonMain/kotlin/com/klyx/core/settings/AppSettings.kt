@@ -73,14 +73,6 @@ data class AppSettings(
     @SerialComment("Use the Compose editor (unstable) instead of the Sora editor")
     val useComposeEditorInsteadOfSoraEditor: Boolean = false,
 
-    @SerialComment(
-        """
-        Whether to load extensions on app startup or at runtime.
-        If disabled, extensions will be loaded at runtime instead of on the splash screen.
-        """
-    )
-    val loadExtensionsOnStartup: Boolean = true,
-
     val fontScale: Float = 1.0f,
 
     @SerialComment("Whether to show terminal tab option or not in the menu.")

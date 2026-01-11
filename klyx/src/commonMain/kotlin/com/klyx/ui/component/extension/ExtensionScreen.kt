@@ -20,6 +20,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.klyx.appPrefs
+import com.klyx.core.io.okioFs
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
 import com.klyx.resources.Res.string
@@ -41,8 +42,8 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
             entry<ExtensionList> {
                 ExtensionListScreen(
                     modifier = Modifier.fillMaxSize(),
-                    onExtensionItemClick = { extension ->
-                        backStack.add(ExtensionDetail(extensionInfo = extension))
+                    onExtensionItemClick = { manifest ->
+                        backStack.add(ExtensionDetail(manifest))
                     }
                 )
             }
@@ -50,7 +51,7 @@ fun ExtensionScreen(modifier: Modifier = Modifier) {
             entry<ExtensionDetail> { detail ->
                 ExtensionDetailScreen(
                     modifier = Modifier.fillMaxSize(),
-                    extensionInfo = detail.extensionInfo,
+                    manifest = detail.manifest,
                     onNavigateBack = { backStack.removeLastOrNull() }
                 )
             }

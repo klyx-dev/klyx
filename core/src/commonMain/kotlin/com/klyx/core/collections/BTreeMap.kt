@@ -9,6 +9,7 @@ class BTreeMap<K : Comparable<K>, V>(numberOfEntriesInNode: Int = 12) {
 
     private val rootNode = Node<K, V>(numberOfEntriesInNode)
 
+    operator fun get(key: K) = rootNode[key]
     operator fun set(key: K, value: V) = put(key, value)
 
     fun put(key: K, value: V) {

@@ -2,7 +2,6 @@ package com.klyx.core.settings
 
 import arrow.core.left
 import arrow.core.right
-import com.klyx.core.language.LanguageName
 import com.klyx.core.lsp.LanguageServerName
 import com.klyx.core.partitionMap
 import kotlinx.serialization.Serializable
@@ -55,8 +54,8 @@ data class LanguageSettings(
             }
         }
 
-        operator fun get(languageName: LanguageName) = SettingsManager.settings.value.languages[languageName.value]
-            ?: SettingsManager.defaultSettings.languages[languageName.value]
+        operator fun get(languageName: String) = SettingsManager.settings.value.languages[languageName]
+            ?: SettingsManager.defaultSettings.languages[languageName]
 
     }
 }

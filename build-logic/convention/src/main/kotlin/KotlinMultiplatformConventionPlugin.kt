@@ -45,8 +45,14 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
                 applyDefaultHierarchyTemplate()
 
                 sourceSets {
+                    val desktopMain = create("desktopMain")
+                    desktopMain.dependsOn(commonMain.get())
+
+                    jvmMain.get().dependsOn(desktopMain)
+
                     commonMain.dependencies {
                         implementation(libs.findLibrary("kotlinx-coroutines-core").get())
+                        implementation(libs.findLibrary("kotlinx-serialization-core").get())
                     }
 
                     commonTest.dependencies {
@@ -55,7 +61,7 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
                         implementation(libs.findLibrary("kotest-assertions-core").get())
                     }
 
-                    jvmTest.dependencies {
+                    desktopMain.dependencies {
                         implementation(libs.findLibrary("kotest-runner-junit5").get())
                     }
                 }

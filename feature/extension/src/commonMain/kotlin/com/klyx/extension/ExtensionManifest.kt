@@ -1,19 +1,26 @@
+@file:UseSerializers(OkioPathListSerializer::class, OkioPathSerializer::class)
+
 package com.klyx.extension
 
-import com.akuleshov7.ktoml.Toml
-import com.akuleshov7.ktoml.TomlInputConfig
-import com.klyx.core.io.Fs
-import com.klyx.core.io.Path
+import androidx.compose.runtime.Stable
+import arrow.core.raise.context.ensure
+import arrow.core.raise.context.result
+import com.klyx.core.io.isFile
+import com.klyx.core.io.okioFs
 import com.klyx.core.lsp.LanguageServerName
-import io.itsvks.anyhow.AnyhowResult
+import com.klyx.core.util.path.OkioPathListSerializer
+import com.klyx.core.util.path.OkioPathSerializer
 import io.itsvks.anyhow.anyhow
-import kotlinx.io.Source
-import kotlinx.io.buffered
-import kotlinx.io.readString
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.decodeFromString
+import net.peanuuutz.tomlkt.Toml
+import okio.Path
+import okio.buffer
+import okio.use
 
+@Stable
 @Serializable
 data class ExtensionManifest(
     val id: String,
@@ -25,17 +32,25 @@ data class ExtensionManifest(
     val repository: String? = null,
     val authors: List<String> = emptyList(),
     val lib: LibManifestEntry = LibManifestEntry(),
-    val themes: List<Path> = emptyList(),
+    var themes: MutableList<Path> = mutableListOf(),
     @SerialName("icon_themes")
-    val iconThemes: List<Path> = emptyList(),
-    val languages: List<Path> = emptyList(),
+    var iconThemes: MutableList<Path> = mutableListOf(),
+    var languages: MutableList<Path> = mutableListOf(),
     val grammars: Map<String, GrammarManifestEntry> = emptyMap(),
     @SerialName("language_servers")
     val languageServers: Map<LanguageServerName, LanguageServerManifestEntry> = emptyMap(),
-    val snippets: Path? = null,
-    val capabilities: List<ExtensionCapability> = emptyList()
+    @SerialName("context_servers")
+    val contextServers: Map<String, ContextServerManifestEntry> = emptyMap(),
+    @SerialName("agent_servers")
+    val agentServers: Map<String, AgentServerManifestEntry> = emptyMap(),
+    @SerialName("slash_commands")
+    val slashCommands: Map<String, SlashCommandManifestEntry> = emptyMap(),
+    var snippets: Path? = null,
+    val capabilities: List<ExtensionCapability> = emptyList(),
+    @SerialName("language_model_providers")
+    val languageModelProviders: Map<String, LanguageModelProviderManifestEntry> = emptyMap()
 ) {
-    fun allowExec(desiredCommand: String, desiredArgs: Array<out String>) = anyhow {
+    fun allowExec(desiredCommand: String, desiredArgs: List<String>) = anyhow {
         val isAllowed = capabilities.any {
             when (it) {
                 is ExtensionCapability.ProcessExec -> it.capability.allows(desiredCommand, desiredArgs)
@@ -51,18 +66,14 @@ data class ExtensionManifest(
     fun allowRemoteLoad(): Boolean = languageServers.isNotEmpty()
 
     companion object {
-        suspend fun load(fs: Fs, extensionDir: Path): AnyhowResult<ExtensionManifest> = anyhow {
+        suspend fun load(extensionDir: Path): Result<ExtensionManifest> = result {
             val extensionName = extensionDir.name
-            val extensionManifestPath = extensionDir.join("extension.toml")
-
-            if (fs.isFile(extensionManifestPath)) {
-                val manifestContent = withContext("loading $extensionName extension.toml, $extensionManifestPath") {
-                    fs.source(extensionManifestPath).buffered().use(Source::readString)
-                }
-                Toml(inputConfig = TomlInputConfig(ignoreUnknownNames = true)).decodeFromString(manifestContent)
-            } else {
-                bail("No extension manifest found for extension $extensionName")
+            val extensionManifestPath = extensionDir / "extension.toml"
+            ensure(okioFs.isFile(extensionManifestPath)) {
+                IllegalStateException("No extension manifest found for extension $extensionName")
             }
+            val manifestContent = okioFs.source(extensionManifestPath).buffer().use { it.readUtf8() }
+            Toml { ignoreUnknownKeys = true }.decodeFromString(manifestContent)
         }
     }
 }

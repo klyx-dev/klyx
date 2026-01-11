@@ -26,8 +26,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.core.extension.ExtensionInfo
 import com.klyx.di.LocalExtensionViewModel
+import com.klyx.extension.ExtensionManifest
 import com.klyx.resources.Res
 import com.klyx.resources.installed
 import com.klyx.resources.update_available
@@ -36,12 +36,12 @@ import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ExtensionCard(
-    extension: ExtensionInfo,
+    manifest: ExtensionManifest,
     modifier: Modifier = Modifier,
     isInstalled: Boolean = false,
     onClick: () -> Unit = {}
 ) {
-    val updateAvailable = LocalExtensionViewModel.current.isUpdateAvailable(extension.id)
+    val updateAvailable = LocalExtensionViewModel.current.isUpdateAvailable(manifest.id)
 
     Card(
         modifier = modifier,
@@ -57,7 +57,7 @@ fun ExtensionCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = extension.name,
+                    text = manifest.name,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.basicMarquee(),
@@ -103,7 +103,7 @@ fun ExtensionCard(
                 modifier = Modifier.padding(horizontal = 4.dp)
             ) {
                 Text(
-                    text = extension.description,
+                    text = manifest.description.orEmpty(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
@@ -121,7 +121,7 @@ fun ExtensionCard(
                     Spacer(modifier = Modifier.width(4.dp))
 
                     Text(
-                        text = extension.authors.joinToString(", "),
+                        text = manifest.authors.joinToString(", "),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall
                     )
