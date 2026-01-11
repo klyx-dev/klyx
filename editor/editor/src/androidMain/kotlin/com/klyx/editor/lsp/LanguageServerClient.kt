@@ -1,6 +1,10 @@
 package com.klyx.editor.lsp
 
 import android.content.Context
+import arrow.core.raise.ResultRaise
+import arrow.core.raise.context.ensure
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.result
 import com.klyx.core.Notifier
 import com.klyx.core.file.Worktree
 import com.klyx.core.logging.KxLogger
@@ -60,10 +64,6 @@ import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.fold
 import com.klyx.lsp.types.isFirst
 import com.klyx.lsp.types.isLeft
-import io.itsvks.anyhow.Err
-import io.itsvks.anyhow.Ok
-import io.itsvks.anyhow.mapError
-import io.itsvks.anyhow.runCatching
 import io.matthewnelson.kmp.process.changeDir
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -150,12 +150,12 @@ class LanguageServerClient(
                 serverCapabilities = result.capabilities
 
                 logger.debug { "Language Server initialized: ${result.capabilities}" }
-                Ok(result)
+                Result.success(result)
             }
         } catch (err: Exception) {
             logger.error(err) { "Failed to initialize LSP" }
             close()
-            Err("Failed to initialize LSP: ${err.message}")
+            Result.failure(RuntimeException("Failed to initialize LSP: ${err.message}"))
         }
     }
 
@@ -175,95 +175,65 @@ class LanguageServerClient(
         version: Int,
         text: String
     ) = withContext(Dispatchers.IO) {
-        try {
+        result {
             if (openDocuments.contains(uri)) {
                 changeDocument(uri, version, text)
-                return@withContext Ok(Unit)
+                return@result
             }
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, languageId, version, text))
             languageServer.textDocument.didOpen(params)
             openDocuments.add(uri)
+        }
+    }
 
-            // logger.debug { "Opened document: $uri, version: $version" }
-            Ok(Unit)
-        } catch (e: Exception) {
-            // logger.error(e) { "Error opening document: $uri" }
-            Err(e.message ?: "Error opening document: $uri")
+    context(_: ResultRaise)
+    private fun ensureDocumentOpened(uri: String) {
+        ensure(openDocuments.contains(uri)) {
+            RuntimeException("Document not open: $uri")
         }
     }
 
     suspend fun closeDocument(uri: String) = withContext(Dispatchers.IO) {
-        try {
-            if (!openDocuments.contains(uri)) {
-                return@withContext Err("Document not open: $uri")
-            }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
             languageServer.textDocument.didClose(params)
             openDocuments.remove(uri)
-            // logger.debug { "Closed document: $uri" }
-            Ok(Unit)
-        } catch (e: Exception) {
-            // logger.error(e) { "Error closing document: $uri" }
-            Err(e.message ?: "Error closing document: $uri")
         }
     }
 
     suspend fun changeDocument(uri: String, version: Int, newText: String) = withContext(Dispatchers.IO) {
-        try {
-            if (!openDocuments.contains(uri)) {
-                // logger.warn { "Ignoring change for unopened document: $uri" }
-                return@withContext Err("Document not opened: $uri")
-            }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = DidChangeTextDocumentParams(
                 VersionedTextDocumentIdentifier(uri, version),
                 listOf(TextDocumentContentChangeEvent(newText))
             )
             languageServer.textDocument.didChange(params)
-
-            // logger.debug { "Changed document: $uri, version: $version" }
-            Ok(Unit)
-        } catch (e: Exception) {
-            // logger.error(e) { "Error changing document: $uri" }
-            Err(e.message ?: "Error changing document: $uri")
         }
     }
 
     suspend fun saveDocument(uri: String, text: String? = null) = withContext(Dispatchers.IO) {
-        try {
-            if (!openDocuments.contains(uri)) {
-                return@withContext Err("Document not opened: $uri")
-            }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = DidSaveTextDocumentParams(TextDocumentIdentifier(uri), text)
             languageServer.textDocument.didSave(params)
-            // logger.debug { "Saved document: $uri" }
-            Ok(Unit)
-        } catch (e: Exception) {
-            // logger.error(e) { "Error saving document: $uri" }
-            Err(e.message ?: "Error saving document: $uri")
         }
     }
 
     suspend fun completion(uri: String, line: Int, character: Int) = withContext(Dispatchers.IO) {
-        try {
-            if (!openDocuments.contains(uri)) {
-                return@withContext Err("Document not opened: $uri")
-            }
+        result {
+            ensureDocumentOpened(uri)
             val params = CompletionParams(
                 TextDocumentIdentifier(uri),
                 Position(line, character)
             )
             val result = languageServer.textDocument.completion(params)
-                ?: return@withContext Err("No completion result")
+                ?: raise(RuntimeException("No completion result"))
             //logger.debug { "Completion result: $result" }
 
-            Ok(result.fold({ it }, { it.items }))
-        } catch (e: Exception) {
-            // logger.error(e) { "Error getting completion: $uri" }
-            Err(e.message ?: "Error getting completion: $uri")
+            result.fold({ it }, { it.items })
         }
     }
 
@@ -272,11 +242,8 @@ class LanguageServerClient(
         tabSize: Int = 4,
         insertSpaces: Boolean = true
     ) = withContext(Dispatchers.IO) {
-        try {
-            if (!openDocuments.contains(uri)) {
-                return@withContext Err("Document not opened: $uri")
-            }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = DocumentFormattingParams(
                 TextDocumentIdentifier(uri),
                 FormattingOptions(tabSize, insertSpaces)
@@ -284,10 +251,7 @@ class LanguageServerClient(
 
             val result = languageServer.textDocument.formatting(params)
             //logger.debug { "Formatting result: $result" }
-            Ok(result.orEmpty())
-        } catch (e: Exception) {
-            // logger.error(e) { "Error formatting document: $uri" }
-            Err(e.message ?: "Error formatting document: $uri")
+            result.orEmpty()
         }
     }
 
@@ -297,9 +261,8 @@ class LanguageServerClient(
         tabSize: Int = 4,
         insertSpaces: Boolean = true
     ) = withContext(Dispatchers.IO) {
-        try {
-            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = DocumentRangeFormattingParams(
                 textDocument = TextDocumentIdentifier(uri),
                 range = range,
@@ -307,67 +270,55 @@ class LanguageServerClient(
             )
 
             val result = languageServer.textDocument.rangeFormatting(params)
-            Ok(result.orEmpty())
-        } catch (e: Exception) {
-            Err(e.message ?: "Error range formatting document: $uri")
+            result.orEmpty()
         }
     }
 
     suspend fun codeAction(uri: String, diagnostic: Diagnostic) = withContext(Dispatchers.IO) {
-        try {
-            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = CodeActionParams(
                 textDocument = TextDocumentIdentifier(uri),
                 range = diagnostic.range,
                 context = CodeActionContext(listOf(diagnostic))
             )
-
             val result = languageServer.textDocument.codeAction(params)
-            Ok(result.orEmpty())
-        } catch (e: Exception) {
-            Err(e.message ?: "Error getting code actions: $uri")
+            result.orEmpty()
         }
     }
 
     suspend fun executeCommand(command: String, args: List<LSPAny>) = withContext(Dispatchers.IO) {
-        try {
+        result {
             val params = ExecuteCommandParams(command, args)
             val result = languageServer.workspace.executeCommand(params)
-            Ok(result)
-        } catch (e: Exception) {
-            Err(e.message ?: "Error executing command: $command")
+            result
         }
     }
 
     suspend fun signatureHelp(uri: String, position: Position) = withContext(Dispatchers.IO) {
-        try {
-            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = SignatureHelpParams(
                 textDocument = TextDocumentIdentifier(uri),
                 position = position
             )
 
             val result = languageServer.textDocument.signatureHelp(params)
-                ?: return@withContext Err("No signature help result")
-            Ok(result)
-        } catch (e: Exception) {
-            Err(e.message ?: "Error getting signature help: $uri")
+                ?: raise(RuntimeException("No signature help result"))
+            result
         }
     }
 
     suspend fun hover(uri: String, position: Position) = withContext(Dispatchers.IO) {
-        runCatching {
-            require(openDocuments.contains(uri)) { "Document not opened: $uri" }
-
+        result {
+            ensureDocumentOpened(uri)
             val params = HoverParams(TextDocumentIdentifier(uri), position)
             languageServer.textDocument.hover(params) ?: error("No hover result")
-        }.mapError { it.message ?: "Error getting hover: $uri" }
+        }
     }
 
     suspend fun inlayHint(params: InlayHintParams) = withContext(Dispatchers.IO) {
-        runCatching {
+        result {
             val provider = serverCapabilities.inlayHintProvider
             val isSupported = provider != null && provider.isFirst() && provider.value
             if (isSupported) {
@@ -377,11 +328,11 @@ class LanguageServerClient(
             } else {
                 error("Inlay hints not supported by server")
             }
-        }.mapError { it.message ?: "Error getting inlay hints" }
+        }
     }
 
     suspend fun documentColor(params: DocumentColorParams) = withContext(Dispatchers.IO) {
-        runCatching {
+        result {
             val provider = serverCapabilities.colorProvider
             val isSupported = provider != null && provider.isFirst() && provider.value
             if (isSupported) {
@@ -391,7 +342,7 @@ class LanguageServerClient(
             } else {
                 error("Document colors not supported by server")
             }
-        }.mapError { it.message ?: "Error getting document colors" }
+        }
     }
 
     override suspend fun notifyProgress(params: ProgressParams) {

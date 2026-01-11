@@ -1,6 +1,5 @@
 package com.klyx.editor.lsp
 
-import android.content.Context
 import android.os.Bundle
 import android.util.LruCache
 import android.view.View
@@ -47,9 +46,6 @@ import io.github.rosemoe.sora.widget.CodeEditor
 import io.github.rosemoe.sora.widget.SymbolPairMatch
 import io.github.rosemoe.sora.widget.subscribeAlways
 import io.github.rosemoe.sora.widget.subscribeEvent
-import io.itsvks.anyhow.getOrElse
-import io.itsvks.anyhow.onFailure
-import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -82,7 +78,6 @@ internal class EditorLanguageServerClient(
     val coroutineScope: CoroutineScope,
     private val settings: AppSettings
 ) : KoinComponent {
-    private val applicationContext: Context by inject()
     private var serverClient: LanguageServerClient? = null
     private val capabilities get() = serverClient?.serverCapabilities
 

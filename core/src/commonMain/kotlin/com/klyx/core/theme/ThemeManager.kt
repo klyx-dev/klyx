@@ -4,7 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import io.itsvks.anyhow.anyhow
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.result
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -50,16 +51,16 @@ object ThemeManager {
     /**
      * Load and parse a theme family from extension
      */
-    suspend fun loadThemeFamily(themeSource: RawSource?) = anyhow {
+    suspend fun loadThemeFamily(themeSource: RawSource?) = result {
         withContext(Dispatchers.IO) {
-            val source = themeSource?.buffered()?.peek() ?: bail("Theme source is null")
+            val source = themeSource?.buffered()?.peek() ?: raise(RuntimeException("Theme source is null"))
 
             val themeJson: ThemeJson = try {
                 json.decodeFromString(source.readString())
             } catch (e: IllegalArgumentException) {
-                bail("Invalid theme JSON: ${e.message}")
+                raise(RuntimeException("Invalid theme JSON: ${e.message}"))
             } catch (e: SerializationException) {
-                bail("Error parsing theme JSON: ${e.message}")
+                raise(RuntimeException("Error parsing theme JSON: ${e.message}"))
             }
 
             availableThemes += themeJson.asTheme()

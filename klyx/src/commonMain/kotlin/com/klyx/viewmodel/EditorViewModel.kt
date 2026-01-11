@@ -7,6 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import arrow.core.raise.context.bind
+import arrow.core.raise.context.raise
+import arrow.core.raise.context.result
 import com.klyx.core.Notifier
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.io.FileCloseEvent
@@ -47,7 +50,6 @@ import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.ui.component.log.LogViewerScreen
 import com.klyx.ui.page.createWelcomePage
 import com.klyx.viewmodel.util.stateInWhileSubscribed
-import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
@@ -435,15 +437,15 @@ class EditorViewModel(
         return _state.value.openTabs.any { it is FileTab && it.isInternal && it.id == tabId }
     }
 
-    fun saveCurrent() = anyhow {
+    fun saveCurrent() = result {
         val current = _state.value
-        val tab = current.openTabs.find { it.id == current.activeTabId } ?: bail("no active tab")
+        val tab = current.openTabs.find { it.id == current.activeTabId } ?: error("no active tab")
 
         if (tab is FileTab) {
             val state = tab.editorState
             val file = tab.file
 
-            if (file.path == "untitled") bail("invalid")
+            if (file.path == "untitled") error("invalid")
 
             viewModelScope.launch(Dispatchers.IO) {
                 if (file.canWrite) {
@@ -464,21 +466,21 @@ class EditorViewModel(
                         EventBus.INSTANCE.post(FileSaveEvent(file, tab.worktree?.rootFile))
                     }
                 } else {
-                    bail("file is not writable")
+                    error("file is not writable")
                 }
             }
         } else {
-            bail("invalid state; tab is not FileTab")
+            error("invalid state; tab is not FileTab")
         }
     }
 
-    fun saveCurrentAs(newFile: KxFile) = anyhow {
-        val currentTabId = _state.value.activeTabId ?: bail("no active tab")
+    fun saveCurrentAs(newFile: KxFile) = result {
+        val currentTabId = _state.value.activeTabId ?: error("no active tab")
         saveAs(currentTabId, newFile).bind()
     }
 
-    fun saveAs(tabId: TabId, newFile: KxFile) = anyhow {
-        val tab = _state.value.openTabs.find { it.id == tabId } ?: bail("no tab found with id: $tabId")
+    fun saveAs(tabId: TabId, newFile: KxFile) = result {
+        val tab = _state.value.openTabs.find { it.id == tabId } ?: error("no tab found with id: $tabId")
 
         if (tab is FileTab) {
             val editorState = tab.editorState
@@ -497,7 +499,7 @@ class EditorViewModel(
                     }
                 } catch (e: Exception) {
                     notifier.error(e.message.orEmpty())
-                    bail(e)
+                    raise(e)
                 }
 
                 val newTab = FileTab(
@@ -517,7 +519,7 @@ class EditorViewModel(
                 }
             }
         } else {
-            bail("invalid state; tab is not FileTab")
+            error("invalid state; tab is not FileTab")
         }
     }
 

@@ -4,13 +4,13 @@ package com.klyx.extension
 
 import androidx.compose.runtime.Stable
 import arrow.core.raise.context.ensure
+import arrow.core.raise.context.raise
 import arrow.core.raise.context.result
 import com.klyx.core.io.isFile
 import com.klyx.core.io.okioFs
 import com.klyx.core.lsp.LanguageServerName
 import com.klyx.core.util.path.OkioPathListSerializer
 import com.klyx.core.util.path.OkioPathSerializer
-import io.itsvks.anyhow.anyhow
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -50,7 +50,7 @@ data class ExtensionManifest(
     @SerialName("language_model_providers")
     val languageModelProviders: Map<String, LanguageModelProviderManifestEntry> = emptyMap()
 ) {
-    fun allowExec(desiredCommand: String, desiredArgs: List<String>) = anyhow {
+    fun allowExec(desiredCommand: String, desiredArgs: List<String>) = result {
         val isAllowed = capabilities.any {
             when (it) {
                 is ExtensionCapability.ProcessExec -> it.capability.allows(desiredCommand, desiredArgs)
@@ -59,7 +59,7 @@ data class ExtensionManifest(
         }
 
         if (!isAllowed) {
-            raise("capability for process:exec $desiredCommand ${desiredArgs.joinToString(" ")} was not listed in the extension manifest")
+            raise(RuntimeException("capability for process:exec $desiredCommand ${desiredArgs.joinToString(" ")} was not listed in the extension manifest"))
         }
     }
 

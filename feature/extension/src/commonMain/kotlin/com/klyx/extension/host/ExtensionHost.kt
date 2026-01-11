@@ -29,7 +29,6 @@ import com.klyx.extension.native.WasmExtensionProcessHost
 import com.klyx.extension.native.WasmExtensionSystemHost
 import com.klyx.extension.native.WasmHost
 import com.klyx.util.getOrThrow
-import io.itsvks.anyhow.getOrThrow
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.expectSuccess
 import io.ktor.client.request.headers

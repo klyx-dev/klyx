@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.ui.graphics.vector.ImageVector
+import arrow.core.raise.context.result
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Project
 import com.klyx.core.file.Worktree
@@ -39,8 +40,6 @@ import com.klyx.core.icon.language.Toml
 import com.klyx.core.icon.language.TypeScript
 import com.klyx.core.icon.language.Xml
 import com.klyx.core.icon.language.Yaml
-import io.itsvks.anyhow.anyhow
-import io.itsvks.anyhow.getOrElse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -49,7 +48,7 @@ data class FileTreeNode(
     val file: KxFile,
     val name: String = file.resolveName(),
     val isDirectory: Boolean = file.isDirectory,
-    val isExecutable: Boolean = anyhow { file.canExecute }.getOrElse { false },
+    val isExecutable: Boolean = result { file.canExecute }.getOrElse { false },
 ) {
     override fun hashCode(): Int {
         var result = isDirectory.hashCode()

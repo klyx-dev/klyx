@@ -71,7 +71,6 @@ kotlin {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
                 implementation(libs.tomlkt)
-                implementation(libs.chasm)
 
                 implementation(projects.core)
                 implementation(projects.util)

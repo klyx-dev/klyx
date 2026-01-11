@@ -2,8 +2,6 @@
 
 package com.klyx.core.logging
 
-import io.itsvks.anyhow.AnyhowResult
-import io.itsvks.anyhow.onFailure
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -11,11 +9,6 @@ import kotlin.time.ExperimentalTime
 
 val defaultLogger = logger("Klyx")
 inline val log get() = defaultLogger
-
-fun <A> AnyhowResult<A>.logErr(): AnyhowResult<A> {
-    onFailure { log.error { it.toString() } }
-    return this
-}
 
 fun <T> Result<T>.logerror() = onFailure { log.error(it) { it.message } }
 

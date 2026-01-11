@@ -1,8 +1,6 @@
 package com.klyx.core.process
 
 import arrow.core.raise.result
-import io.itsvks.anyhow.anyhow
-import io.itsvks.anyhow.map
 import kotlinx.io.files.Path
 
 expect suspend fun getenv(name: String): String?

@@ -30,6 +30,7 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import arrow.core.raise.context.result
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.file.Project
@@ -37,7 +38,7 @@ import com.klyx.core.io.Paths
 import com.klyx.core.io.lastProjectFile
 import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
-import com.klyx.core.logging.logErr
+import com.klyx.core.logging.logerror
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.di.LocalKlyxViewModel
@@ -52,7 +53,6 @@ import com.klyx.ui.page.settings.appearance.DarkThemePreferences
 import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
-import io.itsvks.anyhow.anyhow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -86,7 +86,7 @@ fun MainScreen() {
 
     LifecycleStartEffect(Unit) {
         lifecycleScope.launch(Dispatchers.Default) {
-            anyhow {
+            result {
                 val project: Project = withContext(Dispatchers.IO) {
                     SystemFileSystem.source(Paths.lastProjectFile).buffered().use { source ->
                         Json.decodeFromString(source.readString())
@@ -96,7 +96,7 @@ fun MainScreen() {
                 if (project != openedProject) {
                     klyxViewModel.openProject(project)
                 }
-            }.logErr()
+            }.logerror()
         }
 
         onStopOrDispose {

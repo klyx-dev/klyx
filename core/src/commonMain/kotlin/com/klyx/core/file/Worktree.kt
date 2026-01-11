@@ -5,7 +5,6 @@ import arrow.core.raise.result
 import com.klyx.core.extension.WorktreeDelegate
 import com.klyx.core.process.getenv
 import com.klyx.core.util.join
-import io.itsvks.anyhow.identity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -53,7 +52,7 @@ data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
      */
     override suspend fun which(binaryName: String) = com.klyx.core.process.which(binaryName)
         .map { it.toString() }
-        .fold(::identity) { null }
+        .getOrNull()
 
     /**
      * Returns the current shell environment.

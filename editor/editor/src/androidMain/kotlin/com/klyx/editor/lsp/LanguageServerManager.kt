@@ -22,7 +22,6 @@ import com.klyx.editor.language.LanguageRegistry
 import com.klyx.editor.language.LspAdapterDelegate
 import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.uriString
-import com.klyx.extension.host.ExtensionStore
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DocumentColorParams
 import com.klyx.lsp.InlayHintParams
@@ -31,7 +30,6 @@ import com.klyx.lsp.Range
 import com.klyx.lsp.TextDocumentIdentifier
 import com.klyx.lsp.server.LanguageServer
 import com.klyx.project.lsp.makeLspAdapterDelegate
-import io.itsvks.anyhow.fold
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -123,14 +121,14 @@ object LanguageServerManager {
                 .initializationOptions(delegate).bind()
 
             client.initialize(binary, worktree, initializationOptions).fold(
-                ok = { initializeResult ->
+                onSuccess = { initializeResult ->
                     languageClients[key] = client
                     languageServers[key] = client.languageServer
 
                     val workspaceConfig = adapter.adapter.workspaceConfiguration(delegate).bind()
                     client.changeWorkspaceConfiguration(workspaceConfig)
                 },
-                err = { raise(RuntimeException("Failed to initialize language server: $it")) }
+                onFailure = { raise(RuntimeException("Failed to initialize language server: $it")) }
             )
 
             client

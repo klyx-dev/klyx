@@ -7,8 +7,7 @@ import com.klyx.extension.capabilities.NpmInstallPackageCapability
 import com.klyx.extension.capabilities.ProcessExecCapability
 import com.klyx.extension.native.CapabilityGrantException
 import com.klyx.extension.native.CapabilityGranter
-import io.itsvks.anyhow.getOrThrow
-import io.itsvks.anyhow.mapError
+import com.klyx.util.getOrThrow
 import io.ktor.http.Url
 
 internal val DefaultGrantedCapabilities = listOf(
@@ -23,8 +22,7 @@ class ExtensionCapabilityGranter(
 ) : CapabilityGranter {
     override fun grantExec(desiredCommand: String, desiredArgs: List<String>) {
         manifest.allowExec(desiredCommand, desiredArgs)
-            .mapError { CapabilityGrantException(it.stackTraceToString()) }
-            .getOrThrow()
+            .getOrThrow { CapabilityGrantException(it.stackTraceToString()) }
 
         val isAllowed = grantedCapabilities
             .any { capability ->

@@ -50,8 +50,6 @@ import com.klyx.runner.CodeRunner
 import com.klyx.tab.FileTab
 import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
 import io.github.vinceglb.filekit.name
-import io.itsvks.anyhow.onFailure
-import io.itsvks.anyhow.onSuccess
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
