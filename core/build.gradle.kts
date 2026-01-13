@@ -24,7 +24,6 @@ kotlin {
             dependencies {
                 api(libs.koin.compose)
 
-                implementation(libs.compose.material.icons.extended)
                 implementation(libs.compose.components.resources)
 
                 implementation(libs.androidx.lifecycle.viewmodel)
@@ -57,6 +56,7 @@ kotlin {
                 implementation(libs.kfswatch)
                 api(libs.semver)
                 implementation(libs.multiplatform.settings.no.arg)
+                implementation(projects.icons)
             }
         }
 

@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.sharp.Close
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -30,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.notification.Notification
 import com.klyx.core.notification.NotificationType
 import com.klyx.core.theme.harmonizeWithPrimary
+import com.klyx.icons.Close
+import com.klyx.icons.Icons
 
 @Composable
 internal fun NotificationCard(
@@ -81,7 +81,7 @@ internal fun NotificationCard(
                             modifier = Modifier.size(20.dp),
                         ) {
                             Icon(
-                                imageVector = Icons.Sharp.Close,
+                                Icons.Close,
                                 contentDescription = "Close"
                             )
                         }

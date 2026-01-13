@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -39,6 +36,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.klyx.icons.Icons
+import com.klyx.icons.KeyboardArrowDown
+import com.klyx.icons.KeyboardArrowUp
 import com.klyx.lsp.MarkupContent
 import com.klyx.lsp.SignatureHelp
 import com.klyx.lsp.SignatureInformation
@@ -48,6 +48,7 @@ import com.klyx.lsp.types.isLeft
 import com.klyx.lsp.types.isRight
 import com.mikepenz.markdown.m3.Markdown
 
+@Suppress("ParamsComparedByRef")
 @Composable
 internal fun SignatureHelpContent(
     signatureHelp: SignatureHelp?,
@@ -147,7 +148,7 @@ private fun SignatureNavigationHeader(
                 modifier = Modifier.size(24.dp)
             ) {
                 Icon(
-                    Icons.Default.KeyboardArrowUp,
+                    Icons.KeyboardArrowUp,
                     contentDescription = "Previous overload",
                     modifier = Modifier.size(16.dp)
                 )
@@ -161,7 +162,7 @@ private fun SignatureNavigationHeader(
                 modifier = Modifier.size(24.dp)
             ) {
                 Icon(
-                    Icons.Default.KeyboardArrowDown,
+                    Icons.KeyboardArrowDown,
                     contentDescription = "Next overload",
                     modifier = Modifier.size(16.dp)
                 )
@@ -170,6 +171,7 @@ private fun SignatureNavigationHeader(
     }
 }
 
+@Suppress("ParamsComparedByRef")
 @Composable
 private fun HighlightedSignatureLabel(
     signature: SignatureInformation,

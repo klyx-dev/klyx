@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -28,6 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.di.LocalExtensionViewModel
 import com.klyx.extension.ExtensionManifest
+import com.klyx.icons.Icons
+import com.klyx.icons.Person
 import com.klyx.resources.Res
 import com.klyx.resources.installed
 import com.klyx.resources.update_available
@@ -112,7 +112,7 @@ fun ExtensionCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        Icons.Default.Person,
+                        Icons.Person,
                         contentDescription = null,
                         modifier = Modifier.size(13.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant

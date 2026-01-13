@@ -8,13 +8,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarToday
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.History
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.Update
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -50,6 +43,13 @@ import com.klyx.core.util.string
 import com.klyx.di.LocalExtensionViewModel
 import com.klyx.extension.ExtensionManifest
 import com.klyx.extension.host.ExtensionStore
+import com.klyx.icons.CalendarMonth
+import com.klyx.icons.Delete
+import com.klyx.icons.Download
+import com.klyx.icons.History
+import com.klyx.icons.Icons
+import com.klyx.icons.Person
+import com.klyx.icons.Update
 import com.klyx.resources.Res.string
 import com.klyx.resources.action_install
 import com.klyx.resources.action_uninstall
@@ -116,12 +116,12 @@ fun ExtensionDetailScreen(
             Text(manifest.description.orEmpty())
 
             TextWithIcon(
-                Icons.Outlined.Person,
+                Icons.Person,
                 text = manifest.authors.joinToString(", ")
             )
 
             TextWithIcon(
-                Icons.Outlined.History,
+                Icons.History,
                 text = "Version: ${manifest.version}"
             )
 
@@ -129,7 +129,7 @@ fun ExtensionDetailScreen(
 
             if (!isDevExtension) {
                 TextWithIcon(
-                    Icons.Outlined.Download,
+                    Icons.Download,
                     text = "Downloads: (Not available)"
                 )
 
@@ -138,7 +138,7 @@ fun ExtensionDetailScreen(
                 }
 
                 TextWithIcon(
-                    Icons.Outlined.CalendarToday,
+                    Icons.CalendarMonth,
                     text = lastUpdated.ifEmpty { "Last updated on ..." }
                 )
             }
@@ -150,11 +150,11 @@ fun ExtensionDetailScreen(
                 var isUpdating by remember { mutableStateOf(false) }
 
                 val (icon, labelRes) = when {
-                    isInstalling -> Icons.Outlined.Download to string.installing
-                    isInstalled && updateAvailable && isUpdating -> Icons.Outlined.Update to string.updating
-                    isInstalled && updateAvailable -> Icons.Outlined.Update to string.update
-                    isInstalled -> Icons.Outlined.Delete to string.action_uninstall
-                    else -> Icons.Outlined.Download to string.action_install
+                    isInstalling -> Icons.Download to string.installing
+                    isInstalled && updateAvailable && isUpdating -> Icons.Update to string.updating
+                    isInstalled && updateAvailable -> Icons.Update to string.update
+                    isInstalled -> Icons.Delete to string.action_uninstall
+                    else -> Icons.Download to string.action_install
                 }
 
                 val isUninstall = isInstalled && !updateAvailable

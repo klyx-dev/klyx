@@ -21,12 +21,6 @@ import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardCommandKey
-import androidx.compose.material.icons.outlined.DriveFolderUpload
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
@@ -73,6 +67,12 @@ import com.klyx.core.theme.blend
 import com.klyx.core.ui.component.ShortcutText
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
+import com.klyx.icons.Add
+import com.klyx.icons.DriveFolderUpload
+import com.klyx.icons.Extension
+import com.klyx.icons.Icons
+import com.klyx.icons.KeyboardCommandKey
+import com.klyx.icons.Settings
 import com.klyx.ui.page.main.LocalDrawerState
 import com.klyx.ui.util.openIfClosed
 import com.klyx.viewmodel.openExtensionScreen
@@ -183,21 +183,21 @@ fun WelcomePage() {
             TextButtonWithShortcutAndIcon(
                 text = "New",
                 shortcut = null,
-                icon = Icons.Default.Add,
+                icon = Icons.Add,
                 onClick = editorViewModel::openUntitledFile
             )
 
             TextButtonWithShortcutAndIcon(
                 text = "Open Project",
                 shortcut = keyShortcutOf(ctrl = true, key = Key.O),
-                icon = Icons.Outlined.DriveFolderUpload,
+                icon = Icons.DriveFolderUpload,
                 onClick = directoryPicker::launch
             )
 
             TextButtonWithShortcutAndIcon(
                 text = "Open Command Palette",
                 shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.P),
-                icon = Icons.Default.KeyboardCommandKey,
+                icon = Icons.KeyboardCommandKey,
                 onClick = CommandManager::showCommandPalette
             )
 
@@ -208,14 +208,14 @@ fun WelcomePage() {
             TextButtonWithShortcutAndIcon(
                 text = "Open Settings",
                 shortcut = null,
-                icon = Icons.Outlined.Settings,
+                icon = Icons.Settings,
                 onClick = { navigator.navigateTo(Route.Settings) }
             )
 
             TextButtonWithShortcutAndIcon(
                 text = "Explore Extensions",
                 shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.X),
-                icon = Icons.Outlined.Extension,
+                icon = Icons.Extension,
                 onClick = editorViewModel::openExtensionScreen
             )
         }

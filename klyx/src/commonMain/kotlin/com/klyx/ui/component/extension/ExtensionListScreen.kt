@@ -22,9 +22,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,6 +52,9 @@ import com.klyx.core.net.rememberNetworkState
 import com.klyx.di.LocalExtensionViewModel
 import com.klyx.extension.ExtensionManifest
 import com.klyx.extension.host.ExtensionStore
+import com.klyx.icons.Icons
+import com.klyx.icons.Search
+import com.klyx.icons.SearchOff
 import com.klyx.resources.Res.string
 import com.klyx.resources.extension_install_dev_button
 import com.klyx.resources.extension_screen_title
@@ -132,7 +132,7 @@ fun ExtensionListScreen(
                 shape = MaterialTheme.shapes.small,
                 leadingIcon = {
                     Icon(
-                        Icons.Default.Search,
+                        Icons.Search,
                         contentDescription = null
                     )
                 }
@@ -151,7 +151,7 @@ fun ExtensionListScreen(
 
             IconButton(onClick = { showSearchBar = !showSearchBar }) {
                 Icon(
-                    if (!showSearchBar) Icons.Default.Search else Icons.Default.SearchOff,
+                    if (!showSearchBar) Icons.Search else Icons.SearchOff,
                     contentDescription = null
                 )
             }

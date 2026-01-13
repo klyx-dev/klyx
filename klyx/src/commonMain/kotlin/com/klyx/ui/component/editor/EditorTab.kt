@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -52,6 +50,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import com.klyx.icons.Close
+import com.klyx.icons.Icons
 import com.klyx.tab.FileTab
 import com.klyx.tab.Tab
 
@@ -254,7 +254,7 @@ fun EditorTab(
             }
         ) {
             Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = Icons.Close,
                 contentDescription = "Close tab",
                 tint = textColor.copy(alpha = if (isSelected) 1f else 0.5f),
                 modifier = Modifier

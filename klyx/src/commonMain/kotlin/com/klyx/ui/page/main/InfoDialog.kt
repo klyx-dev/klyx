@@ -8,11 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,6 +30,11 @@ import com.klyx.core.platform.currentOs
 import com.klyx.core.ui.component.FilledButtonWithIcon
 import com.klyx.core.ui.component.OutlinedButtonChip
 import com.klyx.core.ui.component.OutlinedButtonWithIcon
+import com.klyx.icons.Close
+import com.klyx.icons.ContentCopy
+import com.klyx.icons.Icons
+import com.klyx.icons.Info
+import com.klyx.icons.OpenInNew
 import com.klyx.resources.Res
 import com.klyx.resources.release
 import kotlinx.coroutines.launch
@@ -58,14 +58,14 @@ fun InfoDialog(onDismissRequest: () -> Unit) {
         onDismissRequest = onDismissRequest,
         confirmButton = {
             OutlinedButtonWithIcon(
-                icon = Icons.Outlined.Close,
+                icon = Icons.Close,
                 text = "Close",
                 onClick = onDismissRequest
             )
         },
         dismissButton = {
             FilledButtonWithIcon(
-                icon = Icons.Outlined.ContentCopy,
+                icon = Icons.ContentCopy,
                 text = "Copy and Close",
                 onClick = {
                     scope.launch {
@@ -75,7 +75,7 @@ fun InfoDialog(onDismissRequest: () -> Unit) {
                 }
             )
         },
-        icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+        icon = { Icon(Icons.Info, contentDescription = null) },
         title = { Text("Info", textAlign = TextAlign.Center) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -107,14 +107,14 @@ fun InfoDialog(onDismissRequest: () -> Unit) {
                 ) {
                     OutlinedButtonChip(
                         label = "GitHub",
-                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                        icon = Icons.OpenInNew,
                     ) {
                         uriHandler.openUri(GitHub.KLYX_REPO_URL)
                     }
 
                     OutlinedButtonChip(
                         label = stringResource(Res.string.release),
-                        icon = Icons.AutoMirrored.Outlined.OpenInNew,
+                        icon = Icons.OpenInNew,
                     ) {
                         uriHandler.openUri(GitHub.RELEASE_URL)
                     }

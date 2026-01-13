@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardTab
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +25,8 @@ import com.klyx.core.settings.EditorSettings
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
+import com.klyx.icons.Icons
+import com.klyx.icons.KeyboardTab
 import com.klyx.resources.Res.string
 import com.klyx.resources.tab_size
 import com.klyx.resources.tab_size_desc
@@ -49,7 +49,7 @@ fun TabSizeDialog(
             }
         },
         dismissButton = { DismissButton { onDismissRequest() } },
-        icon = { Icon(Icons.AutoMirrored.Outlined.KeyboardTab, contentDescription = null) },
+        icon = { Icon(Icons.KeyboardTab, contentDescription = null) },
         title = { Text(stringResource(string.tab_size), textAlign = TextAlign.Center) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {

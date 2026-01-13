@@ -2,8 +2,6 @@ package com.klyx.ui.page.settings.appearance
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Scaffold
@@ -23,6 +21,8 @@ import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceSingleChoiceItem
 import com.klyx.core.ui.component.PreferenceSubtitle
 import com.klyx.core.ui.component.PreferenceSwitchVariant
+import com.klyx.icons.Contrast
+import com.klyx.icons.Icons
 import com.klyx.resources.Res
 import com.klyx.resources.additional_settings
 import com.klyx.resources.dark_theme
@@ -87,7 +87,7 @@ fun DarkThemePreferences() {
             item {
                 PreferenceSwitchVariant(
                     title = stringResource(Res.string.high_contrast),
-                    icon = Icons.Outlined.Contrast,
+                    icon = Icons.Contrast,
                     enabled = isDarkMode,
                     isChecked = isHighContrastModeEnabled && isDarkMode,
                     onClick = { checked ->

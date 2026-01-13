@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -37,6 +34,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.core.REPORT_ISSUE_URL
+import com.klyx.icons.Close
+import com.klyx.icons.ContentCopy
+import com.klyx.icons.Icons
 import com.klyx.ui.theme.KlyxTheme
 
 class CrashActivity : ComponentActivity() {
@@ -82,7 +82,7 @@ class CrashActivity : ComponentActivity() {
                                 ) {
                                     IconButton(onClick = ::finishAffinity) {
                                         Icon(
-                                            imageVector = Icons.Filled.Close,
+                                            Icons.Close,
                                             contentDescription = "Close App"
                                         )
                                     }
@@ -112,7 +112,7 @@ class CrashActivity : ComponentActivity() {
                                 Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show()
                             },
                             text = { Text("Copy") },
-                            icon = { Icon(Icons.Default.ContentCopy, contentDescription = null) }
+                            icon = { Icon(Icons.ContentCopy, contentDescription = null) }
                         )
                     }
                 ) { innerPadding ->

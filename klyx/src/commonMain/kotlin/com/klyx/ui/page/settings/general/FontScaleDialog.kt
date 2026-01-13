@@ -6,8 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -30,6 +28,8 @@ import com.klyx.core.settings.AppSettings
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
+import com.klyx.icons.FormatSize
+import com.klyx.icons.Icons
 import com.klyx.resources.Res.string
 import com.klyx.resources.font_scale
 import com.klyx.resources.font_scale_desc
@@ -52,7 +52,7 @@ internal fun FontScaleDialog(
             }
         },
         dismissButton = { DismissButton { onDismissRequest() } },
-        icon = { Icon(Icons.Outlined.FormatSize, contentDescription = null) },
+        icon = { Icon(Icons.FormatSize, contentDescription = null) },
         title = { Text(stringResource(string.font_scale), textAlign = TextAlign.Center) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {

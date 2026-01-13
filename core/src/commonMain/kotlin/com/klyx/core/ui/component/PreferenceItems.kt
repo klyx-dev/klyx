@@ -17,10 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Translate
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -48,6 +44,10 @@ import androidx.compose.ui.unit.sp
 import com.klyx.core.LocalFixedColorRoles
 import com.klyx.core.theme.applyOpacity
 import com.klyx.core.theme.harmonizeWithPrimary
+import com.klyx.icons.Check
+import com.klyx.icons.Icons
+import com.klyx.icons.Info
+import com.klyx.icons.Translate
 
 private const val horizontal = 8
 private const val vertical = 12
@@ -259,7 +259,7 @@ fun PreferenceItemDescription(
 @Composable
 fun rememberThumbContent(
     isChecked: Boolean,
-    checkedIcon: ImageVector = Icons.Outlined.Check,
+    checkedIcon: ImageVector = Icons.Check,
 ): (@Composable () -> Unit)? =
     remember(isChecked, checkedIcon) {
         if (isChecked) {
@@ -497,7 +497,7 @@ fun PreferencesCautionCard(
 fun PreferencesHintCard(
     title: String = "Title ".repeat(2),
     description: String? = "Description text ".repeat(3),
-    icon: ImageVector? = Icons.Outlined.Translate,
+    icon: ImageVector? = Icons.Translate,
     containerColor: Color = LocalFixedColorRoles.current.secondaryFixed,
     contentColor: Color = LocalFixedColorRoles.current.onSecondaryFixed,
     onClick: () -> Unit = {},
@@ -652,7 +652,7 @@ fun PreferenceSubtitle(
 fun PreferenceInfo(
     modifier: Modifier = Modifier,
     text: String,
-    icon: ImageVector = Icons.Outlined.Info,
+    icon: ImageVector = Icons.Info,
     applyPaddings: Boolean = true,
 ) {
     Column(

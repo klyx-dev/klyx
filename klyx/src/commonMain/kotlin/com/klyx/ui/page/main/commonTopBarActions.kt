@@ -3,13 +3,6 @@ package com.klyx.ui.page.main
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Redo
-import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.outlined.PlayArrow
-import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -41,6 +34,13 @@ import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.util.value
 import com.klyx.di.LocalEditorViewModel
+import com.klyx.icons.Icons
+import com.klyx.icons.MoreVert
+import com.klyx.icons.PlayArrow
+import com.klyx.icons.Redo
+import com.klyx.icons.Save
+import com.klyx.icons.Settings
+import com.klyx.icons.Undo
 import com.klyx.resources.Res.string
 import com.klyx.resources.notification_failed_to_save
 import com.klyx.resources.notification_no_active_file
@@ -79,14 +79,14 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
     activeTab?.let { tab ->
         if (tab is FileTab && !tab.isReadOnly) {
             TopBarIconButton(
-                Icons.AutoMirrored.Filled.Undo,
+                Icons.Undo,
                 enabled = canUndo,
                 contentDescription = "Undo",
                 onClick = editorViewModel::undo
             )
 
             TopBarIconButton(
-                Icons.AutoMirrored.Filled.Redo,
+                Icons.Redo,
                 enabled = canRedo,
                 contentDescription = "Redo",
                 onClick = editorViewModel::redo
@@ -96,7 +96,7 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
 
             if (runner.canRun(tab.file)) {
                 TopBarIconButton(
-                    Icons.Outlined.PlayArrow,
+                    Icons.PlayArrow,
                     contentDescription = "Run",
                     onClick = {
                         coroutineScope.launch {
@@ -107,7 +107,7 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
             }
 
             TopBarIconButton(
-                Icons.Outlined.Save,
+                Icons.Save,
                 contentDescription = "Save",
                 enabled = tab.isModified || tab.file.isKlyxTempFile(),
                 onClick = {
@@ -138,7 +138,7 @@ fun commonTopBarActions(project: Project) = movableContentWithReceiverOf<RowScop
 
     if (activeTab == null || activeTab !is FileTab) {
         TopBarIconButton(
-            Icons.Outlined.Settings,
+            Icons.Settings,
             contentDescription = stringResource(string.settings),
             onClick = { navigator.navigateTo(Route.Settings) }
         )
@@ -161,7 +161,7 @@ private fun OverflowMenu(
 
     Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
         TopBarIconButton(
-            icon = Icons.Rounded.MoreVert,
+            icon = Icons.MoreVert,
             contentDescription = "Menu",
             onClick = { expanded = !expanded }
         )

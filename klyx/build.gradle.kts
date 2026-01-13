@@ -33,7 +33,6 @@ kotlin {
         }
 
         commonMain.dependencies {
-            implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.components.resources)
             implementation(libs.androidx.material3.adaptive)
             implementation(libs.androidx.material3.adaptive.nav3)
@@ -57,6 +56,7 @@ kotlin {
             implementation(libs.semver)
 
             api(projects.core)
+            api(projects.icons)
             api(projects.lsp.server)
             api(projects.feature.mcp)
             api(projects.feature.extension)

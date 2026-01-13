@@ -2,11 +2,6 @@ package com.klyx.ui.page.settings.general
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FormatSize
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Warning
-import androidx.compose.material.icons.outlined._60fpsSelect
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -32,6 +27,11 @@ import com.klyx.core.ui.component.DismissButton
 import com.klyx.core.ui.component.PreferenceItem
 import com.klyx.core.ui.component.PreferenceSubtitle
 import com.klyx.core.ui.component.PreferenceSwitch
+import com.klyx.icons.Code
+import com.klyx.icons.FormatSize
+import com.klyx.icons.Icons
+import com.klyx.icons.Warning
+import com.klyx.icons._60FpsSelect
 import com.klyx.resources.Res
 import com.klyx.resources.general_settings
 import org.jetbrains.compose.resources.stringResource
@@ -62,7 +62,7 @@ fun GeneralPreferences() {
             item {
                 PreferenceSwitch(
                     title = "Show FPS",
-                    icon = Icons.Outlined._60fpsSelect,
+                    icon = Icons._60FpsSelect,
                     description = "Show the FPS counter in the UI",
                     isChecked = appSettings.showFps,
                     onClick = { showFps ->
@@ -74,7 +74,7 @@ fun GeneralPreferences() {
             item {
                 PreferenceSwitch(
                     title = "Use Compose Editor (Unstable)",
-                    icon = Icons.Outlined.Code,
+                    icon = Icons.Code,
                     description = "Switch to the experimental Compose-based editor instead of the Sora editor.",
                     isChecked = appSettings.useComposeEditorInsteadOfSoraEditor,
                     onClick = { enabled ->
@@ -93,7 +93,7 @@ fun GeneralPreferences() {
                 PreferenceItem(
                     title = "Font Scale",
                     description = "${(appSettings.fontScale * 100).toInt()}%",
-                    icon = Icons.Default.FormatSize,
+                    icon = Icons.FormatSize,
                     onClick = { showFontScaleDialog = !showFontScaleDialog }
                 )
             }
@@ -116,7 +116,7 @@ fun GeneralPreferences() {
                     }
                 },
                 dismissButton = { DismissButton { showComposeEditorWarning = false } },
-                icon = { Icon(Icons.Outlined.Warning, contentDescription = null) },
+                icon = { Icon(Icons.Warning, contentDescription = null) },
                 title = { Text("Experimental Feature", textAlign = TextAlign.Center) },
                 text = {
                     Text(

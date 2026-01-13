@@ -11,12 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.DriveFolderUpload
-import androidx.compose.material.icons.outlined.FileOpen
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -90,6 +84,11 @@ import com.klyx.editor.SoraEditorState
 import com.klyx.filetree.FileTree
 import com.klyx.filetree.FileTreeNode
 import com.klyx.filetree.toFileTreeNodes
+import com.klyx.icons.Add
+import com.klyx.icons.Close
+import com.klyx.icons.DriveFolderUpload
+import com.klyx.icons.FileOpen
+import com.klyx.icons.Icons
 import com.klyx.isWidthAtLeastMediumOrExpanded
 import com.klyx.resources.Res
 import com.klyx.resources.open_a_project
@@ -189,7 +188,7 @@ fun MainPage(modifier: Modifier = Modifier) {
                         ) {
                             val imageVector by remember {
                                 derivedStateOf {
-                                    if (checkedProgress > 0.5f) Icons.Filled.Close else Icons.Filled.Add
+                                    if (checkedProgress > 0.5f) Icons.Close else Icons.Add
                                 }
                             }
 
@@ -210,7 +209,7 @@ fun MainPage(modifier: Modifier = Modifier) {
                             fabMenuExpanded = false
                         },
                         text = { Text("New File") },
-                        icon = { Icon(Icons.Rounded.Add, contentDescription = "New File") }
+                        icon = { Icon(Icons.Add, contentDescription = "New File") }
                     )
 
                     FloatingActionButtonMenuItem(
@@ -219,7 +218,7 @@ fun MainPage(modifier: Modifier = Modifier) {
                             fabMenuExpanded = false
                         },
                         text = { Text("Open File") },
-                        icon = { Icon(Icons.Outlined.FileOpen, contentDescription = "Open File") }
+                        icon = { Icon(Icons.FileOpen, contentDescription = "Open File") }
                     )
 
                     FloatingActionButtonMenuItem(
@@ -228,7 +227,7 @@ fun MainPage(modifier: Modifier = Modifier) {
                             fabMenuExpanded = false
                         },
                         text = { Text("Open Folder") },
-                        icon = { Icon(Icons.Outlined.DriveFolderUpload, contentDescription = "Open Folder") }
+                        icon = { Icon(Icons.DriveFolderUpload, contentDescription = "Open Folder") }
                     )
                 }
             }

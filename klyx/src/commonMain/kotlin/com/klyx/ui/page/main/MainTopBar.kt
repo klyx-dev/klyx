@@ -4,8 +4,6 @@ package com.klyx.ui.page.main
 
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.DriveFileMove
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -24,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.file.Project
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.component.FpsText
+import com.klyx.icons.DriveFileMove
+import com.klyx.icons.Icons
 import com.klyx.tab.Tab
 import kotlinx.coroutines.launch
 
@@ -80,7 +80,7 @@ private fun FileTreeButton() {
         modifier = Modifier.padding(horizontal = 6.dp)
     ) {
         Icon(
-            Icons.AutoMirrored.Rounded.DriveFileMove,
+            Icons.DriveFileMove,
             contentDescription = "Open file tree"
         )
     }

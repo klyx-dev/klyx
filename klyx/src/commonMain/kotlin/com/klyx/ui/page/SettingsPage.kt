@@ -2,11 +2,6 @@ package com.klyx.ui.page
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Palette
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Scaffold
@@ -20,6 +15,11 @@ import com.klyx.LocalNavigator
 import com.klyx.SettingsRoute
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.SettingItem
+import com.klyx.icons.Code
+import com.klyx.icons.Icons
+import com.klyx.icons.Info
+import com.klyx.icons.Palette
+import com.klyx.icons.Settings
 import com.klyx.resources.Res
 import com.klyx.resources.about
 import com.klyx.resources.about_page
@@ -55,7 +55,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                 SettingItem(
                     title = stringResource(Res.string.general_settings),
                     description = stringResource(Res.string.general_settings_desc),
-                    icon = Icons.Outlined.Settings
+                    icon = Icons.Settings
                 ) {
                     navigator.navigateTo(SettingsRoute.General)
                 }
@@ -65,7 +65,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                 SettingItem(
                     title = stringResource(Res.string.editor_settings),
                     description = stringResource(Res.string.editor_settings_desc),
-                    icon = Icons.Outlined.Code
+                    icon = Icons.Code
                 ) {
                     navigator.navigateTo(SettingsRoute.Editor)
                 }
@@ -75,7 +75,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                 SettingItem(
                     title = stringResource(Res.string.look_and_feel),
                     description = stringResource(Res.string.display_settings),
-                    icon = Icons.Outlined.Palette,
+                    icon = Icons.Palette,
                 ) {
                     navigator.navigateTo(SettingsRoute.Appearance)
                 }
@@ -85,7 +85,7 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                 SettingItem(
                     title = stringResource(Res.string.about),
                     description = stringResource(Res.string.about_page),
-                    icon = Icons.Outlined.Info,
+                    icon = Icons.Info,
                 ) {
                     navigator.navigateTo(SettingsRoute.About)
                 }

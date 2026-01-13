@@ -21,11 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Colorize
-import androidx.compose.material.icons.outlined.DarkMode
-import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
@@ -62,6 +57,11 @@ import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceSwitch
 import com.klyx.core.ui.component.PreferenceSwitchWithDivider
+import com.klyx.icons.Check
+import com.klyx.icons.Colorize
+import com.klyx.icons.DarkMode
+import com.klyx.icons.Icons
+import com.klyx.icons.LightMode
 import com.klyx.resources.Res
 import com.klyx.resources.dark_theme
 import com.klyx.resources.dynamic_color
@@ -182,7 +182,7 @@ fun AppearancePreferences() {
             PreferenceSwitch(
                 title = stringResource(Res.string.dynamic_color),
                 description = stringResource(Res.string.dynamic_color_desc),
-                icon = Icons.Outlined.Colorize,
+                icon = Icons.Colorize,
                 isChecked = appSettings.dynamicColor,
                 onClick = { dynamicColor ->
                     appSettings.update { it.copy(dynamicColor = dynamicColor) }
@@ -193,7 +193,7 @@ fun AppearancePreferences() {
 
             PreferenceSwitchWithDivider(
                 title = stringResource(Res.string.dark_theme),
-                icon = if (isDarkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                icon = if (isDarkTheme) Icons.DarkMode else Icons.LightMode,
                 isChecked = isDarkTheme,
                 description = appSettings.appearance.desc(),
                 onChecked = { checked ->
@@ -301,7 +301,7 @@ fun RowScope.ColorButtonImpl(
                                 .drawBehind { drawCircle(containerColor) }
                     ) {
                         Icon(
-                            imageVector = Icons.Outlined.Check,
+                            imageVector = Icons.Check,
                             contentDescription = null,
                             modifier = Modifier.size(iconSize).align(Alignment.Center),
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,

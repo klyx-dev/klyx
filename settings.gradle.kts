@@ -43,6 +43,7 @@ include(":klyx", ":androidApp")
 include(":core")
 include(":project")
 include(":util")
+include(":icons")
 include(
     ":editor:editor",
     ":editor:language",

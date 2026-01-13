@@ -1,17 +1,6 @@
 package com.klyx.ui.page.main
 
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ExitToApp
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.outlined.Cancel
-import androidx.compose.material.icons.outlined.Extension
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.KeyboardCommandKey
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,6 +22,17 @@ import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.core.ui.component.DropdownMenuItem
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
+import com.klyx.icons.Cancel
+import com.klyx.icons.ChevronRight
+import com.klyx.icons.Close
+import com.klyx.icons.ExitToApp
+import com.klyx.icons.Extension
+import com.klyx.icons.Folder
+import com.klyx.icons.Help
+import com.klyx.icons.Icons
+import com.klyx.icons.KeyboardCommandKey
+import com.klyx.icons.Settings
+import com.klyx.icons.Terminal
 import com.klyx.resources.Res
 import com.klyx.resources.settings
 import com.klyx.viewmodel.openExtensionScreen
@@ -70,13 +70,13 @@ fun ColumnScope.DropdownMenuItems(
         onClick = onShowFileMenu,
         leadingIcon = {
             Icon(
-                Icons.Outlined.Folder,
+                Icons.Folder,
                 contentDescription = "File Actions"
             )
         },
         trailingIcon = {
             Icon(
-                Icons.Default.ChevronRight,
+                Icons.ChevronRight,
                 contentDescription = null
             )
         }
@@ -93,7 +93,7 @@ fun ColumnScope.DropdownMenuItems(
         },
         leadingIcon = {
             Icon(
-                Icons.Outlined.Terminal,
+                Icons.Terminal,
                 contentDescription = "Terminal"
             )
         }
@@ -108,7 +108,7 @@ fun ColumnScope.DropdownMenuItems(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Settings,
+                    Icons.Settings,
                     contentDescription = stringResource(Res.string.settings)
                 )
             }
@@ -125,7 +125,7 @@ fun ColumnScope.DropdownMenuItems(
         },
         icon = {
             Icon(
-                Icons.Outlined.KeyboardCommandKey,
+                Icons.KeyboardCommandKey,
                 contentDescription = "Open Command Palette"
             )
         },
@@ -140,7 +140,7 @@ fun ColumnScope.DropdownMenuItems(
         },
         icon = {
             Icon(
-                Icons.Outlined.Extension,
+                Icons.Extension,
                 contentDescription = "Extensions"
             )
         },
@@ -158,7 +158,7 @@ fun ColumnScope.DropdownMenuItems(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Cancel,
+                    Icons.Cancel,
                     contentDescription = "Close Project"
                 )
             }
@@ -174,7 +174,7 @@ fun ColumnScope.DropdownMenuItems(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Default.Close,
+                    Icons.Close,
                     contentDescription = "Close Editor"
                 )
             }
@@ -200,13 +200,13 @@ fun ColumnScope.DropdownMenuItems(
         onClick = onShowHelpMenu,
         leadingIcon = {
             Icon(
-                Icons.AutoMirrored.Outlined.HelpOutline,
+                Icons.Help,
                 contentDescription = "Help"
             )
         },
         trailingIcon = {
             Icon(
-                Icons.Default.ChevronRight,
+                Icons.ChevronRight,
                 contentDescription = null
             )
         }
@@ -217,7 +217,7 @@ fun ColumnScope.DropdownMenuItems(
         onClick = { quitApp() },
         icon = {
             Icon(
-                Icons.AutoMirrored.Outlined.ExitToApp,
+                Icons.ExitToApp,
                 contentDescription = "Quit App"
             )
         },

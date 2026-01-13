@@ -20,8 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -41,6 +39,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.klyx.core.ui.component.DropdownMenuDivider
+import com.klyx.icons.Close
+import com.klyx.icons.Icons
 import com.klyx.tab.Tab
 import com.klyx.tab.TabMenuAction
 import com.klyx.tab.TabMenuState
@@ -141,7 +141,7 @@ private fun EditorTab(
             Spacer(modifier = Modifier.width(4.dp))
 
             Icon(
-                imageVector = Icons.Default.Close,
+                imageVector = Icons.Close,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp)
                     .clip(CircleShape)

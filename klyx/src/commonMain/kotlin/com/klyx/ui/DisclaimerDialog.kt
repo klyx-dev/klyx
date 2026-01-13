@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +16,8 @@ import com.klyx.core.app.App
 import com.klyx.core.app.LocalApp
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
+import com.klyx.icons.Help
+import com.klyx.icons.Icons
 import com.klyx.resources.Res
 import com.klyx.resources.disclaimer
 import com.klyx.resources.exit
@@ -37,7 +37,7 @@ fun DisclaimerDialog(onAccept: (App) -> Unit) {
             dismissOnClickOutside = false
         ),
         title = { Text(stringResource(Res.string.important_notice), textAlign = TextAlign.Center) },
-        icon = { Icon(Icons.AutoMirrored.Outlined.HelpOutline, contentDescription = null) },
+        icon = { Icon(Icons.Help, contentDescription = null) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 SelectionContainer {

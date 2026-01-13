@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
@@ -37,6 +35,8 @@ import com.klyx.core.LocalFixedColorRoles
 import com.klyx.core.res.Res
 import com.klyx.core.res.got_it
 import com.klyx.core.res.how_does_it_work
+import com.klyx.icons.Help
+import com.klyx.icons.Icons
 import org.jetbrains.compose.resources.stringResource
 
 private val DialogVerticalPadding = PaddingValues(vertical = 24.dp)
@@ -59,7 +59,7 @@ fun HelpDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(text = stringResource(resource = Res.string.how_does_it_work)) },
-        icon = { Icon(Icons.AutoMirrored.Outlined.HelpOutline, null) },
+        icon = { Icon(Icons.Help, null) },
         text = { Text(text = text) },
         confirmButton = confirmButton,
         dismissButton = dismissButton,

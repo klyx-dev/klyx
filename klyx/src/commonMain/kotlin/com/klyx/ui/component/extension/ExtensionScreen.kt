@@ -2,8 +2,6 @@ package com.klyx.ui.component.extension
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -20,9 +18,10 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
 import com.klyx.appPrefs
-import com.klyx.core.io.okioFs
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
+import com.klyx.icons.Icons
+import com.klyx.icons.Info
 import com.klyx.resources.Res.string
 import com.klyx.resources.extension_disclaimer
 import com.klyx.ui.component.extension.ExtensionRoutes.ExtensionDetail
@@ -71,7 +70,7 @@ private fun ExtensionDisclaimer() {
         AlertDialog(
             onDismissRequest = { showExtensionDisclaimer = false },
             confirmButton = { ConfirmButton("OK") { showExtensionDisclaimer = false } },
-            icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
+            icon = { Icon(Icons.Info, contentDescription = null) },
             title = { Text("Info", textAlign = TextAlign.Center) },
             text = { Text(stringResource(string.extension_disclaimer), style = MaterialTheme.typography.bodyLarge) },
             dismissButton = {

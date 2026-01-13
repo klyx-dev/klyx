@@ -2,11 +2,6 @@ package com.klyx.ui.page.settings.about
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Feedback
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Scaffold
@@ -26,9 +21,14 @@ import com.klyx.LocalNavigator
 import com.klyx.core.GitHub
 import com.klyx.core.LocalNotifier
 import com.klyx.core.clipboard.clipEntryOf
+import com.klyx.core.internal.platform.PlatformInfo
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceItem
-import com.klyx.core.internal.platform.PlatformInfo
+import com.klyx.icons.Description
+import com.klyx.icons.Feedback
+import com.klyx.icons.Icons
+import com.klyx.icons.Info
+import com.klyx.icons.NewReleases
 import com.klyx.resources.Res
 import com.klyx.resources.about
 import com.klyx.resources.readme
@@ -72,7 +72,7 @@ fun AboutPage() {
                 PreferenceItem(
                     title = stringResource(Res.string.readme),
                     description = stringResource(Res.string.readme_desc),
-                    icon = Icons.Outlined.Description,
+                    icon = Icons.Description,
                 ) {
                     openUrl(GitHub.KLYX_REPO_URL)
                 }
@@ -82,7 +82,7 @@ fun AboutPage() {
                 PreferenceItem(
                     title = stringResource(Res.string.release),
                     description = stringResource(Res.string.release_desc),
-                    icon = Icons.Outlined.NewReleases,
+                    icon = Icons.NewReleases,
                 ) {
                     openUrl(GitHub.RELEASE_URL)
                 }
@@ -92,7 +92,7 @@ fun AboutPage() {
                 PreferenceItem(
                     title = stringResource(Res.string.version),
                     description = PlatformInfo.appVersion,
-                    icon = Icons.Outlined.Info
+                    icon = Icons.Info
                 ) {
                     scope.launch {
                         clipboard.setClipEntry(
@@ -113,7 +113,7 @@ fun AboutPage() {
             item {
                 PreferenceItem(
                     title = "Give Feedback",
-                    icon = Icons.Outlined.Feedback,
+                    icon = Icons.Feedback,
                     onClick = { showFeedbackDialog = !showFeedbackDialog }
                 )
             }

@@ -2,11 +2,6 @@ package com.klyx.ui.page.settings.editor
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.KeyboardTab
-import androidx.compose.material.icons.outlined.FormatListNumbered
-import androidx.compose.material.icons.outlined.KeyboardAlt
-import androidx.compose.material.icons.outlined.TextFields
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.Scaffold
@@ -29,6 +24,11 @@ import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceItem
 import com.klyx.core.ui.component.PreferenceSubtitle
 import com.klyx.core.ui.component.PreferenceSwitch
+import com.klyx.icons.FormatListNumbered
+import com.klyx.icons.Icons
+import com.klyx.icons.KeyboardAlt
+import com.klyx.icons.KeyboardTab
+import com.klyx.icons.TextFields
 import com.klyx.resources.Res.string
 import com.klyx.resources.common
 import com.klyx.resources.editor_settings
@@ -83,7 +83,7 @@ fun EditorPreferences() {
             item {
                 PreferenceItem(
                     title = stringResource(string.font_size),
-                    icon = Icons.Outlined.TextFields,
+                    icon = Icons.TextFields,
                     description = "${settings.fontSize} sp",
                     onClick = { showFontSizeDialog = true }
                 )
@@ -92,7 +92,7 @@ fun EditorPreferences() {
             item {
                 PreferenceItem(
                     title = stringResource(string.tab_size),
-                    icon = Icons.AutoMirrored.Outlined.KeyboardTab,
+                    icon = Icons.KeyboardTab,
                     description = "${settings.tabSize}",
                     onClick = { showTabSizeDialog = true }
                 )
@@ -102,7 +102,7 @@ fun EditorPreferences() {
                 PreferenceSwitch(
                     title = "Show Virtual Keys",
                     description = "Show virtual keys (e.g. Tab, Brackets) above the keyboard",
-                    icon = Icons.Outlined.KeyboardAlt,
+                    icon = Icons.KeyboardAlt,
                     isChecked = settings.showVirtualKeys,
                     onClick = { show ->
                         settings.update { it.copy(showVirtualKeys = show) }
@@ -116,7 +116,7 @@ fun EditorPreferences() {
                 PreferenceSwitch(
                     title = stringResource(string.pin_line_numbers),
                     description = stringResource(string.pin_line_numbers_desc),
-                    icon = Icons.Outlined.FormatListNumbered,
+                    icon = Icons.FormatListNumbered,
                     isChecked = settings.pinLineNumbers,
                     onClick = { checked ->
                         settings.update { it.copy(pinLineNumbers = checked) }

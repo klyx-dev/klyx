@@ -6,9 +6,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Clear
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.ElevatedAssistChip
@@ -31,6 +28,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.core.LocalFixedColorRoles
+import com.klyx.icons.Check
+import com.klyx.icons.Close
+import com.klyx.icons.Icons
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -122,7 +122,7 @@ fun SingleChoiceChip(
     selected: Boolean,
     enabled: Boolean = true,
     label: String,
-    leadingIcon: ImageVector = Icons.Outlined.Check,
+    leadingIcon: ImageVector = Icons.Check,
     onClick: () -> Unit,
 ) {
     FilterChip(
@@ -184,7 +184,7 @@ fun ShortcutChip(
                     modifier = Modifier.size(InputChipDefaults.IconSize),
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Clear,
+                        imageVector = Icons.Close,
                         contentDescription = "Remove",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(InputChipDefaults.IconSize),

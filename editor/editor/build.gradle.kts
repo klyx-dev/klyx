@@ -25,12 +25,10 @@ kotlin {
 
         commonMain {
             dependencies {
-                implementation(libs.koin.core)
-                implementation(libs.koin.compose)
-
-                implementation(libs.compose.material.icons.extended)
                 implementation(libs.compose.components.resources)
 
+                implementation(libs.koin.core)
+                implementation(libs.koin.compose)
                 implementation(libs.androidx.lifecycle.viewmodel)
                 implementation(libs.androidx.lifecycle.runtime.compose)
 
@@ -42,6 +40,7 @@ kotlin {
                 implementation(libs.androidx.collection)
 
                 implementation(projects.core)
+                implementation(projects.icons)
                 implementation(projects.lsp.server)
                 implementation(projects.project)
                 implementation(projects.editor.language)
@@ -87,4 +86,9 @@ kotlin {
 
 atomicfu {
     transformJvm = false
+}
+
+compose.resources {
+    packageOfResClass = "com.klyx.editor.resources"
+    generateResClass = auto
 }

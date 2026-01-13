@@ -6,11 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Feedback
-import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -25,6 +20,11 @@ import com.klyx.core.LocalNotifier
 import com.klyx.core.icon.GithubAlt
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.ui.component.TextButtonWithIcon
+import com.klyx.icons.BugReport
+import com.klyx.icons.Feedback
+import com.klyx.icons.Icons
+import com.klyx.icons.Mail
+import com.klyx.icons.Star
 
 @Composable
 fun GiveFeedbackDialog(onDismissRequest: () -> Unit) {
@@ -34,7 +34,7 @@ fun GiveFeedbackDialog(onDismissRequest: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = { },
-        icon = { Icon(Icons.Outlined.Feedback, contentDescription = null) },
+        icon = { Icon(Icons.Feedback, contentDescription = null) },
         title = { Text("Give Feedback", textAlign = TextAlign.Center) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -47,21 +47,21 @@ fun GiveFeedbackDialog(onDismissRequest: () -> Unit) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 TextButtonWithIcon(
-                    icon = Icons.Outlined.BugReport,
+                    icon = Icons.BugReport,
                     text = "File a Bug Report",
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { uriHandler.openUri(GitHub.BUG_REPORT_URL) }
                 )
 
                 TextButtonWithIcon(
-                    icon = Icons.Outlined.StarBorder,
+                    icon = Icons.Star,
                     text = "Request a Feature",
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { uriHandler.openUri(GitHub.FEATURE_REQUEST_URL) }
                 )
 
                 TextButtonWithIcon(
-                    icon = Icons.Outlined.Mail,
+                    icon = Icons.Mail,
                     text = "Send an Email",
                     modifier = Modifier.fillMaxWidth(),
                     onClick = {

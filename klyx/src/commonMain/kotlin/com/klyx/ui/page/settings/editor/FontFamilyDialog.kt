@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +35,8 @@ import com.klyx.core.settings.EditorSettings
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.ConfirmButton
 import com.klyx.core.ui.component.DismissButton
+import com.klyx.icons.Folder
+import com.klyx.icons.Icons
 import com.klyx.resources.Res
 import com.klyx.resources.font_family
 import com.klyx.ui.component.editor.resolveFontFamily
@@ -152,7 +152,7 @@ fun FontFamilyDialog(
                                 placeholder = { Text("Choose a font") },
                                 trailingIcon = {
                                     IconButton(onClick = fontPicker::launch) {
-                                        Icon(Icons.Outlined.Folder, contentDescription = "Choose font")
+                                        Icon(Icons.Folder, contentDescription = "Choose font")
                                     }
                                 }
                             )

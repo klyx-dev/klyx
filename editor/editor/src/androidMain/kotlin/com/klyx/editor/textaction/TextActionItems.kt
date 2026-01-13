@@ -2,12 +2,6 @@ package com.klyx.editor.textaction
 
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentCut
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,35 +18,41 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.TextSelectStart
 import com.klyx.editor.KlyxEditor
+import com.klyx.icons.ContentCopy
+import com.klyx.icons.ContentCut
+import com.klyx.icons.ContentPaste
+import com.klyx.icons.FormatAlignLeft
+import com.klyx.icons.Icons
+import com.klyx.icons.SelectAll
 
-@Suppress("UnusedReceiverParameter")
+@Suppress("UnusedReceiverParameter", "ParamsComparedByRef")
 @Composable
 internal fun RowScope.TextActionItems(
     editor: KlyxEditor,
     onClick: (String) -> Unit = {}
 ) {
     IconButton(
-        Icons.Default.SelectAll,
+        Icons.SelectAll,
         "Select All"
     ) {
         editor.selectAll()
         onClick("selectall")
     }
 
-    IconButton(Icons.Default.ContentCopy, "Copy") {
+    IconButton(Icons.ContentCopy, "Copy") {
         editor.copyText()
         editor.setSelection(editor.cursor.rightLine, editor.cursor.rightColumn)
         onClick("copy")
     }
 
-    IconButton(Icons.Default.ContentCut, "Cut") {
+    IconButton(Icons.ContentCut, "Cut") {
         if (editor.cursor.isSelected) {
             editor.cutText()
         }
         onClick("cut")
     }
 
-    IconButton(Icons.Default.ContentPaste, "Paste") {
+    IconButton(Icons.ContentPaste, "Paste") {
         editor.pasteText()
         editor.setSelection(editor.cursor.rightLine, editor.cursor.rightColumn)
         onClick("paste")
@@ -63,7 +63,7 @@ internal fun RowScope.TextActionItems(
         onClick("longselect")
     }
 
-    IconButton(Icons.AutoMirrored.Filled.FormatAlignLeft, "Format Code") {
+    IconButton(Icons.FormatAlignLeft, "Format Code") {
         if (editor.cursor.isSelected) {
             editor.formatCodeAsync(
                 editor.cursor.left(),

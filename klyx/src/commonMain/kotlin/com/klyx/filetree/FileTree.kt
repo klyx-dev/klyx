@@ -24,8 +24,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -70,6 +68,8 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolve
 import com.klyx.di.LocalFileTreeViewModel
+import com.klyx.icons.Icons
+import com.klyx.icons.KeyboardArrowRight
 import com.klyx.ui.component.menu.PopupMenu
 import com.klyx.ui.page.main.worktreeDrawerWidth
 
@@ -278,7 +278,7 @@ private fun FileTreeItem(
                         )
                     } else {
                         Icon(
-                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            Icons.KeyboardArrowRight,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(16.dp)

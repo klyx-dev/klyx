@@ -1,25 +1,11 @@
 package com.klyx.filetree
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
-import androidx.compose.material.icons.filled.Android
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.AudioFile
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.DataObject
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.PictureAsPdf
-import androidx.compose.material.icons.filled.VideoFile
-import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.ui.graphics.vector.ImageVector
 import arrow.core.raise.context.result
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.Project
 import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolveName
-import com.klyx.core.icon.FolderOpen
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.language.C
 import com.klyx.core.icon.language.Cpp
@@ -40,6 +26,20 @@ import com.klyx.core.icon.language.Toml
 import com.klyx.core.icon.language.TypeScript
 import com.klyx.core.icon.language.Xml
 import com.klyx.core.icon.language.Yaml
+import com.klyx.icons.Android
+import com.klyx.icons.Archive
+import com.klyx.icons.AudioFile
+import com.klyx.icons.Code
+import com.klyx.icons.DataObject
+import com.klyx.icons.Description
+import com.klyx.icons.Folder
+import com.klyx.icons.FolderOpen
+import com.klyx.icons.Icons
+import com.klyx.icons.Image
+import com.klyx.icons.InsertDriveFile
+import com.klyx.icons.PictureAsPdf
+import com.klyx.icons.Terminal
+import com.klyx.icons.VideoFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -98,27 +98,27 @@ internal fun FileTreeNode.resolveFileIcon(): ImageVector {
         "py" -> KlyxIcons.Language.Python
         "yml", "yaml" -> KlyxIcons.Language.Yaml
         "md", "mdx" -> KlyxIcons.Language.Markdown
-        "json" -> Icons.Default.DataObject
-        "apk" -> Icons.Default.Android
-        "txt" -> Icons.Default.Description
-        "png", "jpg", "jpeg", "gif", "svg", "webp" -> Icons.Default.Image
-        "pdf" -> Icons.Default.PictureAsPdf
-        "zip", "rar", "7z", "tar", "gz" -> Icons.Default.Archive
-        "mp4", "avi", "mov", "mkv" -> Icons.Default.VideoFile
-        "mp3", "wav", "flac", "ogg" -> Icons.Default.AudioFile
-        "java", "h", "hpp", "cs" -> Icons.Default.Code
+        "json" -> Icons.DataObject
+        "apk" -> Icons.Android
+        "txt" -> Icons.Description
+        "png", "jpg", "jpeg", "gif", "svg", "webp" -> Icons.Image
+        "pdf" -> Icons.PictureAsPdf
+        "zip", "rar", "7z", "tar", "gz" -> Icons.Archive
+        "mp4", "avi", "mov", "mkv" -> Icons.VideoFile
+        "mp3", "wav", "flac", "ogg" -> Icons.AudioFile
+        "java", "h", "hpp", "cs" -> Icons.Code
         else -> if (isExecutable) {
-            Icons.Outlined.Terminal
+            Icons.Terminal
         } else {
-            Icons.AutoMirrored.Filled.InsertDriveFile
+            Icons.InsertDriveFile
         }
     }
 }
 
 internal fun FileTreeNode.resolveFolderIcon(isExpanded: Boolean): ImageVector {
     return if (isExpanded) {
-        KlyxIcons.FolderOpen
+        Icons.FolderOpen
     } else {
-        Icons.Outlined.Folder
+        Icons.Folder
     }
 }

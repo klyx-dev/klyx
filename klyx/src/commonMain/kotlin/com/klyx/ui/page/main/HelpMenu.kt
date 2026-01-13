@@ -1,16 +1,5 @@
 package com.klyx.ui.page.main
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Article
-import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.outlined.Feedback
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.Keyboard
-import androidx.compose.material.icons.outlined.Report
-import androidx.compose.material.icons.outlined.RestartAlt
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -38,6 +27,17 @@ import com.klyx.core.io.logFile
 import com.klyx.core.ui.component.DropdownMenuDivider
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
+import com.klyx.icons.Article
+import com.klyx.icons.ChevronRight
+import com.klyx.icons.Feedback
+import com.klyx.icons.FormatListBulleted
+import com.klyx.icons.Icons
+import com.klyx.icons.Info
+import com.klyx.icons.Keyboard
+import com.klyx.icons.Report
+import com.klyx.icons.RestartAlt
+import com.klyx.icons.Settings
+import com.klyx.icons.Share
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.openLogViewer
@@ -69,7 +69,7 @@ fun HelpMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Feedback,
+                    Icons.Feedback,
                     contentDescription = null
                 )
             }
@@ -93,7 +93,7 @@ fun HelpMenu(
             onClick = { uriHandler.openUri(DOCS_URL) },
             leadingIcon = {
                 Icon(
-                    Icons.AutoMirrored.Outlined.Article,
+                    Icons.Article,
                     contentDescription = null
                 )
             }
@@ -104,7 +104,7 @@ fun HelpMenu(
             onClick = { uriHandler.openUri(KEYBOARD_SHORTCUTS_URL) },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Keyboard,
+                    Icons.Keyboard,
                     contentDescription = null
                 )
             }
@@ -115,7 +115,7 @@ fun HelpMenu(
             onClick = { uriHandler.openUri(REPORT_ISSUE_URL) },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Report,
+                    Icons.Report,
                     contentDescription = null
                 )
             }
@@ -137,7 +137,7 @@ fun HelpMenu(
             },
             trailingIcon = {
                 Icon(
-                    Icons.Default.ChevronRight,
+                    Icons.ChevronRight,
                     contentDescription = null
                 )
             }
@@ -175,7 +175,7 @@ private fun KlyxMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Settings,
+                    Icons.Settings,
                     contentDescription = null
                 )
             }
@@ -191,7 +191,7 @@ private fun KlyxMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.AutoMirrored.Outlined.FormatListBulleted,
+                    Icons.FormatListBulleted,
                     contentDescription = null
                 )
             }
@@ -205,7 +205,7 @@ private fun KlyxMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Share,
+                    Icons.Share,
                     contentDescription = null
                 )
             }
@@ -216,7 +216,7 @@ private fun KlyxMenu(
             onClick = { restartApp(isKillProcess = true) },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.RestartAlt,
+                    Icons.RestartAlt,
                     contentDescription = null
                 )
             }
@@ -230,7 +230,7 @@ private fun KlyxMenu(
             },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.Info,
+                    Icons.Info,
                     contentDescription = null
                 )
             }

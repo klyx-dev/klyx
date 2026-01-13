@@ -1,7 +1,5 @@
 package com.klyx.ui.component
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.Icon
@@ -11,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.klyx.icons.Error
+import com.klyx.icons.Icons
 
 @Composable
 fun KlyxDialog(
@@ -80,7 +80,7 @@ fun KlyxErrorDialog(
         onDismiss = onDismiss,
         confirmText = buttonText,
         dismissText = "",
-        icon = Icons.Default.Error,
+        icon = Icons.Error,
         modifier = modifier
     )
 }

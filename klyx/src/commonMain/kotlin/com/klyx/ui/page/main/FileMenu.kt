@@ -1,12 +1,5 @@
 package com.klyx.ui.page.main
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.CreateNewFolder
-import androidx.compose.material.icons.outlined.DriveFolderUpload
-import androidx.compose.material.icons.outlined.FileOpen
-import androidx.compose.material.icons.outlined.Save
-import androidx.compose.material.icons.outlined.SaveAs
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -35,6 +28,13 @@ import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalFileTreeViewModel
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.filetree.asFileTreeNode
+import com.klyx.icons.Add
+import com.klyx.icons.CreateNewFolder
+import com.klyx.icons.DriveFolderUpload
+import com.klyx.icons.FileOpen
+import com.klyx.icons.Icons
+import com.klyx.icons.Save
+import com.klyx.icons.SaveAs
 import com.klyx.resources.Res.string
 import com.klyx.resources.notification_all_files_saved
 import com.klyx.resources.notification_failed_to_save
@@ -128,7 +128,7 @@ fun FileMenu(
             },
             icon = {
                 Icon(
-                    Icons.Outlined.Add,
+                    Icons.Add,
                     contentDescription = "Create new file"
                 )
             },
@@ -142,7 +142,7 @@ fun FileMenu(
             onClick = { filePicker.launch() },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.FileOpen,
+                    Icons.FileOpen,
                     contentDescription = "Open File"
                 )
             }
@@ -153,7 +153,7 @@ fun FileMenu(
             onClick = { directoryPicker.launch() },
             icon = {
                 Icon(
-                    Icons.Outlined.DriveFolderUpload,
+                    Icons.DriveFolderUpload,
                     contentDescription = "Open Folder"
                 )
             },
@@ -167,7 +167,7 @@ fun FileMenu(
             onClick = { addFolderPicker.launch() },
             leadingIcon = {
                 Icon(
-                    Icons.Outlined.CreateNewFolder,
+                    Icons.CreateNewFolder,
                     contentDescription = "Add Folder to Project"
                 )
             }
@@ -191,14 +191,21 @@ fun FileMenu(
                         } else {
                             editorViewModel.saveCurrent()
                                 .onSuccess { notifier.toast(com.klyx.core.util.string(string.notification_saved)) }
-                                .onFailure { notifier.error(com.klyx.core.util.string(string.notification_failed_to_save, file.name)) }
+                                .onFailure {
+                                    notifier.error(
+                                        com.klyx.core.util.string(
+                                            string.notification_failed_to_save,
+                                            file.name
+                                        )
+                                    )
+                                }
                         }
                         onDismissRequest()
                     },
                     enabled = tab.isModified,
                     icon = {
                         Icon(
-                            Icons.Outlined.Save,
+                            Icons.Save,
                             contentDescription = "Save"
                         )
                     },
@@ -218,7 +225,7 @@ fun FileMenu(
                     },
                     icon = {
                         Icon(
-                            Icons.Outlined.SaveAs,
+                            Icons.SaveAs,
                             contentDescription = "Save As"
                         )
                     },
@@ -248,7 +255,7 @@ fun FileMenu(
                     },
                     icon = {
                         Icon(
-                            Icons.Outlined.Save,
+                            Icons.Save,
                             contentDescription = "Save All"
                         )
                     },

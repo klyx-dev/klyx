@@ -12,8 +12,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -40,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import com.klyx.core.GitHub
 import com.klyx.core.res.Res
 import com.klyx.core.res.confirm
+import com.klyx.icons.Icons
+import com.klyx.icons.OpenInNew
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -160,7 +160,7 @@ fun FilledConfirmButton(
 fun LinkButton(
     modifier: Modifier = Modifier,
     text: String = "Klyx usage reference",
-    icon: ImageVector = Icons.AutoMirrored.Outlined.OpenInNew,
+    icon: ImageVector = Icons.OpenInNew,
     link: String = GitHub.KLYX_REPO_URL,
 ) {
     val uriHandler = LocalUriHandler.current
