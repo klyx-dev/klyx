@@ -8,7 +8,7 @@ import com.klyx.core.logging.Message
 import com.klyx.editor.CursorState
 import com.klyx.editor.ExperimentalCodeEditorApi
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 @Stable
@@ -39,45 +39,46 @@ data class LogState(
 )
 
 class StatusBarViewModel : ViewModel() {
-    private val _state = MutableStateFlow(StatusBarState())
-    val state = _state.asStateFlow()
 
-    private val _currentLogState = MutableStateFlow(LogState())
-    val currentLogState = _currentLogState.asStateFlow()
+    val state: StateFlow<StatusBarState>
+        field = MutableStateFlow(StatusBarState())
+
+    val currentLogState: StateFlow<LogState>
+        field = MutableStateFlow(LogState())
 
     fun setCurrentLogMessage(message: Message?, isProgressive: Boolean = false) {
-        _currentLogState.update { it.copy(message = message, isProgressive = isProgressive) }
+        currentLogState.update { it.copy(message = message, isProgressive = isProgressive) }
     }
 
     fun setReadOnly(readOnly: Boolean) {
-        _state.update { it.copy(readOnly = readOnly) }
+        state.update { it.copy(readOnly = readOnly) }
     }
 
     fun setLanguage(language: String?) {
-        _state.update { it.copy(language = language) }
+        state.update { it.copy(language = language) }
     }
 
     fun setCursorState(cursorState: CursorState?) {
-        _state.update { it.copy(cursorState = cursorState) }
+        state.update { it.copy(cursorState = cursorState) }
     }
 
     fun setLspState(lspState: LspState) {
-        _state.update { it.copy(lspState = lspState) }
+        state.update { it.copy(lspState = lspState) }
     }
 
     fun setDiagnostics(errorCount: Int, warningCount: Int) {
-        _state.update { it.copy(errorCount = errorCount, warningCount = warningCount) }
+        state.update { it.copy(errorCount = errorCount, warningCount = warningCount) }
     }
 
     fun setEncoding(encoding: String) {
-        _state.update { it.copy(encoding = encoding) }
+        state.update { it.copy(encoding = encoding) }
     }
 
     fun setLineEndings(lineEndings: String) {
-        _state.update { it.copy(lineEndings = lineEndings) }
+        state.update { it.copy(lineEndings = lineEndings) }
     }
 
     fun setInsertMode(insertMode: Boolean) {
-        _state.update { it.copy(insertMode = insertMode) }
+        state.update { it.copy(insertMode = insertMode) }
     }
 }

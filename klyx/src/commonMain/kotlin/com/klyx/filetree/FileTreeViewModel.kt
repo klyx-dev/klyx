@@ -16,7 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okio.FileSystem
@@ -27,17 +27,16 @@ data class ClipboardState(
     val isCut: Boolean // true = cut, false = copy
 )
 
-class FileTreeViewModel(
-    private val notifier: Notifier
-) : ViewModel() {
-    private val _rootNodes = MutableStateFlow(emptyMap<Worktree, FileTreeNode>())
-    val rootNodes = _rootNodes.asStateFlow()
+class FileTreeViewModel(private val notifier: Notifier) : ViewModel() {
 
-    private val _clipboard = MutableStateFlow<ClipboardState?>(null)
-    val clipboard = _clipboard.asStateFlow()
+    val rootNodes: StateFlow<Map<Worktree, FileTreeNode>>
+        field = MutableStateFlow(emptyMap<Worktree, FileTreeNode>())
 
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing = _isRefreshing.asStateFlow()
+    val clipboard: StateFlow<ClipboardState?>
+        field = MutableStateFlow<ClipboardState?>(null)
+
+    val isRefreshing: StateFlow<Boolean>
+        field = MutableStateFlow(false)
 
     var selectedNode by mutableStateOf<FileTreeNode?>(null)
 
@@ -47,21 +46,21 @@ class FileTreeViewModel(
     private val childrenNodeCache = mutableStateMapOf<String, List<FileTreeNode>>()
 
     fun copyNode(node: FileTreeNode) {
-        _clipboard.update { ClipboardState(node, false) }
+        clipboard.update { ClipboardState(node, false) }
     }
 
     fun cutNode(node: FileTreeNode) {
-        _clipboard.update { ClipboardState(node, true) }
+        clipboard.update { ClipboardState(node, true) }
     }
 
     fun clearClipboard() {
-        _clipboard.update { null }
+        clipboard.update { null }
     }
 
-    fun hasClip() = _clipboard.value != null
+    fun hasClip() = clipboard.value != null
 
     fun pasteNode(targetNode: FileTreeNode): Boolean {
-        val clip = _clipboard.value ?: return false
+        val clip = clipboard.value ?: return false
         if (targetNode.isDirectory.not()) return false
 
         val node = clip.node
@@ -112,18 +111,18 @@ class FileTreeViewModel(
 
     fun addRootNode(worktree: Worktree) {
         viewModelScope.launch {
-            _rootNodes.update { it + (worktree to worktree.asFileTreeNode()) }
+            rootNodes.update { it + (worktree to worktree.asFileTreeNode()) }
         }
     }
 
     fun removeRootNode(worktree: Worktree) {
-        if (_rootNodes.value.containsKey(worktree)) {
-            _rootNodes.update { it - worktree }
+        if (rootNodes.value.containsKey(worktree)) {
+            rootNodes.update { it - worktree }
         }
     }
 
     fun updateRootNodes(nodes: Map<Worktree, FileTreeNode>) {
-        _rootNodes.update { nodes }
+        rootNodes.update { nodes }
         nodes.forEach { (_, node) -> loadChildren(node) }
     }
 
@@ -159,7 +158,7 @@ class FileTreeViewModel(
     }
 
     fun isRootNode(node: FileTreeNode): Boolean {
-        return _rootNodes.value.values.any { it.file.absolutePath == node.file.absolutePath }
+        return rootNodes.value.values.any { it.file.absolutePath == node.file.absolutePath }
     }
 
     fun isNodeLoading(node: FileTreeNode): Boolean {
@@ -321,7 +320,7 @@ class FileTreeViewModel(
     }
 
     private fun findNodeByPath(path: String): FileTreeNode? {
-        _rootNodes.value.values.forEach { rootNode ->
+        rootNodes.value.values.forEach { rootNode ->
             if (rootNode.file.absolutePath == path) {
                 return rootNode
             }
@@ -348,14 +347,14 @@ class FileTreeViewModel(
 
     fun refreshTree() {
         viewModelScope.launch {
-            _isRefreshing.value = true
+            isRefreshing.value = true
 
             try {
                 delay(300)
 
                 childrenNodeCache.clear()
 
-                _rootNodes.value.values.forEach { rootNode ->
+                rootNodes.value.values.forEach { rootNode ->
                     loadChildren(rootNode, force = true)
                 }
 
@@ -370,7 +369,7 @@ class FileTreeViewModel(
             } catch (e: Exception) {
                 notifier.toast("Refresh failed: ${e.message}")
             } finally {
-                _isRefreshing.value = false
+                isRefreshing.value = false
             }
         }
     }

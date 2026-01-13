@@ -1,11 +1,10 @@
 package com.klyx.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.klyx.core.Notifier
 import com.klyx.core.file.Project
 import com.klyx.core.file.Worktree
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 data class KlyxMenuState(
@@ -18,63 +17,62 @@ data class KlyxAppState(
     val showLogViewer: Boolean = false,
 )
 
-class KlyxViewModel(
-    private val notifier: Notifier
-) : ViewModel() {
-    private val _klyxMenuState = MutableStateFlow(KlyxMenuState())
-    val klyxMenuState = _klyxMenuState.asStateFlow()
+class KlyxViewModel : ViewModel() {
 
-    private val _appState = MutableStateFlow(KlyxAppState())
-    val appState = _appState.asStateFlow()
+    val klyxMenuState: StateFlow<KlyxMenuState>
+        field = MutableStateFlow(KlyxMenuState())
 
-    private val _openedProject = MutableStateFlow(Project(emptyList()))
-    val openedProject = _openedProject.asStateFlow()
+    val appState: StateFlow<KlyxAppState>
+        field = MutableStateFlow(KlyxAppState())
+
+    val openedProject: StateFlow<Project>
+        field = MutableStateFlow(Project(emptyList()))
 
     fun showInfoDialog() {
-        _klyxMenuState.update { it.copy(showInfoDialog = true) }
+        klyxMenuState.update { it.copy(showInfoDialog = true) }
     }
 
     fun showGiveFeedbackDialog() {
-        _klyxMenuState.update { it.copy(showGiveFeedbackDialog = true) }
+        klyxMenuState.update { it.copy(showGiveFeedbackDialog = true) }
     }
 
     fun dismissGiveFeedbackDialog() {
-        _klyxMenuState.update { it.copy(showGiveFeedbackDialog = false) }
+        klyxMenuState.update { it.copy(showGiveFeedbackDialog = false) }
     }
 
     fun dismissInfoDialog() {
-        _klyxMenuState.update { it.copy(showInfoDialog = false) }
+        klyxMenuState.update { it.copy(showInfoDialog = false) }
     }
 
     fun showPermissionDialog() {
-        _appState.update { it.copy(showPermissionDialog = true) }
+        appState.update { it.copy(showPermissionDialog = true) }
     }
 
     fun dismissPermissionDialog() {
-        _appState.update { it.copy(showPermissionDialog = false) }
+        appState.update { it.copy(showPermissionDialog = false) }
     }
 
     fun openProject(worktree: Worktree) {
-        _openedProject.update { Project(listOf(worktree)) }
+        openedProject.update { Project(listOf(worktree)) }
     }
 
     fun openProject(project: Project) {
-        _openedProject.update { project }
+        openedProject.update { project }
     }
 
     fun closeProject() {
-        _openedProject.update { Project(emptyList()) }
+        openedProject.update { Project(emptyList()) }
     }
 
     fun addWorktreeToProject(worktree: Worktree) {
-        _openedProject.update { it.copy(worktrees = it.worktrees + worktree) }
+        openedProject.update { it.copy(worktrees = it.worktrees + worktree) }
     }
 
     fun showLogViewer() {
-        _appState.update { it.copy(showLogViewer = true) }
+        appState.update { it.copy(showLogViewer = true) }
     }
 
     fun dismissLogViewer() {
-        _appState.update { it.copy(showLogViewer = false) }
+        appState.update { it.copy(showLogViewer = false) }
     }
 }

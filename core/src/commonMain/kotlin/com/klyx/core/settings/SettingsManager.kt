@@ -12,7 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -38,8 +38,8 @@ object SettingsManager {
     private inline val settingsFile get() = Paths.settingsFile
     private inline val globalSettingsFile get() = Paths.globalSettingsFile
 
-    private val _settings = MutableStateFlow(AppSettings())
-    val settings = _settings.asStateFlow()
+    val settings: StateFlow<AppSettings>
+        field = MutableStateFlow(AppSettings())
 
     val defaultSettings: AppSettings by lazy { AppSettings() }
 
@@ -82,7 +82,7 @@ object SettingsManager {
 
     fun updateSettings(function: (AppSettings) -> AppSettings) {
         val oldSettings = settings.value.copy()
-        _settings.update { function(settings.value) }
+        settings.update { function(settings.value) }
         EventBus.INSTANCE.tryPost(SettingsChangeEvent(oldSettings, settings.value))
         CoroutineScope(Dispatchers.Default).launch { save() }
     }

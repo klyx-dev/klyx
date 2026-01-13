@@ -35,7 +35,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,12 +58,13 @@ data class ExtensionListState(
 )
 
 class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
-    private val _extensionListState = MutableStateFlow(ExtensionListState())
-    val extensionListState = _extensionListState.asStateFlow()
+
+    val extensionListState: StateFlow<ExtensionListState>
+        field = MutableStateFlow(ExtensionListState())
 
     init {
         EventBus.INSTANCE.subscribe<Event.ExtensionUninstalled> { event ->
-            _extensionListState.update { state ->
+            extensionListState.update { state ->
                 state.copy(
                     installedExtensions = state.installedExtensions.filter { it.id != event.extensionId }
                 )
@@ -72,15 +73,15 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
     }
 
     fun loadExtensions(store: ExtensionStore) {
-        _extensionListState.update { it.copy(isLoading = true) }
+        extensionListState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val installed = store.installedExtensions().map { it.value.manifest }
-                _extensionListState.update { it.copy(installedExtensions = installed) }
+                extensionListState.update { it.copy(installedExtensions = installed) }
 
                 val remote = fetchAllExtensions()
-                _extensionListState.update {
+                extensionListState.update {
                     it.copy(
                         remoteExtensions = remote,
                         installedExtensions = installed
@@ -90,23 +91,23 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
                 logger().error(err) { "Error fetching extensions: ${err.message}" }
             }
 
-            _extensionListState.update { it.copy(isLoading = false) }
+            extensionListState.update { it.copy(isLoading = false) }
         }
     }
 
     fun getExtensionInfo(extensionId: String): ExtensionManifest? {
         // Installed version always takes priority
-        return _extensionListState.value.installedExtensions.firstOrNull { it.id == extensionId }
-            ?: _extensionListState.value.remoteExtensions.firstOrNull { it.id == extensionId }
+        return extensionListState.value.installedExtensions.firstOrNull { it.id == extensionId }
+            ?: extensionListState.value.remoteExtensions.firstOrNull { it.id == extensionId }
     }
 
     fun isUpdateAvailable(extensionId: String): Boolean {
-        val installedVersion = _extensionListState.value.installedExtensions
+        val installedVersion = extensionListState.value.installedExtensions
             .firstOrNull { it.id == extensionId }
             ?.version
             ?.toVersion()
 
-        val remoteVersion = _extensionListState.value.remoteExtensions
+        val remoteVersion = extensionListState.value.remoteExtensions
             .firstOrNull { it.id == extensionId }
             ?.version
             ?.toVersion()
@@ -117,7 +118,7 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
     fun refreshInstalledExtensions(store: ExtensionStore) {
         val installed = store.installedExtensions().map { it.value.manifest }
 
-        _extensionListState.update { current ->
+        extensionListState.update { current ->
             current.copy(
                 installedExtensions = installed,
                 // Also update remote metadata to include updated versions
@@ -129,14 +130,14 @@ class ExtensionViewModel(private val notifier: Notifier) : ViewModel() {
     }
 
     fun onFilterChanged(filter: ExtensionFilter) {
-        _extensionListState.update { it.copy(filter = filter) }
+        extensionListState.update { it.copy(filter = filter) }
     }
 
     fun onSearchQueryChanged(query: String) {
-        _extensionListState.update { it.copy(searchQuery = query) }
+        extensionListState.update { it.copy(searchQuery = query) }
     }
 
-    fun getFilteredExtensions(state: ExtensionListState = _extensionListState.value): List<ExtensionManifest> {
+    fun getFilteredExtensions(state: ExtensionListState = extensionListState.value): List<ExtensionManifest> {
         val installedExtensions = state.installedExtensions
         val installedIds = installedExtensions.map { it.id }.toSet()
 

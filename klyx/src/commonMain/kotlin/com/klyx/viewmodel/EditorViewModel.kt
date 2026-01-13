@@ -55,6 +55,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -72,22 +73,20 @@ data class TabState(
     val pendingFiles: List<KxFile> = emptyList()
 )
 
-@Suppress("MemberVisibilityCanBePrivate", "unused")
-class EditorViewModel(
-    private val notifier: Notifier
-) : ViewModel() {
-    private val _state = MutableStateFlow(TabState())
-    val state = _state.asStateFlow()
+class EditorViewModel(private val notifier: Notifier) : ViewModel() {
 
-    val activeFile = _state.map { tabState ->
+    val state: StateFlow<TabState>
+        field = MutableStateFlow(TabState())
+
+    val activeFile = state.map { tabState ->
         (tabState.openTabs.find { it is FileTab && it.id == tabState.activeTabId } as? FileTab)?.file
     }.stateInWhileSubscribed(initialValue = null)
 
-    val activeTab = _state.map { tabState ->
+    val activeTab = state.map { tabState ->
         tabState.openTabs.find { it.id == tabState.activeTabId }
     }.stateInWhileSubscribed(null)
 
-    val currentEditorState = _state.map { tabState ->
+    val currentEditorState = state.map { tabState ->
         (tabState.openTabs.find { it is FileTab && it.id == tabState.activeTabId } as? FileTab)?.editorState
     }.stateInWhileSubscribed(initialValue = null)
 
@@ -97,7 +96,7 @@ class EditorViewModel(
     private val _canRedo = MutableStateFlow(false)
     val canRedo = _canRedo.asStateFlow()
 
-    val isTabOpen = _state.map {
+    val isTabOpen = state.map {
         it.openTabs.isNotEmpty()
     }.stateInWhileSubscribed(initialValue = false)
 
@@ -112,7 +111,7 @@ class EditorViewModel(
         observeUndoRedoState()
     }
 
-    fun isTabOpen(predicate: (Tab) -> Boolean) = _state.map {
+    fun isTabOpen(predicate: (Tab) -> Boolean) = state.map {
         it.openTabs.any(predicate)
     }.stateInWhileSubscribed(initialValue = false)
 
@@ -196,7 +195,7 @@ class EditorViewModel(
     }
 
     fun openTab(tab: Tab) {
-        _state.update { current ->
+        state.update { current ->
             if (current.openTabs.any { it.id == tab.id }) {
                 current.copy(activeTabId = tab.id)
             } else {
@@ -225,11 +224,11 @@ class EditorViewModel(
     }
 
     fun openPendingFiles() {
-        _state.value.pendingFiles.forEach(::openFile)
-        _state.update { it.copy(pendingFiles = emptyList()) }
+        state.value.pendingFiles.forEach(::openFile)
+        state.update { it.copy(pendingFiles = emptyList()) }
     }
 
-    fun isPendingFile(file: KxFile) = file in _state.value.pendingFiles
+    fun isPendingFile(file: KxFile) = file in state.value.pendingFiles
 
     @OptIn(ExperimentalComposeCodeEditorApi::class)
     fun openFile(
@@ -241,7 +240,7 @@ class EditorViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val permissionRequired = file.isPermissionRequired(R_OK or W_OK)
             if (permissionRequired) {
-                _state.update { it.copy(pendingFiles = it.pendingFiles + file) }
+                state.update { it.copy(pendingFiles = it.pendingFiles + file) }
             }
 
             val tab = if (!file.isKlyxTempFile() && !permissionRequired && !file.isValidUtf8()) {
@@ -272,7 +271,7 @@ class EditorViewModel(
     }
 
     fun closeOthersTab(currentTabId: TabId) {
-        _state.update {
+        state.update {
             val closingTabs = it.openTabs.filterNot { tab -> tab.id == currentTabId }
             val newTabs = it.openTabs.filter { tab -> tab.id == currentTabId }
             viewModelScope.launch(Dispatchers.Default) {
@@ -288,7 +287,7 @@ class EditorViewModel(
     }
 
     fun closeLeftTab(currentTabId: TabId) {
-        _state.update { state ->
+        state.update { state ->
             val tabs = state.openTabs
             val currentIndex = tabs.indexOfFirst { it.id == currentTabId }
             if (currentIndex <= 0) return@update state // nothing to close on the left or tab not found
@@ -310,7 +309,7 @@ class EditorViewModel(
     }
 
     fun closeRightTab(currentTabId: TabId) {
-        _state.update { state ->
+        state.update { state ->
             val tabs = state.openTabs
             val currentIndex = tabs.indexOfFirst { it.id == currentTabId }
             if (currentIndex == -1 || currentIndex >= tabs.lastIndex) return@update state // nothing to close on right
@@ -332,19 +331,19 @@ class EditorViewModel(
     }
 
     fun canCloseLeftTab(currentTabId: TabId): Boolean {
-        val tabs = _state.value.openTabs
+        val tabs = state.value.openTabs
         val index = tabs.indexOfFirst { it.id == currentTabId }
         return index > 0 // means there's at least one tab to the left
     }
 
     fun canCloseRightTab(currentTabId: TabId): Boolean {
-        val tabs = _state.value.openTabs
+        val tabs = state.value.openTabs
         val index = tabs.indexOfFirst { it.id == currentTabId }
         return index != -1 && index < tabs.lastIndex // means there's at least one tab to the right
     }
 
     fun getClosableTabSides(currentTabId: TabId): Pair<Boolean, Boolean> {
-        val tabs = _state.value.openTabs
+        val tabs = state.value.openTabs
         val index = tabs.indexOfFirst { it.id == currentTabId }
         return when {
             index == -1 -> false to false
@@ -353,7 +352,7 @@ class EditorViewModel(
     }
 
     fun closeTab(tabId: TabId) {
-        _state.update { current ->
+        state.update { current ->
             val updatedTabs = current.openTabs.filterNot { it.id == tabId }
             val newActiveTabId = when {
                 tabId == current.activeTabId -> updatedTabs.lastOrNull()?.id
@@ -375,10 +374,10 @@ class EditorViewModel(
         }
     }
 
-    fun closeActiveTab() = _state.value.activeTabId?.let { closeTab(it) }
+    fun closeActiveTab() = state.value.activeTabId?.let { closeTab(it) }
 
     fun setActiveTab(tabId: TabId) {
-        _state.update { current ->
+        state.update { current ->
             if (current.openTabs.any { it.id == tabId }) {
                 current.copy(activeTabId = tabId)
             } else {
@@ -388,11 +387,11 @@ class EditorViewModel(
     }
 
     fun getTab(tabId: TabId): Tab? {
-        return _state.value.openTabs.find { it.id == tabId }
+        return state.value.openTabs.find { it.id == tabId }
     }
 
     fun replaceTab(tabId: TabId, newTab: Tab) {
-        _state.update { current ->
+        state.update { current ->
             val updatedTabs = current.openTabs.map { tab ->
                 if (tab.id == tabId) newTab else tab
             }
@@ -405,7 +404,7 @@ class EditorViewModel(
     }
 
     fun closeAllTabs() {
-        _state.update { current ->
+        state.update { current ->
             current.copy(
                 openTabs = emptyList(),
                 activeTabId = null
@@ -414,31 +413,31 @@ class EditorViewModel(
     }
 
     fun isTabOpen(tabId: TabId): Boolean {
-        return _state.value.openTabs.any { it.id == tabId }
+        return state.value.openTabs.any { it.id == tabId }
     }
 
     fun isTabActive(tabId: TabId): Boolean {
-        return _state.value.activeTabId == tabId
+        return state.value.activeTabId == tabId
     }
 
     fun isFileTabOpen(fileId: FileId): Boolean {
-        return _state.value.openTabs.any { it is FileTab && it.id == fileId }
+        return state.value.openTabs.any { it is FileTab && it.id == fileId }
     }
 
     fun isFileTabActive(fileId: FileId): Boolean {
-        return _state.value.activeTabId == fileId
+        return state.value.activeTabId == fileId
     }
 
     fun isFileTab(tabId: TabId): Boolean {
-        return _state.value.openTabs.any { it is FileTab && it.id == tabId }
+        return state.value.openTabs.any { it is FileTab && it.id == tabId }
     }
 
     fun isFileTabInternal(tabId: TabId): Boolean {
-        return _state.value.openTabs.any { it is FileTab && it.isInternal && it.id == tabId }
+        return state.value.openTabs.any { it is FileTab && it.isInternal && it.id == tabId }
     }
 
     fun saveCurrent() = result {
-        val current = _state.value
+        val current = state.value
         val tab = current.openTabs.find { it.id == current.activeTabId } ?: error("no active tab")
 
         if (tab is FileTab) {
@@ -475,12 +474,12 @@ class EditorViewModel(
     }
 
     fun saveCurrentAs(newFile: KxFile) = result {
-        val currentTabId = _state.value.activeTabId ?: error("no active tab")
+        val currentTabId = state.value.activeTabId ?: error("no active tab")
         saveAs(currentTabId, newFile).bind()
     }
 
     fun saveAs(tabId: TabId, newFile: KxFile) = result {
-        val tab = _state.value.openTabs.find { it.id == tabId } ?: error("no tab found with id: $tabId")
+        val tab = state.value.openTabs.find { it.id == tabId } ?: error("no tab found with id: $tabId")
 
         if (tab is FileTab) {
             val editorState = tab.editorState
@@ -526,7 +525,7 @@ class EditorViewModel(
     fun saveAll(): Map<String, Boolean> {
         val results = mutableMapOf<String, Boolean>()
 
-        _state.value.openTabs.forEach { tab ->
+        state.value.openTabs.forEach { tab ->
             if (tab is FileTab) {
                 val file = tab.file
                 val state = tab.editorState
