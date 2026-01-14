@@ -7,7 +7,7 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
-uniffi = "0.29.4"
+uniffi = "0.31.0"
 semver = "1.0.27"
 futures = "0.3"
 tokio = { version = "1.49.0", features = ["fs", "rt-multi-thread"] }
