@@ -8,6 +8,7 @@ import com.klyx.core.app.Application
 import com.klyx.core.di.initKoin
 import com.klyx.core.event.EventBus
 import com.klyx.core.initializeKlyx
+import com.klyx.core.setComposeWindowProvider
 import com.klyx.di.commonModule
 import com.klyx.resources.Res
 import com.klyx.resources.klyx_logo
@@ -35,6 +36,7 @@ suspend fun main() {
                 false
             }
         ) {
+            setComposeWindowProvider { window }
             KlyxApp { MainScreen() }
         }
     }

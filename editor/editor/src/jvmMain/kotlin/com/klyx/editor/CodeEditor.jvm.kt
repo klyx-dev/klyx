@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.TextUnit
-import com.klyx.core.file.Worktree
+import com.klyx.project.Worktree
 
 @Composable
 @ExperimentalCodeEditorApi

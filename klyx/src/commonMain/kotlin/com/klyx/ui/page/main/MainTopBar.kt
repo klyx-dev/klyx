@@ -19,11 +19,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.core.file.Project
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.core.ui.component.FpsText
 import com.klyx.icons.DriveFileMove
 import com.klyx.icons.Icons
+import com.klyx.project.Project
 import com.klyx.tab.Tab
 import kotlinx.coroutines.launch
 

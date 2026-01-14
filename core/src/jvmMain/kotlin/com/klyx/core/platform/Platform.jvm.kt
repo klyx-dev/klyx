@@ -38,3 +38,6 @@ fun <R> selectByOs(
 }
 
 actual fun Platform.quit(): Nothing = exitProcess(0)
+
+actual val Platform.version: String get() = System.getProperty("os.version")
+actual val Platform.deviceModel: String get() = System.getProperty("user.name")

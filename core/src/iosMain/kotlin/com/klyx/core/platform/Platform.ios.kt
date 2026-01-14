@@ -1,5 +1,6 @@
 package com.klyx.core.platform
 
+import platform.UIKit.UIDevice
 import kotlin.system.exitProcess
 
 actual fun currentOs(): Os {
@@ -11,3 +12,6 @@ actual fun currentArchitecture(): Architecture {
 }
 
 actual fun Platform.quit(): Nothing = exitProcess(0)
+
+actual val Platform.version: String get() = UIDevice.currentDevice.systemVersion
+actual val Platform.deviceModel: String get() = UIDevice.currentDevice.model

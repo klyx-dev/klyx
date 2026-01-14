@@ -8,7 +8,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.generateId
 import com.klyx.editor.ComposeEditorState
 import com.klyx.editor.EditorState
@@ -16,9 +15,11 @@ import com.klyx.editor.ExperimentalCodeEditorApi
 import com.klyx.editor.SoraEditorState
 import com.klyx.editor.compose.event.TextChangeEvent
 import com.klyx.editor.event.ContentChangeEvent
+import com.klyx.project.Worktree
 
 typealias TabId = String
 
+@Stable
 sealed class Tab(
     open val name: String,
     open val id: TabId = generateId(),

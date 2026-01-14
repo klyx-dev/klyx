@@ -1,4 +1,4 @@
-package com.klyx.core.file
+package com.klyx.project
 
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable

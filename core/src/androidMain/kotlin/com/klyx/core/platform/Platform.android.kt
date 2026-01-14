@@ -18,3 +18,6 @@ actual fun currentArchitecture(): Architecture {
 }
 
 actual fun Platform.quit(): Nothing = WindowManager.closeAllWindowsAndQuit()
+
+actual val Platform.version: String get() = Build.VERSION.RELEASE
+actual val Platform.deviceModel: String get() = "${Build.MANUFACTURER} ${Build.MODEL}"

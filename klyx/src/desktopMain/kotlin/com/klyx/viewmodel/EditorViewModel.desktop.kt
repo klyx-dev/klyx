@@ -1,7 +1,7 @@
 package com.klyx.viewmodel
 
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
+import com.klyx.project.Worktree
 
 internal actual suspend fun onCloseFileTab(
     worktree: Worktree?,

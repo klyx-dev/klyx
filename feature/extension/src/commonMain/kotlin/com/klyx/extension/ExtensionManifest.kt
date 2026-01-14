@@ -9,8 +9,8 @@ import arrow.core.raise.context.result
 import com.klyx.core.io.isFile
 import com.klyx.core.io.okioFs
 import com.klyx.core.lsp.LanguageServerName
-import com.klyx.core.util.path.OkioPathListSerializer
-import com.klyx.core.util.path.OkioPathSerializer
+import com.klyx.core.serializers.path.OkioPathListSerializer
+import com.klyx.core.serializers.path.OkioPathSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers

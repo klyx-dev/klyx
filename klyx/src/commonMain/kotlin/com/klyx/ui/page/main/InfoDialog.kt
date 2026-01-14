@@ -24,9 +24,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.klyx.core.GitHub
+import com.klyx.core.app.LocalBuildInfo
 import com.klyx.core.clipboard.clipEntryOf
-import com.klyx.core.internal.platform.PlatformInfo
-import com.klyx.core.platform.currentOs
+import com.klyx.core.platform.LocalPlatform
+import com.klyx.core.platform.deviceModel
+import com.klyx.core.platform.version
 import com.klyx.core.ui.component.FilledButtonWithIcon
 import com.klyx.core.ui.component.OutlinedButtonChip
 import com.klyx.core.ui.component.OutlinedButtonWithIcon
@@ -44,13 +46,15 @@ import org.jetbrains.compose.resources.stringResource
 fun InfoDialog(onDismissRequest: () -> Unit) {
     val uriHandler = LocalUriHandler.current
     val clipboard = LocalClipboard.current
+    val buildInfo = LocalBuildInfo.current
+    val platform = LocalPlatform.current
     val scope = rememberCoroutineScope()
 
     val systemInfo = remember {
         buildString {
-            appendLine("Klyx | ${PlatformInfo.appVersion} (${PlatformInfo.buildNumber})")
-            appendLine("${PlatformInfo.name} ${PlatformInfo.version} | ${PlatformInfo.deviceModel}")
-            appendLine("${currentOs()} | ${PlatformInfo.architecture}")
+            appendLine("Klyx | ${buildInfo.versionName} (${buildInfo.versionCode})")
+            appendLine("${platform.os} ${platform.version} | ${platform.deviceModel}")
+            appendLine("${platform.os} | ${platform.architecture}")
         }
     }
 

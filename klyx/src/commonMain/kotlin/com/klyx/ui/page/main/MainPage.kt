@@ -63,8 +63,6 @@ import com.klyx.LocalWindowSizeClass
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Project
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.io.R_OK
@@ -90,6 +88,8 @@ import com.klyx.icons.DriveFolderUpload
 import com.klyx.icons.FileOpen
 import com.klyx.icons.Icons
 import com.klyx.isWidthAtLeastMediumOrExpanded
+import com.klyx.project.Project
+import com.klyx.project.Worktree
 import com.klyx.resources.Res
 import com.klyx.resources.open_a_project
 import com.klyx.tab.FileTab

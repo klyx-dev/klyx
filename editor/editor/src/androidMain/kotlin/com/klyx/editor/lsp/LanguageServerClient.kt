@@ -6,7 +6,6 @@ import arrow.core.raise.context.ensure
 import arrow.core.raise.context.raise
 import arrow.core.raise.context.result
 import com.klyx.core.Notifier
-import com.klyx.core.file.Worktree
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerBinary
@@ -64,6 +63,7 @@ import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.fold
 import com.klyx.lsp.types.isFirst
 import com.klyx.lsp.types.isLeft
+import com.klyx.project.Worktree
 import io.matthewnelson.kmp.process.changeDir
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope

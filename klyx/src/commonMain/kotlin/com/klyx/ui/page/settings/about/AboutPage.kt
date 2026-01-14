@@ -20,8 +20,11 @@ import androidx.compose.ui.platform.LocalUriHandler
 import com.klyx.LocalNavigator
 import com.klyx.core.GitHub
 import com.klyx.core.LocalNotifier
+import com.klyx.core.app.LocalBuildInfo
 import com.klyx.core.clipboard.clipEntryOf
-import com.klyx.core.internal.platform.PlatformInfo
+import com.klyx.core.platform.LocalPlatform
+import com.klyx.core.platform.deviceModel
+import com.klyx.core.platform.version
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.PreferenceItem
 import com.klyx.icons.Description
@@ -89,18 +92,21 @@ fun AboutPage() {
             }
 
             item {
+                val buildInfo = LocalBuildInfo.current
+                val platform = LocalPlatform.current
+
                 PreferenceItem(
                     title = stringResource(Res.string.version),
-                    description = PlatformInfo.appVersion,
+                    description = buildInfo.versionName,
                     icon = Icons.Info
                 ) {
                     scope.launch {
                         clipboard.setClipEntry(
                             clipEntryOf(
                                 """
-                                App version: ${PlatformInfo.appVersion} (${PlatformInfo.buildNumber})
-                                Device information: ${PlatformInfo.name} ${PlatformInfo.version} (${PlatformInfo.architecture})
-                                Device model: ${PlatformInfo.deviceModel}
+                                App version: ${buildInfo.versionName} (${buildInfo.versionCode})
+                                Device information: ${platform.os} ${platform.version} (${platform.architecture})
+                                Device model: ${platform.deviceModel}
                             """.trimIndent()
                             )
                         )

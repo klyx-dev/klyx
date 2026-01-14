@@ -17,7 +17,6 @@ import com.klyx.core.event.io.FileOpenEvent
 import com.klyx.core.event.io.FileSaveEvent
 import com.klyx.core.file.FileId
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.id
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
@@ -38,6 +37,7 @@ import com.klyx.editor.compose.CodeEditorState
 import com.klyx.editor.compose.ExperimentalComposeCodeEditorApi
 import com.klyx.editor.compose.event.TextChangeEvent
 import com.klyx.editor.event.ContentChangeEvent
+import com.klyx.project.Worktree
 import com.klyx.resources.Res.string
 import com.klyx.resources.tab_title_default_settings
 import com.klyx.resources.tab_title_extensions

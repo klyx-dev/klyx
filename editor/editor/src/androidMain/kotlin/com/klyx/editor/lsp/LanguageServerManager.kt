@@ -7,7 +7,6 @@ import com.klyx.core.app.App
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerBinary
 import com.klyx.core.lsp.LanguageServerBinaryOptions
@@ -29,6 +28,7 @@ import com.klyx.lsp.Position
 import com.klyx.lsp.Range
 import com.klyx.lsp.TextDocumentIdentifier
 import com.klyx.lsp.server.LanguageServer
+import com.klyx.project.Worktree
 import com.klyx.project.lsp.makeLspAdapterDelegate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart

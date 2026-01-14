@@ -1,7 +1,5 @@
 package com.klyx.project.lsp
 
-import com.klyx.core.file.Project
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.toKotlinxIoPath
 import com.klyx.core.io.okioFs
 import com.klyx.core.logging.logger
@@ -10,6 +8,8 @@ import com.klyx.core.util.asHashMap
 import com.klyx.editor.language.BinaryStatus
 import com.klyx.editor.language.LanguageRegistry
 import com.klyx.editor.language.LspAdapterDelegate
+import com.klyx.project.Project
+import com.klyx.project.Worktree
 import com.klyx.settings.WorktreeId
 import okio.Path
 import okio.Path.Companion.toPath

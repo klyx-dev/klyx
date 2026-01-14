@@ -1,8 +1,8 @@
 package com.klyx.core.app
 
 import com.klyx.core.platform.Platform
+import com.klyx.core.platform.version
 import com.klyx.core.process.Thread
-import com.klyx.core.internal.platform.PlatformInfo
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -24,7 +24,7 @@ data class CrashReport(
         appendLine("=== Crash Report ===")
         appendLine("Time: $timestamp")
         appendLine("Platform: $platform")
-        appendLine("OS Version: ${PlatformInfo.version}")
+        appendLine("Version: ${platform.version}")
         appendLine()
         appendLine("App Version: ${buildInfo.versionName} (${buildInfo.versionCode})")
         appendLine("Build Type: ${buildInfo.buildType}")

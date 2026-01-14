@@ -33,7 +33,6 @@ import androidx.navigation3.ui.NavDisplay
 import arrow.core.raise.context.result
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.subscribeToEvent
-import com.klyx.core.file.Project
 import com.klyx.core.io.Paths
 import com.klyx.core.io.lastProjectFile
 import com.klyx.core.logging.KxLog
@@ -43,6 +42,7 @@ import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.settings.currentAppSettings
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
+import com.klyx.project.Project
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.page.SettingsPage

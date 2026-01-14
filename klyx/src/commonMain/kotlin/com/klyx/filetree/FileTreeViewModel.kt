@@ -9,9 +9,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.core.Notifier
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolve
 import com.klyx.core.file.toOkioPath
+import com.klyx.project.Worktree
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay

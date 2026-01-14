@@ -14,7 +14,6 @@ import com.klyx.core.LocalPlatformContext
 import com.klyx.core.PlatformContext
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
-import com.klyx.core.file.Project
 import com.klyx.core.icon.BackToTab
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.Pip
@@ -33,6 +32,7 @@ import com.klyx.icons.Icons
 import com.klyx.icons.KeyboardCommandKey
 import com.klyx.icons.Settings
 import com.klyx.icons.Terminal
+import com.klyx.project.Project
 import com.klyx.resources.Res
 import com.klyx.resources.settings
 import com.klyx.viewmodel.openExtensionScreen

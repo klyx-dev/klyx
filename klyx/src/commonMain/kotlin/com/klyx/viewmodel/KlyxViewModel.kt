@@ -1,8 +1,8 @@
 package com.klyx.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.klyx.core.file.Project
-import com.klyx.core.file.Worktree
+import com.klyx.project.Project
+import com.klyx.project.Worktree
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update

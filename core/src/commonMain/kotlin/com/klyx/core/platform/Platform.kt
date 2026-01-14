@@ -3,7 +3,10 @@ package com.klyx.core.platform
 import androidx.compose.runtime.staticCompositionLocalOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.CoroutineContext
 import kotlin.jvm.JvmInline
 
 /**
@@ -24,12 +27,49 @@ expect fun currentArchitecture(): Architecture
 /**
  * A [CoroutineScope] designated for background operations.
  */
-typealias BackgroundScope = CoroutineScope
+@JvmInline
+value class BackgroundScope private constructor(
+    private val scope: CoroutineScope
+) : CoroutineScope by scope {
+
+    companion object {
+        fun io() = BackgroundScope(CoroutineScope(SupervisorJob() + Dispatchers.IO))
+
+        fun default() = BackgroundScope(CoroutineScope(SupervisorJob() + Dispatchers.Default))
+
+        fun from(scope: CoroutineScope) = BackgroundScope(scope)
+    }
+
+    init {
+        val dispatcher = scope.coroutineContext[ContinuationInterceptor]
+        require(
+            dispatcher != null &&
+                    dispatcher != Dispatchers.Main &&
+                    dispatcher != Dispatchers.Main.immediate
+        ) {
+            "BackgroundScope must use a background dispatcher"
+        }
+    }
+}
 
 /**
  * A [CoroutineScope] intended for UI-bound or main-thread operations.
  */
-typealias ForegroundScope = CoroutineScope
+@JvmInline
+value class ForegroundScope(
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+) : CoroutineScope by scope {
+    init {
+        require(scope.coroutineContext.hasMainDispatcher()) {
+            "ForegroundScope must run on the Main dispatcher"
+        }
+    }
+
+    private fun CoroutineContext.hasMainDispatcher(): Boolean {
+        val dispatcher = this[ContinuationInterceptor]
+        return dispatcher == Dispatchers.Main || dispatcher == Dispatchers.Main.immediate
+    }
+}
 
 /**
  * Represents a platform defined by an operating system and an architecture.
@@ -38,11 +78,11 @@ typealias ForegroundScope = CoroutineScope
  * on which the application is running.
  *
  * @property os The operating system of the platform.
- * @property arch The architecture of the platform.
+ * @property architecture The architecture of the platform.
  */
-data class Platform(val os: Os, val arch: Architecture) {
+data class Platform(val os: Os, val architecture: Architecture) {
     override fun toString(): String {
-        return "$os ($arch)"
+        return "$os ($architecture)"
     }
 
     /**
@@ -51,7 +91,7 @@ data class Platform(val os: Os, val arch: Architecture) {
      * This scope uses [Dispatchers.Default] for executing CPU-bound tasks and includes a [SupervisorJob],
      * ensuring that the failure of one child coroutine does not cancel the entire scope or other siblings.
      */
-    val backgroundScope: BackgroundScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    val backgroundScope = BackgroundScope.default()
 
     /**
      * A [CoroutineScope] intended for UI-bound or main-thread operations.
@@ -59,7 +99,7 @@ data class Platform(val os: Os, val arch: Architecture) {
      * This scope uses [Dispatchers.Main] and is supervised by a [SupervisorJob],
      * meaning failure of one child coroutine will not cancel the others.
      */
-    val foregroundScope: ForegroundScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    val foregroundScope = ForegroundScope()
 
     companion object {
         /**
@@ -75,6 +115,9 @@ data class Platform(val os: Os, val arch: Architecture) {
  * Gracefully quit the application via the platform's standard routine.
  */
 expect fun Platform.quit(): Nothing
+
+expect val Platform.version: String
+expect val Platform.deviceModel: String
 
 /**
  * A [CompositionLocal] that provides the current [Platform] to the Compose hierarchy.

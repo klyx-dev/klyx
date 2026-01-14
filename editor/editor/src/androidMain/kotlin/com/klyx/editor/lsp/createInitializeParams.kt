@@ -2,7 +2,6 @@ package com.klyx.editor.lsp
 
 import android.os.Process
 import com.klyx.core.KlyxBuildConfig
-import com.klyx.core.file.Worktree
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.lsp.ClientInfo
 import com.klyx.lsp.CodeActionKind
@@ -43,6 +42,7 @@ import com.klyx.lsp.capabilities.WorkspaceClientCapabilities
 import com.klyx.lsp.capabilities.WorkspaceEditCapabilities
 import com.klyx.lsp.capabilities.WorkspaceSymbolCapabilities
 import com.klyx.lsp.types.LSPAny
+import com.klyx.project.Worktree
 
 fun createInitializeParams(
     worktree: Worktree,

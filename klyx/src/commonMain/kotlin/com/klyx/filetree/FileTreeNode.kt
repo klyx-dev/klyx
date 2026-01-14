@@ -1,10 +1,9 @@
 package com.klyx.filetree
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.vector.ImageVector
 import arrow.core.raise.context.result
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Project
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolveName
 import com.klyx.core.icon.KlyxIcons
 import com.klyx.core.icon.language.C
@@ -40,10 +39,13 @@ import com.klyx.icons.InsertDriveFile
 import com.klyx.icons.PictureAsPdf
 import com.klyx.icons.Terminal
 import com.klyx.icons.VideoFile
+import com.klyx.project.Project
+import com.klyx.project.Worktree
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
+@Immutable
 data class FileTreeNode(
     val file: KxFile,
     val name: String = file.resolveName(),

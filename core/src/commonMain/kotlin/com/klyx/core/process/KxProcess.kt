@@ -51,7 +51,7 @@ class KxProcess @PublishedApi internal constructor(internal val builder: KxProce
     @InternalProcessApi
     val raw get() = withProcess { this }
 
-    inline val startTime: ComparableTimeMark
+    val startTime: ComparableTimeMark
         get() {
             checkProcessSpawned()
             return process.startTime
@@ -86,8 +86,7 @@ class KxProcess @PublishedApi internal constructor(internal val builder: KxProce
         return process.block()
     }
 
-    @PublishedApi
-    internal fun checkProcessSpawned() = check(::process.isInitialized) { "Process has not been spawned" }
+    private fun checkProcessSpawned() = check(::process.isInitialized) { "Process has not been spawned" }
 
     override fun toString(): String {
         return if (::process.isInitialized) {

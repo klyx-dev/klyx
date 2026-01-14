@@ -1,5 +1,6 @@
 package com.klyx.core.app
 
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.platform.BackgroundScope
 import com.klyx.core.platform.ForegroundScope
@@ -117,3 +118,5 @@ data class BuildInfo(
         )
     }
 }
+
+val LocalBuildInfo = staticCompositionLocalOf { BuildInfo.current() }

@@ -15,7 +15,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.core.LocalNotifier
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
@@ -35,6 +34,7 @@ import com.klyx.icons.FileOpen
 import com.klyx.icons.Icons
 import com.klyx.icons.Save
 import com.klyx.icons.SaveAs
+import com.klyx.project.Worktree
 import com.klyx.resources.Res.string
 import com.klyx.resources.notification_all_files_saved
 import com.klyx.resources.notification_failed_to_save

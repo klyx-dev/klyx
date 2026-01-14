@@ -65,11 +65,11 @@ import coil3.compose.LocalPlatformContext
 import coil3.svg.SvgDecoder
 import com.klyx.core.LocalNotifier
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.resolve
 import com.klyx.di.LocalFileTreeViewModel
 import com.klyx.icons.Icons
 import com.klyx.icons.KeyboardArrowRight
+import com.klyx.project.Worktree
 import com.klyx.ui.component.menu.PopupMenu
 import com.klyx.ui.page.main.worktreeDrawerWidth
 

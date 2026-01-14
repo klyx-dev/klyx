@@ -6,7 +6,6 @@ import android.view.View
 import androidx.compose.runtime.CompositionContext
 import com.klyx.core.app.App
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.settings.AppSettings
@@ -27,6 +26,7 @@ import com.klyx.lsp.WorkspaceEdit
 import com.klyx.lsp.types.fold
 import com.klyx.lsp.types.isLeft
 import com.klyx.lsp.types.leftOr
+import com.klyx.project.Worktree
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.EditorReleaseEvent
 import io.github.rosemoe.sora.event.ScrollEvent
@@ -67,7 +67,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 

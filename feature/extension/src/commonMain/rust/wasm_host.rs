@@ -35,7 +35,6 @@ use std::{
     },
     time::Duration,
 };
-use std::fmt::Display;
 use tokio::{
     runtime::{Builder, Runtime},
     sync::Mutex,

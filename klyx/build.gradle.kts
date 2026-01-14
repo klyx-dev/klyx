@@ -57,6 +57,7 @@ kotlin {
 
             api(projects.core)
             api(projects.icons)
+            api(projects.project)
             api(projects.lsp.server)
             api(projects.feature.mcp)
             api(projects.feature.extension)

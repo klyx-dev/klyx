@@ -24,7 +24,6 @@ wasm-encoder = "0.243.0"
 wasmparser = "0.243.0"
 wasmtime = { version = "33", default-features = false, features = [
     "async",
-    "demangle",
     "runtime",
     "cranelift",
     "component-model",

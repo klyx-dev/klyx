@@ -2,7 +2,7 @@
 
 package com.klyx.extension
 
-import com.klyx.core.util.path.OkioPathSerializer
+import com.klyx.core.serializers.path.OkioPathSerializer
 import com.klyx.editor.language.LanguageMatcher
 import com.klyx.editor.language.LanguageName
 import kotlinx.serialization.Serializable

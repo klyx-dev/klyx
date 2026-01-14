@@ -29,7 +29,6 @@ import com.klyx.LocalNavigator
 import com.klyx.Route
 import com.klyx.core.LocalNotifier
 import com.klyx.core.PlatformContext
-import com.klyx.core.file.Project
 import com.klyx.core.file.isKlyxTempFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.util.value
@@ -41,6 +40,7 @@ import com.klyx.icons.Redo
 import com.klyx.icons.Save
 import com.klyx.icons.Settings
 import com.klyx.icons.Undo
+import com.klyx.project.Project
 import com.klyx.resources.Res.string
 import com.klyx.resources.notification_failed_to_save
 import com.klyx.resources.notification_no_active_file

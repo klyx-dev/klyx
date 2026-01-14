@@ -11,7 +11,6 @@ import com.klyx.core.cmd.CommandManager.removeCommands
 import com.klyx.core.cmd.buildCommand
 import com.klyx.core.cmd.key.keyShortcutOf
 import com.klyx.core.file.KxFile
-import com.klyx.core.file.Worktree
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
 import com.klyx.core.file.toKxFiles
@@ -20,6 +19,7 @@ import com.klyx.core.io.W_OK
 import com.klyx.core.util.string
 import com.klyx.di.LocalEditorViewModel
 import com.klyx.di.LocalKlyxViewModel
+import com.klyx.project.Worktree
 import com.klyx.resources.Res
 import com.klyx.resources.notification_all_files_saved
 import com.klyx.resources.notification_failed_to_save

@@ -1,8 +1,9 @@
-package com.klyx.core.file
+package com.klyx.project
 
 import androidx.compose.runtime.Immutable
 import arrow.core.raise.result
-import com.klyx.core.extension.WorktreeDelegate
+import com.klyx.core.file.KxFile
+import com.klyx.core.file.toKxFile
 import com.klyx.core.process.getenv
 import com.klyx.core.util.join
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,7 @@ import kotlinx.serialization.Transient
  */
 @Immutable
 @Serializable
-data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
+data class Worktree(val rootFile: KxFile) {
     @Transient
     private val fs = SystemFileSystem
 
@@ -33,14 +34,14 @@ data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
 
     private val id get() = hashCode().toULong()
 
-    override fun id() = id
+    fun id() = id
 
-    override fun rootPath() = rootFile.absolutePath
+    fun rootPath() = rootFile.absolutePath
 
     /**
      * Returns the textual contents of the specified file in the worktree.
      */
-    override suspend fun readTextFile(path: Path) = result {
+    suspend fun readTextFile(path: Path) = result {
         withContext(Dispatchers.IO) {
             val source = fs.source(worktreePath.join(path)).buffered()
             source.readString()
@@ -50,14 +51,14 @@ data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
     /**
      * Returns the path to the given binary name, if one is present on the `$PATH`.
      */
-    override suspend fun which(binaryName: String) = com.klyx.core.process.which(binaryName)
+    suspend fun which(binaryName: String) = com.klyx.core.process.which(binaryName)
         .map { it.toString() }
         .getOrNull()
 
     /**
      * Returns the current shell environment.
      */
-    override suspend fun shellEnv() = getenv()
+    suspend fun shellEnv() = getenv()
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -68,9 +69,7 @@ data class Worktree(val rootFile: KxFile) : WorktreeDelegate {
         return rootFile.path == other.rootFile.path
     }
 
-    override fun hashCode(): Int {
-        return rootFile.path.hashCode()
-    }
+    override fun hashCode() = rootFile.path.hashCode()
 }
 
 fun Worktree(path: String) = Worktree(path.toKxFile())

@@ -1,6 +1,6 @@
 package com.klyx.core.lsp
 
-import com.klyx.core.util.path.PathSerializer
+import com.klyx.core.serializers.path.PathSerializer
 import kotlinx.io.files.Path
 import kotlinx.serialization.Serializable
 
