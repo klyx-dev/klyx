@@ -20,12 +20,11 @@ env:
 jobs:
   build-android-app:
     name: Build Android App
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache
           docker system prune -af || true
@@ -39,9 +38,6 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
 
       - run: echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
       - run: echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
