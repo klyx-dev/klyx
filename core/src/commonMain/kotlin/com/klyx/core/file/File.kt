@@ -74,8 +74,19 @@ expect fun PlatformContext.shareFile(file: KxFile)
 
 expect fun ByteArray.isValidUtf8(): Boolean
 
-suspend fun KxFile.isValidUtf8() = withContext(Dispatchers.IO) { readBytes().isValidUtf8() }
-suspend fun PlatformFile.isValidUtf8() = readBytes().isValidUtf8()
+suspend fun KxFile.isValidUtf8() = withContext(Dispatchers.IO) {
+    try {
+        readBytes().isValidUtf8()
+    } catch (_: Exception) {
+        false
+    }
+}
+
+suspend fun PlatformFile.isValidUtf8() = try {
+    readBytes().isValidUtf8()
+} catch (_: Exception) {
+    false
+}
 
 fun Long.humanBytes(): String {
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
