@@ -100,16 +100,9 @@ jobs:
           mkdir -p klyx
           find . -path "*/build/outputs/apk/*/*.apk" -exec cp {} klyx/ \; 2>/dev/null || true
 
-      - name: Upload APKs
+      - name: Upload APKs individually
         if: hashFiles('klyx/*.apk') != ''
-        run: |
-          for apk in klyx/*.apk; do
-            name=$(basename "$apk" .apk)
-            echo "Uploading $apk as artifact $name"
-            gh run upload-artifact \
-              --name "$name" \
-              --path "$apk" \
-              --retention-days 15
-          done
-        env:
-          GH_TOKEN: ${{ github.token }}
+        uses: actions/upload-artifact@v4
+        with:
+          path: klyx/*.apk
+          retention-days: 15
