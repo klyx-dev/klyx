@@ -12,13 +12,25 @@ kotlin {
     sourceSets {
         val androidMain by getting
         val desktopMain by getting
+        val commonMain by getting
 
         val commonJvmAndroid by creating {
-            dependsOn(commonMain.get())
+            dependsOn(commonMain)
         }
 
         androidMain.dependsOn(commonJvmAndroid)
         desktopMain.dependsOn(commonJvmAndroid)
+
+        val skikoMain by creating {
+            dependsOn(commonMain)
+
+            dependencies {
+                implementation(libs.jetbrains.skiko)
+            }
+        }
+
+        desktopMain.dependsOn(skikoMain)
+        appleMain.get().dependsOn(skikoMain)
 
         commonMain {
             dependencies {

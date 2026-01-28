@@ -1,0 +1,18 @@
+[package]
+name = "klyx-terminal"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+path = "src/commonMain/rust/terminal.rs"
+
+[profile.dev]
+debug = 2
+panic = "unwind"
+
+[dependencies]
+uniffi.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+libc = "0.2"

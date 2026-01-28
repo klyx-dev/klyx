@@ -31,6 +31,7 @@ annotation class UnsafeGlobalAccess
  *
  * @throws IllegalStateException if accessed before the Application is initialized.
  */
+@Suppress("UndeclaredKoinUsage")
 @UnsafeGlobalAccess
 val GlobalApp: App by lazy(mode = KoinPlatformTools.defaultLazyMode()) {
     (KoinPlatformTools
@@ -55,6 +56,7 @@ class Application internal constructor(val app: App) {
     val foregroundScope: ForegroundScope = app.foregroundScope
 }
 
+@Suppress("UndeclaredKoinUsage")
 private fun application() = KoinPlatformTools
     .defaultContext()
     .getOrNull()

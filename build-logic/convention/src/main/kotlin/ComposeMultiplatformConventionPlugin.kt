@@ -9,10 +9,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 class ComposeMultiplatformConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
-            if (!pluginManager.hasPlugin("klyx.multiplatform")) {
-                apply(plugin = "klyx.multiplatform")
-            }
-
             apply(plugin = "org.jetbrains.compose")
             apply(plugin = "org.jetbrains.kotlin.plugin.compose")
 

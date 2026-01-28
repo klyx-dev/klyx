@@ -1,6 +1,7 @@
 [versions]
+ndkVersion = "29.0.14206865"
 # AGP and tools should be updated together
-androidGradlePlugin = "8.13.2"
+androidGradlePlugin = "8.12.0"
 androidTools = "31.13.2"
 androidx-activity = "1.12.2"
 androidx-core = "1.17.0"
@@ -49,6 +50,8 @@ androidx-nav3 = "1.0.0-alpha06"
 jetbrains-skiko = "0.9.37.3"
 buildkonfig = "0.17.1"
 gobley = "0.3.7"
+kotlinLogging = "7.0.14"
+navigationevent = "1.0.0"
 
 [libraries]
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
@@ -62,6 +65,7 @@ compose-material3 = { module = "org.jetbrains.compose.material3:material3", vers
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
 #noinspection UnusedVersionCatalogEntry
 compose-ui-util = { module = "org.jetbrains.compose.ui:ui-util", version.ref = "compose-multiplatform" }
+navigationevent = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
 androidx-nav3-runtime = { module = "org.jetbrains.androidx.navigation3:navigation3-runtime", version.ref = "androidx-nav3" }
 androidx-nav3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "androidx-nav3" }
@@ -77,6 +81,7 @@ coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" 
 coil-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil" }
 fuzzywuzzy-kotlin = { module = "eu.codlab:fuzzywuzzy-kotlin", version.ref = "fuzzywuzzy-kotlin" }
 kfswatch = { module = "io.github.irgaly.kfswatch:kfswatch", version.ref = "kfswatch" }
+kotlin-logging = { module = "io.github.oshai:kotlin-logging", version.ref = "kotlinLogging" }
 multiplatform-markdown-renderer = { module = "com.mikepenz:multiplatform-markdown-renderer", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-markdown-renderer-m3 = { module = "com.mikepenz:multiplatform-markdown-renderer-m3", version.ref = "multiplatformMarkdownRenderer" }
 multiplatform-settings-no-arg = { module = "com.russhwolf:multiplatform-settings-no-arg", version.ref = "multiplatformSettingsNoArg" }

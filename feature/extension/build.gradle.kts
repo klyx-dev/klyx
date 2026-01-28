@@ -16,7 +16,7 @@ plugins {
 android {
     namespace = "com.klyx.extension"
     compileSdk = 36
-    ndkVersion = "29.0.14206865"
+    ndkVersion = libs.versions.ndkVersion.get()
 
     defaultConfig {
         minSdk = 26

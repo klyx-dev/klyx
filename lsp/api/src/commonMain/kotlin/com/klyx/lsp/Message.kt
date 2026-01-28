@@ -45,12 +45,21 @@ data class RequestMessage(
 
 /**
  * The request id.
+ *
+ * @see IntRequestId
+ * @see StringRequestId
  */
 typealias RequestId = NumberOrString
 
+/**
+ * Creates a new request id from an integer.
+ */
 @Suppress("FunctionName")
 fun IntRequestId(id: Int): RequestId = id.asLeft()
 
+/**
+ * Creates a new request id from a string.
+ */
 @Suppress("FunctionName")
 fun StringRequestId(id: String): RequestId = id.asRight()
 

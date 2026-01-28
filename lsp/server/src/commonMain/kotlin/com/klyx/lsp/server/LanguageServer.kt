@@ -1,11 +1,13 @@
 package com.klyx.lsp.server
 
+import com.klyx.lsp.ErrorCodes.InvalidRequest
 import com.klyx.lsp.InitializeParams
 import com.klyx.lsp.InitializeResult
-import com.klyx.lsp.SetTraceParams
-import com.klyx.lsp.ErrorCodes.InvalidRequest
 import com.klyx.lsp.InitializedParams
+import com.klyx.lsp.SetTraceParams
 import com.klyx.lsp.WorkDoneProgressCancelParams
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
 
 /**
  * Interface for implementations of
@@ -103,3 +105,9 @@ interface LanguageServer {
      */
     suspend fun cancelProgress(params: WorkDoneProgressCancelParams)
 }
+
+fun LanguageServer(
+    client: LanguageClient,
+    `in`: RawSource,
+    out: RawSink
+): LanguageServer = createLanguageServer(client, `in`, out)

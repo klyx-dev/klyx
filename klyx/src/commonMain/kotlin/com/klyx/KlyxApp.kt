@@ -11,6 +11,7 @@ import org.koin.compose.koinInject
 
 val LocalLogBuffer = staticCompositionLocalOf { LogBuffer(maxSize = 2000) }
 
+@Suppress("UndeclaredKoinUsage")
 @Composable
 fun KlyxApp(content: @Composable () -> Unit) {
     CompositionLocalProvider(LocalApp provides koinInject()) {

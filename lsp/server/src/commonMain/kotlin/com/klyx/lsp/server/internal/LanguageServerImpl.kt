@@ -17,7 +17,7 @@ import kotlinx.io.RawSource
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 
-internal fun createLanguageServerImpl(
+internal fun LanguageServerImpl(
     scope: CoroutineScope,
     client: LanguageClient,
     stdin: RawSource,

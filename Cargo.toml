@@ -1,12 +1,14 @@
 [workspace]
 members = [
-    "feature/extension",
     "crates/extension_api",
+    "feature/extension",
+    "feature/terminal/emulator",
 ]
 resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1.0.100"
+thiserror = "2.0.17"
 uniffi = "0.29.4"
 semver = "1.0.27"
 futures = "0.3"

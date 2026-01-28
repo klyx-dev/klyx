@@ -62,6 +62,7 @@ class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope
     override fun onCreate() {
         super.onCreate()
         instance = this
+        System.setProperty("kotlin-logging-to-android-native", "true")
         setupCrashHandler(::handleUncaughtException)
 
         initKoin(commonModule) {
@@ -122,7 +123,8 @@ class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope
                         penaltyListener(Executors.newSingleThreadExecutor()) { violation ->
                             if (!violation.stackTrace.any {
                                     it.className.contains("com.blankj.utilcode.util") ||
-                                            it.className.contains("com.oplus.uifirst")
+                                            it.className.contains("com.oplus.uifirst") ||
+                                            it.className.contains("com.sun.jna")
                                 }
                             ) {
                                 if (violation is DiskReadViolation &&

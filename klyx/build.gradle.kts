@@ -62,6 +62,7 @@ kotlin {
             api(projects.feature.mcp)
             api(projects.feature.extension)
             api(projects.feature.languageExtension)
+            api(projects.feature.terminal.ui)
             api(projects.editor.editor)
             api(projects.editor.language)
             api(projects.editor.languages)

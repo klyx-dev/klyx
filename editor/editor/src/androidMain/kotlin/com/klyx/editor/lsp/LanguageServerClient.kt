@@ -9,7 +9,6 @@ import com.klyx.core.Notifier
 import com.klyx.core.logging.KxLogger
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerBinary
-import com.klyx.core.process.InternalProcessApi
 import com.klyx.core.process.Signal
 import com.klyx.core.process.asJavaProcessBuilder
 import com.klyx.core.process.systemProcess
@@ -55,7 +54,6 @@ import com.klyx.lsp.WorkDoneProgressReport
 import com.klyx.lsp.capabilities.ServerCapabilities
 import com.klyx.lsp.server.LanguageClient
 import com.klyx.lsp.server.LanguageServer
-import com.klyx.lsp.server.createLanguageServer
 import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
@@ -76,8 +74,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import kotlinx.io.asSink
-import kotlinx.io.asSource
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
@@ -106,7 +102,6 @@ class LanguageServerClient(
         notifier.toast(params.message)
     }
 
-    @OptIn(InternalProcessApi::class)
     suspend fun initialize(
         binary: LanguageServerBinary,
         worktree: Worktree,
@@ -133,10 +128,10 @@ class LanguageServerClient(
                     }
                 }
 
-                languageServer = createLanguageServer(
+                languageServer = LanguageServer(
                     this@LanguageServerClient,
-                    process.inputStream.asSource(),
-                    process.outputStream.asSink()
+                    process.inputStream,
+                    process.outputStream
                 )
 
                 val result = languageServer.initialize(

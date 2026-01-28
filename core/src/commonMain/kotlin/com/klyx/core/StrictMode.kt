@@ -1,6 +1,5 @@
 package com.klyx.core
 
-import android.os.StrictMode
 import androidx.annotation.MainThread
 
 /**
@@ -13,18 +12,7 @@ import androidx.annotation.MainThread
  * @return The result of the block.
  */
 @MainThread
-inline fun <T> allowDiskReads(block: () -> T): T {
-    if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
-        val old = StrictMode.allowThreadDiskReads()
-        return try {
-            block()
-        } finally {
-            StrictMode.setThreadPolicy(old)
-        }
-    } else {
-        return block()
-    }
-}
+expect inline fun <T> allowDiskReads(block: () -> T): T
 
 /**
  * Temporarily relaxes StrictMode to allow disk writes on the current thread.
@@ -36,18 +24,7 @@ inline fun <T> allowDiskReads(block: () -> T): T {
  * @return The result of the block.
  */
 @MainThread
-inline fun <T> allowDiskWrites(block: () -> T): T {
-    if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
-        val old = StrictMode.allowThreadDiskWrites()
-        return try {
-            block()
-        } finally {
-            StrictMode.setThreadPolicy(old)
-        }
-    } else {
-        return block()
-    }
-}
+expect inline fun <T> allowDiskWrites(block: () -> T): T
 
 /**
  * Temporarily relaxes StrictMode to allow both disk reads and writes on the current thread.
@@ -59,16 +36,4 @@ inline fun <T> allowDiskWrites(block: () -> T): T {
  * @return The result of the block.
  */
 @MainThread
-inline fun <T> allowDiskReadsWrites(block: () -> T): T {
-    if (KlyxBuildConfig.ENABLE_STRICT_MODE) {
-        val old = StrictMode.allowThreadDiskWrites()
-        StrictMode.allowThreadDiskReads()
-        return try {
-            block()
-        } finally {
-            StrictMode.setThreadPolicy(old)
-        }
-    } else {
-        return block()
-    }
-}
+expect inline fun <T> allowDiskReadsWrites(block: () -> T): T

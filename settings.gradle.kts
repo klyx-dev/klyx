@@ -59,7 +59,11 @@ include(
     ":feature:mcp",
     ":feature:extension",
     ":feature:language-extension",
-    ":feature:settings"
+    ":feature:settings",
+)
+include(
+    ":feature:terminal:emulator",
+    ":feature:terminal:ui",
 )
 include(":lsp:api", ":lsp:server")
 

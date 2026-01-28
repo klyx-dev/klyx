@@ -17,7 +17,7 @@ import com.klyx.lsp.types.LSPObject
 import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.asLeft
 import com.klyx.lsp.types.asRight
-import com.klyx.lsp.types.leftOr
+import com.klyx.lsp.types.fold
 import kotlinx.atomicfu.atomic
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -517,4 +517,4 @@ private fun createResponse(id: RequestId?, result: LSPAny? = null, error: Respon
     return response
 }
 
-private fun OneOf<LSPArray, LSPObject>.jsonElement() = leftOr { right }
+private fun OneOf<LSPArray, LSPObject>.jsonElement() = fold({ it }, { it })

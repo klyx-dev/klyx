@@ -54,3 +54,7 @@ object GitHub {
     const val BUG_REPORT_URL = "$KLYX_REPO_URL/issues/new?template=bug_report.yml"
     const val FEATURE_REQUEST_URL = "$KLYX_REPO_URL/issues/new?template=feature_request.yml"
 }
+
+fun test() {
+    val _ = StringBuilder().setLength(0)
+}
