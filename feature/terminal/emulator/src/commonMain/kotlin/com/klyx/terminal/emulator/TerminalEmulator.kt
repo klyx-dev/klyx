@@ -2723,7 +2723,7 @@ class TerminalEmulator(
     fun getSelectedText(x1: Int, y1: Int, x2: Int, y2: Int) = screen.getSelectedText(x1, y1, x2, y2)
 
     /** If DECSET 2004 is set, prefix paste with "\033[200~" and suffix with "\033[201~". */
-    suspend fun paste(text: String) {
+    suspend fun paste(text: CharSequence) {
         var text = text
         // First: Always remove escape key and C1 control characters [0x80,0x9F]:
         text = text.replace("(\u001B|[\u0080-\u009F])".toRegex(), "")

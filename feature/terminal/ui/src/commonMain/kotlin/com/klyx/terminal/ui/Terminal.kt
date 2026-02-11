@@ -62,6 +62,11 @@ import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
+import com.klyx.terminal.ui.selection.SelectionController
+import com.klyx.terminal.ui.selection.SelectionOverlay
+import com.klyx.terminal.ui.selection.SelectionState
+import com.klyx.terminal.ui.selection.rememberSelectionController
+import com.klyx.terminal.ui.selection.rememberSelectionState
 import com.klyx.util.clipboard.paste
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -137,13 +142,18 @@ fun Terminal(
 ) {
     val session = remember(state) { state.session }
     val enableKeyLogging = remember(state) { state.enableKeyLogging }
+    val selectionState = rememberSelectionState(state)
+
     val coroutineScope = rememberCoroutineScope()
+    val clipboard = LocalClipboard.current
+
+    val selectionController = rememberSelectionController(state)
 
     val textMeasurer = rememberTextMeasurer()
     val metrics by remember(fontFamily, fontSize) {
         derivedStateOf {
             val layout = textMeasurer.measure(
-                text = "Mg",
+                text = "X",
                 style = TextStyle(
                     fontFamily = fontFamily,
                     fontSize = fontSize
@@ -151,16 +161,17 @@ fun Terminal(
             )
 
             FontMetrics(
-                width = layout.size.width / 2,
+                width = layout.size.width,
                 height = layout.size.height,
-                ascent = layout.firstBaseline,
+                ascent = -layout.firstBaseline,
                 descent = layout.size.height - layout.firstBaseline
-            )
+            ).also {
+                state.metrics = it
+            }
         }
     }
 
     val haptics = LocalHapticFeedback.current
-    val clipboard = LocalClipboard.current
 
     var emulator by remember { mutableStateOf(session.emulator) }
 
@@ -178,7 +189,7 @@ fun Terminal(
     val navState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(state = navState) {
         if (isSelectingText) {
-            state.stopTextSelection()
+            selectionController.hide()
         } else {
             if (client.shouldBackButtonBeMappedToEscape) {
                 //
@@ -213,7 +224,7 @@ fun Terminal(
                     val rowShift = emu.scrollCounter
                     if (-topRow + rowShift > rowsInHistory) {
                         if (isSelectingText) {
-                            state.stopTextSelection()
+                            selectionController.hide()
                         }
 
                         if (emu.autoScrollDisabled) {
@@ -225,6 +236,7 @@ fun Terminal(
                         if (isSelectingText) {
                             selectionY1 -= rowShift
                             selectionY2 -= rowShift
+                            selectionController.decrementYTextSelectionCursors(rowShift)
                         }
                     }
                 } else if (!skipScrolling && topRow != 0) {
@@ -279,8 +291,9 @@ fun Terminal(
 
     BoxWithConstraints(
         modifier = modifier
-            .onSizeChanged { (width, height) ->
-                updateSize(width, height)
+            .onSizeChanged { newSize ->
+                updateSize(newSize.width, newSize.height)
+                state.size = newSize
             }
             .pointerInput(state) {
                 coroutineScope {
@@ -326,12 +339,10 @@ fun Terminal(
                                 }
                             }
 
-                            when(event.type) {
+                            when (event.type) {
                                 PointerEventType.Release -> {
                                     scrollRemainder = 0f
                                     if (event.changes.none { it.type == PointerType.Mouse } && emulator?.isMouseTrackingActive == true && !isSelectingText && !scrolledWithFinger) {
-                                        // Quick event processing when mouse tracking is active - do not wait for check of double tapping
-                                        // for zooming.
                                         this@coroutineScope.launch {
                                             event.changes.forEach { change ->
                                                 state.sendMouseEventCode(
@@ -358,36 +369,27 @@ fun Terminal(
                     }
                 }
             }
-            .pointerInput(state) {
+            .pointerInput(state, selectionController) {
                 detectTapGestures(
                     onTap = { offset ->
-                        if (isSelectingText) {
-                            state.stopTextSelection()
+                        if (selectionController.isActive) {
+                            selectionController.hide()
                         } else {
                             focusRequester.requestFocus(FocusDirection.Enter)
                             client.onSingleTapUp(offset)
                         }
                     },
                     onLongPress = { offset ->
-                        if (!isSelectingText) {
+                        if (!selectionController.isActive) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-
-                            val col = (offset.x / metrics.width).toInt()
-                            val row = ((offset.y - metrics.ascent) / metrics.height + topRow).toInt()
-
-                            isSelectingText = true
-                            selectionX1 = col
-                            selectionY1 = row
-                            selectionX2 = col
-                            selectionY2 = row
-
+                            selectionController.show(offset, metrics)
                             client.onLongPress(offset)
                             client.copyModeChanged(true)
                         }
                     }
                 )
             }
-            .pointerInput(Unit) {
+            .pointerInput(client) {
                 detectTransformGestures { _, _, zoom, _ ->
                     if (emulator == null || isSelectingText) return@detectTransformGestures
 
@@ -395,7 +397,7 @@ fun Terminal(
                     scaleFactor = client.onScale(scaleFactor)
                 }
             }
-            .scroll(state, metrics)
+            .scroll(state, metrics, selectionController)
             .focusRequester(focusRequester)
             .terminalInput(state)
             .focusable(interactionSource = remember { MutableInteractionSource() })
@@ -422,7 +424,6 @@ fun Terminal(
         val width = constraints.maxWidth
         val height = constraints.maxHeight
 
-        // update terminal size when constraints change
         LaunchedEffect(width, height, metrics) {
             updateSize(width, height)
         }
@@ -446,10 +447,11 @@ fun Terminal(
                         val width = if (hasFixedWidth) maxWidth else 0
                         val height = if (hasFixedHeight) maxHeight else 0
                         layout(width, height) {}
-                        //layout(maxWidth, maxHeight) {}
                     }
                 }
             )
+
+            SelectionOverlay(selectionState)
         }
     }
 
@@ -460,8 +462,9 @@ fun Terminal(
 
 private fun Modifier.scroll(
     state: TerminalState,
-    fontMetrics: FontMetrics
-) = this then pointerInput(state) {
+    fontMetrics: FontMetrics,
+    selectionController: SelectionController
+) = this then pointerInput(state, selectionController) {
     var scrollRemainder by state.scrollRemainder
 
     coroutineScope {
@@ -472,15 +475,17 @@ private fun Modifier.scroll(
             onDrag = { change, dragAmount ->
                 change.consume()
 
-                val emulator = state.emulator ?: return@detectDragGestures
-
                 if (state.isSelectingText.value) {
-                    // update selection
-                    val col = (change.position.x / fontMetrics.width).toInt()
-                    val row =
-                        ((change.position.y - fontMetrics.ascent) / fontMetrics.height + state.topRow.value).toInt()
-                    state.selectionX2.value = col.coerceIn(0, emulator.columns - 1)
-                    state.selectionY2.value = row
+                    val newX = (change.position.x / fontMetrics.width).toInt()
+                    val newY = ((change.position.y - fontMetrics.ascent) / fontMetrics.height).toInt()
+
+                    selectionController.onEndHandleDrag(
+                        dragAmount = androidx.compose.ui.geometry.Offset(
+                            x = (newX - state.selectionX2.intValue) * fontMetrics.width.toFloat(),
+                            y = (newY - state.selectionY2.intValue + state.topRow.intValue) * fontMetrics.height.toFloat()
+                        ),
+                        metrics = fontMetrics
+                    )
                 } else {
                     state.scrolledWithFinger.value = true
                     val distanceY = -dragAmount.y + scrollRemainder
@@ -493,27 +498,26 @@ private fun Modifier.scroll(
             },
             onDragEnd = {
                 scrollRemainder = 0f
+                if (state.isSelectingText.value) {
+                    selectionController.onEndHandleDragEnd()
+                }
             }
         )
     }
 } then pointerInput(Unit) {
     coroutineScope {
         awaitPointerEventScope {
-            val emulator = state.emulator ?: return@awaitPointerEventScope
+            val emulator = state.emulator
 
             while (true) {
                 val event = awaitPointerEvent()
                 this@coroutineScope.launch {
                     if (event.type == PointerEventType.Scroll) {
-                        if (emulator.isMouseTrackingActive) {
-                            // If moving with mouse pointer while pressing button, report that instead of scroll.
-                            // This means that we never report moving with button press-events for touch input,
-                            // since we cannot just start sending these events without a starting press event,
-                            // which we do not do for touch input, only mouse in onTouchEvent().
+                        if (emulator?.isMouseTrackingActive == true) {
                             println("pointer: ${event.changes.joinToString()}")
                             for (change in event.changes) {
                                 state.sendMouseEventCode(
-                                    change.scrollDelta, //change.position
+                                    change.scrollDelta,
                                     change.uptimeMillis,
                                     fontMetrics,
                                     TerminalEmulator.MOUSE_LEFT_BUTTON_MOVED,
@@ -522,7 +526,6 @@ private fun Modifier.scroll(
                             }
                         }
 
-                        // Handle mouse wheel scrolling.
                         val up = event.changes.none { it.scrollDelta.y > 0 }
                         val change = event.changes.first()
                         state.doScroll(if (up) -3 else 3, change.scrollDelta, change.uptimeMillis, fontMetrics)

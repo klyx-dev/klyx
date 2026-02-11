@@ -1,11 +1,16 @@
 package com.klyx.core.app
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisallowComposableCalls
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.platform.BackgroundScope
 import com.klyx.core.platform.ForegroundScope
 import com.klyx.core.platform.currentPlatform
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.dsl.koinApplication
 import org.koin.mp.KoinPlatformTools
 import kotlin.jvm.JvmStatic
@@ -75,9 +80,23 @@ fun Application(): Application {
  * @param block The suspending block of code to execute when the debug mode is active.
  */
 @OptIn(UnsafeGlobalAccess::class)
-inline fun debug(crossinline block: suspend () -> Unit) {
+inline fun debug(crossinline block: suspend App.() -> Unit) {
     if (KlyxBuildConfig.IS_DEBUG) {
-        GlobalApp.backgroundScope.launch { block() }
+        val app = GlobalApp
+        app.backgroundScope.launch { block(app) }
+    }
+}
+
+@Composable
+inline fun Debug(crossinline block: @DisallowComposableCalls suspend App.() -> Unit) {
+    if (KlyxBuildConfig.IS_DEBUG) {
+        val app = LocalApp.current
+
+        LaunchedEffect(Unit) {
+            withContext(Dispatchers.Default) {
+                block(app)
+            }
+        }
     }
 }
 

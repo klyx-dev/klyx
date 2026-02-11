@@ -2,13 +2,17 @@ package com.klyx.terminal.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.unit.IntSize
+import com.klyx.terminal.Cell
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
@@ -20,6 +24,7 @@ import kotlin.jvm.JvmInline
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 @Stable
 class TerminalState(
@@ -28,6 +33,7 @@ class TerminalState(
     internal var enableKeyLogging: Boolean
 ) {
     internal val screenEvents = session.screenEvents
+    internal var size by mutableStateOf(IntSize.Zero)
 
     internal val topRow = mutableIntStateOf(0)
     internal val selectionY1 = mutableIntStateOf(-1)
@@ -47,6 +53,8 @@ class TerminalState(
 
     internal val redraws: SharedFlow<Unit>
         field = MutableSharedFlow(extraBufferCapacity = 1)
+
+    internal lateinit var metrics: FontMetrics
 
     internal fun invalidate() {
         redraws.tryEmit(Unit)
@@ -184,6 +192,23 @@ class TerminalState(
             // If left alt, send escape before the code point to make e.g. Alt+B and Alt+F work in readline:
             session.writeCodePoint(altDown, codePoint)
         }
+    }
+
+    fun getPointX(cx: Int): Int {
+        var cx = cx
+        if (cx > emulator!!.columns) {
+            cx = emulator!!.columns
+        }
+        return cx * metrics.width
+    }
+
+    fun getPointY(cy: Int) = (cy - topRow.intValue) * metrics.height
+
+    fun cellAt(offset: Offset, relativeToScroll: Boolean = false): Cell {
+        val column = (offset.x / metrics.width).roundToInt()
+        var row = (offset.y - metrics.descent).roundToInt() / metrics.height
+        if (relativeToScroll) row += topRow.intValue
+        return Cell(column, row)
     }
 
     companion object {
