@@ -1,6 +1,5 @@
 package com.klyx.core.app
 
-import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.logging.log
@@ -50,8 +49,6 @@ private val initBreadcrumbs_ = Breadcrumbs
  * @param message The message to be recorded in the breadcrumb trail. Blank messages are ignored.
  */
 fun trace(message: String) {
-    if (KlyxBuildConfig.IS_DEBUG) {
-        Breadcrumbs.add(message)
-        log.debug { message.lowercase() }
-    }
+    Breadcrumbs.add(message)
+    log.debug { message.lowercase() }
 }
