@@ -1,6 +1,7 @@
 package com.klyx.core
 
 import com.klyx.core.app.Application
+import com.klyx.core.app.Initialization
 import com.klyx.core.app.trace
 import com.klyx.core.noderuntime.NodeBinaryOptions
 import com.klyx.core.noderuntime.NodeRuntime
@@ -22,6 +23,16 @@ import kotlinx.coroutines.withContext
 private val initMutex = Mutex()
 private var isInitialized = false
 
+private val STEPS = arrayOf(
+    "Loading settings",
+    "Starting extension system",
+    "Building extension index",
+    "Preparing Node runtime",
+    "Registering languages",
+    "Wiring language extensions",
+    "Starting extension host",
+)
+
 /**
  * Initializes the application runtime environment including language server configuration,
  * extension host setup, and environment variables. This method ensures the initialization
@@ -34,21 +45,36 @@ suspend fun initializeKlyx(application: Application) {
 
     initMutex.withLock {
         if (isInitialized) return
+        Initialization.defineSteps(*STEPS)
+
         val cx = application.app
-        SettingsManager.init(cx)
+        step(0) { SettingsManager.init(cx) }
 
         withContext(Dispatchers.Default) {
-            extension.init(cx)
+            step(1) { extension.init(cx) }
+
             val extensionHostProxy = ExtensionHostProxy.global(cx)
-            // todo: expose node settings
             val options = MutableStateFlow(NodeBinaryOptions())
-            val nodeRuntime = NodeRuntime(httpClient, CompletableDeferred(Unit), options.asStateFlow())
-            val languageRegistry = LanguageRegistry.INSTANCE
-            initLanguages(languageRegistry, nodeRuntime, application.app)
-            initLanguageExtensions(extensionHostProxy, languageRegistry)
-            initExtensionHost(extensionHostProxy, nodeRuntime, cx)
+
+            step(2) {
+                NodeRuntime(httpClient, CompletableDeferred(Unit), options.asStateFlow())
+            }?.let { nodeRuntime ->
+                val languageRegistry = LanguageRegistry.INSTANCE
+                step(3) { initLanguages(languageRegistry, nodeRuntime, application.app) }
+                step(4) { initLanguageExtensions(extensionHostProxy, languageRegistry) }
+                step(5) { initExtensionHost(extensionHostProxy, nodeRuntime, cx) }
+            }
         }
 
         isInitialized = true
+        Initialization.complete()
     }
+}
+
+private inline fun <R> step(index: Int, block: () -> R): R? {
+    Initialization.beginStep(index)
+    return runCatching(block).fold(
+        onSuccess = { Initialization.completeStep(index); it },
+        onFailure = { Initialization.failStep(index, it); null },
+    )
 }

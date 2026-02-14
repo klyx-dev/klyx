@@ -16,7 +16,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
-import com.klyx.MainScreen
+import com.klyx.InitScreen
 import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.Notifier
 import com.klyx.core.event.CrashEvent
@@ -81,7 +81,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
             )
         )
 
-        MainScreen()
+        InitScreen()
     }
 
     override fun onResume() {

@@ -37,7 +37,7 @@ suspend fun main() {
             }
         ) {
             setComposeWindowProvider { window }
-            KlyxApp { MainScreen() }
+            KlyxApp { InitScreen() }
         }
     }
 }

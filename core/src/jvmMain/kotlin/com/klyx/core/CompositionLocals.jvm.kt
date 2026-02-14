@@ -2,6 +2,7 @@ package com.klyx.core
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 
@@ -15,4 +16,9 @@ actual fun PlatformLocalProvider(content: @Composable () -> Unit) {
 @Composable
 actual fun dynamicDarkColorScheme(): ColorScheme {
     return darkColorScheme()
+}
+
+@Composable
+actual fun dynamicLightColorScheme(): ColorScheme {
+    return lightColorScheme()
 }

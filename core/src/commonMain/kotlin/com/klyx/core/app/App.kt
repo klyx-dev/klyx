@@ -212,7 +212,6 @@ interface HasApp : KoinComponent {
     val app: App
 }
 
-
 /**
  * CompositionLocal that provides the current [App] instance.
  */

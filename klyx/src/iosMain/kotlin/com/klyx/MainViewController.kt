@@ -14,5 +14,5 @@ fun MainViewController() = ComposeUIViewController(
         runBlocking { initializeKlyx(app) }
     }
 ) {
-    KlyxApp { MainScreen() }
+    KlyxApp { InitScreen() }
 }

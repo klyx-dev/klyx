@@ -74,14 +74,12 @@ class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope
             setupStrictModePolicies()
         }
 
+        if (!KlyxBuildConfig.IS_DEBUG) {
+            LoggerConfig.Default = LoggerConfig(replayBufferSize = 500)
+        }
+
         app = Application()
         launch { initializeKlyx(app) }
-
-        if (!KlyxBuildConfig.IS_DEBUG) {
-            LoggerConfig.Default = LoggerConfig(
-                minimumLevel = Level.Info
-            )
-        }
 
         FileProviderRegistry.getInstance().addFileProvider(
             AssetsFileResolver(assets)

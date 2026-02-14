@@ -109,6 +109,9 @@ fun SharedLocalProvider(content: @Composable () -> Unit) {
 @Composable
 expect fun dynamicDarkColorScheme(): ColorScheme
 
+@Composable
+expect fun dynamicLightColorScheme(): ColorScheme
+
 val LocalBuildVariant = staticCompositionLocalOf<BuildVariant> {
     noLocalProvidedFor<BuildVariant>()
 }
