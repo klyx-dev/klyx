@@ -192,7 +192,6 @@ private fun ColumnScope.TerminalScreenInternal(
     }
 }
 
-@Suppress("MagicNumber")
 context(context: Context)
 private suspend fun TerminalView(
     user: String,

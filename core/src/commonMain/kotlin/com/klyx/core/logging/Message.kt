@@ -3,6 +3,7 @@ package com.klyx.core.logging
 import com.klyx.core.currentThreadName
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
 
@@ -12,7 +13,7 @@ data class Message @OptIn(ExperimentalTime::class) constructor(
     val message: String,
     val type: MessageType = MessageType.Standard,
     val throwable: Throwable? = null,
-    val timestamp: kotlin.time.Instant = kotlin.time.Clock.System.now(),
+    val timestamp: Instant = Clock.System.now(),
     val threadName: String = currentThreadName,
     val metadata: Map<String, Any> = emptyMap()
 )
