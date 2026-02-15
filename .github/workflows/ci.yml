@@ -100,9 +100,26 @@ jobs:
           mkdir -p klyx
           find . -path "*/build/outputs/apk/*/*.apk" -exec cp {} klyx/ \; 2>/dev/null || true
 
-      - name: Upload APKs individually
-        if: hashFiles('klyx/*.apk') != ''
+      - name: Upload arm64-v8a APK
+        if: hashFiles('klyx/*arm64-v8a*.apk') != ''
         uses: actions/upload-artifact@v4
         with:
-          path: klyx/*.apk
+          name: apk-arm64-v8a
+          path: klyx/*arm64-v8a*.apk
+          retention-days: 15
+
+      - name: Upload x86_64 APK
+        if: hashFiles('klyx/*x86_64*.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-x86_64
+          path: klyx/*x86_64*.apk
+          retention-days: 15
+
+      - name: Upload universal APK
+        if: hashFiles('klyx/*universal*.apk') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-universal
+          path: klyx/*universal*.apk
           retention-days: 15
