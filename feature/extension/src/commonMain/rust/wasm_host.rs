@@ -51,8 +51,7 @@ use wasmtime_wasi::{
 };
 
 static RUNTIME: Lazy<Runtime> = Lazy::new(|| {
-    Builder::new_multi_thread()
-        .worker_threads(4)
+    Builder::new_current_thread()
         .enable_all()
         .build()
         .expect("failed to build tokio runtime")
@@ -488,7 +487,7 @@ impl WasmHost {
 
         // we need to run run the task in a tokio context as wasmtime_wasi may
         // call into tokio, accessing its runtime handle when we trigger the `engine.increment_epoch()` above.
-        let task = Arc::new(tokio::spawn(extension_task));
+        let task = Arc::new(RUNTIME.spawn(extension_task));
 
         Ok(WasmExtensionWrapper {
             extension: Arc::new(WasmExtension {
