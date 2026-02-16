@@ -503,7 +503,9 @@ impl WasmHost {
 
     async fn build_wasi_ctx(&self, extension_id: &str) -> Result<wasi::WasiCtx> {
         let extension_work_dir = self.work_dir.join(extension_id);
-        fs::create_dir(&extension_work_dir).context("failed to create extension work dir")?;
+        if !fs::exists(&extension_work_dir)? {
+            fs::create_dir(&extension_work_dir).context("failed to create extension work dir")?;
+        }
 
         let file_perms = FilePerms::all();
         let dir_perms = DirPerms::all();
