@@ -3,6 +3,8 @@ package com.klyx.core.process
 import arrow.core.raise.result
 import kotlinx.io.files.Path
 
+expect suspend fun systemEnv(): Map<String, String>
+
 expect suspend fun getenv(name: String): String?
 expect suspend fun getenv(): Map<String, String>
 

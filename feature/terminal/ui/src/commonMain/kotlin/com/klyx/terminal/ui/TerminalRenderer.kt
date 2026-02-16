@@ -42,7 +42,7 @@ private class TerminalRendererNode(
     private val baseTextStyle: TextStyle
 ) : Modifier.Node(), DrawModifierNode, ObserverModifierNode, CompositionLocalConsumerModifierNode {
 
-    val glyphHeight get() = fontAscent + fontDescent
+    val fontLineSpacingAndAscent get() = fontLineSpacing + fontAscent
 
     private val asciiMeasures = FloatArray(127)
 
@@ -106,7 +106,7 @@ private class TerminalRendererNode(
             )
         }
 
-        var baselineY = fontAscent
+        var baselineY = 0f
         for (row in topRow until endRow) {
             baselineY += fontLineSpacing
 
@@ -114,7 +114,7 @@ private class TerminalRendererNode(
             var selx1 = -1
             var selx2 = -1
 
-            if (row in selectionY1..selectionY2) {
+            if (row >= selectionY1 && row <= selectionY2) {
                 if (row == selectionY1) selx1 = selectionX1
                 selx2 = if (row == selectionY2) selectionX2 else emulator.columns
             }
@@ -144,7 +144,7 @@ private class TerminalRendererNode(
                 }
                 val codePointWcWidth = WcWidth.width(codePoint)
                 val insideCursor = (cursorX == column || (codePointWcWidth == 2 && cursorX == column + 1))
-                val insideSelection = column in selx1..selx2
+                val insideSelection = column >= selx1 && column <= selx2
                 val style = lineObject.getStyle(column)
 
                 // Measure text width for this code point
@@ -330,19 +330,23 @@ private class TerminalRendererNode(
         if (backColor != palette[TerminalTextStyle.COLOR_INDEX_BACKGROUND]) {
             drawRect(
                 color = Color(backColor),
-                topLeft = Offset(left, y - fontAscent),
-                size = Size(right - left, fontLineSpacing.toFloat())
+                topLeft = Offset(left, y - fontLineSpacingAndAscent + fontAscent),
+                size = Size(right - left, fontLineSpacingAndAscent - fontAscent)
             )
         }
 
         // draw cursor
         if (cursor != 0) {
-            val cursorTop = y - fontAscent
-            var cursorHeight = glyphHeight
+            val fullCursorHeight = fontLineSpacingAndAscent - fontAscent
+            var cursorHeight = fullCursorHeight
             var cursorRight = right
+            var cursorTop = y - fullCursorHeight
 
             when (cursorStyle) {
-                CursorStyle.Underline -> cursorHeight /= 4f
+                CursorStyle.Underline -> {
+                    cursorHeight /= 4f
+                    cursorTop = y - cursorHeight
+                }
                 CursorStyle.Bar -> {
                     cursorRight -= ((right - left) * 3) / 4f
                 }
@@ -386,7 +390,7 @@ private class TerminalRendererNode(
 
             drawText(
                 textLayoutResult = textLayoutResult,
-                topLeft = Offset(left, y - fontAscent)
+                topLeft = Offset(left, y - fontLineSpacingAndAscent + fontAscent)
             )
         } else {
             println("[Terminal] INVISIBLE TEXT")

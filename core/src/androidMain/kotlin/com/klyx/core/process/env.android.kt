@@ -38,3 +38,5 @@ actual val systemUserName: String
         |Please ensure the terminal is installed and user name set.
         """.trimMargin()
     )
+
+actual suspend fun systemEnv() = System.getenv().orEmpty()

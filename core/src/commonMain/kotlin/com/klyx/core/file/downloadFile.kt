@@ -69,7 +69,7 @@ suspend fun Collection<DownloadableFile>.downloadAll(
     onFileProgress: suspend (file: KxFile, sent: Long, total: Long?) -> Unit = { _, _, _ -> },
     onTotalProgress: suspend (bytesDownloaded: Long, totalBytes: Long?) -> Unit = { _, _ -> },
     onComplete: suspend (KxFile) -> Unit = {},
-    onError: (file: KxFile, exception: Throwable) -> Unit = { _, _ -> },
+    onError: suspend (file: KxFile, exception: Throwable) -> Unit = { _, _ -> },
     onAllComplete: suspend () -> Unit = {}
 ) = supervisorScope {
     val semaphore = Semaphore(concurrency)

@@ -17,14 +17,22 @@ import io.github.oshai.kotlinlogging.Marker
  * Returns the default implementation of [TerminalSessionClient].
  */
 @Composable
-fun rememberTerminalSessionClient(cursorStyle: CursorStyle = CursorStyle.default()): TerminalSessionClient {
+fun rememberTerminalSessionClient(
+    cursorStyle: CursorStyle = CursorStyle.default(),
+    onSessionFinished: (TerminalSession) -> Unit = {},
+    onTitleChanged: (TerminalSession) -> Unit = {},
+): TerminalSessionClient {
     val clipboard = LocalClipboard.current
-    return remember(clipboard, cursorStyle) { TerminalSessionClientImpl(clipboard, cursorStyle) }
+    return remember(clipboard, cursorStyle) {
+        TerminalSessionClientImpl(clipboard, cursorStyle, onSessionFinished, onTitleChanged)
+    }
 }
 
 private class TerminalSessionClientImpl(
     private val clipboard: Clipboard,
-    cursorStyle: CursorStyle
+    cursorStyle: CursorStyle,
+    val onSessionFinish: (TerminalSession) -> Unit,
+    val onTitleChange: (TerminalSession) -> Unit,
 ) : TerminalSessionClient {
 
     private val logger = KotlinLogging.logger("TerminalClient")
@@ -32,8 +40,14 @@ private class TerminalSessionClientImpl(
     override val terminalCursorStyle = cursorStyle
 
     override fun onTextChanged(changedSession: TerminalSession) {}
-    override fun onTitleChanged(changedSession: TerminalSession) {}
-    override fun onSessionFinished(finishedSession: TerminalSession) {}
+
+    override fun onTitleChanged(changedSession: TerminalSession) {
+        onTitleChange(changedSession)
+    }
+
+    override fun onSessionFinished(finishedSession: TerminalSession) {
+        onSessionFinish(finishedSession)
+    }
 
     override suspend fun onCopyTextToClipboard(session: TerminalSession, text: String?) {
         clipboard.setClipEntry(clipEntryOf(text ?: return))

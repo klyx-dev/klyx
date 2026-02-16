@@ -46,8 +46,8 @@ open class TerminalSession(
     private val cwd: String,
     private val args: List<String>,
     private val env: List<String>,
-    private val transcriptRows: Int,
-    client: TerminalSessionClient
+    client: TerminalSessionClient,
+    private val transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS
 ) : TerminalOutput {
 
     var client: TerminalSessionClient = client

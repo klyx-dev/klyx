@@ -1,5 +1,6 @@
 package com.klyx.core.io
 
+import com.klyx.core.unsupported
 import com.klyx.core.util.join
 import kotlinx.cinterop.BooleanVar
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -67,3 +68,6 @@ actual object Paths {
         }
     }
 }
+
+actual val Paths.androidExternalFilesDir: Path get() = unsupported("Android only")
+actual val Paths.androidNativeLibraryDir: Path get() = unsupported("Android only")

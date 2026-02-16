@@ -12,6 +12,7 @@ import com.klyx.extension.ExtensionHostProxy
 import com.klyx.extension.extension
 import com.klyx.extension.host.initExtensionHost
 import com.klyx.language.extension.initLanguageExtensions
+import com.klyx.terminal.initializeTerminal
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ private val STEPS = arrayOf(
     "Registering languages",
     "Wiring language extensions",
     "Starting extension host",
+    "Initializing terminal"
 )
 
 /**
@@ -64,6 +66,8 @@ suspend fun initializeKlyx(application: Application) {
                 step(4) { initLanguageExtensions(extensionHostProxy, languageRegistry) }
                 step(5) { initExtensionHost(extensionHostProxy, nodeRuntime, cx) }
             }
+
+            step(6) { initializeTerminal(cx) }
         }
 
         isInitialized = true

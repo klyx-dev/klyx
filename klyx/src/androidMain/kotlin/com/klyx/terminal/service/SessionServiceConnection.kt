@@ -3,22 +3,29 @@ package com.klyx.terminal.service
 import android.content.ComponentName
 import android.content.ServiceConnection
 import android.os.IBinder
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 class SessionServiceConnection : ServiceConnection {
-    var isBound = false
-    var sessionBinder by mutableStateOf<SessionService.SessionBinder?>(null)
+    val isBound: StateFlow<Boolean>
+        field = MutableStateFlow(false)
+
+    val sessionBinder: StateFlow<SessionService.SessionBinder?>
+        field = MutableStateFlow(null)
 
     override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
         val binder = service as SessionService.SessionBinder
-        sessionBinder = binder
-        isBound = true
+        sessionBinder.update { binder }
+        isBound.update { true }
     }
 
     override fun onServiceDisconnected(name: ComponentName?) {
-        isBound = false
-        sessionBinder = null
+        unbind()
+    }
+
+    fun unbind() {
+        isBound.update { false }
+        sessionBinder.update { null }
     }
 }

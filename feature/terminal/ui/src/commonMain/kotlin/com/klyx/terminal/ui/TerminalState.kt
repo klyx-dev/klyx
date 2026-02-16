@@ -27,7 +27,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 @Stable
-class TerminalState(
+class TerminalState internal constructor(
     internal val client: TerminalClient,
     val session: TerminalSession,
     internal var enableKeyLogging: Boolean

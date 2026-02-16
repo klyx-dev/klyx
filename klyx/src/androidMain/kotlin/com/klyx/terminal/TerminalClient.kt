@@ -57,15 +57,15 @@ class TerminalClient(
     override fun onKeyDown(keyCode: Int, e: KeyEvent, session: TerminalSession): Boolean {
         if (e.keyCode == KeyEvent.KEYCODE_ENTER && !session.isRunning) {
             activity.sessionBinder?.run {
-                terminateSession(service.currentSession)
-
-                if (service.sessionList.isEmpty()) {
-                    activity.finish()
-                } else {
-                    activity.lifecycleScope.launch {
-                        changeSession(activity, terminal, service.sessionList.first())
-                    }
-                }
+//                terminateSession(service.currentSession)
+//
+//                if (service.sessionList.isEmpty()) {
+//                    activity.finish()
+//                } else {
+//                    activity.lifecycleScope.launch {
+//                        changeSession(activity, terminal, service.sessionList.first())
+//                    }
+//                }
             }
             return true
         }

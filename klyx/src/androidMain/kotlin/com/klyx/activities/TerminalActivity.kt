@@ -30,9 +30,9 @@ class TerminalActivity : KlyxActivity() {
 
     override fun onStop() {
         super.onStop()
-        if (serviceConnection.isBound) {
-            unbindService(serviceConnection)
-            serviceConnection.isBound = false
-        }
+//        if (serviceConnection.isBound) {
+//            unbindService(serviceConnection)
+//            serviceConnection.isBound = false
+//        }
     }
 }
