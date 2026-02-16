@@ -88,8 +88,8 @@ fun ColumnScope.DropdownMenuItems(
         text = { Text("Terminal") },
         onClick = {
             onDismissRequest()
-            //onNavigateTo(Route.Terminal)
-            context.openTerminal()
+            onNavigateTo(Route.Terminal)
+            //context.openTerminal()
         },
         leadingIcon = {
             Icon(

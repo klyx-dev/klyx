@@ -10,3 +10,5 @@ actual suspend fun getenv(): Map<String, String> {
 
 actual val systemUserName: String
     get() = System.getProperty("user.name") ?: error("Unable to resolve the current system user")
+
+actual suspend fun systemEnv() = System.getenv().orEmpty()

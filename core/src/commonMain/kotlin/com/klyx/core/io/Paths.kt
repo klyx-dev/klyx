@@ -18,6 +18,9 @@ expect object Paths {
     val logsDir: Path
 }
 
+expect val Paths.androidExternalFilesDir: Path
+expect val Paths.androidNativeLibraryDir: Path
+
 inline val Paths.logFile get() = logsDir.join("Klyx.log")
 inline val Paths.oldLogFile get() = logsDir.join("Klyx.log.old")
 

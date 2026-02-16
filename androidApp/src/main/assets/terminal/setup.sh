@@ -89,6 +89,7 @@ printf '%s\n' "$nameserver" > "$SANDBOX_DIR/etc/resolv.conf"
 
 # write hosts
 printf '%s\n' "$hosts" > "$SANDBOX_DIR/etc/hosts"
+printf '127.0.1.1 %s\n' "$(hostname)" >> "$SANDBOX_DIR/etc/hosts"
 
 groupFile="$SANDBOX_DIR/etc/group"
 aid="$(id -g)"

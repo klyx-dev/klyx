@@ -477,7 +477,7 @@ private fun Modifier.scroll(
 
                 if (state.isSelectingText.value) {
                     val newX = (change.position.x / fontMetrics.width).toInt()
-                    val newY = ((change.position.y - fontMetrics.ascent) / fontMetrics.height).toInt()
+                    val newY = (change.position.y / fontMetrics.height).toInt()
 
                     selectionController.onEndHandleDrag(
                         dragAmount = androidx.compose.ui.geometry.Offset(

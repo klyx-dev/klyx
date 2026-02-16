@@ -16,13 +16,13 @@ suspend fun changeSession(
         terminalView.apply {
             val client = TerminalClient(this, activity)
 
-            val session = withContext(Dispatchers.Default) {
-                activity.sessionBinder!!.getSession(sessionId)
-                    ?: activity.sessionBinder!!.createSession(sessionId, client, activity = activity)
-            }
-
-            session.updateTerminalSessionClient(client)
-            attachSession(session)
+//            val session = withContext(Dispatchers.Default) {
+//                activity.sessionBinder!!.getSession(sessionId)
+//                    ?: activity.sessionBinder!!.createSession(sessionId, client, activity = activity)
+//            }
+//
+//            session.updateTerminalSessionClient(client)
+//            attachSession(session)
             setTerminalViewClient(client)
 
             post {
@@ -36,5 +36,5 @@ suspend fun changeSession(
             }
         }
     }
-    activity.sessionBinder!!.service.currentSession = sessionId
+    //activity.sessionBinder!!.service.currentSession = sessionId
 }

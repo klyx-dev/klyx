@@ -4,7 +4,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.reentrantLock
+import kotlinx.atomicfu.locks.withLock
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -29,7 +30,7 @@ class EventBus private constructor() {
         val INSTANCE by lazy(mode = LazyThreadSafetyMode.SYNCHRONIZED) { EventBus() }
     }
 
-    private val lock = SynchronizedObject()
+    private val lock = reentrantLock()
     private val eventChannels = hashMapOf<KClass<*>, Channel<Any>>()
     private val eventFlows = hashMapOf<KClass<*>, SharedFlow<Any>>()
 
@@ -152,24 +153,28 @@ class EventBus private constructor() {
     internal fun unsubscribeFlow(eventClass: KClass<*>) = eventFlows.remove(eventClass)
 
     private fun getOrCreateChannel(eventClass: KClass<*>): Channel<Any> {
-        return eventChannels.getOrPut(eventClass) {
-            Channel<Any>(Channel.UNLIMITED).also { channel ->
-                val sharedFlow = channel.receiveAsFlow()
-                    .shareIn(
-                        scope = scope,
-                        started = SharingStarted.Lazily,
-                        replay = 0
-                    )
-                eventFlows[eventClass] = sharedFlow
+        return lock.withLock {
+            eventChannels.getOrPut(eventClass) {
+                Channel<Any>(Channel.UNLIMITED).also { channel ->
+                    val sharedFlow = channel.receiveAsFlow()
+                        .shareIn(
+                            scope = scope,
+                            started = SharingStarted.Lazily,
+                            replay = 0
+                        )
+                    eventFlows[eventClass] = sharedFlow
+                }
             }
         }
     }
 
     @PublishedApi
     internal fun getOrCreateFlow(eventClass: KClass<*>): SharedFlow<Any> {
-        return eventFlows.getOrPut(eventClass) {
-            getOrCreateChannel(eventClass)
-            eventFlows[eventClass]!!
+        return lock.withLock {
+            eventFlows.getOrPut(eventClass) {
+                getOrCreateChannel(eventClass)
+                eventFlows[eventClass]!!
+            }
         }
     }
 

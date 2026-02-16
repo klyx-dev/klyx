@@ -211,19 +211,19 @@ private suspend fun TerminalView(
 
         val client = TerminalClient(this, activity)
 
-        val session = with(activity.sessionBinder!!) {
-            withContext(Dispatchers.Default) {
-                getSession(service.currentSession)
-                    ?: createSession(
-                        id = service.currentSession,
-                        userName = user,
-                        client = client,
-                        activity = activity
-                    )
-            }
-        }
-        session.updateTerminalSessionClient(client)
-        attachSession(session)
+//        val session = with(activity.sessionBinder!!) {
+//            withContext(Dispatchers.Default) {
+//                getSession(service.currentSession)
+//                    ?: createSession(
+//                        id = service.currentSession,
+//                        userName = user,
+//                        client = client,
+//                        activity = activity
+//                    )
+//            }
+//        }
+//        session.updateTerminalSessionClient(client)
+//        attachSession(session)
         setTerminalViewClient(client)
     }
 }

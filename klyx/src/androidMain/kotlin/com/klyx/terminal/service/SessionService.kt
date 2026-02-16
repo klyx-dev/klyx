@@ -10,71 +10,26 @@ import android.content.Intent
 import android.os.Binder
 import android.os.PowerManager
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import com.klyx.R.drawable
-import com.klyx.activities.TerminalActivity
-import com.klyx.core.terminal.currentUser
+import com.klyx.activities.MainActivity
+import com.klyx.core.event.EventBus
 import com.klyx.core.util.value
 import com.klyx.resources.Res
 import com.klyx.resources.app_name
-import com.klyx.terminal.TerminalSessionId
-import com.termux.terminal.TerminalSession
-import com.termux.terminal.TerminalSessionClient
+import com.klyx.terminal.SessionManager
+import com.klyx.terminal.event.NewSessionEvent
+import com.klyx.terminal.event.SessionTerminateEvent
+import kotlinx.coroutines.DelicateCoroutinesApi
 
 class SessionService : Service() {
-    private val sessions = hashMapOf<TerminalSessionId, TerminalSession>()
     private var daemonRunning = false
-
-    val sessionList = mutableStateListOf<TerminalSessionId>()
     var currentSession by mutableStateOf("main")
 
     inner class SessionBinder : Binder() {
         val service get() = this@SessionService
-
-        suspend fun createSession(
-            id: TerminalSessionId,
-            client: TerminalSessionClient,
-            activity: TerminalActivity,
-            userName: String? = currentUser
-        ): TerminalSession {
-            requireNotNull(userName) { "User name cannot be null" }
-
-            return com.klyx.terminal.createSession(
-                user = userName,
-                client = client,
-                activity = activity,
-                sessionId = id
-            ).also {
-                sessions[id] = it
-                sessionList.add(id)
-                updateNotification()
-            }
-        }
-
-        fun getSession(id: TerminalSessionId) = sessions[id]
-
-        fun terminateSession(id: TerminalSessionId) {
-            sessions[id]?.apply {
-                if (emulator != null) {
-                    finishIfRunning()
-                }
-            }
-
-            sessions.remove(id)
-            sessionList.remove(id)
-
-            if (sessions.isEmpty()) {
-                stopSelf()
-                if (daemonRunning) {
-                    daemonRunning = false
-                }
-            } else {
-                updateNotification()
-            }
-        }
     }
 
     private val binder = SessionBinder()
@@ -87,14 +42,27 @@ class SessionService : Service() {
     override fun onBind(intent: Intent?) = binder
 
     override fun onDestroy() {
-        sessions.values.forEach { it.finishIfRunning() }
+        SessionManager.terminateAll()
         daemonRunning = false
         if (wakeLock?.isHeld == true) wakeLock?.release()
         super.onDestroy()
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate() {
         super.onCreate()
+        EventBus.INSTANCE.subscribe<NewSessionEvent> { updateNotification() }
+        EventBus.INSTANCE.subscribe<SessionTerminateEvent> {
+            if (SessionManager.sessions.isEmpty()) {
+                stopSelf()
+                if (daemonRunning) {
+                    daemonRunning = false
+                }
+            } else {
+                updateNotification()
+            }
+        }
+
         createNotificationChannel()
         val notification = createNotification()
         startForeground(1, notification)
@@ -115,7 +83,7 @@ class SessionService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_EXIT -> {
-                sessions.values.forEach { it.finishIfRunning() }
+                SessionManager.terminateAll()
                 if (daemonRunning) {
                     daemonRunning = false
                 }
@@ -135,7 +103,7 @@ class SessionService : Service() {
     }
 
     private fun createNotification(): Notification {
-        val intent = Intent(this, TerminalActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -197,7 +165,7 @@ class SessionService : Service() {
     }
 
     private fun getNotificationContentText(wakelock: Boolean): String {
-        val count = sessions.size
+        val count = SessionManager.sessions.size
         val s = if (count > 1) "sessions" else "session"
         val wakeHeld = if (wakelock) " (wake lock held)" else ""
         return "$count $s running$wakeHeld"

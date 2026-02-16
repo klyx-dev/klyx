@@ -3,6 +3,7 @@ package com.klyx.core.io
 import com.klyx.core.dirs
 import com.klyx.core.expect
 import com.klyx.core.platform.selectByOs
+import com.klyx.core.unsupported
 import com.klyx.core.util.join
 import kotlinx.io.files.Path
 
@@ -69,3 +70,6 @@ actual object Paths {
         )
     }
 }
+
+actual val Paths.androidExternalFilesDir: Path get() = unsupported("Android only")
+actual val Paths.androidNativeLibraryDir: Path get() = unsupported("Android only")

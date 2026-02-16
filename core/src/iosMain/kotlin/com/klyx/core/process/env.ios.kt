@@ -22,3 +22,5 @@ actual suspend fun getenv(): Map<String, String> {
 
 actual val systemUserName: String
     get() = NSUserName()
+
+actual suspend fun systemEnv() = getenv()
