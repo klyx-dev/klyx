@@ -52,6 +52,7 @@ import com.klyx.terminal.LocalSessionBinder
 import com.klyx.terminal.SessionManager
 import com.klyx.terminal.TerminalManager
 import com.klyx.terminal.TerminalUiState
+import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.ui.Terminal
 import com.klyx.terminal.ui.rememberTerminalSessionClient
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
@@ -78,20 +79,32 @@ fun TerminalPage(modifier: Modifier = Modifier) {
 
             if (isBound) {
                 val sessionClient = rememberTerminalSessionClient(
-                    //onSessionFinished = { navigator.navigateBack() }
+                    onSessionFinished = { navigator.navigateBack() }
                 )
 
-                val session = remember(sessionClient) {
-                    runBlocking { SessionManager.newSession(user, sessionClient) }
+                var session by remember { mutableStateOf<TerminalSession?>(null) }
+                LaunchedEffect(sessionClient, user) {
+                    session = SessionManager.newSession(user, sessionClient)
                 }
 
-                Terminal(
-                    modifier = Modifier.matchParentSize(),
-                    session = session,
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 15.sp,
-                    client = remember { KlyxTerminalClient() }
-                )
+                if (session != null) {
+                    Terminal(
+                        modifier = Modifier.matchParentSize(),
+                        session = session!!,
+                        fontFamily = JetBrainsMonoFontFamily,
+                        fontSize = 15.sp,
+                        client = remember { KlyxTerminalClient() }
+                    )
+                } else {
+                    Column(
+                        modifier = Modifier.align(Alignment.Center),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Creating session...", fontFamily = KlyxMono)
+                        Spacer(Modifier.height(16.dp))
+                        CircularWavyProgressIndicator()
+                    }
+                }
             } else {
                 Column(
                     modifier = Modifier.align(Alignment.Center),

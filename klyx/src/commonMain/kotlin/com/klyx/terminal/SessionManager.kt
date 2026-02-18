@@ -5,9 +5,12 @@ import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
 import com.klyx.terminal.event.NewSessionEvent
 import com.klyx.terminal.event.SessionTerminateEvent
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.uuid.Uuid
 
 object SessionManager {
+    private val lock = Mutex()
     val sessions = mutableMapOf<Uuid, TerminalSession>()
 
     suspend fun newSession(
@@ -18,18 +21,13 @@ object SessionManager {
 
         return newSession(user, client, id).also {
             EventBus.INSTANCE.post(NewSessionEvent(id, it))
-            sessions[id] = it
+            lock.withLock { sessions[id] = it }
         }
     }
 
     suspend fun terminate(id: Uuid) {
-        sessions[id]?.let {
-            if (it.emulator != null) {
-                it.finishIfRunning()
-            }
-        }
-
-        sessions.remove(id)
+        val sessionToTerminate = lock.withLock { sessions.remove(id) }
+        sessionToTerminate?.finishIfRunning()
         EventBus.INSTANCE.post(SessionTerminateEvent(id))
     }
 
