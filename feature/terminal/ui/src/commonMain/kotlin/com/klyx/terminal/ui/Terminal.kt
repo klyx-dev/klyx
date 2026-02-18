@@ -1,6 +1,8 @@
 package com.klyx.terminal.ui
 
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -23,6 +25,7 @@ import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -468,19 +471,27 @@ private fun Modifier.scroll(
     var scrollRemainder by state.scrollRemainder
 
     coroutineScope {
-        detectDragGestures(
-            onDragStart = {
-                state.scrolledWithFinger.value = false
-            },
-            onDrag = { change, dragAmount ->
-                change.consume()
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false)
+            state.scrolledWithFinger.value = true
+
+            var previousPosition = down.position
+
+            do {
+                val event = awaitPointerEvent()
+                val dragEvent = event.changes.firstOrNull { it.id == down.id } ?: break
+                if (!dragEvent.pressed) break
+
+                val dragAmount = dragEvent.position - previousPosition
+                previousPosition = dragEvent.position
+                dragEvent.consume()
 
                 if (state.isSelectingText.value) {
-                    val newX = (change.position.x / fontMetrics.width).toInt()
-                    val newY = (change.position.y / fontMetrics.height).toInt()
+                    val newX = (dragEvent.position.x / fontMetrics.width).toInt()
+                    val newY = (dragEvent.position.y / fontMetrics.height).toInt()
 
                     selectionController.onEndHandleDrag(
-                        dragAmount = androidx.compose.ui.geometry.Offset(
+                        dragAmount = Offset(
                             x = (newX - state.selectionX2.intValue) * fontMetrics.width.toFloat(),
                             y = (newY - state.selectionY2.intValue + state.topRow.intValue) * fontMetrics.height.toFloat()
                         ),
@@ -492,17 +503,21 @@ private fun Modifier.scroll(
                     val deltaRows = (distanceY / fontMetrics.height).toInt()
                     scrollRemainder = distanceY - deltaRows * fontMetrics.height
                     launch {
-                        state.doScroll(deltaRows, change.position, change.uptimeMillis, fontMetrics)
+                        state.doScroll(
+                            deltaRows,
+                            dragEvent.scrollDelta,
+                            dragEvent.uptimeMillis,
+                            fontMetrics
+                        )
                     }
                 }
-            },
-            onDragEnd = {
-                scrollRemainder = 0f
-                if (state.isSelectingText.value) {
-                    selectionController.onEndHandleDragEnd()
-                }
+            } while (true)
+
+            scrollRemainder = 0f
+            if (state.isSelectingText.value) {
+                selectionController.onEndHandleDragEnd()
             }
-        )
+        }
     }
 } then pointerInput(Unit) {
     coroutineScope {
@@ -514,7 +529,6 @@ private fun Modifier.scroll(
                 this@coroutineScope.launch {
                     if (event.type == PointerEventType.Scroll) {
                         if (emulator?.isMouseTrackingActive == true) {
-                            println("pointer: ${event.changes.joinToString()}")
                             for (change in event.changes) {
                                 state.sendMouseEventCode(
                                     change.scrollDelta,
