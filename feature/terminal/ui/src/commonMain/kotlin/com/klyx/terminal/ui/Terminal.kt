@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.establishTextInputSession
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
@@ -294,10 +295,6 @@ fun Terminal(
 
     BoxWithConstraints(
         modifier = modifier
-            .onSizeChanged { newSize ->
-                updateSize(newSize.width, newSize.height)
-                state.size = newSize
-            }
             .pointerInput(state) {
                 coroutineScope {
                     awaitPointerEventScope {
@@ -429,6 +426,7 @@ fun Terminal(
 
         LaunchedEffect(width, height, metrics) {
             updateSize(width, height)
+            state.size = IntSize(width, height)
         }
 
         CompositionLocalProvider(LocalEmulator provides emulator) {
@@ -437,6 +435,7 @@ fun Terminal(
                     .matchParentSize()
                     .graphicsLayer {
                         compositingStrategy = CompositingStrategy.Offscreen
+                        clip = true
                     }
                     .renderTerminal(
                         state = state,
