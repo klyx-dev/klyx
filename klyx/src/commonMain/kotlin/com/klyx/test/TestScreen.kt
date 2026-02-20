@@ -1,19 +1,15 @@
 package com.klyx.test
 
-import androidx.compose.animation.core.animateIntOffsetAsState
-import androidx.compose.animation.core.animateOffsetAsState
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsBottomHeight
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,11 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.round
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.allowDiskReads
@@ -40,11 +33,7 @@ import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import kotlinx.coroutines.delay
 import kotlinx.io.files.SystemFileSystem
 
-private val tmpDir by lazy {
-    allowDiskReads {
-        Paths.tempDir
-    }
-}
+private val tmpDir by lazy { allowDiskReads { Paths.tempDir } }
 private val filesDir by lazy { allowDiskReads { Paths.dataDir.join("files") } }
 
 private val env by lazy {
@@ -72,7 +61,7 @@ private val env by lazy {
             "TMPDIR" to "$tmpDir",
             "DATADIR" to "${Paths.dataDir}",
             "DOTNET_GCHeapHardLimit" to "1C0000000",
-            //"PENDING_CMD" to "false",
+            "PENDING_CMD" to "false",
             "DISPLAY" to ":0"
         )
     }
@@ -80,36 +69,49 @@ private val env by lazy {
 
 @Composable
 fun TestScreen(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize()) {
-        var cursorStyle by remember { mutableStateOf(CursorStyle.Block) }
-        val terminalState = rememberTerminalState(
-            shell = "/system/bin/sh",
-            args = listOf("-c", "${filesDir.join("usr/bin/sandbox")}"),
-            env = env,
-            cwd = "$filesDir",
-            cursorStyle = cursorStyle
-        )
-
-        LaunchedEffect(terminalState) {
-            delay(5000)
-            //cursorStyle = CursorStyle.Underline
-            //terminalState.session.write("echo hello\n")
-        }
-
-        Terminal(
-            state = terminalState,
-            modifier = Modifier
-                .fillMaxSize()
-                .windowInsetsPadding(WindowInsets.ime),
-            fontSize = 18.sp,
-            fontFamily = JetBrainsMonoFontFamily
-        )
-
+    Scaffold(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding(),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0)
+    ) { scaffoldPadding ->
         Box(
-            Modifier.fillMaxWidth(),
-            contentAlignment = Alignment.TopEnd,
+            modifier = modifier
+                .fillMaxSize()
+                .padding(scaffoldPadding)
+                .consumeWindowInsets(scaffoldPadding)
+                .systemBarsPadding()
         ) {
-            FpsText()
+            var cursorStyle by remember { mutableStateOf(CursorStyle.Block) }
+            val terminalState = rememberTerminalState(
+                shell = "/system/bin/sh",
+                args = listOf("-c", "${filesDir.join("usr/bin/sandbox")}"),
+                env = env,
+                cwd = "$filesDir",
+                cursorStyle = cursorStyle
+            )
+
+            LaunchedEffect(terminalState) {
+                delay(5000)
+                //cursorStyle = CursorStyle.Underline
+                //terminalState.session.write("echo hello\n")
+            }
+
+            Terminal(
+                state = terminalState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .border(Dp.Hairline, Color.Green),
+                fontSize = 18.sp,
+                fontFamily = JetBrainsMonoFontFamily
+            )
+
+            Box(
+                Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopEnd,
+            ) {
+                FpsText()
+            }
         }
     }
 }
