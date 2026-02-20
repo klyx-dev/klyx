@@ -46,9 +46,9 @@ internal class SelectionController(
     var isActive by mutableStateOf(false)
         private set
 
-    var startHandlePosition by mutableStateOf(HandlePosition())
+    var startHandlePosition by mutableStateOf(Offset.Zero)
         private set
-    var endHandlePosition by mutableStateOf(HandlePosition())
+    var endHandlePosition by mutableStateOf(Offset.Zero)
         private set
 
     var startHandleOrientation by mutableStateOf(HandleOrientation.Left)
@@ -164,17 +164,17 @@ internal class SelectionController(
 
     private fun updateHandlePositions(metrics: FontMetrics) {
         val x1 = state.getPointX(selX1)
-        val y1 = state.getPointY(selY1 + 1) + metrics.ascent.roundToInt()
+        val y1 = state.getPointY(selY1 + 1) + metrics.ascent
         val x2 = state.getPointX(selX2 + 1)
-        val y2 = state.getPointY(selY2 + 1) + metrics.ascent.roundToInt()
+        val y2 = state.getPointY(selY2 + 1) + metrics.ascent
 
-        startHandlePosition = HandlePosition(
-            x = x1 - (if (startHandleOrientation == HandleOrientation.Left) 18 else 6),
+        startHandlePosition = Offset(
+            x = x1 - (if (startHandleOrientation == HandleOrientation.Left) 18f else 6f),
             y = y1
         )
 
-        endHandlePosition = HandlePosition(
-            x = x2 - (if (endHandleOrientation == HandleOrientation.Right) 18 else 6),
+        endHandlePosition = Offset(
+            x = x2 - (if (endHandleOrientation == HandleOrientation.Right) 18f else 6f),
             y = y2
         )
     }
@@ -225,15 +225,15 @@ internal class SelectionController(
 
     private fun updatePosition(
         isStartHandle: Boolean,
-        x: Int,
-        y: Int,
+        x: Float,
+        y: Float,
         metrics: FontMetrics
     ) {
         val emulator = state.emulator ?: return
         val screen = emulator.screen
         val scrollRows = screen.activeTranscriptRows
 
-        val cursorX = x / metrics.width
+        val cursorX = (x / metrics.width).toInt()
         val cursorY = ((y - metrics.ascent) / metrics.height).roundToInt() + state.topRow.intValue
 
         if (isStartHandle) {

@@ -3,7 +3,6 @@ package com.klyx.terminal.ui
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -12,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -39,12 +37,14 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.currentValueOf
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.PlatformTextInputMethodRequest
@@ -52,9 +52,7 @@ import androidx.compose.ui.platform.PlatformTextInputModifierNode
 import androidx.compose.ui.platform.PlatformTextInputSessionScope
 import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.platform.establishTextInputSession
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
@@ -66,11 +64,8 @@ import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
+import com.klyx.terminal.ui.selection.ContainerBounds
 import com.klyx.terminal.ui.selection.SelectionController
-import com.klyx.terminal.ui.selection.SelectionOverlay
-import com.klyx.terminal.ui.selection.SelectionState
-import com.klyx.terminal.ui.selection.rememberSelectionController
-import com.klyx.terminal.ui.selection.rememberSelectionState
 import com.klyx.util.clipboard.paste
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -146,58 +141,46 @@ fun Terminal(
 ) {
     val session = remember(state) { state.session }
     val enableKeyLogging = remember(state) { state.enableKeyLogging }
-    val selectionState = rememberSelectionState(state)
 
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
-
-    val selectionController = rememberSelectionController(state)
-
-    val textMeasurer = rememberTextMeasurer()
-    val metrics by remember(fontFamily, fontSize) {
-        derivedStateOf {
-            val layout = textMeasurer.measure(
-                text = "X",
-                style = TextStyle(
-                    fontFamily = fontFamily,
-                    fontSize = fontSize
-                )
-            )
-
-            FontMetrics(
-                width = layout.size.width,
-                height = layout.size.height,
-                ascent = -layout.firstBaseline,
-                descent = layout.size.height - layout.firstBaseline
-            ).also {
-                state.metrics = it
-            }
-        }
-    }
-
+    val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
 
-    var emulator by remember { mutableStateOf(session.emulator) }
+    val typeface by rememberNativeTypeface(fontFamily)
+    val fontSizePx = with(density) { fontSize.toPx() }
+    val painter = remember(fontSizePx, typeface) {
+        TerminalPainter(fontSizePx = fontSizePx, typeface = typeface)
+    }
 
+    val metrics = remember(painter) {
+        FontMetrics(
+            width = painter.fontWidth.toInt(),
+            height = painter.fontLineSpacing,
+            ascent = -painter.fontAscent.toFloat(),
+            descent = (painter.fontLineSpacing - painter.fontAscent).toFloat(),
+        ).also { state.metrics = it }
+    }
+
+    var emulator by remember { mutableStateOf(session.emulator) }
     var topRow by remember(state) { state.topRow }
     var selectionY1 by remember(state) { state.selectionY1 }
     var selectionY2 by remember(state) { state.selectionY2 }
     var selectionX1 by remember(state) { state.selectionX1 }
     var selectionX2 by remember(state) { state.selectionX2 }
     var isSelectingText by remember(state) { state.isSelectingText }
-
     var scaleFactor by remember(state) { state.scaleFactor }
     var scrolledWithFinger by remember(state) { state.scrolledWithFinger }
     var scrollRemainder by remember(state) { state.scrollRemainder }
 
+    var containerBounds by remember { mutableStateOf(ContainerBounds.Zero) }
+
     val navState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(state = navState) {
         if (isSelectingText) {
-            selectionController.hide()
-        } else {
-            if (client.shouldBackButtonBeMappedToEscape) {
-                //
-            }
+            //selectionController.hide()
+        } else if (client.shouldBackButtonBeMappedToEscape) {
+            /* map to escape */
         }
     }
 
@@ -228,7 +211,7 @@ fun Terminal(
                     val rowShift = emu.scrollCounter
                     if (-topRow + rowShift > rowsInHistory) {
                         if (isSelectingText) {
-                            selectionController.hide()
+                            //selectionController.hide()
                         }
 
                         if (emu.autoScrollDisabled) {
@@ -240,7 +223,7 @@ fun Terminal(
                         if (isSelectingText) {
                             selectionY1 -= rowShift
                             selectionY2 -= rowShift
-                            selectionController.decrementYTextSelectionCursors(rowShift)
+                            //selectionController.decrementYTextSelectionCursors(rowShift)
                         }
                     }
                 } else if (!skipScrolling && topRow != 0) {
@@ -256,13 +239,8 @@ fun Terminal(
     LaunchedEffect(state) {
         state.screenEvents.collect { event ->
             when (event) {
-                is ScreenEvent.ContentChanged -> {
-                    onScreenUpdated(event.skipScrolling)
-                }
-
-                is ScreenEvent.CursorBlink -> {
-                    emulator?.cursorBlinkState = event.visible
-                }
+                is ScreenEvent.ContentChanged -> onScreenUpdated(event.skipScrolling)
+                is ScreenEvent.CursorBlink -> emulator?.cursorBlinkState = event.visible
             }
         }
     }
@@ -270,26 +248,18 @@ fun Terminal(
     val focusRequester = remember { FocusRequester() }
 
     fun updateSize(width: Int, height: Int) {
-        if (width > 0 && height > 0) {
-            val fontWidth = metrics.width
-            val fontHeight = metrics.height
-            val fontAscent = metrics.ascent
-
-            val newColumns = max(4, (width / fontWidth))
-            val newRows = max(4, (height - fontAscent.toInt()) / fontHeight)
-
-            if (emulator == null || newColumns != emulator?.columns || newRows != emulator?.rows) {
-                session.updateSize(
-                    newColumns,
-                    newRows,
-                    fontWidth,
-                    fontHeight
-                )
-                emulator = session.emulator
-                client.onEmulatorSet()
-                topRow = 0
-                state.invalidate()
-            }
+        if (width <= 0 || height <= 0) return
+        val fontWidth = painter.fontWidth.toInt()
+        val fontHeight = painter.fontLineSpacing
+        val fontAscent = painter.fontAscent // positive absolute value
+        val newColumns = max(4, width / fontWidth)
+        val newRows = max(4, (height - fontAscent) / fontHeight)
+        if (emulator == null || newColumns != emulator?.columns || newRows != emulator?.rows) {
+            session.updateSize(newColumns, newRows, fontWidth, fontHeight)
+            emulator = session.emulator
+            client.onEmulatorSet()
+            topRow = 0
+            state.invalidate()
         }
     }
 
@@ -369,20 +339,20 @@ fun Terminal(
                     }
                 }
             }
-            .pointerInput(state, selectionController) {
+            .pointerInput(state /*,selectionController*/) {
                 detectTapGestures(
                     onTap = { offset ->
-                        if (selectionController.isActive) {
-                            selectionController.hide()
+                        if (/* selectionController.isActive */ false) {
+                            //selectionController.hide()
                         } else {
                             focusRequester.requestFocus(FocusDirection.Enter)
                             client.onSingleTapUp(offset)
                         }
                     },
                     onLongPress = { offset ->
-                        if (!selectionController.isActive) {
+                        if (/*!selectionController.isActive*/true) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            selectionController.show(offset, metrics)
+                            //selectionController.show(offset, metrics)
                             client.onLongPress(offset)
                             client.copyModeChanged(true)
                         }
@@ -397,7 +367,7 @@ fun Terminal(
                     scaleFactor = client.onScale(scaleFactor)
                 }
             }
-            .scroll(state, metrics, selectionController)
+            .scroll(state, metrics/*, selectionController*/)
             .focusRequester(focusRequester)
             .terminalInput(state)
             .focusable(interactionSource = remember { MutableInteractionSource() })
@@ -424,7 +394,7 @@ fun Terminal(
         val width = constraints.maxWidth
         val height = constraints.maxHeight
 
-        LaunchedEffect(width, height, metrics) {
+        LaunchedEffect(width, height, painter) {
             updateSize(width, height)
             state.size = IntSize(width, height)
         }
@@ -433,17 +403,21 @@ fun Terminal(
             Layout(
                 modifier = Modifier
                     .matchParentSize()
+                    .onGloballyPositioned { coords ->
+                        val pos = coords.positionInWindow()
+                        val size = coords.size
+                        containerBounds = ContainerBounds(
+                            left = pos.x,
+                            top = pos.y,
+                            right = pos.x + size.width,
+                            bottom = pos.y + size.height,
+                        )
+                    }
                     .graphicsLayer {
                         compositingStrategy = CompositingStrategy.Offscreen
                         clip = true
                     }
-                    .renderTerminal(
-                        state = state,
-                        fontSize = fontSize,
-                        fontFamily = fontFamily,
-                        textMeasurer = textMeasurer,
-                        fontMetrics = metrics
-                    ),
+                    .renderTerminal(state, painter),
                 measurePolicy = { _, constraints ->
                     with(constraints) {
                         val width = if (hasFixedWidth) maxWidth else 0
@@ -453,7 +427,12 @@ fun Terminal(
                 }
             )
 
-            SelectionOverlay(selectionState)
+//            SelectionOverlay(
+//                selectionState = selectionState,
+//                containerBounds = containerBounds,
+//                containerPaddingPx = 0f,
+//                onUpdatePosition = onHandleDragged,
+//            )
         }
     }
 
@@ -465,8 +444,8 @@ fun Terminal(
 private fun Modifier.scroll(
     state: TerminalState,
     fontMetrics: FontMetrics,
-    selectionController: SelectionController
-) = this then pointerInput(state, selectionController) {
+    //selectionController: SelectionController
+) = this then pointerInput(state, /*selectionController*/) {
     var scrollRemainder by state.scrollRemainder
 
     coroutineScope {
@@ -489,13 +468,13 @@ private fun Modifier.scroll(
                     val newX = (dragEvent.position.x / fontMetrics.width).toInt()
                     val newY = (dragEvent.position.y / fontMetrics.height).toInt()
 
-                    selectionController.onEndHandleDrag(
-                        dragAmount = Offset(
-                            x = (newX - state.selectionX2.intValue) * fontMetrics.width.toFloat(),
-                            y = (newY - state.selectionY2.intValue + state.topRow.intValue) * fontMetrics.height.toFloat()
-                        ),
-                        metrics = fontMetrics
-                    )
+//                    selectionController.onEndHandleDrag(
+//                        dragAmount = Offset(
+//                            x = (newX - state.selectionX2.intValue) * fontMetrics.width.toFloat(),
+//                            y = (newY - state.selectionY2.intValue + state.topRow.intValue) * fontMetrics.height.toFloat()
+//                        ),
+//                        metrics = fontMetrics
+//                    )
                 } else {
                     state.scrolledWithFinger.value = true
                     val distanceY = -dragAmount.y + scrollRemainder
@@ -514,7 +493,7 @@ private fun Modifier.scroll(
 
             scrollRemainder = 0f
             if (state.isSelectingText.value) {
-                selectionController.onEndHandleDragEnd()
+                //selectionController.onEndHandleDragEnd()
             }
         }
     }
