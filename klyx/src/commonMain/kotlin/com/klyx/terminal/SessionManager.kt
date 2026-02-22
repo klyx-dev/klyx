@@ -15,7 +15,7 @@ object SessionManager {
     var currentSessionId = Uuid.generateV7()
 
     suspend fun getOrCreateSession(id: Uuid, user: String, client: TerminalSessionClient): TerminalSession {
-        return sessions[id]?.let { session ->
+        return lock.withLock { sessions[id] }?.let { session ->
             if (session.isRunning.value) session else null
         } ?: newSession(user, client, id)
     }
@@ -37,9 +37,11 @@ object SessionManager {
         EventBus.INSTANCE.post(SessionTerminateEvent(id))
     }
 
-    fun terminateAll() {
-        sessions.values.forEach {
-            it.finishIfRunning()
+    suspend fun terminateAll() {
+        lock.withLock {
+            sessions.values.forEach {
+                it.finishIfRunning()
+            }
         }
     }
 }
