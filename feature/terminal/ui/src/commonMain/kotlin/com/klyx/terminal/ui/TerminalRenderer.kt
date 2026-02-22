@@ -39,6 +39,8 @@ private class TerminalRendererNode(
 
     override fun ContentDrawScope.draw() {
         val emulator = currentValueOf(LocalEmulator)
+        println("DEBUG draw() size=${size.width}x${size.height} rows=${emulator?.rows} cols=${emulator?.columns}")
+
         if (emulator == null || painter.fontWidth == 0f || painter.fontLineSpacing == 0) {
             drawIntoCanvas { painter.drawRect(it, 0f, 0f, size.width, size.height, 0xFF000000.toInt()) }
             return

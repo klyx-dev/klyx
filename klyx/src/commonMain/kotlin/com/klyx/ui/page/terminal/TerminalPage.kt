@@ -47,6 +47,7 @@ import com.klyx.core.file.humanBytes
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
+import com.klyx.core.terminal.ExtraKeys
 import com.klyx.terminal.FileDownloadStatus
 import com.klyx.terminal.LocalSessionBinder
 import com.klyx.terminal.SessionManager
@@ -54,10 +55,16 @@ import com.klyx.terminal.TerminalManager
 import com.klyx.terminal.TerminalUiState
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.ui.Terminal
+import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
+import com.klyx.terminal.ui.extrakeys.ExtraKeys
+import com.klyx.terminal.ui.extrakeys.ExtraKeysConstants
+import com.klyx.terminal.ui.extrakeys.ExtraKeysInfo
 import com.klyx.terminal.ui.rememberTerminalSessionClient
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.ui.theme.KlyxMono
-import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+
+val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -88,13 +95,27 @@ fun TerminalPage(modifier: Modifier = Modifier) {
                 }
 
                 if (session != null) {
-                    Terminal(
-                        modifier = Modifier.matchParentSize(),
-                        session = session!!,
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontSize = 15.sp,
-                        client = remember { KlyxTerminalClient() }
-                    )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        val extraKeysClient = remember(session) { KlyxExtraKeysClient(session!!) }
+
+                        Terminal(
+                            modifier = Modifier.weight(1f),
+                            session = session!!,
+                            fontFamily = JetBrainsMonoFontFamily,
+                            fontSize = 15.sp,
+                            client = remember { KlyxTerminalClient() }
+                        )
+
+                        ExtraKeys(
+                            extraKeysInfo = ExtraKeysInfo(
+                                propertiesInfo = json.encodeToString(ExtraKeys),
+                                style = ExtraKeyStyle.ArrowsOnly,
+                                extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
+                            ),
+                            client = extraKeysClient,
+                            modifier = Modifier.height(75.dp)
+                        )
+                    }
                 } else {
                     Column(
                         modifier = Modifier.align(Alignment.Center),

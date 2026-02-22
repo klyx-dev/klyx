@@ -271,7 +271,7 @@ class TerminalEmulator(
         this.cellWidthPixels = cellWidthPixels
         this.cellHeightPixels = cellHeightPixels
 
-        if (this.columns == columns || this.rows == rows) {
+        if (this.columns == columns && this.rows == rows) {
             return
         } else if (columns < 2 || rows < 2) {
             throw IllegalArgumentException("Invalid terminal size: $columns x $rows")

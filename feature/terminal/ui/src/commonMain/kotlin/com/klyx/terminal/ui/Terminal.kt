@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -23,7 +24,6 @@ import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -67,7 +67,6 @@ import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
 import com.klyx.terminal.ui.selection.ContainerBounds
-import com.klyx.terminal.ui.selection.HandleType
 import com.klyx.terminal.ui.selection.SelectionController
 import com.klyx.terminal.ui.selection.SelectionOverlay
 import com.klyx.terminal.ui.selection.SelectionState
@@ -257,9 +256,8 @@ fun Terminal(
         if (width <= 0 || height <= 0) return
         val fontWidth = painter.fontWidth.toInt()
         val fontHeight = painter.fontLineSpacing
-        val fontAscent = painter.fontAscent // positive absolute value
         val newColumns = max(4, width / fontWidth)
-        val newRows = max(4, (height - fontAscent) / fontHeight)
+        val newRows = max(4, (height - painter.fontLineSpacingAndAscent) / fontHeight)
         if (emulator == null || newColumns != emulator?.columns || newRows != emulator?.rows) {
             session.updateSize(newColumns, newRows, fontWidth, fontHeight)
             emulator = session.emulator
@@ -409,7 +407,7 @@ fun Terminal(
         CompositionLocalProvider(LocalEmulator provides emulator) {
             Layout(
                 modifier = Modifier
-                    .matchParentSize()
+                    .fillMaxSize()
                     .onGloballyPositioned { coords ->
                         val pos = coords.positionInWindow()
                         val size = coords.size
@@ -426,11 +424,7 @@ fun Terminal(
                     }
                     .renderTerminal(state, painter),
                 measurePolicy = { _, constraints ->
-                    with(constraints) {
-                        val width = if (hasFixedWidth) maxWidth else 0
-                        val height = if (hasFixedHeight) maxHeight else 0
-                        layout(width, height) {}
-                    }
+                    layout(constraints.maxWidth, constraints.maxHeight) {}
                 }
             )
 
