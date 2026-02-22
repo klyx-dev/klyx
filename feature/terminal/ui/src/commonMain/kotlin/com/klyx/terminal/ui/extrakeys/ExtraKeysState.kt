@@ -25,11 +25,6 @@ class ExtraKeysState(
     var longPressTimeoutMs by mutableLongStateOf(longPressTimeoutMs)
     var longPressRepeatDelayMs by mutableLongStateOf(longPressRepeatDelayMs)
 
-    var buttonTextColor: Color by mutableStateOf(Color(0xFFFFFFFF))
-    var buttonActiveTextColor: Color by mutableStateOf(Color(0xFF80DEEA))
-    var buttonBackgroundColor: Color by mutableStateOf(Color(0x00000000))
-    var buttonActiveBackgroundColor: Color by mutableStateOf(Color(0xFF7F7F7F))
-
     var buttonTextAllCaps: Boolean by mutableStateOf(true)
 
     fun isSpecialButton(key: String) = specialButtons.keys.any { it.key == key }
