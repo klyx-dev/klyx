@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
+import com.klyx.core.LocalNotifier
 import com.klyx.terminal.ScreenEvent
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalEmulator
@@ -151,6 +152,7 @@ fun Terminal(
     val clipboard = LocalClipboard.current
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
+    val notifier = LocalNotifier.current
 
     val typeface by rememberNativeTypeface(fontFamily)
     val fontSizePx = with(density) { fontSize.toPx() }
@@ -169,14 +171,10 @@ fun Terminal(
 
     var emulator by remember { mutableStateOf(session.emulator) }
     var topRow by remember(state) { state.topRow }
-    var selectionY1 by remember(state) { state.selectionY1 }
-    var selectionY2 by remember(state) { state.selectionY2 }
-    var selectionX1 by remember(state) { state.selectionX1 }
-    var selectionX2 by remember(state) { state.selectionX2 }
+
     var isSelectingText by remember(state) { state.isSelectingText }
     var scaleFactor by remember(state) { state.scaleFactor }
     var scrolledWithFinger by remember(state) { state.scrolledWithFinger }
-    var scrollRemainder by remember(state) { state.scrollRemainder }
 
     var containerBounds by remember { mutableStateOf(ContainerBounds.Zero) }
 
@@ -319,7 +317,7 @@ fun Terminal(
 
                             when (event.type) {
                                 PointerEventType.Release -> {
-                                    scrollRemainder = 0f
+                                    state.scrollRemainder.floatValue = 0f
                                     if (event.changes.none { it.type == PointerType.Mouse } && emulator?.isMouseTrackingActive == true && !isSelectingText && !scrolledWithFinger) {
                                         this@coroutineScope.launch {
                                             event.changes.forEach { change ->
@@ -360,7 +358,8 @@ fun Terminal(
                     onLongPress = { offset ->
                         if (!selectionController.isActive) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            selectionController.show(offset, metrics)
+                            //selectionController.show(offset, metrics)
+                            notifier.toast("Text selection is not yet supported, but will be available in a future update.")
                             client.onLongPress(offset)
                             client.copyModeChanged(true)
                         }
