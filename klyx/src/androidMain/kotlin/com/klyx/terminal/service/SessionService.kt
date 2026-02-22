@@ -9,12 +9,11 @@ import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.PowerManager
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.core.app.NotificationCompat
 import com.klyx.R.drawable
 import com.klyx.activities.MainActivity
+import com.klyx.core.app.GlobalApp
+import com.klyx.core.app.UnsafeGlobalAccess
 import com.klyx.core.event.EventBus
 import com.klyx.core.util.value
 import com.klyx.resources.Res
@@ -23,10 +22,11 @@ import com.klyx.terminal.SessionManager
 import com.klyx.terminal.event.NewSessionEvent
 import com.klyx.terminal.event.SessionTerminateEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 class SessionService : Service() {
     private var daemonRunning = false
-    var currentSession by mutableStateOf("main")
 
     inner class SessionBinder : Binder() {
         val service get() = this@SessionService
@@ -41,8 +41,9 @@ class SessionService : Service() {
 
     override fun onBind(intent: Intent?) = binder
 
+    @OptIn(DelicateCoroutinesApi::class)
     override fun onDestroy() {
-        SessionManager.terminateAll()
+        GlobalScope.launch { SessionManager.terminateAll() }
         daemonRunning = false
         if (wakeLock?.isHeld == true) wakeLock?.release()
         super.onDestroy()
@@ -79,15 +80,19 @@ class SessionService : Service() {
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class, UnsafeGlobalAccess::class)
     @SuppressLint("WakelockTimeout", "Wakelock")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_EXIT -> {
-                SessionManager.terminateAll()
-                if (daemonRunning) {
-                    daemonRunning = false
+                GlobalScope.launch {
+                    SessionManager.terminateAll()
+                    if (daemonRunning) {
+                        daemonRunning = false
+                    }
+                    stopSelf()
+                    GlobalApp.global<com.klyx.terminal.SessionBinder>().unbind(applicationContext)
                 }
-                stopSelf()
             }
 
             ACTION_WAKE_LOCK -> {
