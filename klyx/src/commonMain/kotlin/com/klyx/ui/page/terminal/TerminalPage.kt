@@ -92,7 +92,7 @@ fun TerminalPage(modifier: Modifier = Modifier) {
 
                 var session by remember { mutableStateOf<TerminalSession?>(null) }
                 LaunchedEffect(sessionClient, user) {
-                    session = SessionManager.newSession(user, sessionClient)
+                    session = SessionManager.getOrCreateSession(SessionManager.currentSessionId, user, sessionClient)
                 }
 
                 if (session != null) {

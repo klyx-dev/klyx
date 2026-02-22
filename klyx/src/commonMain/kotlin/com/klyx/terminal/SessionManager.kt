@@ -12,14 +12,20 @@ import kotlin.uuid.Uuid
 object SessionManager {
     private val lock = Mutex()
     val sessions = mutableMapOf<Uuid, TerminalSession>()
+    var currentSessionId = Uuid.generateV7()
+
+    suspend fun getOrCreateSession(id: Uuid, user: String, client: TerminalSessionClient): TerminalSession {
+        return sessions[id]?.let { session ->
+            if (session.isRunning.value) session else null
+        } ?: newSession(user, client, id)
+    }
 
     suspend fun newSession(
         user: String,
-        client: TerminalSessionClient
+        client: TerminalSessionClient,
+        id: Uuid = Uuid.generateV7()
     ): TerminalSession {
-        val id = Uuid.generateV7()
-
-        return newSession(user, client, id).also {
+        return com.klyx.terminal.newSession(user, client, id).also {
             EventBus.INSTANCE.post(NewSessionEvent(id, it))
             lock.withLock { sessions[id] = it }
         }
