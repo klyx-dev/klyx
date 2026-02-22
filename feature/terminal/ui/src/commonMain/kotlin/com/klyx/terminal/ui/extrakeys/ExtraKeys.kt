@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
@@ -22,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -48,7 +51,9 @@ fun ExtraKeys(
     if (rowCount == 0) return
 
     Column(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 3.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         for (row in buttons) {
@@ -56,7 +61,7 @@ fun ExtraKeys(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(0.dp)
+                horizontalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 for (button in row) {
                     ExtraKeyButtonCell(
@@ -97,14 +102,17 @@ private fun ExtraKeyButtonCell(
     var longPressJob by remember { mutableStateOf<Job?>(null) }
     var longPressCount by remember { mutableIntStateOf(0) }
 
+    val colorScheme = MaterialTheme.colorScheme
+
     fun effectiveTextColor() = when {
-        isSpecial && specialState?.isActive == true -> state.buttonActiveTextColor
-        else -> state.buttonTextColor
+        isSpecial && specialState?.isActive == true -> colorScheme.onPrimary
+        else -> colorScheme.onSurface
     }
 
     fun effectiveBgColor() = when {
-        isPressed -> state.buttonActiveBackgroundColor
-        else -> state.buttonBackgroundColor
+        isSpecial && specialState?.isActive == true -> colorScheme.primary
+        isPressed -> colorScheme.surfaceDim
+        else -> Color.Transparent
     }
 
     fun doHapticIfNeeded(button: ExtraKeyButton) {
@@ -264,11 +272,11 @@ private fun ExtraKeyButtonCell(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .defaultMinSize(minWidth = 48.dp, minHeight = 48.dp)
-                        .background(state.buttonActiveBackgroundColor)
+                        .background(colorScheme.primary)
                 ) {
                     Text(
                         text = if (state.buttonTextAllCaps) popup.display.uppercase() else popup.display,
-                        color = state.buttonTextColor,
+                        color = colorScheme.onPrimary,
                         fontSize = 14.sp
                     )
                 }
