@@ -68,10 +68,10 @@ private class TerminalRendererNode(
                 heightOffset += painter.fontLineSpacing
 
                 val cursorX = if (row == cursorRow && cursorVisible) cursorCol else -1
-                var selx1 = -1;
+                var selx1 = -1
                 var selx2 = -1
                 if (row in selectionY1..selectionY2) {
-                    if (row == selectionY1) selx1 = selectionX1
+                    selx1 = if (row == selectionY1) selectionX1 else 0
                     selx2 = if (row == selectionY2) selectionX2 else columns
                 }
 
