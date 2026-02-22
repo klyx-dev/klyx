@@ -181,8 +181,7 @@ fun Terminal(
     var containerBounds by remember { mutableStateOf(ContainerBounds.Zero) }
 
     val selectionState = remember(density) {
-        val handleSizePx = with(density) { 22.dp.toPx() }
-        SelectionState(handleSizePx, handleSizePx)
+        SelectionState(with(density) { 48.dp.toPx() }, with(density) { 28.dp.toPx() })
     }
     val selectionController = rememberSelectionController(state, selectionState)
 

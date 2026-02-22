@@ -245,7 +245,7 @@ internal class SelectionController(
         val scrollRows = screen.activeTranscriptRows
 
         val cursorX = (x / metrics.width).toInt()
-        val cursorY = (y / metrics.height).toInt() + state.topRow.intValue
+        val cursorY = ((y - metrics.ascent) / metrics.height).roundToInt() + state.topRow.intValue
 
         if (isStartHandle) {
             selX1 = cursorX.coerceIn(0, emulator.columns - 1)
