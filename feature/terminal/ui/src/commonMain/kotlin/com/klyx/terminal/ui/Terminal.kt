@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.establishTextInputSession
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
@@ -65,7 +66,11 @@ import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
 import com.klyx.terminal.ui.selection.ContainerBounds
+import com.klyx.terminal.ui.selection.HandleType
 import com.klyx.terminal.ui.selection.SelectionController
+import com.klyx.terminal.ui.selection.SelectionOverlay
+import com.klyx.terminal.ui.selection.SelectionState
+import com.klyx.terminal.ui.selection.rememberSelectionController
 import com.klyx.util.clipboard.paste
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -175,10 +180,16 @@ fun Terminal(
 
     var containerBounds by remember { mutableStateOf(ContainerBounds.Zero) }
 
+    val selectionState = remember(density) {
+        val handleSizePx = with(density) { 22.dp.toPx() }
+        SelectionState(handleSizePx, handleSizePx)
+    }
+    val selectionController = rememberSelectionController(state, selectionState)
+
     val navState = rememberNavigationEventState(NavigationEventInfo.None)
     NavigationBackHandler(state = navState) {
         if (isSelectingText) {
-            //selectionController.hide()
+            selectionController.hide()
         } else if (client.shouldBackButtonBeMappedToEscape) {
             /* map to escape */
         }
@@ -211,7 +222,7 @@ fun Terminal(
                     val rowShift = emu.scrollCounter
                     if (-topRow + rowShift > rowsInHistory) {
                         if (isSelectingText) {
-                            //selectionController.hide()
+                            selectionController.hide()
                         }
 
                         if (emu.autoScrollDisabled) {
@@ -221,9 +232,7 @@ fun Terminal(
                         topRow -= rowShift
                         // decrement selection cursors
                         if (isSelectingText) {
-                            selectionY1 -= rowShift
-                            selectionY2 -= rowShift
-                            //selectionController.decrementYTextSelectionCursors(rowShift)
+                            selectionController.decrementYTextSelectionCursors(rowShift)
                         }
                     }
                 } else if (!skipScrolling && topRow != 0) {
@@ -339,20 +348,20 @@ fun Terminal(
                     }
                 }
             }
-            .pointerInput(state /*,selectionController*/) {
+            .pointerInput(state, selectionController) {
                 detectTapGestures(
                     onTap = { offset ->
-                        if (/* selectionController.isActive */ false) {
-                            //selectionController.hide()
+                        if (selectionController.isActive) {
+                            selectionController.hide()
                         } else {
                             focusRequester.requestFocus(FocusDirection.Enter)
                             client.onSingleTapUp(offset)
                         }
                     },
                     onLongPress = { offset ->
-                        if (/*!selectionController.isActive*/true) {
+                        if (!selectionController.isActive) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            //selectionController.show(offset, metrics)
+                            selectionController.show(offset, metrics)
                             client.onLongPress(offset)
                             client.copyModeChanged(true)
                         }
@@ -367,7 +376,7 @@ fun Terminal(
                     scaleFactor = client.onScale(scaleFactor)
                 }
             }
-            .scroll(state, metrics/*, selectionController*/)
+            .scroll(state, metrics, selectionController)
             .focusRequester(focusRequester)
             .terminalInput(state)
             .focusable(interactionSource = remember { MutableInteractionSource() })
@@ -427,12 +436,14 @@ fun Terminal(
                 }
             )
 
-//            SelectionOverlay(
-//                selectionState = selectionState,
-//                containerBounds = containerBounds,
-//                containerPaddingPx = 0f,
-//                onUpdatePosition = onHandleDragged,
-//            )
+            SelectionOverlay(
+                selectionState = selectionState,
+                containerBounds = containerBounds,
+                containerPaddingPx = 0f,
+                onUpdatePosition = { type, x, y ->
+                    selectionController.onHandleMoved(type, x, y, metrics)
+                },
+            )
         }
     }
 
@@ -444,8 +455,8 @@ fun Terminal(
 private fun Modifier.scroll(
     state: TerminalState,
     fontMetrics: FontMetrics,
-    //selectionController: SelectionController
-) = this then pointerInput(state, /*selectionController*/) {
+    selectionController: SelectionController
+) = this then pointerInput(state, selectionController) {
     var scrollRemainder by state.scrollRemainder
 
     coroutineScope {
@@ -465,16 +476,10 @@ private fun Modifier.scroll(
                 dragEvent.consume()
 
                 if (state.isSelectingText.value) {
-                    val newX = (dragEvent.position.x / fontMetrics.width).toInt()
-                    val newY = (dragEvent.position.y / fontMetrics.height).toInt()
-
-//                    selectionController.onEndHandleDrag(
-//                        dragAmount = Offset(
-//                            x = (newX - state.selectionX2.intValue) * fontMetrics.width.toFloat(),
-//                            y = (newY - state.selectionY2.intValue + state.topRow.intValue) * fontMetrics.height.toFloat()
-//                        ),
-//                        metrics = fontMetrics
-//                    )
+                    selectionController.onEndHandleDrag(
+                        dragAmount = dragAmount,
+                        metrics = fontMetrics
+                    )
                 } else {
                     state.scrolledWithFinger.value = true
                     val distanceY = -dragAmount.y + scrollRemainder
@@ -493,7 +498,7 @@ private fun Modifier.scroll(
 
             scrollRemainder = 0f
             if (state.isSelectingText.value) {
-                //selectionController.onEndHandleDragEnd()
+                selectionController.onEndHandleDragEnd()
             }
         }
     }

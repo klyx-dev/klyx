@@ -22,17 +22,21 @@ import kotlin.time.Clock
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
-internal fun rememberSelectionController(state: TerminalState): SelectionController {
+internal fun rememberSelectionController(
+    state: TerminalState,
+    selectionState: SelectionState
+): SelectionController {
     val clipboard = LocalClipboard.current
-    return remember(clipboard, state) {
-        SelectionController(state, clipboard)
+    return remember(clipboard, state, selectionState) {
+        SelectionController(state, clipboard, selectionState)
     }
 }
 
 @Stable
 internal class SelectionController(
     private val state: TerminalState,
-    private val clipboard: Clipboard
+    private val clipboard: Clipboard,
+    val selectionState: SelectionState,
 ) {
     var selX1 by mutableIntStateOf(-1)
         private set
@@ -89,10 +93,11 @@ internal class SelectionController(
 
     fun show(offset: Offset, metrics: FontMetrics) {
         val col = (offset.x / metrics.width).toInt()
-        val row = ((offset.y - metrics.ascent) / metrics.height + state.topRow.intValue).toInt()
+        val row = ((offset.y - metrics.ascent) / metrics.height).toInt() + state.topRow.intValue
 
         setInitialTextSelectionPosition(col, row)
 
+        selectionState.startSelection(selX1, selY1, selX2, selY2)
         updateHandlePositions(metrics)
 
         showStartTime = Clock.System.now()
@@ -118,6 +123,7 @@ internal class SelectionController(
         selY2 = -1
         isActive = false
 
+        selectionState.clearSelection()
         state.stopTextSelection()
 
         return true
@@ -163,20 +169,16 @@ internal class SelectionController(
     }
 
     private fun updateHandlePositions(metrics: FontMetrics) {
-        val x1 = state.getPointX(selX1)
-        val y1 = state.getPointY(selY1 + 1) + metrics.ascent
-        val x2 = state.getPointX(selX2 + 1)
-        val y2 = state.getPointY(selY2 + 1) + metrics.ascent
+        val x1 = state.getPointX(selX1).toFloat()
+        val y1 = state.getPointY(selY1 + 1).toFloat()
+        val x2 = state.getPointX(selX2 + 1).toFloat()
+        val y2 = state.getPointY(selY2 + 1).toFloat()
 
-        startHandlePosition = Offset(
-            x = x1 - (if (startHandleOrientation == HandleOrientation.Left) 18f else 6f),
-            y = y1
-        )
+        selectionState.updateStartHandle(x1, y1, selX1, selY1)
+        selectionState.updateEndHandle(x2, y2, selX2, selY2)
 
-        endHandlePosition = Offset(
-            x = x2 - (if (endHandleOrientation == HandleOrientation.Right) 18f else 6f),
-            y = y2
-        )
+        startHandlePosition = Offset(x1, y1)
+        endHandlePosition = Offset(x2, y2)
     }
 
     fun onStartHandleDragStart() {
@@ -223,6 +225,15 @@ internal class SelectionController(
         isEndHandleDragging = false
     }
 
+    fun onHandleMoved(type: HandleType, x: Int, y: Int, metrics: FontMetrics) {
+        updatePosition(
+            isStartHandle = type == HandleType.Start,
+            x = x.toFloat(),
+            y = y.toFloat(),
+            metrics = metrics
+        )
+    }
+
     private fun updatePosition(
         isStartHandle: Boolean,
         x: Float,
@@ -234,7 +245,7 @@ internal class SelectionController(
         val scrollRows = screen.activeTranscriptRows
 
         val cursorX = (x / metrics.width).toInt()
-        val cursorY = ((y - metrics.ascent) / metrics.height).roundToInt() + state.topRow.intValue
+        val cursorY = (y / metrics.height).toInt() - 1 + state.topRow.intValue
 
         if (isStartHandle) {
             selX1 = cursorX.coerceIn(0, emulator.columns - 1)
