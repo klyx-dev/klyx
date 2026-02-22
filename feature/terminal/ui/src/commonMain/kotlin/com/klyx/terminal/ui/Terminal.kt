@@ -183,7 +183,8 @@ fun Terminal(
     val selectionController = rememberSelectionController(state, selectionState)
 
     val navState = rememberNavigationEventState(NavigationEventInfo.None)
-    NavigationBackHandler(state = navState) {
+    val shouldInterceptBack = isSelectingText || client.shouldBackButtonBeMappedToEscape
+    NavigationBackHandler(state = navState, isBackEnabled = shouldInterceptBack) {
         if (isSelectingText) {
             selectionController.hide()
         } else if (client.shouldBackButtonBeMappedToEscape) {
