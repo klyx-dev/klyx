@@ -216,10 +216,10 @@ value class Os private constructor(val value: Int) {
 value class Architecture private constructor(val value: Int) {
     override fun toString(): String {
         return when (this) {
-            Aarch64 -> "Aarch64"
-            X86 -> "X86"
-            X8664 -> "X86_64"
-            else -> "Unknown"
+            Aarch64 -> "aarch64"
+            X86 -> "x86"
+            X8664 -> "x86_64"
+            else -> "unknown"
         }
     }
 
