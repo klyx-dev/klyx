@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -22,7 +23,6 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,7 +40,9 @@ import com.klyx.core.logging.KxLog
 import com.klyx.core.logging.MessageType
 import com.klyx.core.logging.logerror
 import com.klyx.core.notification.ui.NotificationOverlay
-import com.klyx.core.settings.currentAppSettings
+import com.klyx.core.platform.Os
+import com.klyx.core.platform.currentOs
+import com.klyx.core.platform.currentPlatform
 import com.klyx.di.LocalKlyxViewModel
 import com.klyx.di.LocalStatusBarViewModel
 import com.klyx.project.Project
@@ -64,13 +66,9 @@ import kotlinx.io.readString
 import kotlinx.io.writeString
 import kotlinx.serialization.json.Json
 
-private const val LAST_PROJECT_KEY = "last_project"
-
 @Composable
 fun MainScreen() {
-    val appSettings = currentAppSettings
     val lifecycleOwner = LocalLifecycleOwner.current
-    val keyboardController = LocalSoftwareKeyboardController.current
 
     val klyxViewModel = LocalKlyxViewModel.current
     val openedProject by klyxViewModel.openedProject.collectAsState()
@@ -126,7 +124,13 @@ fun MainScreen() {
 
             entry<Route.Terminal> {
                 Surface {
-                    TerminalPage(modifier = Modifier.fillMaxSize())
+                    if (currentOs() == Os.Android) {
+                        TerminalPage(modifier = Modifier.fillMaxSize())
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Terminal not supported on ${currentPlatform()} platform")
+                        }
+                    }
                 }
             }
 
