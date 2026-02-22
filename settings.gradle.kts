@@ -51,11 +51,6 @@ include(
     ":editor:tree-sitter"
 )
 include(
-    ":terminal:terminal-view",
-    ":terminal:terminal-emulator",
-    ":terminal:termux-shared"
-)
-include(
     ":feature:mcp",
     ":feature:extension",
     ":feature:language-extension",

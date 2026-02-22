@@ -210,5 +210,3 @@ private fun TopBarIconButton(
         Icon(icon, contentDescription)
     }
 }
-
-expect fun PlatformContext.openTerminal()

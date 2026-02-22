@@ -74,10 +74,6 @@
             android:name="com.klyx.activities.CrashActivity"
             android:exported="false" />
 
-        <activity
-            android:name="com.klyx.activities.TerminalActivity"
-            android:exported="false" />
-
         <profileable
             android:shell="true"
             tools:targetApi="q" />
