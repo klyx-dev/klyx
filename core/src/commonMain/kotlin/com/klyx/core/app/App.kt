@@ -1,5 +1,6 @@
 package com.klyx.core.app
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.logging.log
 import com.klyx.core.noLocalProvidedFor
@@ -20,7 +21,6 @@ import org.koin.core.component.KoinComponent
 import org.koin.mp.KoinPlatformTools
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.jvm.JvmField
 import kotlin.jvm.JvmName
 import kotlin.reflect.typeOf
 import kotlin.time.Duration.Companion.milliseconds
@@ -199,6 +199,9 @@ class App internal constructor(
     inline fun <reified T> get(): T = defaultKoin.get()
     inline fun <reified T> getOrNull(): T? = defaultKoin.getOrNull()
 }
+
+@Composable
+inline fun <reified T : Global> globalOf(): T = LocalApp.current.global()
 
 /**
  * Represents an entity that holds a reference to an [App] instance.

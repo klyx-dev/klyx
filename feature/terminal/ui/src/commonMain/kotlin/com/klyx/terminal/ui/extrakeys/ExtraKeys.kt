@@ -143,6 +143,7 @@ private fun ExtraKeyButtonCell(
                 isSpecial -> {
                     delay(state.longPressTimeoutMs)
                     if (isActive) {
+                        doHapticIfNeeded(button)
                         state.onSpecialButtonLongPress(button.key)
                         longPressCount++
                     }

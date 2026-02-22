@@ -1,5 +1,6 @@
 package com.klyx.ui.page.terminal
 
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,20 +11,24 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
@@ -33,23 +38,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigationevent.NavigationEventInfo
-import androidx.navigationevent.compose.NavigationBackHandler
-import androidx.navigationevent.compose.rememberNavigationEventState
 import com.klyx.LocalNavigator
 import com.klyx.core.LocalPlatformContext
+import com.klyx.core.app.globalOf
 import com.klyx.core.file.humanBytes
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
 import com.klyx.core.terminal.ExtraKeys
 import com.klyx.terminal.FileDownloadStatus
-import com.klyx.terminal.LocalSessionBinder
+import com.klyx.terminal.SessionBinder
 import com.klyx.terminal.SessionManager
 import com.klyx.terminal.TerminalManager
 import com.klyx.terminal.TerminalUiState
@@ -65,78 +71,102 @@ import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.ui.theme.KlyxMono
 import kotlinx.serialization.json.Json
 
-val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false }
+private val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TerminalPage(modifier: Modifier = Modifier) {
     InitTerminal { user ->
-        val binder = LocalSessionBinder.current
-        val navigator = LocalNavigator.current
+        var title: String? by remember { mutableStateOf(null) }
 
-        NavigationBackHandler(rememberNavigationEventState(NavigationEventInfo.None)) {
-            navigator.navigateBack()
-        }
-
-        Box(
-            modifier = modifier
-                .systemBarsPadding()
-                .imePadding()
-        ) {
-            val isBound by binder.isBounded.collectAsState()
-
-            if (isBound) {
-                val sessionClient = rememberTerminalSessionClient(
-                    onSessionFinished = { navigator.navigateBack() }
+        Scaffold(
+            modifier = modifier,
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            title ?: "Terminal",
+                            fontFamily = KlyxMono,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                    )
                 )
+            }
+        ) { innerPadding ->
+            val binder = globalOf<SessionBinder>()
+            val navigator = LocalNavigator.current
 
-                var session by remember { mutableStateOf<TerminalSession?>(null) }
-                LaunchedEffect(sessionClient, user) {
-                    session = SessionManager.getOrCreateSession(SessionManager.currentSessionId, user, sessionClient)
-                }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .imePadding()
+            ) {
+                val isBound by binder.isBounded.collectAsState()
 
-                if (session != null) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        val extraKeysClient = remember(session) { KlyxExtraKeysClient(session!!) }
-                        val extraKeysState = rememberExtraKeysState()
+                if (isBound) {
+                    val sessionClient = rememberTerminalSessionClient(
+                        //onSessionFinished = { navigator.navigateBack() },
+                        onTitleChanged = { title = it.title }
+                    )
 
-                        Terminal(
-                            modifier = Modifier.weight(1f),
-                            session = session!!,
-                            fontFamily = JetBrainsMonoFontFamily,
-                            fontSize = 15.sp,
-                            client = remember { KlyxTerminalClient(extraKeysState) }
+                    var session by remember { mutableStateOf<TerminalSession?>(null) }
+                    LaunchedEffect(sessionClient, user) {
+                        session = SessionManager.getOrCreateSession(
+                            SessionManager.currentSessionId, user, sessionClient
                         )
+                        title = session!!.title
+                    }
 
-                        ExtraKeys(
-                            extraKeysInfo = ExtraKeysInfo(
-                                propertiesInfo = json.encodeToString(ExtraKeys),
-                                style = ExtraKeyStyle.ArrowsOnly,
-                                extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
-                            ),
-                            state = extraKeysState,
-                            client = extraKeysClient,
-                            modifier = Modifier.height(75.dp)
-                        )
+                    if (session != null) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            val extraKeysClient = remember(session) { KlyxExtraKeysClient(session!!) }
+                            val extraKeysState = rememberExtraKeysState()
+
+                            Terminal(
+                                modifier = Modifier.weight(1f),
+                                session = session!!,
+                                fontFamily = JetBrainsMonoFontFamily,
+                                fontSize = 15.sp,
+                                client = remember { KlyxTerminalClient(extraKeysState, navigator::navigateBack) }
+                            )
+
+                            ExtraKeys(
+                                extraKeysInfo = ExtraKeysInfo(
+                                    propertiesInfo = json.encodeToString(ExtraKeys),
+                                    style = ExtraKeyStyle.ArrowsOnly,
+                                    extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
+                                ),
+                                state = extraKeysState,
+                                client = extraKeysClient,
+                                modifier = Modifier.height(75.dp)
+                            )
+                        }
+                    } else {
+                        Column(
+                            modifier = Modifier.align(Alignment.Center),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Creating session...", fontFamily = KlyxMono)
+                            Spacer(Modifier.height(16.dp))
+                            CircularWavyProgressIndicator()
+                        }
                     }
                 } else {
                     Column(
                         modifier = Modifier.align(Alignment.Center),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("Creating session...", fontFamily = KlyxMono)
+                        Text("Binding Session", fontFamily = KlyxMono)
                         Spacer(Modifier.height(16.dp))
                         CircularWavyProgressIndicator()
                     }
-                }
-            } else {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Binding Session", fontFamily = KlyxMono)
-                    Spacer(Modifier.height(16.dp))
-                    CircularWavyProgressIndicator()
                 }
             }
         }
@@ -145,12 +175,20 @@ fun TerminalPage(modifier: Modifier = Modifier) {
 
 @Composable
 private fun InitTerminal(content: @Composable (user: String) -> Unit) {
-    val sessionBinder = LocalSessionBinder.current
+    val sessionBinder = globalOf<SessionBinder>()
     val context = LocalPlatformContext.current
 
-    LifecycleStartEffect(Unit) {
-        sessionBinder.bind(context)
-        onStopOrDispose { sessionBinder.unbind(context) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> sessionBinder.bind(context)
+                else -> {}
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     val uiState by TerminalManager.uiState.collectAsStateWithLifecycle()
