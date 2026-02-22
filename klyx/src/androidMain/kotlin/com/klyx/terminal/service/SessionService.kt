@@ -21,6 +21,7 @@ import com.klyx.resources.app_name
 import com.klyx.terminal.SessionManager
 import com.klyx.terminal.event.NewSessionEvent
 import com.klyx.terminal.event.SessionTerminateEvent
+import com.klyx.terminal.event.TerminateAllSessionEvent
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -91,7 +92,7 @@ class SessionService : Service() {
                         daemonRunning = false
                     }
                     stopSelf()
-                    GlobalApp.global<com.klyx.terminal.SessionBinder>().unbind(applicationContext)
+                    EventBus.INSTANCE.post(TerminateAllSessionEvent)
                 }
             }
 

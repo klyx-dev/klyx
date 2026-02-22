@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalNavigator
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.app.globalOf
+import com.klyx.core.event.EventBus
 import com.klyx.core.file.humanBytes
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
@@ -60,6 +61,7 @@ import com.klyx.terminal.SessionManager
 import com.klyx.terminal.TerminalManager
 import com.klyx.terminal.TerminalUiState
 import com.klyx.terminal.emulator.TerminalSession
+import com.klyx.terminal.event.TerminateAllSessionEvent
 import com.klyx.terminal.ui.Terminal
 import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import com.klyx.terminal.ui.extrakeys.ExtraKeys
@@ -109,6 +111,12 @@ fun TerminalPage(modifier: Modifier = Modifier) {
                     .imePadding()
             ) {
                 val isBound by binder.isBounded.collectAsState()
+
+                LaunchedEffect(Unit) {
+                    EventBus.INSTANCE.subscribe<TerminateAllSessionEvent> {
+                        navigator.navigateBack()
+                    }
+                }
 
                 if (isBound) {
                     val sessionClient = rememberTerminalSessionClient(

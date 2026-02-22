@@ -32,6 +32,7 @@ import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.terminal.SessionBinder
+import com.klyx.terminal.event.TerminateAllSessionEvent
 import com.klyx.viewmodel.EditorViewModel
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
@@ -46,10 +47,17 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
     private val editorViewModel by viewModel<EditorViewModel>()
     private val fileTreeViewModel by viewModel<FileTreeViewModel>()
 
+    @OptIn(UnsafeGlobalAccess::class)
+    private val app by lazy { GlobalApp }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
         subscribe()
+
+        EventBus.INSTANCE.subscribe<TerminateAllSessionEvent> {
+            app.global<SessionBinder>().unbind(this)
+        }
     }
 
     @Composable
@@ -92,9 +100,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
         handleIntent(intent)
     }
 
-    @OptIn(UnsafeGlobalAccess::class)
     override fun onDestroy() {
-        val app = GlobalApp
         super.onDestroy()
         app.global<SessionBinder>().unbind(this)
     }
