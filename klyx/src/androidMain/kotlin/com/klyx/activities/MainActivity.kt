@@ -19,6 +19,8 @@ import androidx.lifecycle.lifecycleScope
 import com.klyx.InitScreen
 import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.Notifier
+import com.klyx.core.app.GlobalApp
+import com.klyx.core.app.UnsafeGlobalAccess
 import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.Subscriber
@@ -29,6 +31,7 @@ import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
+import com.klyx.terminal.SessionBinder
 import com.klyx.viewmodel.EditorViewModel
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
@@ -87,6 +90,13 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
     override fun onResume() {
         super.onResume()
         handleIntent(intent)
+    }
+
+    @OptIn(UnsafeGlobalAccess::class)
+    override fun onDestroy() {
+        val app = GlobalApp
+        super.onDestroy()
+        app.global<SessionBinder>().unbind(this)
     }
 
     private fun handleIntent(intent: Intent) {

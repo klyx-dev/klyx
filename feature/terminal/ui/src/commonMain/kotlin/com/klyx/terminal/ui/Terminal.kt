@@ -87,7 +87,7 @@ fun Terminal(
     args: List<String> = emptyList(),
     env: Map<String, String> = emptyMap(),
     cursorStyle: CursorStyle = CursorStyle.default(),
-    sessionClient: TerminalSessionClient = rememberTerminalSessionClient(cursorStyle),
+    sessionClient: TerminalSessionClient = rememberTerminalSessionClient(cursorStyle = cursorStyle),
     terminalClient: TerminalClient = rememberTerminalClient(),
     fontSize: TextUnit = 18.sp,
     fontFamily: FontFamily = FontFamily.Monospace,

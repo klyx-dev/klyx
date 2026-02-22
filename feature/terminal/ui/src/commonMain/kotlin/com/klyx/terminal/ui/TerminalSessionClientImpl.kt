@@ -18,13 +18,14 @@ import io.github.oshai.kotlinlogging.Marker
  */
 @Composable
 fun rememberTerminalSessionClient(
-    cursorStyle: CursorStyle = CursorStyle.default(),
     onSessionFinished: (TerminalSession) -> Unit = {},
     onTitleChanged: (TerminalSession) -> Unit = {},
+    onColorsChanged: (TerminalSession) -> Unit = {},
+    cursorStyle: CursorStyle = CursorStyle.default(),
 ): TerminalSessionClient {
     val clipboard = LocalClipboard.current
     return remember(clipboard, cursorStyle) {
-        TerminalSessionClientImpl(clipboard, cursorStyle, onSessionFinished, onTitleChanged)
+        TerminalSessionClientImpl(clipboard, cursorStyle, onSessionFinished, onTitleChanged, onColorsChanged)
     }
 }
 
@@ -33,6 +34,7 @@ private class TerminalSessionClientImpl(
     cursorStyle: CursorStyle,
     val onSessionFinish: (TerminalSession) -> Unit,
     val onTitleChange: (TerminalSession) -> Unit,
+    val onColorsChange: (TerminalSession) -> Unit,
 ) : TerminalSessionClient {
 
     private val logger = KotlinLogging.logger("TerminalClient")
@@ -61,7 +63,7 @@ private class TerminalSessionClientImpl(
     }
 
     override fun onBell(session: TerminalSession) {}
-    override fun onColorsChanged(session: TerminalSession) {}
+    override fun onColorsChanged(session: TerminalSession) = onColorsChange(session)
     override fun onTerminalCursorStateChange(state: Boolean) {}
     override fun setTerminalShellPid(session: TerminalSession, pid: Int) {}
 

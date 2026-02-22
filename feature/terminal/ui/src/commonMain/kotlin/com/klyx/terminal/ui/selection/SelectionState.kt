@@ -20,7 +20,6 @@ internal class SelectionState(
     handleWidthPx: Float,
     handleHeightPx: Float,
 ) {
-    // ── Handles ───────────────────────────────────────────────────────────────
 
     /**
      * The start (left) handle — initial orientation [HandleOrientation.Left].
@@ -28,8 +27,8 @@ internal class SelectionState(
      */
     val startHandle = HandleState(
         initialOrientation = HandleOrientation.Left,
-        handleWidthPx      = handleWidthPx,
-        handleHeightPx     = handleHeightPx,
+        handleWidthPx = handleWidthPx,
+        handleHeightPx = handleHeightPx,
     )
 
     /**
@@ -38,17 +37,14 @@ internal class SelectionState(
      */
     val endHandle = HandleState(
         initialOrientation = HandleOrientation.Right,
-        handleWidthPx      = handleWidthPx,
-        handleHeightPx     = handleHeightPx,
+        handleWidthPx = handleWidthPx,
+        handleHeightPx = handleHeightPx,
     )
-
-    // ── Selection activity ────────────────────────────────────────────────────
 
     /** True when a selection is active and the overlay should be shown. */
     var isActive by mutableStateOf(false)
         private set
 
-    // ── Terminal cell selection bounds ────────────────────────────────────────
     // These are in terminal column / row coordinates, not pixels.
 
     /** Column of the selection start. */
@@ -67,21 +63,19 @@ internal class SelectionState(
     var selectionEndRow by mutableStateOf(0)
         private set
 
-    // ── Public API ────────────────────────────────────────────────────────────
-
     /**
      * Begin a new selection.  Both handles are hidden until
      * [updateStartHandle] / [updateEndHandle] are called.
      */
     fun startSelection(
         startCol: Int, startRow: Int,
-        endCol:   Int, endRow:   Int,
+        endCol: Int, endRow: Int,
     ) {
         selectionStartColumn = startCol
-        selectionStartRow    = startRow
-        selectionEndColumn   = endCol
-        selectionEndRow      = endRow
-        isActive             = true
+        selectionStartRow = startRow
+        selectionEndColumn = endCol
+        selectionEndRow = endRow
+        isActive = true
     }
 
     /**
@@ -93,9 +87,14 @@ internal class SelectionState(
      * @param col      Terminal column — stored so callers can query the cell.
      * @param row      Terminal row.
      */
-    fun updateStartHandle(screenX: Float, screenY: Float, col: Int = selectionStartColumn, row: Int = selectionStartRow) {
+    fun updateStartHandle(
+        screenX: Float,
+        screenY: Float,
+        col: Int = selectionStartColumn,
+        row: Int = selectionStartRow
+    ) {
         selectionStartColumn = col
-        selectionStartRow    = row
+        selectionStartRow = row
         startHandle.moveTo(screenX, screenY)
         startHandle.isVisible = true
     }
@@ -106,7 +105,7 @@ internal class SelectionState(
      */
     fun updateEndHandle(screenX: Float, screenY: Float, col: Int = selectionEndColumn, row: Int = selectionEndRow) {
         selectionEndColumn = col
-        selectionEndRow    = row
+        selectionEndRow = row
         endHandle.moveTo(screenX, screenY)
         endHandle.isVisible = true
     }
@@ -116,11 +115,11 @@ internal class SelectionState(
      * Mirrors hide() on both handles + clearing the selection.
      */
     fun clearSelection() {
-        startHandle.isVisible  = false
+        startHandle.isVisible = false
         startHandle.isDragging = false
-        endHandle.isVisible    = false
-        endHandle.isDragging   = false
-        isActive               = false
+        endHandle.isVisible = false
+        endHandle.isDragging = false
+        isActive = false
     }
 
     /**
@@ -128,7 +127,7 @@ internal class SelectionState(
      * Mirrors hide() being called from moveTo() when !isPositionVisible().
      */
     fun hideStartHandle() {
-        startHandle.isVisible  = false
+        startHandle.isVisible = false
         startHandle.isDragging = false
     }
 
@@ -136,11 +135,9 @@ internal class SelectionState(
      * Hide just the end handle.
      */
     fun hideEndHandle() {
-        endHandle.isVisible  = false
+        endHandle.isVisible = false
         endHandle.isDragging = false
     }
-
-    // ── Convenience getters ────────────────────────────────────────────────────
 
     /** True if either handle is currently being dragged. */
     val isDragging: Boolean
@@ -149,6 +146,6 @@ internal class SelectionState(
     /** Returns the [HandleState] for the given [HandleType]. */
     fun handleFor(type: HandleType): HandleState = when (type) {
         HandleType.Start -> startHandle
-        HandleType.End   -> endHandle
+        HandleType.End -> endHandle
     }
 }
