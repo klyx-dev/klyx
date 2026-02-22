@@ -34,7 +34,7 @@ class ExtraKeysState(
 
     fun isSpecialButton(key: String) = specialButtons.keys.any { it.key == key }
 
-    fun readSpecialButton(specialButton: SpecialButton, autoSetInActive: Boolean): Boolean? {
+    fun readSpecialButton(specialButton: SpecialButton, autoSetInActive: Boolean = true): Boolean? {
         val stateHolder = specialButtons[specialButton] ?: return null
         val state = stateHolder.value
         if (!state.isActive) return false

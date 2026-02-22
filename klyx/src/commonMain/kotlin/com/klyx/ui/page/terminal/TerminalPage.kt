@@ -59,6 +59,7 @@ import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import com.klyx.terminal.ui.extrakeys.ExtraKeys
 import com.klyx.terminal.ui.extrakeys.ExtraKeysConstants
 import com.klyx.terminal.ui.extrakeys.ExtraKeysInfo
+import com.klyx.terminal.ui.extrakeys.rememberExtraKeysState
 import com.klyx.terminal.ui.rememberTerminalSessionClient
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.ui.theme.KlyxMono
@@ -97,13 +98,14 @@ fun TerminalPage(modifier: Modifier = Modifier) {
                 if (session != null) {
                     Column(modifier = Modifier.fillMaxSize()) {
                         val extraKeysClient = remember(session) { KlyxExtraKeysClient(session!!) }
+                        val extraKeysState = rememberExtraKeysState()
 
                         Terminal(
                             modifier = Modifier.weight(1f),
                             session = session!!,
                             fontFamily = JetBrainsMonoFontFamily,
                             fontSize = 15.sp,
-                            client = remember { KlyxTerminalClient() }
+                            client = remember { KlyxTerminalClient(extraKeysState) }
                         )
 
                         ExtraKeys(
@@ -112,6 +114,7 @@ fun TerminalPage(modifier: Modifier = Modifier) {
                                 style = ExtraKeyStyle.ArrowsOnly,
                                 extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
                             ),
+                            state = extraKeysState,
                             client = extraKeysClient,
                             modifier = Modifier.height(75.dp)
                         )
