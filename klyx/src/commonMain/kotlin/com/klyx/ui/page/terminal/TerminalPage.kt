@@ -103,6 +103,7 @@ fun TerminalPage(modifier: Modifier = Modifier) {
         ) { innerPadding ->
             val binder = globalOf<SessionBinder>()
             val navigator = LocalNavigator.current
+            val context = LocalPlatformContext.current
 
             Box(
                 modifier = Modifier
@@ -137,12 +138,22 @@ fun TerminalPage(modifier: Modifier = Modifier) {
                             val extraKeysClient = remember(session) { KlyxExtraKeysClient(session!!) }
                             val extraKeysState = rememberExtraKeysState()
 
+                            val terminalClient = remember {
+                                KlyxTerminalClient(
+                                    extraKeysState = extraKeysState,
+                                    onFinishRequest = {
+                                        binder.unbind(context)
+                                        navigator.navigateBack()
+                                    }
+                                )
+                            }
+
                             Terminal(
                                 modifier = Modifier.weight(1f),
                                 session = session!!,
                                 fontFamily = JetBrainsMonoFontFamily,
                                 fontSize = 15.sp,
-                                client = remember { KlyxTerminalClient(extraKeysState, navigator::navigateBack) }
+                                client = terminalClient
                             )
 
                             ExtraKeys(

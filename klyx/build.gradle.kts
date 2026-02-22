@@ -27,9 +27,6 @@ kotlin {
 
             api(libs.material)
             api(libs.sora.language.textmate)
-
-            api(projects.terminal.terminalView)
-            api(projects.terminal.termuxShared)
         }
 
         commonMain.dependencies {
