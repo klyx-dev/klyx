@@ -12,7 +12,6 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.klyx.R.drawable
 import com.klyx.activities.MainActivity
-import com.klyx.core.app.GlobalApp
 import com.klyx.core.app.UnsafeGlobalAccess
 import com.klyx.core.event.EventBus
 import com.klyx.core.util.value
@@ -109,7 +108,9 @@ class SessionService : Service() {
     }
 
     private fun createNotification(): Notification {
-        val intent = Intent(this, MainActivity::class.java)
+        val intent = Intent(this, MainActivity::class.java).apply {
+            action = ACTION_NOTIFICATION_TAP
+        }
         val pendingIntent = PendingIntent.getActivity(
             this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
@@ -182,5 +183,7 @@ class SessionService : Service() {
 
         private const val ACTION_EXIT = "com.klyx.terminal.ACTION_EXIT"
         private const val ACTION_WAKE_LOCK = "com.klyx.terminal.ACTION_WAKE_LOCK"
+
+        const val ACTION_NOTIFICATION_TAP = "com.klyx.terminal.ACTION_NOTIFICATION_TAP"
     }
 }

@@ -33,6 +33,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import arrow.core.raise.context.result
 import com.klyx.core.cmd.CommandManager
+import com.klyx.core.event.EventBus
 import com.klyx.core.event.subscribeToEvent
 import com.klyx.core.io.Paths
 import com.klyx.core.io.lastProjectFile
@@ -48,6 +49,7 @@ import com.klyx.di.LocalStatusBarViewModel
 import com.klyx.project.Project
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
+import com.klyx.ui.event.TerminalNotificationTapEvent
 import com.klyx.ui.page.SettingsPage
 import com.klyx.ui.page.main.MainPage
 import com.klyx.ui.page.settings.about.AboutPage
@@ -116,6 +118,14 @@ fun MainScreen() {
     ) {
         val navigationState = rememberNavigationState(startRoute = Route.Main)
         val navigator = remember { Navigator(navigationState) }
+
+        LaunchedEffect(Unit) {
+            EventBus.INSTANCE.subscribe<TerminalNotificationTapEvent> {
+                if (navigator.currentTopLevelRoute != Route.Terminal) {
+                    navigator.navigateTo(Route.Terminal)
+                }
+            }
+        }
 
         val entryProvider = entryProvider {
             entry<Route.Main> {

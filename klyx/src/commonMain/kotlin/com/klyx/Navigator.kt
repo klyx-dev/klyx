@@ -8,6 +8,13 @@ import androidx.navigation3.runtime.NavKey
  */
 class Navigator(val state: NavigationState) {
 
+    val currentTopLevelRoute: NavKey get() = state.topLevelRoute
+
+    val currentBackStack: List<NavKey>
+        get() = state.backStacks[state.topLevelRoute] ?: error("Stack for ${state.topLevelRoute} not found")
+
+    val currentRoute: NavKey get() = currentBackStack.last()
+
     fun navigateTo(route: NavKey) {
         if (route in state.backStacks.keys) {
             // This is a top level route, just switch to it

@@ -33,6 +33,8 @@ import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
 import com.klyx.terminal.SessionBinder
 import com.klyx.terminal.event.TerminateAllSessionEvent
+import com.klyx.terminal.service.SessionService
+import com.klyx.ui.event.TerminalNotificationTapEvent
 import com.klyx.viewmodel.EditorViewModel
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
@@ -110,6 +112,8 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
             val uri = intent.data!!
             editorViewModel.openFile(uri.toKxFile())
             setIntent(Intent())
+        } else if (intent.action == SessionService.ACTION_NOTIFICATION_TAP) {
+            EventBus.INSTANCE.tryPost(TerminalNotificationTapEvent)
         }
     }
 

@@ -1,6 +1,5 @@
 use libc::open;
 use std::ffi::CString;
-use std::fs;
 
 uniffi::setup_scaffolding!();
 
