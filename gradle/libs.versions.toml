@@ -51,7 +51,7 @@ jetbrains-skiko = "0.9.47"
 buildkonfig = "0.17.1"
 gobley = "0.3.7"
 kotlinLogging = "7.0.14"
-navigationevent = "1.0.0"
+navigationevent = "1.0.1"
 
 [libraries]
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
