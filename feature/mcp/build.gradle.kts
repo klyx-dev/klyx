@@ -9,7 +9,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("io.modelcontextprotocol:kotlin-sdk-client:0.8.3")
+                implementation("io.modelcontextprotocol:kotlin-sdk-client:0.8.4")
             }
         }
     }
