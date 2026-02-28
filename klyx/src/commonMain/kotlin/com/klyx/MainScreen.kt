@@ -18,35 +18,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isShiftPressed
-import androidx.compose.ui.input.key.key
-import androidx.lifecycle.compose.LifecycleStartEffect
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
-import arrow.core.raise.context.result
-import com.klyx.core.cmd.CommandManager
 import com.klyx.core.event.EventBus
-import com.klyx.core.event.subscribeToEvent
-import com.klyx.core.io.Paths
-import com.klyx.core.io.lastProjectFile
-import com.klyx.core.logging.KxLog
-import com.klyx.core.logging.MessageType
-import com.klyx.core.logging.logerror
 import com.klyx.core.notification.ui.NotificationOverlay
 import com.klyx.core.platform.Os
 import com.klyx.core.platform.currentOs
 import com.klyx.core.platform.currentPlatform
 import com.klyx.di.LocalKlyxViewModel
-import com.klyx.di.LocalStatusBarViewModel
-import com.klyx.project.Project
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.event.TerminalNotificationTapEvent
@@ -58,58 +40,11 @@ import com.klyx.ui.page.settings.appearance.DarkThemePreferences
 import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
 import com.klyx.ui.page.terminal.TerminalPage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import kotlinx.io.buffered
-import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.readString
-import kotlinx.io.writeString
-import kotlinx.serialization.json.Json
 
 @Composable
 fun MainScreen() {
-    val lifecycleOwner = LocalLifecycleOwner.current
-
     val klyxViewModel = LocalKlyxViewModel.current
-    val openedProject by klyxViewModel.openedProject.collectAsState()
-
     val appState by klyxViewModel.appState.collectAsStateWithLifecycle()
-
-    LaunchedEffect(lifecycleOwner) {
-        lifecycleOwner.subscribeToEvent<KeyEvent> { event ->
-            if (event.isCtrlPressed && event.isShiftPressed && event.key == Key.P) {
-                CommandManager.showCommandPalette()
-            }
-        }
-    }
-
-    LifecycleStartEffect(Unit) {
-        lifecycleScope.launch(Dispatchers.Default) {
-            result {
-                val project: Project = withContext(Dispatchers.IO) {
-                    SystemFileSystem.source(Paths.lastProjectFile).buffered().use { source ->
-                        Json.decodeFromString(source.readString())
-                    }
-                }
-
-                if (project != openedProject) {
-                    klyxViewModel.openProject(project)
-                }
-            }.logerror()
-        }
-
-        onStopOrDispose {
-            lifecycleScope.launch(Dispatchers.IO) {
-                SystemFileSystem.sink(Paths.lastProjectFile).buffered().use { sink ->
-                    sink.writeString(Json.encodeToString(openedProject))
-                }
-            }
-        }
-    }
-
-    collectLogs()
 
     Box(
         modifier = Modifier
@@ -210,21 +145,5 @@ private fun EntryProviderScope<NavKey>.settingsScreenEntries() {
     entry<SettingsRoute.DarkTheme> { DarkThemePreferences() }
     entry<SettingsRoute.Editor> { EditorPreferences() }
     entry<SettingsRoute.About> { AboutPage() }
-}
-
-@Suppress("ComposableNaming")
-@Composable
-private fun collectLogs() {
-    val statusBarViewModel = LocalStatusBarViewModel.current
-    val logBuffer = LocalLogBuffer.current
-
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.Default.limitedParallelism(4)) {
-            KxLog.logFlow.collect { log ->
-                logBuffer.add(log)
-                statusBarViewModel.setCurrentLogMessage(log, isProgressive = log.type == MessageType.Progress)
-            }
-        }
-    }
 }
 

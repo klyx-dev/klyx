@@ -47,38 +47,33 @@ suspend fun initializeKlyx(application: Application) {
 
     initMutex.withLock {
         if (isInitialized) return
-        Initialization.defineSteps(*STEPS)
 
         val cx = application.app
-        step(0) { SettingsManager.init(cx) }
+        trace("loading settings")
+        SettingsManager.init(cx)
 
         withContext(Dispatchers.Default) {
-            step(1) { extension.init(cx) }
+            trace("Starting extension system")
+            extension.init(cx)
 
             val extensionHostProxy = ExtensionHostProxy.global(cx)
             val options = MutableStateFlow(NodeBinaryOptions())
 
-            step(2) {
-                NodeRuntime(httpClient, CompletableDeferred(Unit), options.asStateFlow())
-            }?.let { nodeRuntime ->
-                val languageRegistry = LanguageRegistry.INSTANCE
-                step(3) { initLanguages(languageRegistry, nodeRuntime, application.app) }
-                step(4) { initLanguageExtensions(extensionHostProxy, languageRegistry) }
-                step(5) { initExtensionHost(extensionHostProxy, nodeRuntime, cx) }
-            }
+            trace("Preparing Node runtime")
+            val nodeRuntime = NodeRuntime(httpClient, CompletableDeferred(Unit), options.asStateFlow())
 
-            step(6) { initializeTerminal(cx) }
+            val languageRegistry = LanguageRegistry.INSTANCE
+            trace("Registering languages")
+            initLanguages(languageRegistry, nodeRuntime, application.app)
+            trace("Wiring language extensions")
+            initLanguageExtensions(extensionHostProxy, languageRegistry)
+            trace("Starting extension host")
+            initExtensionHost(extensionHostProxy, nodeRuntime, cx)
+            trace("Initializing terminal")
+            initializeTerminal(cx)
         }
 
         isInitialized = true
         Initialization.complete()
     }
-}
-
-private inline fun <R> step(index: Int, block: () -> R): R? {
-    Initialization.beginStep(index)
-    return runCatching(block).fold(
-        onSuccess = { Initialization.completeStep(index); it },
-        onFailure = { Initialization.failStep(index, it); null },
-    )
 }

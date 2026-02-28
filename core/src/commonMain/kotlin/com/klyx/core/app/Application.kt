@@ -2,6 +2,7 @@ package com.klyx.core.app
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisallowComposableCalls
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.KlyxBuildConfig
@@ -112,6 +113,7 @@ inline fun Debug(crossinline block: @DisallowComposableCalls suspend App.() -> U
  * @property buildTimestamp The timestamp of when the build was created, in milliseconds since epoch.
  * @property kotlinVersion The version of Kotlin used for the build.
  */
+@Immutable
 data class BuildInfo(
     val versionName: String,
     val versionCode: Int,
