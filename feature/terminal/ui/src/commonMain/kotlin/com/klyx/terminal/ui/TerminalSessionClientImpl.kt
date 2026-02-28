@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
+import com.klyx.terminal.TerminalBell
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
@@ -38,6 +39,7 @@ private class TerminalSessionClientImpl(
 ) : TerminalSessionClient {
 
     private val logger = KotlinLogging.logger("TerminalClient")
+    private val bell = TerminalBell()
 
     override val terminalCursorStyle = cursorStyle
 
@@ -48,6 +50,7 @@ private class TerminalSessionClientImpl(
     }
 
     override fun onSessionFinished(finishedSession: TerminalSession) {
+        bell.release()
         onSessionFinish(finishedSession)
     }
 
@@ -62,7 +65,10 @@ private class TerminalSessionClientImpl(
         }
     }
 
-    override fun onBell(session: TerminalSession) {}
+    override fun onBell(session: TerminalSession) {
+        bell.ring()
+    }
+
     override fun onColorsChanged(session: TerminalSession) = onColorsChange(session)
     override fun onTerminalCursorStateChange(state: Boolean) {}
     override fun setTerminalShellPid(session: TerminalSession, pid: Int) {}
