@@ -64,8 +64,8 @@ fun GeneralPreferences() {
                     title = "Show FPS",
                     icon = Icons._60FpsSelect,
                     description = "Show the FPS counter in the UI",
-                    isChecked = appSettings.showFps,
-                    onClick = { showFps ->
+                    checked = appSettings.showFps,
+                    onCheckedChange = { showFps ->
                         appSettings.update { it.copy(showFps = showFps) }
                     }
                 )
@@ -76,8 +76,8 @@ fun GeneralPreferences() {
                     title = "Use Compose Editor (Unstable)",
                     icon = Icons.Code,
                     description = "Switch to the experimental Compose-based editor instead of the Sora editor.",
-                    isChecked = appSettings.useComposeEditorInsteadOfSoraEditor,
-                    onClick = { enabled ->
+                    checked = appSettings.useComposeEditorInsteadOfSoraEditor,
+                    onCheckedChange = { enabled ->
                         if (!enabled) {
                             appSettings.update { it.copy(useComposeEditorInsteadOfSoraEditor = false) }
                         } else {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -24,8 +25,10 @@ import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -38,7 +41,6 @@ import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.node.CompositionLocalConsumerModifierNode
 import androidx.compose.ui.node.ModifierNodeElement
 import androidx.compose.ui.node.currentValueOf
@@ -55,22 +57,24 @@ import androidx.compose.ui.platform.establishTextInputSession
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.klyx.core.LocalNotifier
+import com.klyx.core.platform.LocalPlatform
+import com.klyx.core.platform.showToast
 import com.klyx.terminal.ScreenEvent
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
-import com.klyx.terminal.ui.selection.ContainerBounds
-import com.klyx.terminal.ui.selection.SelectionController
-import com.klyx.terminal.ui.selection.SelectionOverlay
-import com.klyx.terminal.ui.selection.SelectionState
-import com.klyx.terminal.ui.selection.rememberSelectionController
+import com.klyx.terminal.ui.selection.HandleOrientation
+import com.klyx.terminal.ui.selection.SelectionActionToolbar
+import com.klyx.terminal.ui.selection.SelectionHandle
+import com.klyx.terminal.ui.selection.TextSelectionState
+import com.klyx.terminal.ui.selection.icon.TextSelectHandleLeft
+import com.klyx.terminal.ui.selection.icon.TextSelectHandleRight
 import com.klyx.util.clipboard.paste
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
@@ -151,7 +155,7 @@ fun Terminal(
     val clipboard = LocalClipboard.current
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
-    val notifier = LocalNotifier.current
+    val platform = LocalPlatform.current
 
     val typeface by rememberNativeTypeface(fontFamily)
     val fontSizePx = with(density) { fontSize.toPx() }
@@ -171,22 +175,38 @@ fun Terminal(
     var emulator by remember { mutableStateOf(session.emulator) }
     var topRow by remember(state) { state.topRow }
 
-    var isSelectingText by remember(state) { state.isSelectingText }
+    val selectionState = remember { TextSelectionState() }
+
+    SideEffect {
+        state.isSelectingText.value = selectionState.isActive
+    }
+
+    SideEffect {
+        val sel = selectionState.getSelectors()
+        state.selY1.value = sel[0]
+        state.selY2.value = sel[1]
+        state.selX1.value = sel[2]
+        state.selX2.value = sel[3]
+    }
+
+    var canPaste by remember { mutableStateOf(false) }
+    LaunchedEffect(selectionState.isActive) {
+        if (selectionState.isActive) {
+            canPaste = clipboard.getClipEntry() != null
+        }
+    }
+
+    val isSelectingText = selectionState.isActive
+
     var scaleFactor by remember(state) { state.scaleFactor }
     var scrolledWithFinger by remember(state) { state.scrolledWithFinger }
-
-    var containerBounds by remember { mutableStateOf(ContainerBounds.Zero) }
-
-    val selectionState = remember(density) {
-        SelectionState(with(density) { 48.dp.toPx() }, with(density) { 28.dp.toPx() })
-    }
-    val selectionController = rememberSelectionController(state, selectionState)
 
     val navState = rememberNavigationEventState(NavigationEventInfo.None)
     val shouldInterceptBack = isSelectingText || client.shouldBackButtonBeMappedToEscape
     NavigationBackHandler(state = navState, isBackEnabled = shouldInterceptBack) {
         if (isSelectingText) {
-            selectionController.hide()
+            selectionState.hide()
+            client.copyModeChanged(false)
         } else if (client.shouldBackButtonBeMappedToEscape) {
             /* map to escape */
         }
@@ -218,8 +238,9 @@ fun Terminal(
                 if (isSelectingText || emu.autoScrollDisabled) {
                     val rowShift = emu.scrollCounter
                     if (-topRow + rowShift > rowsInHistory) {
-                        if (isSelectingText) {
-                            selectionController.hide()
+                        if (selectionState.isActive) {
+                            selectionState.hide()
+                            client.copyModeChanged(false)
                         }
 
                         if (emu.autoScrollDisabled) {
@@ -227,9 +248,8 @@ fun Terminal(
                         }
                     } else {
                         topRow -= rowShift
-                        // decrement selection cursors
-                        if (isSelectingText) {
-                            selectionController.decrementYTextSelectionCursors(rowShift)
+                        if (selectionState.isActive) {
+                            selectionState.decrementYCursors(rowShift)
                         }
                     }
                 } else if (!skipScrolling && topRow != 0) {
@@ -344,21 +364,39 @@ fun Terminal(
                     }
                 }
             }
-            .pointerInput(state, selectionController) {
+            .pointerInput(state) {
                 detectTapGestures(
                     onTap = { offset ->
-                        if (selectionController.isActive) {
-                            selectionController.hide()
+                        if (selectionState.isActive) {
+                            selectionState.hide()
+                            client.copyModeChanged(false)
                         } else {
                             focusRequester.requestFocus(FocusDirection.Enter)
                             client.onSingleTapUp(offset)
                         }
                     },
                     onLongPress = { offset ->
-                        if (!selectionController.isActive) {
+                        if (!selectionState.isActive) {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            //selectionController.show(offset, metrics)
-                            notifier.toast("Text selection is not yet supported, but will be available in a future update.")
+
+                            val emu = emulator ?: return@detectTapGestures
+                            val col = (offset.x / painter.fontWidth).toInt().coerceIn(0, emu.columns - 1)
+                            val row = (((offset.y - 40f) / painter.fontLineSpacing) + topRow).toInt()
+
+                            //selectionState.show(col, row)
+
+                            // expand initial tap to word boundaries
+                            //selectionState.initWordSelection(
+                            //    x = col,
+                            //    y = row,
+                            //    maxColumns = emu.columns,
+                            //    isBlank = { c, r ->
+                            //        val ch = emu.screen.getSelectedText(c, r, c, r)
+                            //        ch.isEmpty() || ch == " "
+                            //    },
+                            //)
+                            platform.showToast("Text Selection is not yet supported.")
+
                             client.onLongPress(offset)
                             client.copyModeChanged(true)
                         }
@@ -373,7 +411,7 @@ fun Terminal(
                     scaleFactor = client.onScale(scaleFactor)
                 }
             }
-            .scroll(state, metrics, selectionController)
+            .scroll(state, selectionState, metrics)
             .focusRequester(focusRequester)
             .terminalInput(state)
             .focusable(interactionSource = remember { MutableInteractionSource() })
@@ -394,6 +432,12 @@ fun Terminal(
                 if (enableKeyLogging) {
                     client.logInfo(TerminalState.LOG_TAG, "[Terminal] onKeyEvent($event)")
                 }
+
+                // any key press dismisses the selection
+                if (selectionState.isActive) {
+                    selectionState.hide()
+                    client.copyModeChanged(false)
+                }
                 state.handleKeyEvent(event, coroutineScope)
             }
     ) {
@@ -410,14 +454,7 @@ fun Terminal(
                 modifier = Modifier
                     .fillMaxSize()
                     .onGloballyPositioned { coords ->
-                        val pos = coords.positionInWindow()
-                        val size = coords.size
-                        containerBounds = ContainerBounds(
-                            left = pos.x,
-                            top = pos.y,
-                            right = pos.x + size.width,
-                            bottom = pos.y + size.height,
-                        )
+                        state.layoutCoordinates = coords
                     }
                     .graphicsLayer {
                         compositingStrategy = CompositingStrategy.Offscreen
@@ -427,15 +464,6 @@ fun Terminal(
                 measurePolicy = { _, constraints ->
                     layout(constraints.maxWidth, constraints.maxHeight) {}
                 }
-            )
-
-            SelectionOverlay(
-                selectionState = selectionState,
-                containerBounds = containerBounds,
-                containerPaddingPx = 0f,
-                onUpdatePosition = { type, x, y ->
-                    selectionController.onHandleMoved(type, x, y, metrics)
-                },
             )
         }
     }
@@ -447,9 +475,9 @@ fun Terminal(
 
 private fun Modifier.scroll(
     state: TerminalState,
-    fontMetrics: FontMetrics,
-    selectionController: SelectionController
-) = this then pointerInput(state, selectionController) {
+    selectionState: TextSelectionState,
+    fontMetrics: FontMetrics
+) = this then pointerInput(state) {
     var scrollRemainder by state.scrollRemainder
 
     coroutineScope {
@@ -468,11 +496,9 @@ private fun Modifier.scroll(
                 previousPosition = dragEvent.position
                 dragEvent.consume()
 
-                if (state.isSelectingText.value) {
-                    selectionController.onEndHandleDrag(
-                        dragAmount = dragAmount,
-                        metrics = fontMetrics
-                    )
+                if (selectionState.isActive) {
+                    // Handles own their own drag; nothing to do here for plain scroll.
+                    // Edge-auto-scroll is handled inside each handle's onDragPosition.
                 } else {
                     state.scrolledWithFinger.value = true
                     val distanceY = -dragAmount.y + scrollRemainder
@@ -490,9 +516,6 @@ private fun Modifier.scroll(
             } while (true)
 
             scrollRemainder = 0f
-            if (state.isSelectingText.value) {
-                selectionController.onEndHandleDragEnd()
-            }
         }
     }
 } then pointerInput(Unit) {

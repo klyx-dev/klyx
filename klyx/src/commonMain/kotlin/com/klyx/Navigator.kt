@@ -1,5 +1,8 @@
 package com.klyx
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.navigation3.runtime.NavKey
 
@@ -38,6 +41,28 @@ class Navigator(val state: NavigationState) {
 
     companion object {
         const val ANIMATION_DURATION = 500
+    }
+}
+
+interface NavigationScope {
+    val navigator: Navigator
+    val navigationState: NavigationState
+}
+
+@Composable
+fun NavigationScope(content: @Composable NavigationScope. () -> Unit) {
+    val navigationState = rememberNavigationState(startRoute = Route.Main)
+    val navigator = remember { Navigator(navigationState) }
+
+    val scope = remember(navigator, navigationState) {
+        object : NavigationScope {
+            override val navigator = navigator
+            override val navigationState = navigationState
+        }
+    }
+
+    CompositionLocalProvider(LocalNavigator provides navigator) {
+        scope.content()
     }
 }
 

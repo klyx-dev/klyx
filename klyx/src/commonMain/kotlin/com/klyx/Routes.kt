@@ -18,6 +18,9 @@ sealed interface Route : NavKey {
     data object Terminal : Route, NavKey
 
     @Serializable
+    data object TerminalSettings : Route, NavKey
+
+    @Serializable
     data object Settings : Route, NavKey
 
     companion object {
@@ -28,6 +31,7 @@ sealed interface Route : NavKey {
                 polymorphic(NavKey::class) {
                     subclass(Main::class, Main.serializer())
                     subclass(Terminal::class, Terminal.serializer())
+                    subclass(TerminalSettings::class, TerminalSettings.serializer())
                     subclass(Settings::class, Settings.serializer())
 
                     subclass(SettingsRoute.General::class, SettingsRoute.General.serializer())

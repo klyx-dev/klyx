@@ -138,8 +138,8 @@ fun PreferenceItem(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PreferenceItemVariant(
-    modifier: Modifier = Modifier,
     title: String,
+    modifier: Modifier = Modifier,
     description: String? = null,
     icon: ImageVector? = null,
     enabled: Boolean = true,
@@ -187,9 +187,9 @@ fun PreferenceItemVariant(
 
 @Composable
 fun PreferenceSingleChoiceItem(
-    modifier: Modifier = Modifier,
     text: String,
     selected: Boolean,
+    modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(horizontal = 8.dp, vertical = 16.dp),
     onClick: () -> Unit,
 ) {
@@ -334,18 +334,18 @@ fun PreferenceSwitch(
     title: String,
     description: String? = null,
     icon: ImageVector? = null,
+    checked: Boolean = true,
+    onCheckedChange: ((Boolean) -> Unit) = {},
     enabled: Boolean = true,
-    isChecked: Boolean = true,
-    thumbContent: (@Composable () -> Unit)? = rememberThumbContent(isChecked = isChecked),
-    onClick: ((Boolean) -> Unit) = {},
+    thumbContent: (@Composable () -> Unit)? = rememberThumbContent(isChecked = checked),
 ) {
-
     val interactionSource = remember { MutableInteractionSource() }
+
     Surface(
         modifier = Modifier.toggleable(
-            value = isChecked,
+            value = checked,
             enabled = enabled,
-            onValueChange = onClick,
+            onValueChange = onCheckedChange,
             indication = LocalIndication.current,
             interactionSource = interactionSource,
         )
@@ -371,7 +371,7 @@ fun PreferenceSwitch(
                     PreferenceItemDescription(text = description, enabled = enabled)
             }
             Switch(
-                checked = isChecked,
+                checked = checked,
                 onCheckedChange = null,
                 interactionSource = interactionSource,
                 modifier = Modifier.padding(start = 20.dp, end = 6.dp),
@@ -550,7 +550,7 @@ fun PreferenceSwitchWithContainer(
     icon: ImageVector? = null,
     isChecked: Boolean,
     thumbContent: @Composable (() -> Unit)? = rememberThumbContent(isChecked = isChecked),
-    onClick: () -> Unit,
+    onValueChange: (Boolean) -> Unit,
 ) {
 
     val interactionSource = remember { MutableInteractionSource() }
@@ -562,7 +562,7 @@ fun PreferenceSwitchWithContainer(
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .toggleable(
                     value = isChecked,
-                    onValueChange = { onClick() },
+                    onValueChange = onValueChange,
                     interactionSource = interactionSource,
                     indication = LocalIndication.current,
                 )
@@ -650,8 +650,8 @@ fun PreferenceSubtitle(
 
 @Composable
 fun PreferenceInfo(
-    modifier: Modifier = Modifier,
     text: String,
+    modifier: Modifier = Modifier,
     icon: ImageVector = Icons.Info,
     applyPaddings: Boolean = true,
 ) {

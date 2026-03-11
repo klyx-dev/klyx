@@ -12,7 +12,10 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
 inline fun <reified A> Option<A>.getOrThrow(): A {
-    contract { returnsNotNull() implies (this@getOrThrow is Some<A>) }
+    contract {
+        returns() implies (this@getOrThrow is Some<A>)
+        returnsNotNull() implies (this@getOrThrow is Some<A>)
+    }
     return getOrElse { throw NoSuchElementException("No ${A::class.simpleName} present") }
 }
 

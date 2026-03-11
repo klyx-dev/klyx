@@ -1,125 +1,127 @@
 package com.klyx.terminal.ui.selection
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
-import com.klyx.terminal.ui.selection.icon.TextSelectHandleLeft
-import com.klyx.terminal.ui.selection.icon.TextSelectHandleRight
+import kotlin.math.roundToInt
 
 @Composable
 internal fun SelectionHandle(
-    state: HandleState,
-    containerBounds: ContainerBounds,
-    containerPaddingPx: Float = 0f,
-    onUpdatePosition: (screenX: Int, screenY: Int) -> Unit,
-    onDragStarted: (() -> Unit)? = null,
-    onDragEnded: (() -> Unit)? = null,
+    orientation: HandleOrientation,
+    anchorX: Float,
+    anchorY: Float,
+    leftIcon: ImageVector,
+    rightIcon: ImageVector,
+    modifier: Modifier = Modifier,
+    tint: Color = Color.Unspecified,
+    onDragStart: () -> Unit = {},
+    onDragPosition: (pixelX: Float, pixelY: Float) -> Unit,
+    onDragEnd: () -> Unit = {},
 ) {
-    if (!state.isVisible && !state.isDragging) return
+    var iconSize by remember { mutableStateOf(IntSize(48, 48)) }
 
-    val density = LocalDensity.current
-    val handleSizeDp: DpSize = remember(state.handleWidthPx, state.handleHeightPx) {
-        with(density) {
-            DpSize(
-                width = state.handleWidthPx.toDp(),
-                height = state.handleHeightPx.toDp(),
-            )
-        }
+    val hotspotX = when (orientation) {
+        HandleOrientation.LEFT -> iconSize.width * 3f / 4f
+        HandleOrientation.RIGHT -> iconSize.width * 1f / 4f
     }
+    val hotspotY = 0f
+    // pull the handle up slightly so the pointer tip aligns with the baseline
+    val touchOffsetY = -iconSize.height * 0.3f
 
-    val clipLeft = containerBounds.left + containerPaddingPx
-    val clipTop = containerBounds.top + containerPaddingPx
-    val clipRight = containerBounds.right - containerPaddingPx
-    val clipBottom = containerBounds.bottom - containerPaddingPx
+    // position the top-left of the icon so that the hot-spot lands on (anchorX, anchorY)
+    val drawX = (anchorX - hotspotX).roundToInt()
+    val drawY = (anchorY + touchOffsetY - hotspotY).roundToInt()
 
-    Popup(
-        offset = state.popupOffset,
-        properties = PopupProperties(
-            focusable = false,
-            clippingEnabled = false,
-            dismissOnBackPress = false,
-        ),
-    ) {
+    // track accumulated drag so we can emit absolute positions
+    var dragOriginX by remember { mutableStateOf(0f) }
+    var dragOriginY by remember { mutableStateOf(0f) }
+    var cumulativeDx by remember { mutableStateOf(0f) }
+    var cumulativeDy by remember { mutableStateOf(0f) }
+
+    val currentOrientation = rememberFlippedOrientation(
+        anchorX = anchorX,
+        initial = orientation,
+        iconWidth = iconSize.width,
+    )
+    val icon = if (currentOrientation == HandleOrientation.LEFT) leftIcon else rightIcon
+
+    Popup {
         Box(
-            modifier = Modifier
-                .size(handleSizeDp)
-                .pointerInput(state) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        down.consume()
-
-                        val rawXAtDown = state.pointX + down.position.x
-                        val rawYAtDown = state.pointY + down.position.y
-
-                        state.onDragStart(
-                            rawX = rawXAtDown,
-                            rawY = rawYAtDown,
-                            parentX = containerBounds.left.toInt(),
-                            parentY = containerBounds.top.toInt(),
-                        )
-                        onDragStarted?.invoke()
-
-                        while (true) {
-                            val event = awaitPointerEvent(PointerEventPass.Initial)
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                                ?: break
-
-                            if (!change.pressed) {
-                                state.onDragEnd()
-                                onDragEnded?.invoke()
-                                break
-                            }
-
-                            val delta = change.positionChange()
-                            if (delta != Offset.Zero) {
-                                change.consume()
-
-                                val rawX = state.pointX + change.position.x
-                                val rawY = state.pointY + change.position.y
-
-                                state.onParentMoved(
-                                    currentParentX = containerBounds.left.toInt(),
-                                    currentParentY = containerBounds.top.toInt(),
-                                )
-
-                                state.checkOrientation(
-                                    posX = state.pointX,
-                                    clipLeft = clipLeft,
-                                    clipRight = clipRight,
-                                )
-
-                                val (newX, newY) = state.onDragMove(rawX, rawY)
-                                onUpdatePosition(newX, newY)
-                            }
-                        }
-                    }
+            modifier = modifier
+                .customOffset { IntOffset(drawX, drawY) }
+                .onSizeChanged { iconSize = it }
+                .pointerInput(anchorX, anchorY) {
+                    detectDragGestures(
+                        onDragStart = {
+                            dragOriginX = anchorX
+                            dragOriginY = anchorY
+                            cumulativeDx = 0f
+                            cumulativeDy = 0f
+                            onDragStart()
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            cumulativeDx += dragAmount.x
+                            cumulativeDy += dragAmount.y
+                            val newPixelX = dragOriginX + cumulativeDx - hotspotX + hotspotX
+                            val newPixelY = dragOriginY + cumulativeDy + touchOffsetY + hotspotY
+                            onDragPosition(newPixelX, newPixelY)
+                        },
+                        onDragEnd = {
+                            cumulativeDx = 0f; cumulativeDy = 0f
+                            onDragEnd()
+                        },
+                        onDragCancel = {
+                            cumulativeDx = 0f; cumulativeDy = 0f
+                            onDragEnd()
+                        },
+                    )
                 }
         ) {
-            Image(
-                imageVector = when (state.orientation) {
-                    HandleOrientation.Left -> TextSelectHandleLeft
-                    HandleOrientation.Right -> TextSelectHandleRight
-                },
-                contentDescription = if (state.initialOrientation == HandleOrientation.Left) {
-                    "Selection start handle"
-                } else {
-                    "Selection end handle"
-                },
-                modifier = Modifier.size(handleSizeDp),
+            Icon(
+                imageVector = icon,
+                contentDescription = if (orientation == HandleOrientation.LEFT) "Selection start handle" else "Selection end handle",
+                tint = tint,
             )
         }
     }
 }
+
+@Composable
+private fun rememberFlippedOrientation(
+    anchorX: Float,
+    initial: HandleOrientation,
+    iconWidth: Int,
+): HandleOrientation {
+    // The parent Layout provides its own width via onGloballyPositioned, but
+    // for a lightweight solution we just track via the state exposed here and
+    // let the caller re-compose when anchorX changes.
+    return when {
+        anchorX - iconWidth < 0 -> HandleOrientation.RIGHT
+        // no right-edge guard without parent width. keep initial otherwise
+        else -> initial
+    }
+}
+
+private fun Modifier.customOffset(offset: () -> IntOffset): Modifier =
+    this.then(Modifier.layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) {
+            val off = offset()
+            placeable.placeRelative(off.x, off.y)
+        }
+    })

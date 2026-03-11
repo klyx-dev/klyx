@@ -15,6 +15,7 @@ inline fun <Settings : KlyxSettings> Settings.update(
             is AppSettings -> settings
             is EditorSettings -> it.copy(editor = settings)
             is StatusBarSettings -> it.copy(statusBar = settings)
+            is TerminalSettings -> it.copy(terminal = settings)
         }
     }
 }

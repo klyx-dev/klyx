@@ -38,6 +38,6 @@ cd "$WKDIR" || cd "$HOME"
 declare -px > /etc/profile.d/klyxenv.sh
 chmod +x /etc/profile.d/klyxenv.sh
 
-if [ "$PENDING_CMD" = false ]; then
+if [ "$USER" != "root" ]; then
     exec su - "$USER" -l
 fi

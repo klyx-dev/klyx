@@ -103,8 +103,8 @@ fun EditorPreferences() {
                     title = "Show Virtual Keys",
                     description = "Show virtual keys (e.g. Tab, Brackets) above the keyboard",
                     icon = Icons.KeyboardAlt,
-                    isChecked = settings.showVirtualKeys,
-                    onClick = { show ->
+                    checked = settings.showVirtualKeys,
+                    onCheckedChange = { show ->
                         settings.update { it.copy(showVirtualKeys = show) }
                     }
                 )
@@ -117,8 +117,8 @@ fun EditorPreferences() {
                     title = stringResource(string.pin_line_numbers),
                     description = stringResource(string.pin_line_numbers_desc),
                     icon = Icons.FormatListNumbered,
-                    isChecked = settings.pinLineNumbers,
-                    onClick = { checked ->
+                    checked = settings.pinLineNumbers,
+                    onCheckedChange = { checked ->
                         settings.update { it.copy(pinLineNumbers = checked) }
                     }
                 )

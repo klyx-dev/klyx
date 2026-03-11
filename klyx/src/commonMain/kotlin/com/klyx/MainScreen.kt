@@ -11,11 +11,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +37,7 @@ import com.klyx.ui.page.settings.appearance.AppearancePreferences
 import com.klyx.ui.page.settings.appearance.DarkThemePreferences
 import com.klyx.ui.page.settings.editor.EditorPreferences
 import com.klyx.ui.page.settings.general.GeneralPreferences
+import com.klyx.ui.page.settings.terminal.TerminalSettingsPage
 import com.klyx.ui.page.terminal.TerminalPage
 
 @Composable
@@ -51,40 +50,40 @@ fun MainScreen() {
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        val navigationState = rememberNavigationState(startRoute = Route.Main)
-        val navigator = remember { Navigator(navigationState) }
-
-        LaunchedEffect(Unit) {
-            EventBus.INSTANCE.subscribe<TerminalNotificationTapEvent> {
-                if (navigator.currentTopLevelRoute != Route.Terminal) {
-                    navigator.navigateTo(Route.Terminal)
-                }
-            }
-        }
-
-        val entryProvider = entryProvider {
-            entry<Route.Main> {
-                MainPage(modifier = Modifier.fillMaxSize())
-            }
-
-            entry<Route.Terminal> {
-                Surface {
-                    if (currentOs() == Os.Android) {
-                        TerminalPage(modifier = Modifier.fillMaxSize())
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("Terminal not supported on ${currentPlatform()} platform")
-                        }
+        NavigationScope {
+            LaunchedEffect(Unit) {
+                EventBus.INSTANCE.subscribe<TerminalNotificationTapEvent> {
+                    if (navigator.currentTopLevelRoute != Route.Terminal) {
+                        navigator.navigateTo(Route.Terminal)
                     }
                 }
             }
 
-            entry<Route.Settings> { SettingsPage() }
+            val entryProvider = entryProvider {
+                entry<Route.Main> {
+                    MainPage(modifier = Modifier.fillMaxSize())
+                }
 
-            settingsScreenEntries()
-        }
+                entry<Route.Terminal> {
+                    Surface {
+                        if (currentOs() == Os.Android) {
+                            TerminalPage(modifier = Modifier.fillMaxSize())
+                        } else {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Text("Terminal not supported on ${currentPlatform()} platform")
+                            }
+                        }
+                    }
+                }
 
-        CompositionLocalProvider(LocalNavigator provides navigator) {
+                entry<Route.Settings> { SettingsPage() }
+                entry<Route.TerminalSettings> {
+                    TerminalSettingsPage(modifier = Modifier.fillMaxSize())
+                }
+
+                settingsScreenEntries()
+            }
+
             NavDisplay(
                 modifier = Modifier.align(Alignment.Center),
                 entries = navigationState.toEntries(entryProvider),

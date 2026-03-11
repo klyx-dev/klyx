@@ -81,6 +81,9 @@ data class AppSettings(
     @SerialComment("Status bar settings")
     val statusBar: StatusBarSettings = StatusBarSettings(),
 
+    @SerialComment("Terminal settings")
+    val terminal: TerminalSettings = TerminalSettings(),
+
     @SerialComment("The settings for a particular language.")
     val languages: Map<String, LanguageSettings> = mapOf(
         "JavaScript" to LanguageSettings(languageServers = listOf("!typescript-language-server", "vtsls", "...")),

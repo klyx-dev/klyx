@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.klyx.LocalNavigator
+import com.klyx.Route
 import com.klyx.SettingsRoute
 import com.klyx.core.ui.component.BackButton
 import com.klyx.core.ui.component.SettingItem
@@ -20,6 +21,7 @@ import com.klyx.icons.Icons
 import com.klyx.icons.Info
 import com.klyx.icons.Palette
 import com.klyx.icons.Settings
+import com.klyx.icons.Terminal
 import com.klyx.resources.Res
 import com.klyx.resources.about
 import com.klyx.resources.about_page
@@ -68,6 +70,16 @@ fun SettingsPage(modifier: Modifier = Modifier.fillMaxSize()) {
                     icon = Icons.Code
                 ) {
                     navigator.navigateTo(SettingsRoute.Editor)
+                }
+            }
+
+            item {
+                SettingItem(
+                    title = "Terminal",
+                    description = "Terminal settings",
+                    icon = Icons.Terminal
+                ) {
+                    navigator.navigateTo(Route.TerminalSettings)
                 }
             }
 

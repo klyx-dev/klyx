@@ -27,7 +27,7 @@ suspend fun newSession(
             val tmpDir = Paths.tempDir.join("terminal/${id.toHexString()}").also(SystemFileSystem::createDirectories)
             val sandboxDir = Paths.dataDir.join("sandbox").also(SystemFileSystem::createDirectories)
 
-            val cwd = "/home/$user"
+            val cwd = if (user == "root") "/" else "/home/$user"
 
             val env = mutableListOf(
                 "PROOT_TMP_DIR=$tmpDir",

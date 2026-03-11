@@ -11,6 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.unit.IntSize
 import com.klyx.terminal.Cell
 import com.klyx.terminal.emulator.CursorStyle
@@ -36,10 +37,10 @@ class TerminalState internal constructor(
     internal var size by mutableStateOf(IntSize.Zero)
 
     internal val topRow = mutableIntStateOf(0)
-    internal val selectionY1 = mutableIntStateOf(-1)
-    internal val selectionY2 = mutableIntStateOf(-1)
-    internal val selectionX1 = mutableIntStateOf(-1)
-    internal val selectionX2 = mutableIntStateOf(-1)
+    internal val selY1 = mutableIntStateOf(-1)
+    internal val selY2 = mutableIntStateOf(-1)
+    internal val selX1 = mutableIntStateOf(-1)
+    internal val selX2 = mutableIntStateOf(-1)
     internal val isSelectingText = mutableStateOf(false)
 
     internal val scaleFactor = mutableFloatStateOf(1f)
@@ -50,6 +51,8 @@ class TerminalState internal constructor(
     internal val mouseScrollStartX = mutableIntStateOf(-1)
     internal val mouseScrollStartY = mutableIntStateOf(-1)
     internal val mouseStartDownTime = mutableLongStateOf(-1L)
+
+    internal var layoutCoordinates: LayoutCoordinates? by mutableStateOf(null)
 
     internal val redraws: SharedFlow<Unit>
         field = MutableSharedFlow(extraBufferCapacity = 1)
@@ -64,10 +67,10 @@ class TerminalState internal constructor(
 
     internal fun stopTextSelection() {
         isSelectingText.value = false
-        selectionX1.intValue = -1
-        selectionY1.intValue = -1
-        selectionX2.intValue = -1
-        selectionY2.intValue = -1
+        selX1.intValue = -1
+        selY1.intValue = -1
+        selX2.intValue = -1
+        selY2.intValue = -1
         client.copyModeChanged(false)
     }
 

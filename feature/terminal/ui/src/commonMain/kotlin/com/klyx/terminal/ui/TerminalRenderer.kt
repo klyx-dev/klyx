@@ -47,10 +47,10 @@ private class TerminalRendererNode(
         }
 
         val topRow = state.topRow.intValue
-        val selectionY1 = state.selectionY1.intValue
-        val selectionY2 = state.selectionY2.intValue
-        val selectionX1 = state.selectionX1.intValue
-        val selectionX2 = state.selectionX2.intValue
+        val selectionY1 = state.selY1.intValue
+        val selectionY2 = state.selY2.intValue
+        val selectionX1 = state.selX1.intValue
+        val selectionX2 = state.selX2.intValue
 
         val reverseVideo = emulator.isReverseVideo
         val endRow = topRow + emulator.rows

@@ -183,8 +183,8 @@ fun AppearancePreferences() {
                 title = stringResource(Res.string.dynamic_color),
                 description = stringResource(Res.string.dynamic_color_desc),
                 icon = Icons.Colorize,
-                isChecked = appSettings.dynamicColor,
-                onClick = { dynamicColor ->
+                checked = appSettings.dynamicColor,
+                onCheckedChange = { dynamicColor ->
                     appSettings.update { it.copy(dynamicColor = dynamicColor) }
                 }
             )

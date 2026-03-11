@@ -19,6 +19,8 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +49,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.LocalNavigator
+import com.klyx.Route
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.app.globalOf
 import com.klyx.core.event.EventBus
@@ -54,7 +57,11 @@ import com.klyx.core.file.humanBytes
 import com.klyx.core.net.isConnected
 import com.klyx.core.net.isNotConnected
 import com.klyx.core.net.rememberNetworkState
+import com.klyx.core.settings.CursorStyle
+import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.terminal.ExtraKeys
+import com.klyx.icons.Icons
+import com.klyx.icons.Settings
 import com.klyx.terminal.FileDownloadStatus
 import com.klyx.terminal.SessionBinder
 import com.klyx.terminal.SessionManager
@@ -78,6 +85,9 @@ private val json = Json { prettyPrint = true; encodeDefaults = true; explicitNul
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TerminalPage(modifier: Modifier = Modifier) {
+    val navigator = LocalNavigator.current
+    val terminalSettings = LocalAppSettings.current.terminal
+
     InitTerminal { user ->
         var title: String? by remember { mutableStateOf(null) }
 
@@ -97,12 +107,16 @@ fun TerminalPage(modifier: Modifier = Modifier) {
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                    )
+                    ),
+                    actions = {
+                        IconButton(onClick = { navigator.navigateTo(Route.TerminalSettings) }) {
+                            Icon(Icons.Settings, contentDescription = null)
+                        }
+                    }
                 )
             }
         ) { innerPadding ->
             val binder = globalOf<SessionBinder>()
-            val navigator = LocalNavigator.current
             val context = LocalPlatformContext.current
 
             Box(
@@ -121,8 +135,12 @@ fun TerminalPage(modifier: Modifier = Modifier) {
 
                 if (isBound) {
                     val sessionClient = rememberTerminalSessionClient(
-                        //onSessionFinished = { navigator.navigateBack() },
-                        onTitleChanged = { title = it.title }
+                        onTitleChanged = { title = it.title },
+                        cursorStyle = when (terminalSettings.cursorStyle) {
+                            CursorStyle.Block -> com.klyx.terminal.emulator.CursorStyle.Block
+                            CursorStyle.Underline -> com.klyx.terminal.emulator.CursorStyle.Underline
+                            CursorStyle.Bar -> com.klyx.terminal.emulator.CursorStyle.Bar
+                        }
                     )
 
                     var session by remember { mutableStateOf<TerminalSession?>(null) }
@@ -216,9 +234,10 @@ private fun InitTerminal(content: @Composable (user: String) -> Unit) {
         TerminalSetup(uiState)
     } else {
         var user by remember { mutableStateOf(TerminalManager.currentUser) }
+        val terminalSettings = LocalAppSettings.current.terminal
 
-        if (user != null) {
-            content(user!!)
+        if (user != null || terminalSettings.openAsRoot) {
+            content(if (terminalSettings.openAsRoot) "root" else user!!)
         } else {
             Box(
                 modifier = Modifier
