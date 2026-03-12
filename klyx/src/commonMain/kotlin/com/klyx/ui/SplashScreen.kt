@@ -43,7 +43,6 @@ import com.klyx.core.app.LocalBuildInfo
 import com.klyx.core.logging.KxLog
 import com.klyx.icons.Icons
 import com.klyx.icons.Klyx
-import com.klyx.icons.KlyxOutlined
 import com.klyx.ui.theme.KlyxMono
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -191,12 +190,6 @@ private fun KlyxIcon(modifier: Modifier = Modifier) {
     )
 
     Box {
-        Icon(
-            imageVector = Icons.KlyxOutlined,
-            contentDescription = null,
-            modifier = modifier
-        )
-
         Icon(
             imageVector = Icons.Klyx,
             contentDescription = null,
