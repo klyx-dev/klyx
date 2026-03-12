@@ -57,5 +57,36 @@ class KlyxEditor @JvmOverloads constructor(
 
     fun update(settings: EditorSettings) {
         tabWidth = settings.tabSize.toInt()
+        props.apply {
+            deleteEmptyLineFast = settings.deleteEmptyLineFast
+            deleteMultiSpaces = settings.deleteMultiSpaces
+            allowFullscreen = settings.allowFullscreen
+            symbolPairAutoCompletion = settings.symbolPairAutoCompletion
+            autoIndent = settings.autoIndent
+            disallowSuggestions = settings.disallowSuggestions
+            overScrollEnabled = settings.overScrollEnabled
+            scrollFling = settings.scrollFling
+            scrollAnimationDurationMs = settings.scrollAnimationDurationMs
+            indicatorWaveLength = settings.indicatorWaveLength
+            indicatorWaveWidth = settings.indicatorWaveWidth
+            indicatorWaveAmplitude = settings.indicatorWaveAmplitude
+            useICULibToSelectWords = settings.useICULibToSelectWords
+            highlightMatchingDelimiters = settings.highlightMatchingDelimiters
+            boldMatchingDelimiters = settings.boldMatchingDelimiters
+            enableRoundTextBackground = settings.enableRoundTextBackground
+            formatPastedText = settings.formatPastedText
+            enhancedHomeAndEnd = settings.enhancedHomeAndEnd
+            reselectOnLongPress = settings.reselectOnLongPress
+            fastScrollSensitivity = settings.fastScrollSensitivity
+            mouseWheelScrollFactor = settings.mouseWheelScrollFactor
+            mouseMode = settings.mouseMode.value
+            mouseModeAlwaysShowScrollbars = settings.mouseModeAlwaysShowScrollbars
+            mouseContextMenu = settings.mouseContextMenu
+            stickyScroll = settings.stickyScroll
+            stickyScrollMaxLines = settings.stickyScrollMaxLines
+            stickyScrollPreferInnerScope = settings.stickyScrollPreferInnerScope
+            stickyScrollAutoCollapse = settings.stickyScrollAutoCollapse
+            selectCompletionItemOnEnterForSoftKbd = settings.selectCompletionItemOnEnterForSoftKbd
+        }
     }
 }
