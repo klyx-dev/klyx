@@ -541,7 +541,7 @@ fun EditorPreferences() {
                     value = settings.fastScrollSensitivity,
                     title = "Fast scroll sensitivity",
                     description = "Scrolling speed multiplier when ALT key is pressed (for mouse wheel only).\n\n5.0f by default",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.MouseRegular,
                     min = 1f,
                     onConfirm = { value -> settings.update { it.copy(fastScrollSensitivity = value) } },
                     onDismissRequest = { showFastScrollSensitivityDialog = false }
@@ -553,7 +553,7 @@ fun EditorPreferences() {
                     value = settings.mouseWheelScrollFactor,
                     title = "Mouse wheel scroll factor",
                     description = "Adjust scrolling speed in mouse wheel scrolling",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.MouseRegular,
                     onConfirm = { value -> settings.update { it.copy(mouseWheelScrollFactor = value) } },
                     onDismissRequest = { showMouseWheelScrollFactorDialog = false }
                 )
@@ -564,7 +564,7 @@ fun EditorPreferences() {
                     value = settings.indicatorWaveLength,
                     title = "Indicator wave length",
                     description = "Wave length of problem indicators.",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.Waves,
                     min = 0.0f,
                     minInclusive = false,
                     suffix = "dp",
@@ -578,12 +578,12 @@ fun EditorPreferences() {
                     value = settings.indicatorWaveWidth,
                     title = "Indicator wave width",
                     description = "Wave width of problem indicators.",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.Water,
                     min = 0.0f,
                     minInclusive = false,
                     suffix = "dp",
                     onConfirm = { value -> settings.update { it.copy(indicatorWaveWidth = value) } },
-                    onDismissRequest = { showIndicatorWaveLengthDialog = false }
+                    onDismissRequest = { showIndicatorWaveWidthDialog = false }
                 )
             }
 
@@ -592,19 +592,19 @@ fun EditorPreferences() {
                     value = settings.indicatorWaveAmplitude,
                     title = "Indicator wave amplitude",
                     description = "Wave amplitude of problem indicators.",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.WavesArrowUp,
                     min = 0.0f,
                     minInclusive = false,
                     suffix = "dp",
                     onConfirm = { value -> settings.update { it.copy(indicatorWaveAmplitude = value) } },
-                    onDismissRequest = { showIndicatorWaveLengthDialog = false }
+                    onDismissRequest = { showIndicatorWaveAmplitudeDialog = false }
                 )
             }
 
             showDeleteMultiSpacesDialog -> {
                 IntDialog(
                     title = "Delete multiple spaces",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.TextCursor,
                     description = """
                         Delete multiple spaces at a time when the user press the DELETE key. This only takes effect when selection is in leading spaces.
                         
@@ -620,7 +620,7 @@ fun EditorPreferences() {
             showScrollAnimationDurationDialog -> {
                 IntDialog(
                     title = "Scroll animation duration",
-                    icon = Icons.FormatListNumbered,
+                    icon = Icons.Timelapse,
                     description = """
                         Duration in milliseconds for smooth scrolling animations triggered by the editor.
                         Controls how long programmatic scrolls take to reach their destination.

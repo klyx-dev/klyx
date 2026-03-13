@@ -50,7 +50,7 @@ interface NavigationScope {
 }
 
 @Composable
-fun NavigationScope(content: @Composable NavigationScope. () -> Unit) {
+fun NavigationScope(content: @Composable NavigationScope.() -> Unit) {
     val navigationState = rememberNavigationState(startRoute = Route.Main)
     val navigator = remember { Navigator(navigationState) }
 
