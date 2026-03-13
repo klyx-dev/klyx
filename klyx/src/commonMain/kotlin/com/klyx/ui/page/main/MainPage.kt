@@ -294,7 +294,7 @@ fun MainPage(modifier: Modifier = Modifier) {
                     )
                 }
 
-                MenuStateDialogs()
+                MenuDialogs()
 
                 if (CommandManager.showCommandPalette) {
                     CommandPalette(
@@ -443,9 +443,8 @@ private fun DirectoryPickerButton(directoryPicker: PickerResultLauncher) {
     }
 }
 
-
 @Composable
-private fun MenuStateDialogs() {
+private fun MenuDialogs() {
     val klyxViewModel = LocalKlyxViewModel.current
     val menuState by klyxViewModel.klyxMenuState.collectAsState()
 

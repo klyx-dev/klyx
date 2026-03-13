@@ -88,7 +88,9 @@ private fun ToastCard(
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer
         ),
         shape = RoundedCornerShape(8.dp),
-        modifier = modifier.widthIn(max = with(LocalDensity.current) { (screenWidth * 0.7f).toDp() })
+        modifier = modifier
+            .zIndex(1000f)
+            .widthIn(max = with(LocalDensity.current) { (screenWidth * 0.7f).toDp() })
     ) {
         Row(
             modifier = Modifier.padding(10.dp),
