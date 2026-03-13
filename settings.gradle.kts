@@ -4,7 +4,7 @@ rootProject.name = "KlyxEditor"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
-    includeBuild("ktreesitter-plugin")
+    //includeBuild("ktreesitter-plugin")
     includeBuild("build-logic")
 
     repositories {

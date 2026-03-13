@@ -22,8 +22,8 @@ import com.klyx.core.settings.EditorSettings
 import com.klyx.core.settings.MouseMode
 import com.klyx.core.settings.update
 import com.klyx.core.ui.component.DismissButton
-import com.klyx.icons.FormatListNumbered
 import com.klyx.icons.Icons
+import com.klyx.icons.Mouse
 
 @Composable
 internal fun MouseModeDialog(
@@ -33,7 +33,7 @@ internal fun MouseModeDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         confirmButton = { DismissButton { onDismissRequest() } },
-        icon = { Icon(Icons.FormatListNumbered, contentDescription = null) },
+        icon = { Icon(Icons.Mouse, contentDescription = null) },
         title = { Text("Mouse Mode", textAlign = TextAlign.Center) },
         text = {
             val description = when (settings.mouseMode) {
