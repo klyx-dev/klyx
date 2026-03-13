@@ -12,14 +12,13 @@ import android.provider.DocumentsProvider
 import android.webkit.MimeTypeMap
 import com.klyx.R
 import com.klyx.core.terminal.SAFUtils
-import com.klyx.core.terminal.userHomeDir
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
 import kotlin.time.Duration.Companion.days
 
 class TerminalDocumentsProvider : DocumentsProvider() {
-    private val home get() = with(context!!) { userHomeDir }
+    private val home by lazy { context!!.dataDir.resolve("sandbox") }
 
     override fun openDocument(
         documentId: String?,
@@ -79,19 +78,17 @@ class TerminalDocumentsProvider : DocumentsProvider() {
             add(Root.COLUMN_TITLE, context?.getString(R.string.app_name) ?: R.string.app_name)
             add(Root.COLUMN_SUMMARY, null)
             add(Root.COLUMN_DOCUMENT_ID, SAFUtils.ROOT_DOCUMENT_ID)
-            home?.let { add(Root.COLUMN_AVAILABLE_BYTES, it.freeSpace) }
+            add(Root.COLUMN_AVAILABLE_BYTES, home.freeSpace)
         }
 
         return result
     }
 
-    override fun onCreate(): Boolean {
-        return home != null
-    }
+    override fun onCreate() = home.exists()
 
     private fun getFileForDocumentId(documentId: String): File {
         return when (documentId) {
-            SAFUtils.ROOT_DOCUMENT_ID -> home!!
+            SAFUtils.ROOT_DOCUMENT_ID -> home
             else -> {
                 val relativePath = documentId.removePrefix("${SAFUtils.ROOT_ID}_")
                 File(home, relativePath)
@@ -101,9 +98,9 @@ class TerminalDocumentsProvider : DocumentsProvider() {
 
     private fun getDocumentIdForFile(file: File): String {
         return when {
-            file.absolutePath == home!!.absolutePath -> SAFUtils.ROOT_DOCUMENT_ID
+            file.absolutePath == home.absolutePath -> SAFUtils.ROOT_DOCUMENT_ID
             else -> {
-                val relativePath = file.absolutePath.removePrefix(home!!.absolutePath).removePrefix("/")
+                val relativePath = file.absolutePath.removePrefix(home.absolutePath).removePrefix("/")
                 "${SAFUtils.ROOT_ID}_$relativePath"
             }
         }
@@ -209,7 +206,7 @@ class TerminalDocumentsProvider : DocumentsProvider() {
     override fun querySearchDocuments(rootId: String?, query: String?, projection: Array<out String>?): Cursor {
         val result = MatrixCursor(projection ?: DEFAULT_DOCUMENT_PROJECTION)
         if (query.isNullOrBlank()) return result
-        searchFiles(home!!, query, result)
+        searchFiles(home, query, result)
         return result
     }
 
@@ -305,7 +302,7 @@ class TerminalDocumentsProvider : DocumentsProvider() {
     override fun queryRecentDocuments(rootId: String?, projection: Array<out String>?): Cursor {
         val result = MatrixCursor(projection ?: DEFAULT_DOCUMENT_PROJECTION)
         val recentFiles = mutableListOf<File>()
-        collectRecentFiles(home!!, recentFiles)
+        collectRecentFiles(home, recentFiles)
 
         recentFiles.sortByDescending { it.lastModified() }
         recentFiles.take(50).forEach { file ->

@@ -74,6 +74,8 @@ object TerminalManager {
             }
         }
 
+    val sandboxDirectory get() = sandbox
+
     val uiState: StateFlow<TerminalUiState>
         field = MutableStateFlow(TerminalUiState())
 
