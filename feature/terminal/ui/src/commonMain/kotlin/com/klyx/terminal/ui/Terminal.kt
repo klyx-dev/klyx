@@ -19,16 +19,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusEventModifierNode
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.FocusState
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.isCtrlPressed
@@ -61,17 +60,13 @@ import androidx.compose.ui.unit.sp
 import androidx.navigationevent.NavigationEventInfo
 import androidx.navigationevent.compose.NavigationBackHandler
 import androidx.navigationevent.compose.rememberNavigationEventState
-import com.klyx.core.LocalNotifier
 import com.klyx.core.platform.LocalPlatform
-import com.klyx.core.platform.showToast
 import com.klyx.terminal.ScreenEvent
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
-import com.klyx.terminal.ui.selection.HandleOrientation
-import com.klyx.terminal.ui.selection.SelectionActionToolbar
-import com.klyx.terminal.ui.selection.SelectionHandle
+import com.klyx.terminal.ui.selection.TextSelectionOverlay
 import com.klyx.terminal.ui.selection.TextSelectionState
 import com.klyx.terminal.ui.selection.icon.TextSelectHandleLeft
 import com.klyx.terminal.ui.selection.icon.TextSelectHandleRight
@@ -181,12 +176,22 @@ fun Terminal(
         state.isSelectingText.value = selectionState.isActive
     }
 
-    SideEffect {
-        val sel = selectionState.getSelectors()
-        state.selY1.value = sel[0]
-        state.selY2.value = sel[1]
-        state.selX1.value = sel[2]
-        state.selX2.value = sel[3]
+    LaunchedEffect(selectionState) {
+        snapshotFlow {
+            listOf(
+                selectionState.selY1,
+                selectionState.selY2,
+                selectionState.selX1,
+                selectionState.selX2
+            )
+        }.collect { sel ->
+            state.selY1.intValue = sel[0]
+            state.selY2.intValue = sel[1]
+            state.selX1.intValue = sel[2]
+            state.selX2.intValue = sel[3]
+
+            state.invalidate()
+        }
     }
 
     var canPaste by remember { mutableStateOf(false) }
@@ -381,21 +386,20 @@ fun Terminal(
 
                             val emu = emulator ?: return@detectTapGestures
                             val col = (offset.x / painter.fontWidth).toInt().coerceIn(0, emu.columns - 1)
-                            val row = (((offset.y - 40f) / painter.fontLineSpacing) + topRow).toInt()
+                            val row = ((offset.y / painter.fontLineSpacing) + topRow).toInt()
 
-                            //selectionState.show(col, row)
+                            selectionState.show(col, row)
 
                             // expand initial tap to word boundaries
-                            //selectionState.initWordSelection(
-                            //    x = col,
-                            //    y = row,
-                            //    maxColumns = emu.columns,
-                            //    isBlank = { c, r ->
-                            //        val ch = emu.screen.getSelectedText(c, r, c, r)
-                            //        ch.isEmpty() || ch == " "
-                            //    },
-                            //)
-                            platform.showToast("Text Selection is not yet supported.")
+                            selectionState.initWordSelection(
+                                x = col,
+                                y = row,
+                                maxColumns = emu.columns,
+                                isBlank = { c, r ->
+                                    val ch = emu.screen.getSelectedText(c, r, c, r)
+                                    ch.isEmpty() || ch == " "
+                                },
+                            )
 
                             client.onLongPress(offset)
                             client.copyModeChanged(true)
@@ -463,6 +467,40 @@ fun Terminal(
                     .renderTerminal(state, painter),
                 measurePolicy = { _, constraints ->
                     layout(constraints.maxWidth, constraints.maxHeight) {}
+                }
+            )
+        }
+
+        val currentEmulator = emulator
+        if (currentEmulator != null) {
+            TextSelectionOverlay(
+                state = selectionState,
+                fontWidth = painter.fontWidth,
+                fontLineSpacing = painter.fontLineSpacing.toFloat(),
+                topRow = topRow,
+                maxColumns = currentEmulator.columns,
+                maxRows = currentEmulator.rows,
+                scrollRows = currentEmulator.screen.activeTranscriptRows,
+                leftHandleIcon = TextSelectHandleLeft,
+                rightHandleIcon = TextSelectHandleRight,
+                canPaste = canPaste,
+                getSelectedText = {
+                    val sel = selectionState.getSelectors()
+                    currentEmulator.screen.getSelectedText(sel[2], sel[0], sel[3], sel[1]).trimEnd()
+                },
+                onCopy = { text ->
+                    coroutineScope.launch { session.onCopyTextToClipboard(text) }
+                    selectionState.hide()
+                    client.copyModeChanged(false)
+                },
+                onPaste = {
+                    selectionState.hide()
+                    client.copyModeChanged(false)
+                    coroutineScope.launch { session.onPasteTextFromClipboard() }
+                },
+                onScrollRequest = { rows ->
+                    val rowsInHistory = currentEmulator.screen.activeTranscriptRows
+                    topRow = (topRow + rows).coerceIn(-rowsInHistory, 0)
                 }
             )
         }

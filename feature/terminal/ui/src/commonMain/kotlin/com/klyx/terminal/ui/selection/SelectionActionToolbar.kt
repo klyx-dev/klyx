@@ -7,6 +7,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -23,18 +24,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
 @Composable
-fun SelectionActionToolbar(
+internal fun SelectionActionToolbar(
     visible: Boolean,
     anchorX: Float,
-    anchorY: Float,
+    anchorTopY: Float,
+    anchorBottomY: Float,
     canPaste: Boolean,
     onCopy: () -> Unit,
     onPaste: () -> Unit,
@@ -42,15 +42,27 @@ fun SelectionActionToolbar(
     modifier: Modifier = Modifier,
     backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
     contentColor: Color = contentColorFor(backgroundColor),
-    toolbarHeightPx: Float = 128f,   // pixels above anchorY to float the bar
 ) {
     if (!visible) return
 
-    val offsetY = (anchorY - toolbarHeightPx).roundToInt().coerceAtLeast(0)
+    Box(
+        modifier = Modifier.layout { measurable, constraints ->
+            val placeable = measurable.measure(constraints)
 
-    Popup(
-        offset = IntOffset(anchorX.roundToInt(), offsetY),
-        properties = PopupProperties(focusable = false),
+            val x = (anchorX.roundToInt() - (placeable.width / 2))
+                .coerceIn(0, (constraints.maxWidth - placeable.width).coerceAtLeast(0))
+
+            val spacingPx = 12.dp.roundToPx()
+            var y = anchorTopY.roundToInt() - placeable.height - spacingPx
+
+            if (y < 0) {
+                y = anchorBottomY.roundToInt() + spacingPx
+            }
+
+            layout(placeable.width, placeable.height) {
+                placeable.placeRelative(x, y)
+            }
+        }
     ) {
         AnimatedVisibility(
             visible = visible,

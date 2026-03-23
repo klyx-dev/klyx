@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
-fun TextSelectionOverlay(
+internal fun TextSelectionOverlay(
     state: TextSelectionState,
     fontWidth: Float,
     fontLineSpacing: Float,
@@ -32,7 +32,6 @@ fun TextSelectionOverlay(
 ) {
     if (!state.isActive) return
 
-    // start handle sits one row below the top-left of the selection.
     val startPixelX by remember(state.selX1, fontWidth) {
         derivedStateOf { state.selX1 * fontWidth }
     }
@@ -52,14 +51,28 @@ fun TextSelectionOverlay(
     val toolbarAnchorX by remember(startPixelX, endPixelX) {
         derivedStateOf { (startPixelX + endPixelX) / 2f }
     }
-    val toolbarAnchorY by remember(startPixelY, endPixelY) {
-        derivedStateOf { minOf(startPixelY, endPixelY) }
+    // points to the top of the highest selected row
+    val toolbarAnchorY by remember(state.selY1, state.selY2, fontLineSpacing, topRow) {
+        derivedStateOf {
+            val highestRow = minOf(state.selY1, state.selY2)
+            (highestRow - topRow) * fontLineSpacing
+        }
     }
 
-    fun pixelXToCol(px: Float): Int =
-        (px / fontWidth).toInt().coerceIn(0, maxColumns - 1)
+    // points to the bottom of the lowest selected row
+    val toolbarAnchorBottomY by remember(state.selY1, state.selY2, fontLineSpacing, topRow) {
+        derivedStateOf {
+            val lowestRow = maxOf(state.selY1, state.selY2)
+            (lowestRow + 1 - topRow) * fontLineSpacing
+        }
+    }
 
-    fun pixelYToRow(py: Float): Int = (((py - 40f) / fontLineSpacing) + topRow).toInt()
+    val terminalWidth = maxColumns * fontWidth
+
+    fun startPixelXToCol(px: Float): Int = (px / fontWidth).toInt().coerceIn(0, maxColumns - 1)
+    fun endPixelXToCol(px: Float): Int = ((px / fontWidth) - 1f).toInt().coerceIn(0, maxColumns - 1)
+
+    fun pixelYToRow(py: Float): Int = ((py / fontLineSpacing) - 1f + topRow).toInt()
 
     fun maybeScroll(row: Int) {
         when {
@@ -76,9 +89,10 @@ fun TextSelectionOverlay(
             leftIcon = leftHandleIcon,
             rightIcon = rightHandleIcon,
             tint = handleTint,
+            maxWidth = terminalWidth,
             onDragStart = {},
             onDragPosition = { px, py ->
-                val col = pixelXToCol(px)
+                val col = startPixelXToCol(px)
                 val row = pixelYToRow(py)
                 state.updateStartHandle(col, row, maxRows, scrollRows)
                 maybeScroll(row)
@@ -93,9 +107,10 @@ fun TextSelectionOverlay(
             leftIcon = leftHandleIcon,
             rightIcon = rightHandleIcon,
             tint = handleTint,
+            maxWidth = terminalWidth,
             onDragStart = {},
             onDragPosition = { px, py ->
-                val col = pixelXToCol(px)
+                val col = endPixelXToCol(px)
                 val row = pixelYToRow(py)
                 state.updateEndHandle(col, row, maxRows, scrollRows)
                 maybeScroll(row)
@@ -106,7 +121,8 @@ fun TextSelectionOverlay(
         SelectionActionToolbar(
             visible = state.isActive,
             anchorX = toolbarAnchorX,
-            anchorY = toolbarAnchorY,
+            anchorTopY = toolbarAnchorY,
+            anchorBottomY = toolbarAnchorBottomY,
             canPaste = canPaste,
             onCopy = {
                 onCopy(getSelectedText())
