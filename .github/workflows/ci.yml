@@ -60,8 +60,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
       - run: chmod +x gradlew
-      - name: Generate Tree-sitter grammar
-        run: ./gradlew generateTsGrammar
       - name: Build Android APK
         env:
           CI: true

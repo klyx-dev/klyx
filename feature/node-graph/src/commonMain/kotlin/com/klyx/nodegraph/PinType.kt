@@ -21,7 +21,15 @@ sealed class PinType(val color: Color = Color.White) {
     data object Integer : PinType(StandardNodeColors.Types.Integer)
 
     @Serializable
-    data class String(val maxLines: Int = 1) : PinType(StandardNodeColors.Types.String)
+    data class String(val maxLines: Int = 1) : PinType(StandardNodeColors.Types.String) {
+        override fun equals(other: Any?): kotlin.Boolean {
+            if (this === other) return true
+            if (other == null || this::class != other::class) return false
+            return other is String
+        }
+
+        override fun hashCode() = this::class.hashCode()
+    }
 
     @Serializable
     data object Boolean : PinType(StandardNodeColors.Types.Boolean)
