@@ -532,12 +532,13 @@ private fun Modifier.scroll(
 
                 val dragAmount = dragEvent.position - previousPosition
                 previousPosition = dragEvent.position
-                dragEvent.consume()
 
                 if (selectionState.isActive) {
                     // Handles own their own drag; nothing to do here for plain scroll.
                     // Edge-auto-scroll is handled inside each handle's onDragPosition.
                 } else {
+                    dragEvent.consume()
+
                     state.scrolledWithFinger.value = true
                     val distanceY = -dragAmount.y + scrollRemainder
                     val deltaRows = (distanceY / fontMetrics.height).toInt()
