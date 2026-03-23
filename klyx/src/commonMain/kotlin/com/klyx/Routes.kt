@@ -15,6 +15,15 @@ sealed interface Route : NavKey {
     data object Main : Route, NavKey
 
     @Serializable
+    data object Test : Route, NavKey
+
+    @Serializable
+    data object Extension : Route, NavKey
+
+    @Serializable
+    data class EditOrViewExtension(val filePath: String, val edit: Boolean = true) : Route, NavKey
+
+    @Serializable
     data object Terminal : Route, NavKey
 
     @Serializable
@@ -24,12 +33,15 @@ sealed interface Route : NavKey {
     data object Settings : Route, NavKey
 
     companion object {
-        val TopLevelRoutes: Set<NavKey> = setOf(Main, Terminal, Settings)
+        val TopLevelRoutes: Set<NavKey> = setOf(Main, Test, Terminal, Settings)
 
         fun config() = SavedStateConfiguration {
             serializersModule = SerializersModule {
                 polymorphic(NavKey::class) {
                     subclass(Main::class, Main.serializer())
+                    subclass(Test::class, Test.serializer())
+                    subclass(Extension::class, Extension.serializer())
+                    subclass(EditOrViewExtension::class, EditOrViewExtension.serializer())
                     subclass(Terminal::class, Terminal.serializer())
                     subclass(TerminalSettings::class, TerminalSettings.serializer())
                     subclass(Settings::class, Settings.serializer())

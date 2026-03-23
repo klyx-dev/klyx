@@ -35,7 +35,6 @@ import com.klyx.icons.Terminal
 import com.klyx.project.Project
 import com.klyx.resources.Res
 import com.klyx.resources.settings
-import com.klyx.viewmodel.openExtensionScreen
 import org.jetbrains.compose.resources.stringResource
 
 @Suppress("UnusedReceiverParameter")
@@ -134,7 +133,8 @@ fun ColumnScope.DropdownMenuItems(
     DropdownMenuItem(
         text = "Extensions",
         onClick = {
-            editorViewModel.openExtensionScreen()
+            //editorViewModel.openExtensionScreen()
+            onNavigateTo(Route.Extension)
             onDismissRequest()
         },
         icon = {

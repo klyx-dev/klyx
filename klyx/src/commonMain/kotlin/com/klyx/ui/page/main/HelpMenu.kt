@@ -13,10 +13,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import com.klyx.LocalNavigator
+import com.klyx.Route
 import com.klyx.core.DOCS_URL
 import com.klyx.core.KEYBOARD_SHORTCUTS_URL
 import com.klyx.core.LocalPlatformContext
 import com.klyx.core.REPORT_ISSUE_URL
+import com.klyx.core.app.LocalBuildInfo
 import com.klyx.core.file.shareFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.icon.Discord
@@ -160,6 +163,7 @@ private fun KlyxMenu(
     editorViewModel: EditorViewModel
 ) {
     val context = LocalPlatformContext.current
+    val navigator = LocalNavigator.current
 
     DropdownMenu(
         expanded = expanded,
@@ -235,6 +239,18 @@ private fun KlyxMenu(
                 )
             }
         )
+
+        DropdownMenuDivider()
+
+        if (LocalBuildInfo.current.isDebug) {
+            DropdownMenuItem(
+                text = { Text("Open Test Screen") },
+                onClick = {
+                    navigator.navigateTo(Route.Test)
+                    onDismissRequest()
+                },
+            )
+        }
     }
 }
 

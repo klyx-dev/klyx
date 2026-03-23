@@ -4,11 +4,9 @@ import android.os.Bundle
 import android.util.LruCache
 import android.view.View
 import androidx.compose.runtime.CompositionContext
-import com.klyx.core.app.App
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
 import com.klyx.core.logging.logger
-import com.klyx.core.settings.AppSettings
 import com.klyx.editor.KlyxEditor
 import com.klyx.editor.inlayhint.InlayHintManager
 import com.klyx.editor.language.LanguageName
@@ -17,6 +15,7 @@ import com.klyx.editor.lsp.event.LspEditorContentChangeEvent
 import com.klyx.editor.lsp.event.LspEditorScrollEvent
 import com.klyx.editor.lsp.util.asLspPosition
 import com.klyx.editor.signature.SignatureHelpWindow
+import com.klyx.extension.nodegraph.ExtensionManager
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
 import com.klyx.lsp.Position
@@ -75,7 +74,7 @@ internal class EditorLanguageServerClient(
     val file: KxFile,
     val editor: KlyxEditor,
     val coroutineScope: CoroutineScope,
-    private val settings: AppSettings
+    private val extensionManager: ExtensionManager
 ) : KoinComponent {
     private var serverClient: LanguageServerClient? = null
     private val capabilities get() = serverClient?.serverCapabilities
@@ -113,13 +112,13 @@ internal class EditorLanguageServerClient(
         val extraArguments: Bundle
     )
 
-    fun initialize(localView: View, compositionContext: CompositionContext, cx: App) {
+    fun initialize(localView: View, compositionContext: CompositionContext) {
         signatureHelpWindow.set(SignatureHelpWindow(editor, localView, compositionContext))
         setupFlows()
 
         coroutineScope.launch(Dispatchers.IO) {
             LanguageServerManager
-                .tryConnectLspIfAvailable(worktree, LanguageName(file.language()), settings, cx)
+                .tryConnectLspIfAvailable(worktree, file.language(), extensionManager)
                 .onSuccess { client ->
                     serverClient = client
                     withContext(Dispatchers.Main) {

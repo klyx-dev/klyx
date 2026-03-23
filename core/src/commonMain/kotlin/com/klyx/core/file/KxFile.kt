@@ -169,6 +169,7 @@ suspend fun KxFile.watchAndReload(
     coroutineDispatcher: CoroutineDispatcher,
     onReload: suspend () -> Unit
 ) {
+    if (!exists) return
     var oldContent = withContext(Dispatchers.IO) { readText() }
     val watcher = watcher(coroutineDispatcher)
 

@@ -1,6 +1,7 @@
 package com.klyx.core.io
 
 import com.klyx.core.file.toKotlinxIoPath
+import com.klyx.core.util.join
 import com.klyx.core.withAndroidContext
 import kotlinx.io.files.Path
 
@@ -21,6 +22,8 @@ actual object Paths {
         withAndroidContext { getDir("logs", 0).toKotlinxIoPath() }
     }
 }
+
+val Paths.filesDir get() = dataDir.join("files")
 
 actual val Paths.androidExternalFilesDir
     get() = withAndroidContext {

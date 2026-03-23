@@ -20,12 +20,11 @@ import com.klyx.core.file.KxFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.initializeKlyx
 import com.klyx.core.io.Paths
+import com.klyx.core.io.filesDir
 import com.klyx.core.io.logFile
-import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.core.process.Thread
-import com.klyx.core.terminal.klyxBinDir
-import com.klyx.core.terminal.sandboxDir
+import com.klyx.core.util.join
 import com.klyx.di.commonModule
 import io.github.rosemoe.sora.langs.textmate.registry.FileProviderRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.GrammarRegistry
@@ -41,6 +40,7 @@ import kotlinx.coroutines.withContext
 import org.eclipse.tm4e.core.registry.IThemeSource
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
+import java.io.File
 import java.util.concurrent.Executors
 import kotlin.time.ExperimentalTime
 
@@ -164,7 +164,7 @@ class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope
     }
 
     private fun setupAssetFile(fileName: String) {
-        with(klyxBinDir.resolve(fileName)) {
+        with(File(Paths.filesDir.join("usr", "lib", fileName).toString())) {
             parentFile?.mkdirs()
             writeBytes(assets.open("terminal/$fileName.sh").use { it.readBytes() })
             setExecutable(true)

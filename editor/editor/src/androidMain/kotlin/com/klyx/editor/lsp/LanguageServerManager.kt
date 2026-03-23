@@ -1,26 +1,17 @@
 package com.klyx.editor.lsp
 
-import arrow.core.raise.context.bind
+import arrow.core.raise.context.ensure
 import arrow.core.raise.context.raise
 import arrow.core.raise.context.result
-import com.klyx.core.app.App
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.logging.logger
-import com.klyx.core.lsp.LanguageServerBinary
-import com.klyx.core.lsp.LanguageServerBinaryOptions
 import com.klyx.core.lsp.LanguageServerName
-import com.klyx.core.settings.AppSettings
-import com.klyx.core.settings.LspSettings
-import com.klyx.core.util.intoPath
-import com.klyx.editor.language.BinaryStatus
-import com.klyx.editor.language.CachedLspAdapter
-import com.klyx.editor.language.LanguageName
-import com.klyx.editor.language.LanguageRegistry
-import com.klyx.editor.language.LspAdapterDelegate
 import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.uriString
+import com.klyx.extension.nodegraph.ExtensionManager
+import com.klyx.extension.nodegraph.LspProvisionRequest
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DocumentColorParams
 import com.klyx.lsp.InlayHintParams
@@ -29,18 +20,12 @@ import com.klyx.lsp.Range
 import com.klyx.lsp.TextDocumentIdentifier
 import com.klyx.lsp.server.LanguageServer
 import com.klyx.project.Worktree
-import com.klyx.project.lsp.makeLspAdapterDelegate
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.onTimeout
-import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.serialization.json.Json
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
@@ -86,46 +71,46 @@ object LanguageServerManager {
 
     suspend fun tryConnectLspIfAvailable(
         worktree: Worktree,
-        languageName: LanguageName,
-        appSettings: AppSettings,
-        cx: App
+        languageName: String,
+        extensionManager: ExtensionManager
     ) = result {
         withContext(Dispatchers.IO) lsp@{
-            val languageServerName = getLanguageServerNameForLanguage(languageName, cx)
-                ?: raise(RuntimeException("No language server found for language: $languageName"))
+            val key = worktree.uriString to languageName.lowercase()
+            if (languageServers.containsKey(key)) return@lsp languageClients[key]!!
 
-            val languages = LanguageRegistry.INSTANCE
-            val adapter = languages.adapterForName(languageServerName)
-                ?: raise(RuntimeException("No adapter found for language server: $languageServerName"))
-
-            val languageId = getLanguageIdForLanguage(languageName, cx)
-                ?: raise(RuntimeException("No language id found for language: $languageName"))
-            val delegate = makeLspAdapterDelegate(worktree)
-
-            val key = worktree.uriString to languageId
-
-            if (languageServers.containsKey(key)) {
-                return@lsp languageClients[key]!!
+            ensure(extensionManager.isLanguageSupported(languageName)) {
+                RuntimeException("No extension supports $languageName")
             }
 
-            val settings = appSettings.lsp[languageServerName] ?: LspSettings()
-            val binary = getLanguageServerBinary(
-                adapter = adapter,
-                settings = settings,
-                delegate = delegate,
-                allowBinaryDownload = true
-            ).bind()
+            val request = LspProvisionRequest(languageName, worktree.rootFile.absolutePath)
+            extensionManager.dispatchEventForLanguage(
+                language = languageName,
+                event = "editor.requestLsp",
+                params = mapOf("Request" to request)
+            )
 
-            val client = LanguageServerClient(logger(languageServerName))
-            val initializationOptions = adapter.adapter
-                .initializationOptions(delegate).bind()
+            val provisionResult = withTimeoutOrNull(SERVER_DOWNLOAD_TIMEOUT) {
+                request.response.await()
+            } ?: raise(RuntimeException("Extension timed out providing LSP for $languageName"))
 
-            client.initialize(binary, worktree, initializationOptions).fold(
+            val initializationOptions = try {
+                Json.parseToJsonElement(provisionResult.initializationOptionsJson)
+            } catch (e: Exception) {
+                error("Invalid JSON for initializationOptions: ${e.message}")
+            }
+
+            val workspaceConfig = try {
+                Json.parseToJsonElement(provisionResult.workspaceConfigJson)
+            } catch (e: Exception) {
+                error("Invalid JSON for workspaceConfig: ${e.message}")
+            }
+
+            val client = LanguageServerClient(logger(languageName))
+            client.initialize(provisionResult.binary, worktree, initializationOptions).fold(
                 onSuccess = { initializeResult ->
                     languageClients[key] = client
                     languageServers[key] = client.languageServer
 
-                    val workspaceConfig = adapter.adapter.workspaceConfiguration(delegate).bind()
                     client.changeWorkspaceConfiguration(workspaceConfig)
                 },
                 onFailure = { raise(RuntimeException("Failed to initialize language server: $it")) }
@@ -133,81 +118,6 @@ object LanguageServerManager {
 
             client
         }
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private suspend fun getLanguageServerBinary(
-        adapter: CachedLspAdapter,
-        settings: LspSettings,
-        delegate: LspAdapterDelegate,
-        allowBinaryDownload: Boolean
-    ) = result {
-        settings.binary?.let { settings ->
-            if (settings.path != null) {
-                return@result withContext(Dispatchers.Default) {
-                    val env = delegate.shellEnv()
-                    settings.env?.let { env.putAll(it) }
-
-                    LanguageServerBinary(
-                        path = settings.path!!.intoPath(),
-                        env = env,
-                        arguments = settings.arguments.orEmpty()
-                    )
-                }
-            }
-        }
-
-        val (existingBinary, maybeDownloadBinary) = adapter.getLanguageServerCommand(
-            delegate,
-            LanguageServerBinaryOptions(
-                allowPathLookup = true,
-                allowBinaryDownload = allowBinaryDownload
-            )
-        )()
-
-        delegate.updateStatus(adapter.name, BinaryStatus.None)
-
-        val binary = coroutineScope {
-            when {
-                maybeDownloadBinary == null -> existingBinary.bind()
-                existingBinary.isFailure -> maybeDownloadBinary().bind()
-                else -> {
-                    val existing = existingBinary.bind()
-                    val downloader = async(start = CoroutineStart.UNDISPATCHED) {
-                        maybeDownloadBinary()
-                    }
-
-                    select {
-                        downloader.onAwait { result ->
-                            result.bind()
-                        }
-
-                        onTimeout(SERVER_DOWNLOAD_TIMEOUT) {
-                            CoroutineScope(Dispatchers.Default).launch {
-                                downloader.await()
-                            }
-                            existing
-                        }
-                    }
-                }
-            }
-        }
-
-        val shellEnv = delegate.shellEnv()
-        binary.env?.let { shellEnv.putAll(it) }
-
-        settings.binary?.let { settings ->
-            settings.arguments?.let { args ->
-                binary.arguments = args
-            }
-
-            settings.env?.let { env ->
-                shellEnv.putAll(env)
-            }
-        }
-
-        binary.env = shellEnv
-        binary
     }
 
     suspend fun openDocument(worktree: Worktree, file: KxFile) = withClient(worktree, file) {

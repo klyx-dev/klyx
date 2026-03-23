@@ -27,10 +27,13 @@ import com.klyx.core.platform.Os
 import com.klyx.core.platform.currentOs
 import com.klyx.core.platform.currentPlatform
 import com.klyx.di.LocalKlyxViewModel
+import com.klyx.test.TestScreen
 import com.klyx.ui.DisclaimerDialog
 import com.klyx.ui.component.PermissionDialog
 import com.klyx.ui.event.TerminalNotificationTapEvent
 import com.klyx.ui.page.SettingsPage
+import com.klyx.ui.page.extension.EditExtensionPage
+import com.klyx.ui.page.extension.ExtensionPage
 import com.klyx.ui.page.main.MainPage
 import com.klyx.ui.page.settings.about.AboutPage
 import com.klyx.ui.page.settings.appearance.AppearancePreferences
@@ -77,8 +80,15 @@ fun MainScreen() {
                 }
 
                 entry<Route.Settings> { SettingsPage() }
-                entry<Route.TerminalSettings> {
-                    TerminalSettingsPage(modifier = Modifier.fillMaxSize())
+                entry<Route.TerminalSettings> { TerminalSettingsPage(modifier = Modifier.fillMaxSize()) }
+                entry<Route.Test> { TestScreen() }
+                entry<Route.Extension> { ExtensionPage(modifier = Modifier.fillMaxSize()) }
+                entry<Route.EditOrViewExtension> {
+                    EditExtensionPage(
+                        edit = it.edit,
+                        filePath = it.filePath,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
 
                 settingsScreenEntries()

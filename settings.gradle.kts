@@ -53,8 +53,8 @@ include(
 include(
     ":feature:mcp",
     ":feature:extension",
-    ":feature:language-extension",
     ":feature:settings",
+    ":feature:node-graph",
 )
 include(
     ":feature:terminal:emulator",

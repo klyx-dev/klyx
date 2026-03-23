@@ -46,7 +46,6 @@ import com.klyx.tab.FileTab
 import com.klyx.tab.Tab
 import com.klyx.tab.TabId
 import com.klyx.tab.UnsupportedFileTab
-import com.klyx.ui.component.extension.ExtensionScreen
 import com.klyx.ui.component.log.LogViewerScreen
 import com.klyx.ui.page.createWelcomePage
 import com.klyx.viewmodel.util.stateInWhileSubscribed
@@ -577,17 +576,6 @@ fun EditorViewModel.openDefaultSettings() {
         tabTitle = string(string.tab_title_default_settings),
         isInternal = true
     )
-}
-
-fun EditorViewModel.openExtensionScreen() {
-    val id = "extension"
-
-    if (isTabOpen(id)) setActiveTab(id) else {
-        openTab(string(string.tab_title_extensions), id = id) {
-            ExtensionScreen(modifier = Modifier.fillMaxSize())
-        }
-        setActiveTab(id)
-    }
 }
 
 fun EditorViewModel.openUntitledFile() = openFile(KxFile("untitled"))

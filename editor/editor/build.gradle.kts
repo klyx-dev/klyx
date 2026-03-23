@@ -63,6 +63,7 @@ kotlin {
 
                 implementation(libs.androidx.emoji2)
                 implementation(projects.feature.extension)
+                implementation(projects.feature.nodeGraph)
 
                 //implementation(libs.ktreesitter)
             }

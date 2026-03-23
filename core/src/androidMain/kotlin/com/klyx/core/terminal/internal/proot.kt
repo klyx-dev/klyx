@@ -2,13 +2,14 @@ package com.klyx.core.terminal.internal
 
 import android.annotation.SuppressLint
 import android.content.Context
+import com.klyx.core.io.Paths
+import com.klyx.core.io.androidNativeLibraryDir
+import com.klyx.core.io.filesDir
+import com.klyx.core.io.root
 import com.klyx.core.process.KxProcess
 import com.klyx.core.process.KxProcessBuilder
 import com.klyx.core.process.process
-import com.klyx.core.terminal.klyxFilesDir
-import com.klyx.core.terminal.klyxLibDir
-import com.klyx.core.terminal.prootBinary
-import com.klyx.core.terminal.sandboxDir
+import com.klyx.core.util.join
 import com.klyx.core.withAndroidContext
 import java.io.File
 import kotlin.contracts.ExperimentalContracts
@@ -23,6 +24,9 @@ fun buildProotArgs(
     commands: List<String> = emptyList()
 ): List<String> {
 
+    val klyxFilesDir = Paths.filesDir
+    val sandboxDir = Paths.root
+
     val targetUser = user ?: "root"
     val args = mutableListOf<String>()
 
@@ -31,14 +35,14 @@ fun buildProotArgs(
         "-0",
         "--sysvipc",
         "--link2symlink",
-        "-r", sandboxDir.absolutePath,
+        "-r", sandboxDir.toString(),
         "-w", "/"
     )
 
     val binds = listOf(
         "/dev", "/proc", "/sys",
         "/system", "/vendor", "/product",
-        klyxFilesDir.absolutePath,
+        klyxFilesDir.toString(),
         ctx.dataDir.absolutePath
     )
 
@@ -72,10 +76,13 @@ fun buildProotArgs(
 inline fun prootProcess(vararg args: String, block: KxProcessBuilder.() -> Unit = {}): KxProcess {
     contract { callsInPlace(block, InvocationKind.EXACTLY_ONCE) }
 
+    val prootBinary = Paths.androidNativeLibraryDir.join("libproot.so")
+    val klyxLibDir = Paths.filesDir.join("usr/lib")
+
     return withAndroidContext {
-        process(prootBinary.absolutePath) {
+        process(prootBinary.toString()) {
             environment {
-                put("LD_LIBRARY_PATH", klyxLibDir.absolutePath)
+                put("LD_LIBRARY_PATH", klyxLibDir.toString())
             }
 
             args(args.asList())

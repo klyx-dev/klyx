@@ -5,7 +5,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.noLocalProvidedFor
 import com.klyx.filetree.FileTreeViewModel
-import com.klyx.ui.component.extension.ExtensionViewModel
 import com.klyx.viewmodel.EditorViewModel
 import com.klyx.viewmodel.KlyxViewModel
 import com.klyx.viewmodel.StatusBarViewModel
@@ -18,7 +17,6 @@ fun ProvideViewModels(content: @Composable () -> Unit) {
         LocalKlyxViewModel provides koinViewModel(),
         LocalFileTreeViewModel provides koinViewModel(),
         LocalStatusBarViewModel provides koinViewModel(),
-        LocalExtensionViewModel provides koinViewModel(),
         content = content
     )
 }
@@ -29,5 +27,3 @@ val LocalFileTreeViewModel =
     staticCompositionLocalOf<FileTreeViewModel> { noLocalProvidedFor("LocalFileTreeViewModel") }
 val LocalStatusBarViewModel =
     staticCompositionLocalOf<StatusBarViewModel> { noLocalProvidedFor("LocalStatusBarViewModel") }
-val LocalExtensionViewModel =
-    staticCompositionLocalOf<ExtensionViewModel> { noLocalProvidedFor("LocalExtensionViewModel") }

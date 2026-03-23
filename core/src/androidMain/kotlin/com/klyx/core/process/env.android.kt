@@ -1,6 +1,6 @@
 package com.klyx.core.process
 
-import com.klyx.core.terminal.currentUser
+import com.klyx.core.terminal.TerminalManager
 import com.klyx.core.withAndroidContext
 
 actual suspend fun getenv(name: String): String? {
@@ -31,7 +31,7 @@ actual suspend fun getenv(): Map<String, String> {
 }
 
 actual val systemUserName: String
-    get() = withAndroidContext { currentUser } ?: error(
+    get() = withAndroidContext { TerminalManager.currentUser } ?: error(
         """
         |Unable to resolve the current system user.
         |This likely means the Klyx Terminal is not installed on this Android device, or the application context has not been initialized correctly.

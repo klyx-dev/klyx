@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.klyx.LocalNavigator
 import com.klyx.Route
+import com.klyx.core.allowDiskReads
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.KeyShortcut
 import com.klyx.core.cmd.key.keyShortcutOf
@@ -75,7 +76,6 @@ import com.klyx.icons.Settings
 import com.klyx.project.Worktree
 import com.klyx.ui.page.main.LocalDrawerState
 import com.klyx.ui.util.openIfClosed
-import com.klyx.viewmodel.openExtensionScreen
 import com.klyx.viewmodel.openUntitledFile
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import kotlinx.coroutines.launch
@@ -95,7 +95,7 @@ fun WelcomePage() {
 
     val directoryPicker = rememberDirectoryPickerLauncher { file ->
         if (file != null) {
-            val kx = file.toKxFile()
+            val kx = allowDiskReads { file.toKxFile() }
 
             if (kx.isPermissionRequired(R_OK or W_OK)) {
                 klyxViewModel.showPermissionDialog()
@@ -216,7 +216,7 @@ fun WelcomePage() {
                 text = "Explore Extensions",
                 shortcut = keyShortcutOf(ctrl = true, shift = true, key = Key.X),
                 icon = Icons.Extension,
-                onClick = editorViewModel::openExtensionScreen
+                onClick = { navigator.navigateTo(Route.Extension) }
             )
         }
     }

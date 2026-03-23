@@ -46,6 +46,7 @@ import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.editor.language.textMateLanguageOrEmptyLanguage
 import com.klyx.editor.lsp.EditorLanguageServerClient
 import com.klyx.editor.textaction.TextActionWindow
+import com.klyx.extension.nodegraph.LocalExtensionManager
 import com.klyx.project.Worktree
 import com.klyx.project.parentAsWorktreeOrSelf
 import io.github.rosemoe.sora.langs.textmate.TextMateColorScheme
@@ -124,6 +125,7 @@ actual fun CodeEditor(
     val isDarkMode = LocalIsDarkMode.current
     val fontFamilyResolver = LocalFontFamilyResolver.current
     val appSettings = LocalAppSettings.current
+    val extensionManager = LocalExtensionManager.current
 
     val style by remember {
         derivedStateOf {
@@ -155,11 +157,11 @@ actual fun CodeEditor(
             file = state.file,
             editor = state.editor!!,
             coroutineScope = scope,
-            settings = appSettings
+            extensionManager = extensionManager
         )
 
         runCatching {
-            client.initialize(view, compositionContext, app)
+            client.initialize(view, compositionContext)
         }.onFailure { err ->
             logger.warn { "LSP Extension for ${state.file.language()} failed to initialize: \n${err.message}" }
         }

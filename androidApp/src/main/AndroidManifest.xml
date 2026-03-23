@@ -24,8 +24,8 @@
         android:allowBackup="true"
         android:appCategory="productivity"
         android:enableOnBackInvokedCallback="true"
-        android:hardwareAccelerated="true"
         android:extractNativeLibs="true"
+        android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher"
@@ -69,6 +69,13 @@
             android:name="com.klyx.activities.TestActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name="com.klyx.activities.EditExtensionActivity"
+            android:exported="false"
+            android:screenOrientation="sensorLandscape"
+            android:windowSoftInputMode="adjustResize"
+            tools:ignore="DiscouragedApi" />
 
         <activity
             android:name="com.klyx.activities.CrashActivity"

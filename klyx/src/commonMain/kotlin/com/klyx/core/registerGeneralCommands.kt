@@ -5,6 +5,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.key.Key
+import com.klyx.LocalNavigator
+import com.klyx.Route
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.CommandManager.addCommands
 import com.klyx.core.cmd.CommandManager.removeCommands
@@ -31,7 +33,6 @@ import com.klyx.ui.page.main.closeCurrentWindow
 import com.klyx.ui.page.main.openNewWindow
 import com.klyx.ui.page.main.quitApp
 import com.klyx.ui.util.openIfClosed
-import com.klyx.viewmodel.openExtensionScreen
 import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
@@ -49,6 +50,7 @@ internal fun registerGeneralCommands() {
     val notifier = LocalNotifier.current
     val drawerState = LocalDrawerState.current
     val coroutineScope = rememberCoroutineScope()
+    val navigator = LocalNavigator.current
 
     val filePicker = rememberFilePickerLauncher(mode = FileKitMode.Multiple()) { files ->
         files?.toKxFiles()?.forEach(editorViewModel::openFile)
@@ -112,7 +114,7 @@ internal fun registerGeneralCommands() {
             buildCommand {
                 name("klyx: extensions")
                 shortcut(keyShortcutOf(ctrl = true, shift = true, key = Key.X))
-                action { editorViewModel.openExtensionScreen() }
+                action { navigator.navigateTo(Route.Extension) }
             },
 
             buildCommand {

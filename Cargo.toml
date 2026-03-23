@@ -1,7 +1,6 @@
 [workspace]
 members = [
     "crates/extension_api",
-    "feature/extension",
     "feature/terminal/emulator",
 ]
 resolver = "2"

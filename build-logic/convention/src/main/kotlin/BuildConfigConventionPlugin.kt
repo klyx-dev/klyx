@@ -8,6 +8,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
+import java.util.Properties
 
 class BuildConfigConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -83,6 +84,15 @@ class BuildConfigConventionPlugin : Plugin<Project> {
 
                     buildConfigField(Type.STRING, "CI_OS", env("CI_OS"), nullable = true)
                     buildConfigField(Type.STRING, "CI_ARCH", env("CI_ARCH"), nullable = true)
+
+                    val local = rootProject.file("local.properties")
+                    val localProps = Properties()
+                    if (local.exists()) {
+                        localProps.load(local.inputStream())
+                    }
+
+                    val storeKey = localProps.getProperty("KLYX_STORE_API_KEY") ?: env("KLYX_STORE_API_KEY")!!
+                    buildConfigField(Type.STRING, "STORE_API_KEY", storeKey, nullable = false)
 
                     buildConfigField(
                         Type.STRING,

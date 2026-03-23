@@ -1,20 +1,14 @@
 package com.klyx.core.terminal
 
-import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.core.net.toUri
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.inject
+import com.klyx.core.io.Paths
+import com.klyx.core.io.fs
+import com.klyx.core.io.root
 import java.io.File
 
-@Suppress("UnreachableCode")
-object SAFUtils : KoinComponent {
-    private val context: Context by inject()
-    private val userHomeDir by lazy {
-        with(context) { com.klyx.core.terminal.userHomeDir }
-    }
-
+object SAFUtils {
     const val ROOT_ID = "klyx_terminal_home"
     const val ROOT_DOCUMENT_ID = "klyx_terminal_home_root"
 
@@ -22,24 +16,24 @@ object SAFUtils : KoinComponent {
     fun getDocumentIdForUri(uri: Uri): String = DocumentsContract.getDocumentId(uri)
 
     fun getFileForDocumentId(documentId: String): File {
-        requireNotNull(userHomeDir) { "No user home directory" }
+        require(fs.exists(Paths.root)) { "unpossible" }
 
         return when (documentId) {
-            ROOT_DOCUMENT_ID -> userHomeDir!!
+            ROOT_DOCUMENT_ID -> File(Paths.root.toString())
             else -> {
                 val relativePath = documentId.removePrefix("${ROOT_ID}_")
-                File(userHomeDir, relativePath)
+                File(Paths.root.toString(), relativePath)
             }
         }
     }
 
     fun getDocumentIdForFile(file: File): String {
-        requireNotNull(userHomeDir) { "No user home directory" }
+        require(fs.exists(Paths.root)) { "unpossible" }
 
         return when {
-            file.absolutePath == userHomeDir!!.absolutePath -> ROOT_DOCUMENT_ID
+            file.absolutePath == Paths.root.toString() -> ROOT_DOCUMENT_ID
             else -> {
-                val relativePath = file.absolutePath.removePrefix(userHomeDir!!.absolutePath).removePrefix("/")
+                val relativePath = file.absolutePath.removePrefix(Paths.root.toString()).removePrefix("/")
                 "${ROOT_ID}_$relativePath"
             }
         }

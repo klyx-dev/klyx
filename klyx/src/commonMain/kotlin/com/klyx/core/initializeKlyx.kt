@@ -8,10 +8,6 @@ import com.klyx.core.noderuntime.NodeRuntime
 import com.klyx.core.settings.SettingsManager
 import com.klyx.editor.language.LanguageRegistry
 import com.klyx.editor.languages.initLanguages
-import com.klyx.extension.ExtensionHostProxy
-import com.klyx.extension.extension
-import com.klyx.extension.host.initExtensionHost
-import com.klyx.language.extension.initLanguageExtensions
 import com.klyx.terminal.initializeTerminal
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -48,15 +44,13 @@ suspend fun initializeKlyx(application: Application) {
     initMutex.withLock {
         if (isInitialized) return
 
-        val cx = application.app
+        val app = application.app
         trace("loading settings")
-        SettingsManager.init(cx)
+        SettingsManager.init(app)
 
         withContext(Dispatchers.Default) {
             trace("Starting extension system")
-            extension.init(cx)
 
-            val extensionHostProxy = ExtensionHostProxy.global(cx)
             val options = MutableStateFlow(NodeBinaryOptions())
 
             trace("Preparing Node runtime")
@@ -65,12 +59,8 @@ suspend fun initializeKlyx(application: Application) {
             val languageRegistry = LanguageRegistry.INSTANCE
             trace("Registering languages")
             initLanguages(languageRegistry, nodeRuntime, application.app)
-            trace("Wiring language extensions")
-            initLanguageExtensions(extensionHostProxy, languageRegistry)
-            trace("Starting extension host")
-            initExtensionHost(extensionHostProxy, nodeRuntime, cx)
             trace("Initializing terminal")
-            initializeTerminal(cx)
+            initializeTerminal(app)
         }
 
         isInitialized = true

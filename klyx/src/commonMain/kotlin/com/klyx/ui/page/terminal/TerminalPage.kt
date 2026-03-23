@@ -60,13 +60,13 @@ import com.klyx.core.net.rememberNetworkState
 import com.klyx.core.settings.CursorStyle
 import com.klyx.core.settings.LocalAppSettings
 import com.klyx.core.terminal.ExtraKeys
+import com.klyx.core.terminal.FileDownloadStatus
+import com.klyx.core.terminal.TerminalManager
+import com.klyx.core.terminal.TerminalUiState
 import com.klyx.icons.Icons
 import com.klyx.icons.Settings
-import com.klyx.terminal.FileDownloadStatus
 import com.klyx.terminal.SessionBinder
 import com.klyx.terminal.SessionManager
-import com.klyx.terminal.TerminalManager
-import com.klyx.terminal.TerminalUiState
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.event.TerminateAllSessionEvent
 import com.klyx.terminal.ui.Terminal

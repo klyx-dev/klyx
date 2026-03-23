@@ -87,6 +87,8 @@ jobs:
           CI_OS: ${{ runner.os }}
           CI_ARCH: ${{ runner.arch }}
 
+          KLYX_STORE_API_KEY: ${{ secrets.KLYX_STORE_API_KEY }}
+
           ENABLE_STRICT_MODE: false
           ENABLE_EXPERIMENTAL: true
         run: |

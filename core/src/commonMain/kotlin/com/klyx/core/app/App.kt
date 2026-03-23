@@ -203,6 +203,9 @@ class App internal constructor(
 @Composable
 inline fun <reified T : Global> globalOf(): T = LocalApp.current.global()
 
+@Composable
+inline fun <reified T : Global> globalOfOrNull(): T? = LocalApp.current.globalOrNull()
+
 /**
  * Represents an entity that holds a reference to an [App] instance.
  *

@@ -7,6 +7,7 @@ import com.klyx.core.io.androidNativeLibraryDir
 import com.klyx.core.platform.Os
 import com.klyx.core.platform.currentOs
 import com.klyx.core.process.systemEnv
+import com.klyx.core.terminal.TerminalManager
 import com.klyx.core.unsupported
 import com.klyx.core.util.join
 import com.klyx.terminal.emulator.TerminalSession
