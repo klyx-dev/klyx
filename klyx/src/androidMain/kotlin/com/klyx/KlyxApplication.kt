@@ -164,7 +164,7 @@ class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope
     }
 
     private fun setupAssetFile(fileName: String) {
-        with(File(Paths.filesDir.join("usr", "lib", fileName).toString())) {
+        with(File(Paths.filesDir.join("usr", "bin", fileName).toString())) {
             parentFile?.mkdirs()
             writeBytes(assets.open("terminal/$fileName.sh").use { it.readBytes() })
             setExecutable(true)
