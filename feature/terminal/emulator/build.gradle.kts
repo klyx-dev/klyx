@@ -1,84 +1,37 @@
-import gobley.gradle.GobleyHost
-import gobley.gradle.cargo.dsl.android
-import gobley.gradle.cargo.dsl.jvm
-import gobley.gradle.cargo.profiles.CargoProfile
-import gobley.gradle.rust.targets.RustPosixTarget
-import gobley.gradle.rust.targets.RustWindowsTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
-    //alias(libs.plugins.klyx.multiplatform)
-    alias(libs.plugins.klyx.rust)
-    alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.klyx.multiplatform)
     alias(libs.plugins.klyx.multiplatform.compose)
-    alias(libs.plugins.kotest)
-    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlinx.atomicfu)
     alias(libs.plugins.ksp)
 }
 
-android {
-    namespace = "com.klyx.terminal.emulator"
-    compileSdk = 36
-    ndkVersion = libs.versions.ndkVersion.get()
-
-    defaultConfig {
-        minSdk = 26
-        ndk.abiFilters += setOf("arm64-v8a", "x86_64")
-    }
-
-    buildTypes {
-        debug {
-            isJniDebuggable = true
-            ndk {
-                debugSymbolLevel = "FULL"
-            }
-        }
-    }
-}
-
-cargo {
-    builds.jvm {
-        if (GobleyHost.Platform.Windows.isCurrent) {
-            when (rustTarget) {
-                RustWindowsTarget.X64 -> embedRustLibrary = false
-                RustPosixTarget.MinGWX64 -> embedRustLibrary = true
-                else -> {}
-            }
-        } else {
-            embedRustLibrary = rustTarget == GobleyHost.current.rustTarget
-        }
-    }
-
-    builds.android {
-        debug.buildTaskProvider.configure {
-            additionalEnvironment.put("RUST_BACKTRACE", 1)
-            additionalEnvironment.put("RUSTFLAGS", "-C debuginfo=2")
-        }
-    }
-}
-
-uniffi {
-    generateFromLibrary {
-        packageName = "com.klyx.terminal.native"
-    }
-}
-
 kotlin {
-    //android { namespace = "com.klyx.extension" }
-    @Suppress("DEPRECATION")
-    androidTarget()
+    android { namespace = "com.klyx.terminal.emulator" }
 
-    jvm()
+    targets.withType<KotlinNativeTarget> {
+        compilations.getByName("main") {
+            cinterops.create("terminal") {
+                definitionFile.set(project.file("src/nativeInterop/cinterop/terminal.def"))
+                includeDirs("src/nativeInterop/include")
 
-    if (GobleyHost.Platform.MacOS.isCurrent) {
-        iosArm64()
-        iosSimulatorArm64()
-        iosX64()
+                extraOpts("-Xsource-compiler-option", "-Isrc/nativeInterop/include")
+                project.file("src/nativeInterop/cpp").listFiles()?.filter { it.extension == "c" }?.forEach {
+                    extraOpts("-Xcompile-source", it.absolutePath)
+                }
+            }
+        }
     }
-
-    applyDefaultHierarchyTemplate()
 
     sourceSets {
+        val androidMain by getting {
+            dependencies {
+                implementation(projects.feature.terminal.android)
+            }
+        }
+
         val commonMain by getting {
             dependencies {
                 implementation(libs.kotlinx.coroutines.core)
@@ -86,30 +39,49 @@ kotlin {
                 implementation(projects.util)
             }
         }
-
-        commonTest.dependencies {
-            implementation(libs.kotlinx.coroutines.test)
-            implementation(libs.kotest.framework.engine)
-            implementation(libs.kotest.assertions.core)
-        }
-    }
-
-    compilerOptions {
-        freeCompilerArgs.addAll(
-            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
-            "-opt-in=kotlin.contracts.ExperimentalContracts",
-            "-opt-in=kotlin.ExperimentalUnsignedTypes",
-            "-Xcontext-parameters",
-            "-Xreturn-value-checker=check",
-            "-Xexplicit-backing-fields",
-            "-Xexpect-actual-classes"
-        )
     }
 }
 
-tasks.named<Test>("jvmTest") {
-    useJUnitPlatform()
-    filter {
-        isFailOnNoMatchingTests = false
+atomicfu {
+    transformJvm = false
+}
+
+val jvmNativeBuildDir = layout.buildDirectory.dir("jvmNative").get().asFile
+
+val configureJvmNative = tasks.register<Exec>("configureJvmNative") {
+    group = "build native"
+    description = "Configures CMake for Desktop"
+
+    doFirst {
+        jvmNativeBuildDir.mkdirs()
     }
+
+    workingDir = jvmNativeBuildDir
+    commandLine("cmake", "../../src/nativeInterop/cpp", "-B", ".")
+}
+
+val buildJvmNative = tasks.register<Exec>("buildJvmNative") {
+    group = "build native"
+    description = "Compiles C code for Desktop via CMake"
+
+    dependsOn(configureJvmNative)
+
+    workingDir = jvmNativeBuildDir
+    commandLine("cmake", "--build", ".", "--config", "Release")
+}
+
+val copyJvmNativeBinaries = tasks.register<Copy>("copyJvmNativeBinaries") {
+    group = "build native"
+    description = "Copies compiled native libraries to JVM resources"
+
+    dependsOn(buildJvmNative)
+
+    from(jvmNativeBuildDir) {
+        include("**/*.dll", "**/*.so", "**/*.dylib")
+    }
+    into(layout.buildDirectory.dir("processedResources/jvm/main"))
+}
+
+tasks.named("jvmProcessResources") {
+    dependsOn(copyJvmNativeBinaries)
 }

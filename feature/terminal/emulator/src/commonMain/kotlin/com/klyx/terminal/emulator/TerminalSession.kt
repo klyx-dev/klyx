@@ -3,17 +3,12 @@ package com.klyx.terminal.emulator
 import androidx.compose.runtime.Stable
 import com.klyx.terminal.Logger
 import com.klyx.terminal.ScreenEvent
-import com.klyx.terminal.native.closeFd
-import com.klyx.terminal.native.createSubprocess
-import com.klyx.terminal.native.killProcess
-import com.klyx.terminal.native.readFromFd
-import com.klyx.terminal.native.readSymlink
-import com.klyx.terminal.native.setPtyWindowSize
-import com.klyx.terminal.native.waitFor
-import com.klyx.terminal.native.writeToFd
+import com.klyx.terminal.emulator.native.Terminal
+import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
@@ -25,6 +20,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.Volatile
 import kotlin.uuid.Uuid
 
 /**
@@ -48,7 +44,7 @@ open class TerminalSession(
     private val env: List<String>,
     client: TerminalSessionClient,
     private val transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS
-) : TerminalOutput {
+) : TerminalOutput, SynchronizedObject() {
 
     var client: TerminalSessionClient = client
         private set
@@ -88,7 +84,7 @@ open class TerminalSession(
     /**
      * Only valid if not running.
      */
-    @get:Synchronized
+    @get:KlyxSynchronized
     val exitStatus: Int
         get() = shellExitStatus
 
@@ -102,7 +98,7 @@ open class TerminalSession(
             if (shellPid < 1) return null
 
             return try {
-                readSymlink("/proc/$shellPid/cwd")
+                Terminal.readSymlink("/proc/$shellPid/cwd")
             } catch (e: Exception) {
                 Logger.logError(client, LOG_TAG, "Error getting current directory: ${e.message}")
                 null
@@ -140,12 +136,12 @@ open class TerminalSession(
         if (currentEmulator == null) {
             initializeEmulator(columns, rows, cellWidthPixels, cellHeightPixels)
         } else {
-            setPtyWindowSize(
+            Terminal.setPtyWindowSize(
                 fd = terminalFileDescriptor,
-                rows = rows.toUInt(),
-                cols = columns.toUInt(),
-                cellWidth = cellWidthPixels.toUInt(),
-                cellHeight = cellHeightPixels.toUInt()
+                rows = rows,
+                cols = columns,
+                cellWidth = cellWidthPixels,
+                cellHeight = cellHeightPixels
             )
             currentEmulator.resize(columns, rows, cellWidthPixels, cellHeightPixels)
         }
@@ -165,19 +161,21 @@ open class TerminalSession(
             client = client
         )
 
-        val result = createSubprocess(
+        val processIdArray = IntArray(1)
+
+        terminalFileDescriptor = Terminal.createSubprocess(
             cmd = shellPath,
             cwd = cwd,
-            args = args,
-            envVars = env,
+            args = args.toTypedArray(),
+            envVars = env.toTypedArray(),
+            processIdArray = processIdArray,
             rows = rows,
             columns = columns,
             cellWidth = cellWidthPixels,
             cellHeight = cellHeightPixels
         )
 
-        terminalFileDescriptor = result.ptmFd
-        shellPid = result.pid
+        shellPid = processIdArray[0]
         isRunning.update { true }
 
         client.setTerminalShellPid(this, shellPid)
@@ -191,16 +189,20 @@ open class TerminalSession(
      * Coroutine to read from process and write to terminal
      */
     private fun startInputReader() {
+        val buffer = ByteArray(4096)
+
         scope.launch(Dispatchers.IO) {
             try {
                 while (isActive && shellPid > 0) {
-                    val data = readFromFd(
+                    val bytesRead = Terminal.readFromFd(
                         fd = terminalFileDescriptor,
-                        maxLen = 4096u
+                        buffer = buffer,
+                        maxLen = buffer.size
                     )
-                    if (data.isEmpty()) break
 
-                    if (!processToTerminalIOQueue.write(data, 0, data.size)) break
+                    if (bytesRead <= 0) break
+
+                    if (!processToTerminalIOQueue.write(buffer, 0, bytesRead)) break
 
                     // Notify on main thread
                     withContext(Dispatchers.Main) {
@@ -224,8 +226,14 @@ open class TerminalSession(
                     val bytesToWrite = terminalToProcessIOQueue.read(buffer, blocking = true)
                     if (bytesToWrite <= 0) break
 
-                    val data = buffer.copyOf(bytesToWrite)
-                    writeToFd(terminalFileDescriptor, data)
+                    val written = Terminal.writeToFd(
+                        fd = terminalFileDescriptor,
+                        buffer = buffer,
+                        len = bytesToWrite
+                    )
+
+                    // If the native write returns -1, the file descriptor is broken/closed
+                    if (written < 0) break
                 }
             } catch (e: Exception) {
                 Logger.logError(client, LOG_TAG, "Output writer error: ${e.message}")
@@ -239,7 +247,7 @@ open class TerminalSession(
     private fun startProcessWaiter() {
         scope.launch(Dispatchers.IO) {
             try {
-                val exitCode = waitFor(shellPid)
+                val exitCode = Terminal.waitFor(shellPid)
 
                 withContext(Dispatchers.Main) {
                     handleProcessExited(exitCode)
@@ -346,7 +354,7 @@ open class TerminalSession(
      */
     fun finishIfRunning() {
         if (shellPid > 0) {
-            killProcess(shellPid, 9) // SIGKILL
+            Terminal.killProcess(shellPid, 9) // SIGKILL
         }
     }
 
@@ -364,7 +372,7 @@ open class TerminalSession(
         terminalToProcessIOQueue.close()
         processToTerminalIOQueue.close()
         Logger.logDebug(client, "TerminalSession", "Kotlin closing fd $terminalFileDescriptor")
-        closeFd(terminalFileDescriptor)
+        Terminal.close(terminalFileDescriptor)
 
         scope.cancel()
     }

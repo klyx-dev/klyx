@@ -1,5 +1,8 @@
 @file:Suppress("UnstableApiUsage")
 
+include(":feature:terminal:android")
+
+
 rootProject.name = "KlyxEditor"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
