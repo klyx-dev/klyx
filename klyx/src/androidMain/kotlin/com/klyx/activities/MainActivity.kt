@@ -25,7 +25,7 @@ import com.klyx.core.event.CrashEvent
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.Subscriber
 import com.klyx.core.event.asComposeKeyEvent
-import com.klyx.core.event.subscribe
+import com.klyx.core.event.registerSubscriber
 import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
@@ -55,7 +55,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FileKit.init(this)
-        subscribe()
+        registerSubscriber(this)
 
         EventBus.INSTANCE.subscribe<TerminateAllSessionEvent> {
             app.global<SessionBinder>().unbind(this)

@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 
+@IgnorableReturnValue
 inline fun <reified E : Any> EventBus.registerSubscriber(
     subscriber: Subscriber<E>,
     dispatcher: CoroutineDispatcher = Dispatchers.Default
@@ -13,10 +14,12 @@ inline fun <reified E : Any> EventBus.registerSubscriber(
     return subscribe<E>(dispatcher = dispatcher, onEvent = subscriber::onEvent)
 }
 
+@IgnorableReturnValue
 inline fun <reified E : Any> Subscriber<E>.subscribe(dispatcher: CoroutineDispatcher = Dispatchers.Default): Job {
     return EventBus.INSTANCE.registerSubscriber(this, dispatcher)
 }
 
+@IgnorableReturnValue
 inline fun <reified E : Any> LifecycleOwner.registerSubscriber(
     subscriber: Subscriber<E>,
     minActiveState: Lifecycle.State = Lifecycle.State.STARTED,
@@ -28,6 +31,7 @@ inline fun <reified E : Any> LifecycleOwner.registerSubscriber(
     )
 }
 
+@IgnorableReturnValue
 context(lifecycleOwner: LifecycleOwner)
 inline fun <reified E : Any> Subscriber<E>.subscribe(minActiveState: Lifecycle.State = Lifecycle.State.STARTED): Job {
     return lifecycleOwner.registerSubscriber(this, minActiveState)
