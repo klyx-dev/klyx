@@ -1,7 +1,7 @@
 [versions]
 ndkVersion = "29.0.14206865"
 # AGP and tools should be updated together
-androidGradlePlugin = "8.13.2"
+androidGradlePlugin = "9.1.0"
 androidTools = "31.13.2"
 androidx-activity = "1.12.4"
 androidx-core = "1.17.0"
@@ -49,23 +49,15 @@ compose-material3 = "1.10.0-alpha05"
 androidx-nav3 = "1.0.0-alpha06"
 jetbrains-skiko = "0.9.47"
 buildkonfig = "0.17.1"
-gobley = "0.3.7"
 kotlinLogging = "7.0.14"
 navigationevent = "1.0.1"
-coreKtx = "1.18.0"
-appcompat = "1.6.1"
 
 [libraries]
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
-#noinspection UnusedVersionCatalogEntry
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "compose-multiplatform" }
-#noinspection UnusedVersionCatalogEntry
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "compose-multiplatform" }
-#noinspection UnusedVersionCatalogEntry
 compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "compose-material3" }
-#noinspection UnusedVersionCatalogEntry
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "compose-multiplatform" }
-#noinspection UnusedVersionCatalogEntry
 compose-ui-util = { module = "org.jetbrains.compose.ui:ui-util", version.ref = "compose-multiplatform" }
 navigationevent = { module = "org.jetbrains.androidx.navigationevent:navigationevent-compose", version.ref = "navigationevent" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "compose-multiplatform" }
@@ -133,11 +125,8 @@ jetbrains-skiko = { module = "org.jetbrains.skiko:skiko", version.ref = "jetbrai
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
 
-#noinspection UnusedVersionCatalogEntry
 kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", version.ref = "kotlin" }
-#noinspection UnusedVersionCatalogEntry
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "runner" }
-#noinspection UnusedVersionCatalogEntry
 androidx-test-core = { group = "androidx.test", name = "core", version.ref = "core" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -156,8 +145,6 @@ kotlin-gradlePlugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-pl
 ksp-gradlePlugin = { group = "com.google.devtools.ksp", name = "com.google.devtools.ksp.gradle.plugin", version.ref = "ksp" }
 buildkonfig-gradlePlugin = { group = "com.codingfeline.buildkonfig", name = "buildkonfig-gradle-plugin", version.ref = "buildkonfig" }
 buildkonfig-compiler = { group = "com.codingfeline.buildkonfig", name = "buildkonfig-compiler", version.ref = "buildkonfig" }
-androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
-androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
@@ -174,8 +161,6 @@ kotlinx-atomicfu = { id = "org.jetbrains.kotlinx.atomicfu", version.ref = "kotli
 kotlin-atomicfu = { id = "org.jetbrains.kotlin.plugin.atomicfu", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
-gobley-cargo = { id = "dev.gobley.cargo", version.ref = "gobley" }
-gobley-uniffi = { id = "dev.gobley.uniffi", version.ref = "gobley" }
 
 # Plugins defined by this project
 klyx-android-application = { id = "klyx.android.application" }
@@ -187,4 +172,3 @@ klyx-multiplatform = { id = "klyx.multiplatform" }
 klyx-multiplatform-compose = { id = "klyx.multiplatform.compose" }
 klyx-compose-desktop = { id = "klyx.compose.desktop" }
 klyx-buildConfig = { id = "klyx.buildConfig" }
-klyx-rust = { id = "klyx.rust" }

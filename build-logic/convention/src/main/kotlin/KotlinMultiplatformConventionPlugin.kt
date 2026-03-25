@@ -67,7 +67,7 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
                 }
             }
 
-            configureKotlin<KotlinMultiplatformExtension>()
+            configureKotlin()
 
             tasks.named<Test>("jvmTest") {
                 useJUnitPlatform()

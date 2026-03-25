@@ -9,15 +9,10 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) {
         with(target) {
             apply(plugin = "com.android.library")
-            apply(plugin = "org.jetbrains.kotlin.android")
             apply(plugin = "klyx.android.lint")
 
             extensions.configure<LibraryExtension> {
                 configureKotlinAndroid(this)
-                testOptions.targetSdk = 28
-                lint.targetSdk = 28
-                @Suppress("DEPRECATION")
-                defaultConfig.targetSdk = 28
             }
         }
     }
