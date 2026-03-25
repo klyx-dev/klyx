@@ -3,7 +3,7 @@ package com.klyx.buildlogic
 import io.github.z4kn4fein.semver.Version
 import io.github.z4kn4fein.semver.withoutSuffixes
 
-private val currentVersion = Version(2, 0, 1, preRelease = null, buildMetadata = "preview")
+private val currentVersion = Version(3, 0, 0, preRelease = null, buildMetadata = "preview")
 
 private val currentVersionCode by lazy {
     val (minor, major, patch, preRelease) = currentVersion
