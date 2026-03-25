@@ -1,5 +1,7 @@
 package com.klyx.terminal.emulator
 
+import kotlin.jvm.JvmInline
+
 @JvmInline
 value class CursorPosition internal constructor(
     private val packedValue: Long

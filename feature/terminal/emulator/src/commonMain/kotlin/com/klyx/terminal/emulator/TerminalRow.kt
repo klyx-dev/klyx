@@ -1,6 +1,7 @@
 package com.klyx.terminal.emulator
 
 import com.klyx.util.MIN_SUPPLEMENTARY_CODE_POINT
+import com.klyx.util.charCount
 import com.klyx.util.toChars
 import com.klyx.util.toCodePoint
 
@@ -49,7 +50,7 @@ class TerminalRow(
         var i = x1
         while (i < x2) {
             val sourceChar = sourceChars[i]
-            var codePoint = if (Character.isHighSurrogate(sourceChar)) Character.toCodePoint(
+            var codePoint = if (sourceChar.isHighSurrogate()) Char.toCodePoint(
                 sourceChar,
                 sourceChars[++i]
             ) else sourceChar.code
@@ -71,7 +72,7 @@ class TerminalRow(
 
     /** Note that the column may end of second half of wide character.  */
     fun findStartOfColumn(column: Int): Int {
-        if (column == columns) return spaceUsed.toInt()
+        if (column == columns) return spaceUsed
 
         var currentColumn = 0
         var currentCharIndex = 0
@@ -199,7 +200,7 @@ class TerminalRow(
         }
 
         // Find how many chars this column will need
-        var newCharactersUsedForColumn = Character.charCount(codePoint)
+        var newCharactersUsedForColumn = codePoint.charCount()
         if (newIsCombining) {
             // Combining characters are added to the contents of the column instead of overwriting them, so that they
             // modify the existing contents.

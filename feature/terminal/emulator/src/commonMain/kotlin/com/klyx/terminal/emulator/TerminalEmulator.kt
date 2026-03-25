@@ -18,6 +18,7 @@ import com.klyx.util.CodePoint
 import com.klyx.util.isBmpCodePoint
 import com.klyx.util.toChars
 import kotlin.io.encoding.Base64
+import kotlin.jvm.JvmName
 
 /**
  * Renders text into a screen. Contains all the terminal-specific knowledge and state. Emulates a subset of the X Window

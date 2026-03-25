@@ -1,5 +1,6 @@
 package com.klyx.terminal.emulator
 
+import com.klyx.util.toCodePoint
 import kotlin.math.max
 
 /**
@@ -349,7 +350,7 @@ class TerminalBuffer(
                     // Note that looping over java character, not cells.
                     val c: Char = oldLine.text[i]
                     val codePoint =
-                        if (Character.isHighSurrogate(c)) Character.toCodePoint(c, oldLine.text[++i]) else c.code
+                        if (c.isHighSurrogate()) Char.toCodePoint(c, oldLine.text[++i]) else c.code
                     val displayWidth: Int = WcWidth.width(codePoint)
                     // Use the last style if this is a zero-width character:
                     if (displayWidth > 0) styleAtCol = oldLine.getStyle(currentOldCol)

@@ -1,8 +1,0 @@
-interface system {
-    enum toast-duration {
-        short,
-        long
-    }
-
-    show-toast: func(message: string, duration: toast-duration);
-}

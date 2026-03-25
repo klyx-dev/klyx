@@ -1,8 +1,5 @@
 @file:Suppress("UnstableApiUsage")
 
-include(":feature:terminal:android")
-
-
 rootProject.name = "KlyxEditor"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
@@ -62,6 +59,7 @@ include(
 include(
     ":feature:terminal:emulator",
     ":feature:terminal:ui",
+    ":feature:terminal:android"
 )
 include(":lsp:api", ":lsp:server")
 

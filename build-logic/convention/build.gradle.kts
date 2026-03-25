@@ -78,9 +78,5 @@ gradlePlugin {
             id = libs.plugins.klyx.buildConfig.get().pluginId
             implementationClass = "BuildConfigConventionPlugin"
         }
-        register("rustConvention") {
-            id = libs.plugins.klyx.rust.get().pluginId
-            implementationClass = "RustConventionPlugin"
-        }
     }
 }
