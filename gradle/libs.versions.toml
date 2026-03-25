@@ -53,7 +53,7 @@ gobley = "0.3.7"
 kotlinLogging = "7.0.14"
 navigationevent = "1.0.1"
 coreKtx = "1.18.0"
-appcompat = "1.6.1"
+appcompat = "1.7.1"
 
 [libraries]
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "compose-multiplatform" }
