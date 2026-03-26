@@ -22,6 +22,7 @@ import com.klyx.core.initializeKlyx
 import com.klyx.core.io.Paths
 import com.klyx.core.io.filesDir
 import com.klyx.core.io.logFile
+import com.klyx.core.logging.Level
 import com.klyx.core.logging.LoggerConfig
 import com.klyx.core.process.Thread
 import com.klyx.core.util.join
@@ -75,7 +76,10 @@ class KlyxApplication : android.app.Application(), CoroutineScope by GlobalScope
         }
 
         if (!KlyxBuildConfig.IS_DEBUG) {
-            LoggerConfig.Default = LoggerConfig(replayBufferSize = 500)
+            LoggerConfig.Default = LoggerConfig(
+                replayBufferSize = 500,
+                minimumLevel = Level.Info
+            )
         }
 
         app = Application()
