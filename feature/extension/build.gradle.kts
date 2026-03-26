@@ -1,5 +1,6 @@
 plugins {
     alias(libs.plugins.klyx.multiplatform)
+    alias(libs.plugins.klyx.multiplatform.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
 }

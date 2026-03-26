@@ -24,6 +24,7 @@ import com.klyx.lsp.capabilities.DocumentSymbolCapabilities
 import com.klyx.lsp.capabilities.ExecuteCommandCapabilities
 import com.klyx.lsp.capabilities.FormattingCapabilities
 import com.klyx.lsp.capabilities.HoverCapabilities
+import com.klyx.lsp.capabilities.InlayHintClientCapabilities
 import com.klyx.lsp.capabilities.MessageActionItemCapabilities
 import com.klyx.lsp.capabilities.OnTypeFormattingCapabilities
 import com.klyx.lsp.capabilities.ParameterInformationCapabilities
@@ -121,7 +122,8 @@ fun createInitializeParams(
             publishDiagnostics = PublishDiagnosticsCapabilities(
                 relatedInformation = true,
                 versionSupport = true
-            )
+            ),
+            inlayHint = InlayHintClientCapabilities(dynamicRegistration = true)
         ),
         workspace = WorkspaceClientCapabilities(
             applyEdit = true,

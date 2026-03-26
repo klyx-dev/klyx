@@ -1,9 +1,6 @@
 package com.klyx.extension.nodegraph
 
 import com.klyx.core.lsp.LanguageServerBinary
-import com.klyx.core.platform.ToastDuration
-import com.klyx.core.platform.currentPlatform
-import com.klyx.core.platform.showToast
 import com.klyx.core.process.which
 import com.klyx.nodegraph.ActionNode
 import com.klyx.nodegraph.EvaluateScope
@@ -19,7 +16,6 @@ import com.klyx.nodegraph.PureNode
 import com.klyx.nodegraph.SequentialActionNode
 import com.klyx.nodegraph.SequentialEventNode
 import com.klyx.nodegraph.customPinType
-import com.klyx.nodegraph.enum
 import com.klyx.nodegraph.extension.GraphExtension
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.io.files.Path
@@ -54,6 +50,14 @@ class LspProvisionRequest(
 }
 
 val LspRequestType = customPinType("LspRequest")
+
+fun ExtensionManager.onRequestLsp(languageName: String, request: LspProvisionRequest) {
+    dispatchEventForLanguage(
+        language = languageName,
+        event = OnLspRequestedNode.triggerName,
+        params = mapOf("Request" to request)
+    )
+}
 
 internal object OnLspRequestedNode : SequentialEventNode() {
     override val key = "editor.event.onLspRequested"

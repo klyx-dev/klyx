@@ -12,6 +12,7 @@ import com.klyx.editor.lsp.util.languageId
 import com.klyx.editor.lsp.util.uriString
 import com.klyx.extension.nodegraph.ExtensionManager
 import com.klyx.extension.nodegraph.LspProvisionRequest
+import com.klyx.extension.nodegraph.onRequestLsp
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DocumentColorParams
 import com.klyx.lsp.InlayHintParams
@@ -83,11 +84,7 @@ object LanguageServerManager {
             }
 
             val request = LspProvisionRequest(languageName, worktree.rootFile.absolutePath)
-            extensionManager.dispatchEventForLanguage(
-                language = languageName,
-                event = "editor.requestLsp",
-                params = mapOf("Request" to request)
-            )
+            extensionManager.onRequestLsp(languageName, request)
 
             val provisionResult = withTimeoutOrNull(SERVER_DOWNLOAD_TIMEOUT) {
                 request.response.await()

@@ -2,6 +2,7 @@ package com.klyx.editor.inlayhint
 
 import android.graphics.Color
 import com.klyx.core.file.KxFile
+import com.klyx.core.logging.log
 import com.klyx.editor.KlyxEditor
 import com.klyx.editor.lsp.EditorLanguageServerClient
 import com.klyx.editor.lsp.LanguageServerManager
@@ -22,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,7 +68,7 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
             )
 
             coroutineScope.launch(Dispatchers.Main) {
-                flow.debounce(50).collect { request ->
+                flow.debounce(200).collectLatest { request ->
                     processInlayHintRequest(request)
                 }
             }
@@ -134,15 +136,15 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
         val content = editor.text
 
         // Request over 500 lines for current window
-        val upperLine = max(0, position.line - 500)
-        val lowerLine = min(content.lineCount - 1, position.line + 500)
+        val startLine = max(0, position.line - 500)
+        val endLine = min(content.lineCount - 1, position.line + 500)
 
         LanguageServerManager.inlayHint(
             worktree = client.worktree,
             file = client.file,
             range = createRange(
-                CharPosition(upperLine, 0),
-                CharPosition(lowerLine, content.getColumnCount(lowerLine))
+                CharPosition(startLine, 0),
+                CharPosition(endLine, content.getColumnCount(endLine))
             )
         ).onFailure {
             editor.showInlayHints(null)
@@ -176,12 +178,10 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
 
     private fun updateInlinePresentations(editor: KlyxEditor) {
         val hasInlayHints = !cachedInlayHints.isNullOrEmpty()
-        val hasDocumentColors = !cachedInlayHints.isNullOrEmpty()
+        val hasDocumentColors = !cachedDocumentColors.isNullOrEmpty()
 
         if (!hasInlayHints && !hasDocumentColors) {
-            if (editor.inlayHints != null) {
-                editor.inlayHints = null
-            }
+            editor.inlayHints = null
             return
         }
 
@@ -203,10 +203,10 @@ internal class InlayHintManager(private val client: EditorLanguageServerClient) 
             it.range.start.character.toInt(),
             ConstColor(
                 Color.argb(
-                    it.color.alpha,
-                    it.color.red,
-                    it.color.green,
-                    it.color.blue
+                    (it.color.alpha * 255).toInt(),
+                    (it.color.red * 255).toInt(),
+                    (it.color.green * 255).toInt(),
+                    (it.color.blue * 255).toInt()
                 )
             )
         )

@@ -31,7 +31,9 @@ import com.klyx.lsp.ExecuteCommandParams
 import com.klyx.lsp.FormattingOptions
 import com.klyx.lsp.HoverParams
 import com.klyx.lsp.InitializedParams
+import com.klyx.lsp.InlayHintOptions
 import com.klyx.lsp.InlayHintParams
+import com.klyx.lsp.InlayHintRegistrationOptions
 import com.klyx.lsp.LogMessageParams
 import com.klyx.lsp.MessageActionItem
 import com.klyx.lsp.MessageType
@@ -58,9 +60,12 @@ import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
 import com.klyx.lsp.types.OneOf
+import com.klyx.lsp.types.OneOfThree
 import com.klyx.lsp.types.fold
 import com.klyx.lsp.types.isFirst
 import com.klyx.lsp.types.isLeft
+import com.klyx.lsp.types.isSecond
+import com.klyx.lsp.types.isThird
 import com.klyx.project.Worktree
 import io.matthewnelson.kmp.process.changeDir
 import kotlinx.coroutines.CoroutineName
@@ -315,13 +320,21 @@ class LanguageServerClient(
     suspend fun inlayHint(params: InlayHintParams) = withContext(Dispatchers.IO) {
         result {
             val provider = serverCapabilities.inlayHintProvider
-            val isSupported = provider != null && provider.isFirst() && provider.value
-            if (isSupported) {
-                withTimeout(2000) {
-                    languageServer.textDocument.inlayHint(params).orEmpty()
-                }
-            } else {
+
+            val isSupported = when {
+                provider == null -> false
+                provider.isFirst() -> provider.value
+                provider.isSecond() -> true
+                provider.isThird() -> true
+                else -> false
+            }
+
+            if (!isSupported) {
                 error("Inlay hints not supported by server")
+            }
+
+            withTimeout(2000) {
+                languageServer.textDocument.inlayHint(params).orEmpty()
             }
         }
     }
