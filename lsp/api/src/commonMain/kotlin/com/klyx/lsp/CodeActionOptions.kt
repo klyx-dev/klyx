@@ -45,7 +45,11 @@ open class CodeActionOptions(
      * @since 3.16.0
      */
     var resolveProvider: Boolean? = null
-) : WorkDoneProgressOptions()
+) : WorkDoneProgressOptions() {
+    override fun toString(): String {
+        return "CodeActionOptions(codeActionKinds=${codeActionKinds?.joinToString(prefix = "[", postfix = "]")}, documentation=$documentation, resolveProvider=$resolveProvider)"
+    }
+}
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#codeActionRegistrationOptions)

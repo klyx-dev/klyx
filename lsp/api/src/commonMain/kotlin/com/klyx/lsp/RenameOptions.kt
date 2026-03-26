@@ -11,7 +11,11 @@ open class RenameOptions(
      * Renames should be checked and tested before being executed.
      */
     var prepareProvider: Boolean? = null
-) : WorkDoneProgressOptions()
+) : WorkDoneProgressOptions() {
+    override fun toString(): String {
+        return "RenameOptions(prepareProvider=$prepareProvider)"
+    }
+}
 
 /**
  * [LSP Specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#renameRegistrationOptions)

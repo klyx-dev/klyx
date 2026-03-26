@@ -16,7 +16,11 @@ open class InlayHintOptions(
      * information for an inlay hint item.
      */
     var resolveProvider: Boolean? = null
-) : WorkDoneProgressOptions()
+) : WorkDoneProgressOptions() {
+    override fun toString(): String {
+        return "InlayHintOptions(resolveProvider=$resolveProvider)"
+    }
+}
 
 /**
  * Inlay hint options used during static or dynamic registration.
