@@ -8,10 +8,10 @@ import com.klyx.nodegraph.InputHeaderPin
 import com.klyx.nodegraph.InputPin
 import com.klyx.nodegraph.NodeRegistry
 import com.klyx.nodegraph.OutputHeaderPin
-import com.klyx.nodegraph.PinType
 import com.klyx.nodegraph.SequentialActionNode
 import com.klyx.nodegraph.SequentialEventNode
-import com.klyx.nodegraph.enum
+import com.klyx.nodegraph.StringType
+import com.klyx.nodegraph.enumPinType
 import com.klyx.nodegraph.extension.GraphExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,14 +19,14 @@ import kotlinx.coroutines.withContext
 private object ShowToastNode : SequentialActionNode() {
     override val key = "klyx.system.toast"
     override val title = "Show Toast"
-    override val category = "System"
+    override val category = "Klyx/System"
     override val description = "Show toast message."
 
-    val durationType = PinType.enum<ToastDuration>()
+    val durationType = enumPinType<ToastDuration>()
 
     override val pins = listOf(
         InputHeaderPin("Exec"),
-        InputPin("Message", PinType.String()),
+        InputPin("Message", StringType),
         InputPin("Duration", durationType, defaultValue = ToastDuration.Short.name),
         OutputHeaderPin(defaultNextLabel)
     )
@@ -46,14 +46,19 @@ internal object OnAppStart : SequentialEventNode() {
     override val key = "klyx.system.on_start"
     override val title = "On App Start"
     override val category = "Klyx"
-    override val description = ""
+    override val description = "Triggered when the application starts."
     override val triggerName = key
 
     override val pins = listOf(OutputHeaderPin(defaultNextLabel))
 }
 
+
+private var wasStarted = false
+
 fun ExtensionManager.onAppStart() {
+    if (wasStarted) return
     dispatchEvent(OnAppStart.triggerName)
+    wasStarted = true
 }
 
 object KlyxSystemExtension : GraphExtension {

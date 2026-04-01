@@ -13,6 +13,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
 import com.klyx.nodegraph.core.StandardNodeColors
@@ -28,8 +30,19 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.uuid.Uuid
 
+@Suppress("NOTHING_TO_INLINE")
 @Stable
-class GraphState(val registry: NodeRegistry = DefaultNodeRegistry) {
+inline fun GraphState(
+    density: Density,
+    registry: NodeRegistry = DefaultNodeRegistry
+) = GraphState(registry, density)
+
+@Stable
+class GraphState @PublishedApi internal constructor(
+    val registry: NodeRegistry = DefaultNodeRegistry,
+    internal val density: Density
+) {
+
     internal val nodes = mutableStateListOf<NodeData>()
     internal val connections = mutableStateListOf<NodeConnection>()
     internal val comments = mutableStateListOf<CommentData>()
@@ -739,14 +752,18 @@ fun rememberGraphState(
     installBuiltins: Boolean = true,
     includeDefaultStartNode: Boolean = false,
     builder: NodeGraphBuilder.() -> Unit = {},
-): GraphState = remember(installBuiltins, includeDefaultStartNode) {
-    val registry = NodeRegistry()
-    nodeGraph(registry) {
-        if (installBuiltins) install(BuiltinExtension)
-        if (includeDefaultStartNode) node(StartNode)
-        builder()
-    }
-    GraphState(registry).also { state ->
-        initialBytes?.let { state.restoreFromBytes(it) }
+): GraphState {
+    val density = LocalDensity.current
+
+    return remember(installBuiltins, includeDefaultStartNode) {
+        val registry = NodeRegistry()
+        nodeGraph(registry) {
+            if (installBuiltins) install(BuiltinExtension)
+            if (includeDefaultStartNode) node(StartNode)
+            builder()
+        }
+        GraphState(registry, density).also { state ->
+            initialBytes?.let { state.restoreFromBytes(it) }
+        }
     }
 }

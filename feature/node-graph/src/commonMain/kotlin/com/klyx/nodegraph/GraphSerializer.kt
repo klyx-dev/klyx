@@ -3,6 +3,7 @@
 package com.klyx.nodegraph
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromByteArray
@@ -70,15 +71,25 @@ internal object GraphSerializer {
 
     private val proto = ProtoBuf { encodeDefaults = false }
 
-    fun encode(state: GraphState): ByteArray {
+    fun encode(state: GraphState, density: Float): ByteArray {
         val snapshot = GraphSnapshot(
-            nodes = state.nodes.toList(),
+            nodes = state.nodes.map {
+                it.copy(position = Offset(it.position.x / density, it.position.y / density))
+            },
             connections = state.connections.toList(),
             pinValues = state.pinValues.entries.map { (k, v) -> PinValueEntry(k, v) },
-            comments = state.comments.toList(),
+            comments = state.comments.map {
+                it.copy(
+                    position = Offset(it.position.x / density, it.position.y / density),
+                    size = Size(
+                        it.size.width / density,
+                        it.size.height / density
+                    )
+                )
+            },
             viewport = ViewportState(
-                panX = state.panOffset.x,
-                panY = state.panOffset.y,
+                panX = state.panOffset.x / density,
+                panY = state.panOffset.y / density,
                 scale = state.scale,
             ),
             variables = state.variables.toList(),
@@ -101,7 +112,7 @@ internal object GraphSerializer {
         return proto.encodeToByteArray(snapshot)
     }
 
-    fun decode(bytes: ByteArray, state: GraphState) {
+    fun decode(bytes: ByteArray, state: GraphState, density: Float) {
         state.isLoading = true
         val snapshot: GraphSnapshot = proto.decodeFromByteArray(bytes)
         state.clearAll()
@@ -153,6 +164,7 @@ internal object GraphSerializer {
 
             state.addNodeInternal(
                 node.copy(
+                    position = Offset(node.position.x * density, node.position.y * density),
                     pins = patchedPins,
                     headerColor = patchedHeaderColor
                 )
@@ -161,9 +173,22 @@ internal object GraphSerializer {
         snapshot.customEnums.forEach(state::addCustomEnum)
         snapshot.connections.forEach(state::addConnectionInternal)
         snapshot.pinValues.forEach { state.pinValues[it.pinId] = it.value }
-        snapshot.comments.forEach(state::addCommentInternal)
+        snapshot.comments.forEach { comment ->
+            state.addCommentInternal(
+                comment.copy(
+                    position = Offset(comment.position.x * density, comment.position.y * density),
+                    size = Size(
+                        comment.size.width * density,
+                        comment.size.height * density
+                    )
+                )
+            )
+        }
 
-        state.panOffset = Offset(snapshot.viewport.panX, snapshot.viewport.panY)
+        state.panOffset = Offset(
+            x = snapshot.viewport.panX * density,
+            y = snapshot.viewport.panY * density
+        )
         state.scale = snapshot.viewport.scale
 
         state.registry.installedExtensions().forEach { ext ->
@@ -175,5 +200,5 @@ internal object GraphSerializer {
     }
 }
 
-fun GraphState.toBytes(): ByteArray = GraphSerializer.encode(this)
-fun GraphState.restoreFromBytes(bytes: ByteArray) = GraphSerializer.decode(bytes, this)
+fun GraphState.toBytes(): ByteArray = GraphSerializer.encode(this, density.density)
+fun GraphState.restoreFromBytes(bytes: ByteArray) = GraphSerializer.decode(bytes, this, density.density)

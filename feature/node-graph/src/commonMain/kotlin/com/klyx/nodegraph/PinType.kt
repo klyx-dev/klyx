@@ -157,6 +157,10 @@ inline fun <reified T : Enum<T>> PinType.Companion.enum(
     return PinType.Enum(enumName = name, entries = entries, enumColor = color)
 }
 
+inline fun <reified T : Enum<T>> enumPinType(
+    color: Color = StandardNodeColors.Types.Enum
+) = PinType.enum<T>(color)
+
 fun customPinType(
     typeName: String,
     typeColor: Color = StandardNodeColors.Types.ObjectReference
@@ -167,3 +171,24 @@ inline fun <reified T> customPinType(
     typeName: String = T::class.simpleName!!,
     typeColor: Color = StandardNodeColors.Types.ObjectReference
 ) = PinType.Custom(typeName, typeColor)
+
+val BooleanType = PinType.Boolean
+val FloatType = PinType.Float
+val IntegerType = PinType.Integer
+val FlowType = PinType.Flow
+val StringType = PinType.String()
+val AnyType = PinType.Wildcard()
+
+@Suppress("FunctionName")
+fun WildcardType(allowedTypes: List<PinType> = emptyList()) = PinType.Wildcard(allowedTypes)
+
+@Suppress("FunctionName")
+fun EnumType(
+    enumName: String,
+    entries: List<String>,
+    enumColor: Color = StandardNodeColors.Types.Enum
+) = PinType.Enum(enumName, entries, enumColor)
+
+@Suppress("FunctionName")
+fun CustomType(typeName: String, typeColor: Color = StandardNodeColors.Types.ObjectReference) =
+    PinType.Custom(typeName, typeColor)

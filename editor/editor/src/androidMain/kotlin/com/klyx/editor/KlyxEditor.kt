@@ -45,18 +45,13 @@ class KlyxEditor @JvmOverloads constructor(
         registerInlayHintRenderers(TextInlayHintRenderer.DefaultInstance, ColorInlayHintRenderer.DefaultInstance)
     }
 
-    @OptIn(ExperimentalCodeEditorApi::class)
-    @Suppress("RedundantSuspendModifier")
-    suspend fun connectToLsp(state: CodeEditorState) {
-        //
-    }
-
     fun setTextActionWindow(window: TextActionWindow) {
         textActions = window
     }
 
     fun update(settings: EditorSettings) {
         tabWidth = settings.tabSize.toInt()
+
         props.apply {
             deleteEmptyLineFast = settings.deleteEmptyLineFast
             deleteMultiSpaces = settings.deleteMultiSpaces

@@ -2,6 +2,7 @@ package com.klyx.nodegraph
 
 import androidx.compose.ui.graphics.Color
 import com.klyx.nodegraph.core.StandardNodeColors
+import kotlin.jvm.JvmName
 
 abstract class Node {
     abstract val key: String
@@ -139,6 +140,7 @@ class Inputs internal constructor(
     fun any(label: String): Any? = values[slot(label)]
 
     @Suppress("NOTHING_TO_INLINE")
+    @JvmName("_get")
     inline operator fun <T> get(label: String): T? = custom(label)
 
     @Suppress("UNCHECKED_CAST")
@@ -170,4 +172,11 @@ class Outputs internal constructor(
         values[idx] = value
         evaluated[idx] = true
     }
+
+    operator fun get(label: String): Any? {
+        val idx = labelIndex[label] ?: error("Output pin '$label' not found.")
+        return values[idx]
+    }
+
+    fun isEvaluated(label: String): Boolean = evaluated[labelIndex[label] ?: -1]
 }
