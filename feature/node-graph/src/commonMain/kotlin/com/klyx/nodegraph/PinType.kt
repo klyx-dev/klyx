@@ -172,12 +172,12 @@ inline fun <reified T> customPinType(
     typeColor: Color = StandardNodeColors.Types.ObjectReference
 ) = PinType.Custom(typeName, typeColor)
 
-val BooleanType = PinType.Boolean
-val FloatType = PinType.Float
-val IntegerType = PinType.Integer
-val FlowType = PinType.Flow
-val StringType = PinType.String()
-val AnyType = PinType.Wildcard()
+inline val BooleanType get() = PinType.Boolean
+inline val FloatType get() = PinType.Float
+inline val IntegerType get() = PinType.Integer
+inline val FlowType get() = PinType.Flow
+inline val StringType get() = PinType.String()
+inline val AnyType get() = PinType.Wildcard()
 
 @Suppress("FunctionName")
 fun WildcardType(allowedTypes: List<PinType> = emptyList()) = PinType.Wildcard(allowedTypes)
