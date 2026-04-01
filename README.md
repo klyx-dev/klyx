@@ -9,31 +9,13 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
 
 > **Alpha Software** – Klyx is under active development. APIs may change between releases.
 
-## Features
+## Key Features
 
-- [x] Syntax Highlighting
-- [x] Multi-tab Editing
-- [x] File Tree Browser
-- [x] Multiple Font Support
-- [x] Dynamic Color Schemes (Android 12+)
-- [x] Theme Selector
-- [x] Status Bar
-- [x] Project Support
-- [x] Multi-root Workspaces
-- [x] File Type Detection
-- [x] LSP Support
-- [x] Command Palette
-- [x] Keyboard Shortcuts
-- [x] Extension System
-- [x] Built-in Terminal
-- [x] Custom User Sessions
-- [x] Language Server Extensions
-- [ ] Find & Replace
-- [X] Undo/Redo
-- [ ] Hover Information
-- [ ] Go to Definition
-- [x] Document Formatting
-- [ ] Git Integration
+- **High Performance**: Built with a native-first approach for smooth editing of large files.
+- **LSP Support**: Intelligent code completion, diagnostics, and formatting via Language Server Protocol.
+- **Terminal Integration**: Built-in terminal environment based on Ubuntu.
+- **Multi-root Workspaces**: Manage multiple projects and folders simultaneously.
+- **Modern UI**: Material You dynamic color schemes and an intuitive command palette.
 
 ## Screenshots
 
@@ -48,9 +30,9 @@ Klyx is a lightweight, high-performance code editor built for Android. It provid
   <img src="images/screenshot_6.jpg" width="32%" alt="Screenshot 6"/>
 </div>
 <div>
+  <img src="images/screenshot_7.jpg" width="32%" alt="Screenshot 7"/>
   <img src="images/screenshot_8.jpg" width="32%" alt="Screenshot 8"/>
   <img src="images/screenshot_9.jpg" width="32%" alt="Screenshot 9"/>
-  <img src="images/screenshot_10.jpg" width="32%" alt="Screenshot 10"/>
 </div>
 
 ## System Requirements
