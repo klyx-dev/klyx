@@ -18,7 +18,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
 import com.klyx.InitScreen
-import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.Notifier
 import com.klyx.core.app.GlobalApp
 import com.klyx.core.app.UnsafeGlobalAccess
@@ -27,7 +26,6 @@ import com.klyx.core.event.EventBus
 import com.klyx.core.event.Subscriber
 import com.klyx.core.event.asComposeKeyEvent
 import com.klyx.core.event.registerSubscriber
-import com.klyx.core.file.humanBytes
 import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
@@ -125,6 +123,10 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
                         if (file.exists) {
                             if (file.isDirectory) {
                                 klyxVm.openProject(file.toWorktree())
+                                notifier.notify(
+                                    title = "Project opened",
+                                    message = file.name
+                                )
                             } else if (file.isFile) {
                                 editorViewModel.openFile(file)
                             }

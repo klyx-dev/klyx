@@ -1,6 +1,8 @@
 package com.klyx.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.OpenProjectEvent
 import com.klyx.project.Project
 import com.klyx.project.Worktree
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -53,15 +55,16 @@ class KlyxViewModel : ViewModel() {
     }
 
     fun openProject(worktree: Worktree) {
-        openedProject.update { Project(listOf(worktree)) }
+        openedProject.value = Project(listOf(worktree))
+        EventBus.INSTANCE.tryPost(OpenProjectEvent(worktree.rootPath()))
     }
 
     fun openProject(project: Project) {
-        openedProject.update { project }
+        openedProject.value = project
     }
 
     fun closeProject() {
-        openedProject.update { Project(emptyList()) }
+        openedProject.value = Project(emptyList())
     }
 
     fun addWorktreeToProject(worktree: Worktree) {

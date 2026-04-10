@@ -62,6 +62,8 @@ import com.klyx.LocalLogBuffer
 import com.klyx.LocalWindowSizeClass
 import com.klyx.core.cmd.CommandManager
 import com.klyx.core.cmd.key.keyShortcutOf
+import com.klyx.core.event.EventBus
+import com.klyx.core.event.OpenProjectEvent
 import com.klyx.core.file.KxFile
 import com.klyx.core.file.isPermissionRequired
 import com.klyx.core.file.toKxFile
@@ -104,8 +106,10 @@ import io.github.vinceglb.filekit.dialogs.compose.PickerResultLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberDirectoryPickerLauncher
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalCodeEditorApi::class)
@@ -347,6 +351,18 @@ private fun WorkspaceDrawer(
     val project by klyxVM.openedProject.collectAsState()
     val isFileTabOpen by editorVM.isTabOpen { it is FileTab }.collectAsState()
 
+    LaunchedEffect(Unit) {
+        val context = currentCoroutineContext()
+
+        EventBus.INSTANCE.subscribe<OpenProjectEvent> {
+            if (!drawerState.isOpen) {
+                withContext(context) {
+                    drawerState.open()
+                }
+            }
+        }
+    }
+
     CompositionLocalProvider(LocalDrawerState provides drawerState) {
         ModalNavigationDrawer(
             drawerState = drawerState,
@@ -401,7 +417,7 @@ private fun DrawerContent(
         return
     }
 
-    val nodes by produceState<Map<Worktree, FileTreeNode>?>(null) {
+    val nodes by produceState<Map<Worktree, FileTreeNode>?>(null, project) {
         value = project.toFileTreeNodes()
     }
 
