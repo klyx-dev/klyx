@@ -34,7 +34,6 @@ class KotlinMultiplatformConventionPlugin : Plugin<Project> {
 
                 listOf(
                     iosArm64(),
-                    iosX64(),
                     iosSimulatorArm64()
                 ).forEach { target ->
                     target.binaries.framework {

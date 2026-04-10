@@ -3,6 +3,7 @@ package com.klyx.activities
 import android.annotation.SuppressLint
 import android.app.ActivityManager
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -31,11 +32,13 @@ import com.klyx.core.file.openFile
 import com.klyx.core.file.toKxFile
 import com.klyx.core.theme.LocalIsDarkMode
 import com.klyx.filetree.FileTreeViewModel
+import com.klyx.project.toWorktree
 import com.klyx.terminal.SessionBinder
 import com.klyx.terminal.event.TerminateAllSessionEvent
 import com.klyx.terminal.service.SessionService
 import com.klyx.ui.event.TerminalNotificationTapEvent
 import com.klyx.viewmodel.EditorViewModel
+import com.klyx.viewmodel.KlyxViewModel
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.init
 import kotlinx.coroutines.launch
@@ -48,6 +51,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
 
     private val editorViewModel by viewModel<EditorViewModel>()
     private val fileTreeViewModel by viewModel<FileTreeViewModel>()
+    private val klyxVm by viewModel<KlyxViewModel>()
 
     @OptIn(UnsafeGlobalAccess::class)
     private val app by lazy { GlobalApp }
@@ -108,9 +112,39 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
     }
 
     private fun handleIntent(intent: Intent) {
+        val uri = intent.data
+
+        if (uri != null && uri.scheme == "klyx") {
+            when (uri.host) {
+                "open" -> {
+                    val path = uri.getQueryParameter("project")?.let { Uri.decode(it) }
+                        ?: uri.getQueryParameter("file")?.let { Uri.decode(it) }
+
+                    if (!path.isNullOrEmpty()) {
+                        val file = path.toKxFile()
+                        if (file.exists) {
+                            if (file.isDirectory) {
+                                klyxVm.openProject(file.toWorktree())
+                            } else if (file.isFile) {
+                                editorViewModel.openFile(file)
+                            }
+                        } else {
+                            notifier.error(
+                                title = "Invalid path",
+                                message = "${file.absolutePath} does not exist"
+                            )
+                        }
+                    }
+                }
+            }
+            setIntent(Intent())
+            return
+        }
+
         if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_EDIT) {
-            val uri = intent.data!!
-            editorViewModel.openFile(uri.toKxFile())
+            if (uri != null) {
+                editorViewModel.openFile(uri.toKxFile())
+            }
             setIntent(Intent())
         } else if (intent.action == SessionService.ACTION_NOTIFICATION_TAP) {
             EventBus.INSTANCE.tryPost(TerminalNotificationTapEvent)
@@ -120,6 +154,7 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        handleIntent(intent)
     }
 
     @SuppressLint("RestrictedApi")
@@ -139,20 +174,6 @@ class MainActivity : KlyxActivity(), Subscriber<CrashEvent> {
             @Suppress("DEPRECATION")
             ActivityManager.TaskDescription(label)
         }
-    }
-
-    private fun getSystemSpecs() = buildString {
-        appendLine("Klyx: ${KlyxBuildConfig.VERSION_NAME} (${KlyxBuildConfig.VERSION_CODE})")
-        appendLine("Android Version: ${Build.VERSION.RELEASE}")
-        appendLine("Android SDK: ${Build.VERSION.SDK_INT}")
-        appendLine("Architecture: ${Build.SUPPORTED_ABIS.first()}")
-
-        val activityManager = getSystemService(ActivityManager::class.java)
-        val memoryInfo = ActivityManager.MemoryInfo()
-        activityManager.getMemoryInfo(memoryInfo)
-
-        appendLine("Memory: ${memoryInfo.totalMem.humanBytes()}")
-        append("CPU Count: ${Runtime.getRuntime().availableProcessors()}")
     }
 
     override suspend fun onEvent(event: CrashEvent) {
