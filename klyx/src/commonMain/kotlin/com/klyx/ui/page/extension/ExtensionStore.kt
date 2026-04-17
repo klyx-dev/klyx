@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package com.klyx.ui.page.extension
 
 import com.klyx.core.KlyxBuildConfig
@@ -17,13 +19,15 @@ import io.ktor.http.contentType
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.readByteArray
-import kotlinx.serialization.SerialName
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonNamingStrategy
 import kotlin.io.encoding.Base64
 
 private const val STORE_INDEX_URL = "https://klyx-dev.github.io/extensions/index.json"
@@ -31,9 +35,7 @@ private const val WORKER_PUBLISH_URL = "https://publish-extension.klyx.workers.d
 
 @Serializable
 data class StoreRegistry(
-    @SerialName("store_version")
     val storeVersion: Int,
-    @SerialName("last_updated")
     val lastUpdated: String,
     val extensions: List<StoreExtension>
 )
@@ -45,8 +47,8 @@ data class StoreExtension(
     val author: String,
     val version: String,
     val description: String,
-    @SerialName("download_url")
-    val downloadUrl: String
+    val downloadUrl: String,
+    val downloadCount: Int = 0
 )
 
 @Serializable
@@ -59,6 +61,24 @@ class ExtensionStore {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
+        namingStrategy = JsonNamingStrategy.SnakeCase
+    }
+
+    suspend fun fetchDownloadCounts(): Map<String, Int> = withContext(Dispatchers.IO) {
+        try {
+            json.decodeFromString(fetchText("$WORKER_PUBLISH_URL/downloads"))
+        } catch (e: Exception) {
+            log.error { "Failed to fetch download counts: ${e.message}" }
+            emptyMap()
+        }
+    }
+
+    suspend fun incrementDownloadCount(extensionId: String) = withContext(Dispatchers.IO) {
+        try {
+            httpClient.post("$WORKER_PUBLISH_URL/download?id=$extensionId")
+        } catch (e: Exception) {
+            log.error { "Failed to increment download count for $extensionId: ${e.message}" }
+        }
     }
 
     suspend fun fetchStoreIndex(): List<StoreExtension> = withContext(Dispatchers.IO) {
@@ -77,8 +97,12 @@ class ExtensionStore {
             val targetFile = Path(destDir, "${ext.id}.kxext")
             val bytes = fetchBody(ext.downloadUrl)
             fs.sink(targetFile).buffered().use { it.write(bytes) }
+
+            launch { incrementDownloadCount(ext.id) }
+
             targetFile
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            log.error { "Failed to download extension ${ext.id}: ${e.message}" }
             null
         }
     }
@@ -127,4 +151,3 @@ class ExtensionStore {
         }
     }
 }
-

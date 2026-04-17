@@ -88,6 +88,8 @@ import com.klyx.icons.Info
 import com.klyx.icons.Visibility
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import kotlin.time.Clock
@@ -111,10 +113,21 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
     val localPublishedExtensions = remember { mutableStateListOf<StoreExtension>() }
     var isStoreLoading by remember { mutableStateOf(true) }
 
-    suspend fun refreshStore() {
+    suspend fun refreshStore() = coroutineScope {
         isStoreLoading = true
         storeExtensions.clear()
-        storeExtensions.addAll(store.fetchStoreIndex())
+
+        val storeIndexTask = async(Dispatchers.IO) { store.fetchStoreIndex() }
+        val downloadCountsTask = async(Dispatchers.IO) { store.fetchDownloadCounts() }
+
+        val remoteExtensions = storeIndexTask.await()
+        val liveCounts = downloadCountsTask.await()
+
+        val sorted = remoteExtensions.map { ext ->
+            ext.copy(downloadCount = liveCounts[ext.id] ?: 0)
+        }.sortedByDescending { it.downloadCount }
+
+        storeExtensions.addAll(sorted)
         localPublishedExtensions.removeAll { it in storeExtensions }
         isStoreLoading = false
     }
@@ -233,6 +246,7 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
                                 metadata = metadata,
                                 isLocal = extension.isLocal,
                                 storeExt = remoteStoreMatch,
+                                isStoreLoading = isStoreLoading,
                                 onClick = { openExtension(extension.filePath, edit = false) },
                                 onEdit = { openExtension(extension.filePath, edit = true) },
                                 onView = { openExtension(extension.filePath, edit = false) },
@@ -339,6 +353,12 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
                                         if (installedPath != null) {
                                             extensionManager.addOrReplaceExtension(installedPath, isLocal = false)
                                             snackbarHostState.showSnackbar("${storeExt.name} Installed!")
+
+                                            val index = storeExtensions.indexOfFirst { it.id == storeExt.id }
+                                            if (index >= 0) {
+                                                storeExtensions[index] =
+                                                    storeExt.copy(downloadCount = storeExt.downloadCount + 1)
+                                            }
                                         } else {
                                             snackbarHostState.showSnackbar("Failed to install ${storeExt.name}.")
                                         }
@@ -365,6 +385,7 @@ private fun ExtensionItem(
     onPublish: suspend () -> Unit,
     onUnpublish: suspend () -> Unit,
     onDelete: () -> Unit,
+    isStoreLoading: Boolean,
 ) {
     var isPublishing by remember { mutableStateOf(false) }
     var isUnpublishing by remember { mutableStateOf(false) }
@@ -438,6 +459,15 @@ private fun ExtensionItem(
                     }
 
                     if (isLocal) MetaChip("Local")
+
+                    if (storeExt != null) {
+                        Text(
+                            text = "${storeExt.downloadCount} Downloads",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 4.dp)
+                        )
+                    }
                 }
 
                 if (isLocal) {
@@ -451,53 +481,73 @@ private fun ExtensionItem(
                         Text("Delete")
                     }
 
-                    val isPublished = storeExt != null
-                    val hasUpdate = isPublished && storeExt.version != metadata.version
-
-                    if (isPublished) {
-                        TextButton(
-                            onClick = {
-                                isUnpublishing = true
-                                scope.launch {
-                                    onUnpublish()
-                                    isUnpublishing = false
-                                }
-                            },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp),
-                            enabled = !isBusy
-                        ) {
-                            if (isUnpublishing) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(14.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(Modifier.width(6.dp))
-                            }
-                            Text("Unpublish")
-                        }
-                    }
-
-                    if (!isPublished || hasUpdate) {
+                    if (isStoreLoading) {
                         Button(
-                            onClick = {
-                                isPublishing = true
-                                scope.launch {
-                                    onPublish()
-                                    isPublishing = false
-                                }
-                            },
-                            enabled = !isBusy && canPublish,
+                            onClick = { },
+                            enabled = false,
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                             modifier = Modifier.height(32.dp)
                         ) {
-                            if (isPublishing) {
-                                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                                Spacer(Modifier.width(6.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text("Checking...", style = MaterialTheme.typography.labelMedium)
+                        }
+                    } else {
+                        val isPublished = storeExt != null
+                        val hasUpdate = isPublished && storeExt.version != metadata.version
+
+                        if (isPublished) {
+                            TextButton(
+                                onClick = {
+                                    isUnpublishing = true
+                                    scope.launch {
+                                        onUnpublish()
+                                        isUnpublishing = false
+                                    }
+                                },
+                                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp),
+                                enabled = !isBusy
+                            ) {
+                                if (isUnpublishing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                }
+                                Text("Unpublish")
                             }
-                            Text(if (hasUpdate) "Update" else "Publish", style = MaterialTheme.typography.labelMedium)
+                        }
+
+                        if (!isPublished || hasUpdate) {
+                            Button(
+                                onClick = {
+                                    isPublishing = true
+                                    scope.launch {
+                                        onPublish()
+                                        isPublishing = false
+                                    }
+                                },
+                                enabled = !isBusy && canPublish,
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                if (isPublishing) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                                    Spacer(Modifier.width(6.dp))
+                                }
+                                Text(
+                                    if (hasUpdate) "Update" else "Publish",
+                                    style = MaterialTheme.typography.labelMedium
+                                )
+                            }
                         }
                     }
                 } else {
@@ -526,6 +576,9 @@ private fun StoreExtensionItem(
     onInstall: suspend () -> Unit
 ) {
     var isInstalling by remember { mutableStateOf(false) }
+
+    var localDownloadCount by remember { mutableIntStateOf(storeExt.downloadCount) }
+
     val scope = rememberCoroutineScope()
 
     Card(
@@ -558,6 +611,15 @@ private fun StoreExtensionItem(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MetaChip("v${storeExt.version}")
+
+                Spacer(Modifier.width(8.dp))
+
+                Text(
+                    text = "$localDownloadCount Download(s)",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
                 Spacer(Modifier.weight(1f))
 
                 if (isInstalled) {
@@ -573,6 +635,8 @@ private fun StoreExtensionItem(
                     Button(
                         onClick = {
                             isInstalling = true
+                            localDownloadCount += 1
+
                             scope.launch {
                                 onInstall()
                                 isInstalling = false
