@@ -48,13 +48,15 @@ data class StoreExtension(
     val version: String,
     val description: String,
     val downloadUrl: String,
-    val downloadCount: Int = 0
+    val downloadCount: Int = 0,
+    val publisherId: String = ""
 )
 
 @Serializable
 data class PublishPayload(
     val metadata: String,
-    val fileBase64: String
+    val fileBase64: String,
+    val publisherId: String
 )
 
 class ExtensionStore {
@@ -107,35 +109,37 @@ class ExtensionStore {
         }
     }
 
-    suspend fun publishExtension(filePath: Path, metadata: ExtensionMetadata) = withContext(Dispatchers.IO) {
-        try {
-            val bytes = fs.source(filePath).buffered().use { it.readByteArray() }
+    suspend fun publishExtension(filePath: Path, metadata: ExtensionMetadata, publisherId: String) =
+        withContext(Dispatchers.IO) {
+            try {
+                val bytes = fs.source(filePath).buffered().use { it.readByteArray() }
 
-            val payload = PublishPayload(
-                metadata = json.encodeToString(metadata),
-                fileBase64 = Base64.encode(bytes)
-            )
+                val payload = PublishPayload(
+                    metadata = json.encodeToString(metadata),
+                    fileBase64 = Base64.encode(bytes),
+                    publisherId = publisherId
+                )
 
-            val response = httpClient.post(WORKER_PUBLISH_URL) {
-                contentType(ContentType.Application.Json)
-                bearerAuth(Base64.decode(KlyxBuildConfig.STORE_API_KEY).decodeToString())
-                setBody(json.encodeToString(payload))
-            }
-            response.status.isSuccess().also { success ->
-                if (!success) {
-                    log.error { "Failed to publish '${metadata.name}': ${response.status}" }
-                    val errorBody = response.bodyAsText()
-                    log.error { errorBody }
+                val response = httpClient.post(WORKER_PUBLISH_URL) {
+                    contentType(ContentType.Application.Json)
+                    bearerAuth(Base64.decode(KlyxBuildConfig.STORE_API_KEY).decodeToString())
+                    setBody(json.encodeToString(payload))
                 }
+                response.status.isSuccess().also { success ->
+                    if (!success) {
+                        log.error { "Failed to publish '${metadata.name}': ${response.status}" }
+                        val errorBody = response.bodyAsText()
+                        log.error { errorBody }
+                    }
+                }
+            } catch (_: Exception) {
+                false
             }
-        } catch (_: Exception) {
-            false
         }
-    }
 
-    suspend fun unpublishExtension(extensionId: String): Boolean = withContext(Dispatchers.IO) {
+    suspend fun unpublishExtension(extensionId: String, publisherId: String): Boolean = withContext(Dispatchers.IO) {
         try {
-            val response = httpClient.delete("$WORKER_PUBLISH_URL?id=$extensionId") {
+            val response = httpClient.delete("$WORKER_PUBLISH_URL?id=$extensionId&publisherId=$publisherId") {
                 bearerAuth(Base64.decode(KlyxBuildConfig.STORE_API_KEY).decodeToString())
             }
 
