@@ -2,6 +2,7 @@ package com.klyx.extension.nodegraph
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import com.klyx.core.logging.log
 import com.klyx.nodegraph.EvaluateScope
 import com.klyx.nodegraph.InputPin
 import com.klyx.nodegraph.NodeRegistry
@@ -13,6 +14,7 @@ import com.klyx.nodegraph.SequentialEventNode
 import com.klyx.nodegraph.customPinType
 import com.klyx.nodegraph.extension.GraphExtension
 import com.klyx.nodegraph.extension.Variable
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.Serializable
 
 internal const val EXTENSION_SCHEMA_VERSION = "1.0.0"
@@ -119,6 +121,52 @@ internal object OnInitializeMetadataNode : SequentialEventNode() {
     override val pins = listOf(OutputHeaderPin(defaultNextLabel))
 }
 
+private object OnInstall : SequentialEventNode() {
+    override val key = "klyx.extension.on_install"
+    override val title = "On Install"
+    override val category = "Extension"
+    override val description = "Runs once when the extension is first installed."
+    override val headerColor = Color(0xFF4CAF50)
+    override val triggerName = key
+
+    override val pins = listOf(OutputHeaderPin(defaultNextLabel))
+}
+
+private object OnUninstall : SequentialEventNode() {
+    override val key = "klyx.extension.on_uninstall"
+    override val title = "On Uninstall"
+    override val category = "Extension"
+    override val description = "Runs once when the extension is being uninstalled."
+    override val headerColor = Color(0xFFD32F2F)
+    override val triggerName = key
+
+    override val pins = listOf(OutputHeaderPin(defaultNextLabel))
+}
+
+suspend fun ExtensionManager.onInstall(extensionId: String) {
+    val graph = getById(extensionId)?.graph ?: return
+
+    try {
+        graph.trigger(OnInstall.triggerName, emptyMap(), listener)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.error { "Extension crash on 'OnInstall': ${e.message}" }
+    }
+}
+
+suspend fun ExtensionManager.onUninstall(extensionId: String) {
+    val graph = getById(extensionId)?.graph ?: return
+
+    try {
+        graph.trigger(OnUninstall.triggerName, emptyMap(), listener)
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.error { "Extension crash on 'OnUninstall': ${e.message}" }
+    }
+}
+
 object MetadataExtension : GraphExtension {
 
     override val name = "klyx-extension-metadata"
@@ -144,7 +192,8 @@ object MetadataExtension : GraphExtension {
         registry.register(
             MakeMetadataNode,
             BreakMetadataNode,
-            OnInitializeMetadataNode
+            OnInitializeMetadataNode,
+            OnInstall, OnUninstall
         )
     }
 }

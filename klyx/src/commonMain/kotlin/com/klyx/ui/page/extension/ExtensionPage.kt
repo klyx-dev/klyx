@@ -85,6 +85,8 @@ import com.klyx.core.util.join
 import com.klyx.extension.nodegraph.Extension
 import com.klyx.extension.nodegraph.ExtensionManager
 import com.klyx.extension.nodegraph.ExtensionMetadata
+import com.klyx.extension.nodegraph.onInstall
+import com.klyx.extension.nodegraph.onUninstall
 import com.klyx.icons.Add
 import com.klyx.icons.Edit
 import com.klyx.icons.Icons
@@ -95,8 +97,10 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.files.Path
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.minutes
 
 @Composable
 context(navigationScope: NavigationScope)
@@ -305,6 +309,10 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
                                 onDelete = {
                                     scope.launch(Dispatchers.IO) {
                                         try {
+                                            withTimeoutOrNull(1.minutes) {
+                                                extensionManager.onUninstall(metadata.id)
+                                            }
+
                                             extensionManager.removeExtension(extension)
                                             snackbarHostState.showSnackbar("${metadata.name} deleted.")
                                         } catch (_: Exception) {
@@ -354,7 +362,7 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
                                 val localExt = extensions.find { it.metadata.id == storeExt.id }
                                 val isInstalled = localExt != null
 
-                                val hasUpdate = isInstalled && localExt!!.metadata.version != storeExt.version
+                                val hasUpdate = isInstalled && localExt.metadata.version != storeExt.version
 
                                 StoreExtensionItem(
                                     storeExt = storeExt,
@@ -365,6 +373,7 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
                                     onInstall = {
                                         val destDir = Paths.extensionsDir
                                         val installedPath = store.downloadExtension(storeExt, destDir)
+
                                         if (installedPath != null) {
                                             extensionManager.addOrReplaceExtension(installedPath, isLocal = false)
                                             snackbarHostState.showSnackbar("${storeExt.name} Installed!")
@@ -373,6 +382,12 @@ fun ExtensionPage(modifier: Modifier = Modifier) {
                                             if (index >= 0) {
                                                 storeExtensions[index] =
                                                     storeExt.copy(downloadCount = storeExt.downloadCount + 1)
+                                            }
+
+                                            scope.launch(Dispatchers.IO) {
+                                                withTimeoutOrNull(5.minutes) {
+                                                    extensionManager.onInstall(storeExt.id)
+                                                }
                                             }
                                         } else {
                                             snackbarHostState.showSnackbar("Failed to install ${storeExt.name}.")
