@@ -2,7 +2,7 @@
 ndkVersion = "29.0.14206865"
 # AGP and tools should be updated together
 androidGradlePlugin = "9.1.1"
-androidTools = "31.13.2"
+androidTools = "32.2.0"
 androidx-activity = "1.13.0"
 androidx-core = "1.18.0"
 androidx-lifecycle = "2.10.0"
