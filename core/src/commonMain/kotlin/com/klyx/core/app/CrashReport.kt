@@ -1,5 +1,6 @@
 package com.klyx.core.app
 
+import com.klyx.core.KlyxBuildConfig
 import com.klyx.core.platform.Platform
 import com.klyx.core.platform.version
 import com.klyx.core.process.Thread
@@ -25,6 +26,7 @@ data class CrashReport(
         appendLine("Time: $timestamp")
         appendLine("Platform: $platform")
         appendLine("Version: ${platform.version}")
+        appendLine("Commit: ${KlyxBuildConfig.GIT_COMMIT}")
         appendLine()
         appendLine("App Version: ${buildInfo.versionName} (${buildInfo.versionCode})")
         appendLine("Build Type: ${buildInfo.buildType}")
