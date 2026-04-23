@@ -5,11 +5,9 @@ import android.util.LruCache
 import android.view.View
 import androidx.compose.runtime.CompositionContext
 import com.klyx.core.file.KxFile
-import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.editor.KlyxEditor
 import com.klyx.editor.inlayhint.InlayHintManager
-import com.klyx.editor.language.LanguageName
 import com.klyx.editor.lsp.completion.LspCompletionItem
 import com.klyx.editor.lsp.event.LspEditorContentChangeEvent
 import com.klyx.editor.lsp.event.LspEditorScrollEvent
@@ -118,7 +116,7 @@ internal class EditorLanguageServerClient(
 
         coroutineScope.launch(Dispatchers.IO) {
             LanguageServerManager
-                .tryConnectLspIfAvailable(worktree, file.language(), extensionManager)
+                .tryConnectLspIfAvailable(worktree, file, extensionManager)
                 .onSuccess { client ->
                     serverClient = client
                     withContext(Dispatchers.Main) {

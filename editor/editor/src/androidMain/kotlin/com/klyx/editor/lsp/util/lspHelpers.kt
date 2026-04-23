@@ -1,11 +1,8 @@
 package com.klyx.editor.lsp.util
 
-import com.klyx.core.app.GlobalApp
-import com.klyx.core.app.UnsafeGlobalAccess
 import com.klyx.core.file.KxFile
 import com.klyx.core.language
-import com.klyx.editor.language.LanguageName
-import com.klyx.editor.lsp.getLanguageIdForLanguage
+import com.klyx.core.language.languageIdentifiers
 import com.klyx.lsp.Position
 import com.klyx.lsp.Range
 import com.klyx.project.Worktree
@@ -20,8 +17,7 @@ val Worktree.uriString get() = uri.toString()
 val KxFile.uri: URI get() = File(absolutePath).toURI()
 val KxFile.uriString get() = uri.toString()
 
-@OptIn(UnsafeGlobalAccess::class)
-val KxFile.languageId get() = getLanguageIdForLanguage(LanguageName(language()), GlobalApp) ?: "invalid"
+val KxFile.languageId get() = languageIdentifiers[language()] ?: extension
 
 fun createRange(start: Position, end: Position): Range {
     return Range(start, end)

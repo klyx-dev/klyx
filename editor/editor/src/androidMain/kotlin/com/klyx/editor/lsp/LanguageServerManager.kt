@@ -6,6 +6,7 @@ import arrow.core.raise.context.result
 import com.klyx.core.event.EventBus
 import com.klyx.core.event.SettingsChangeEvent
 import com.klyx.core.file.KxFile
+import com.klyx.core.language
 import com.klyx.core.logging.logger
 import com.klyx.core.lsp.LanguageServerName
 import com.klyx.editor.lsp.util.languageId
@@ -32,8 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.Duration.Companion.seconds
 
 object LanguageServerManager {
-    private val languageServers = mutableMapOf<Pair<String, LanguageServerName>, LanguageServer>()
-    private val languageClients = mutableMapOf<Pair<String, LanguageServerName>, LanguageServerClient>()
+    private val languageServers = mutableMapOf<Pair<String, String>, LanguageServer>()
+    private val languageClients = mutableMapOf<Pair<String, String>, LanguageServerClient>()
 
     private val documentVersions = mutableMapOf<String, AtomicInteger>()
 
@@ -72,23 +73,23 @@ object LanguageServerManager {
 
     suspend fun tryConnectLspIfAvailable(
         worktree: Worktree,
-        languageName: String,
+        file: KxFile,
         extensionManager: ExtensionManager
     ) = result {
         withContext(Dispatchers.IO) lsp@{
-            val key = worktree.uriString to languageName.lowercase()
+            val key = worktree.uriString to file.languageId
             if (languageServers.containsKey(key)) return@lsp languageClients[key]!!
 
-            ensure(extensionManager.isLanguageSupported(languageName)) {
-                RuntimeException("No extension supports $languageName")
+            ensure(extensionManager.isLanguageSupported(file.languageId)) {
+                RuntimeException("No extension supports ${file.languageId}")
             }
 
-            val request = LspProvisionRequest(languageName, worktree.rootFile.absolutePath)
-            extensionManager.onRequestLsp(languageName, request)
+            val request = LspProvisionRequest(file.languageId, worktree.rootFile.absolutePath)
+            extensionManager.onRequestLsp(file.languageId, request)
 
             val provisionResult = withTimeoutOrNull(SERVER_DOWNLOAD_TIMEOUT) {
                 request.response.await()
-            } ?: raise(RuntimeException("Extension timed out providing LSP for $languageName"))
+            } ?: raise(RuntimeException("Extension timed out providing LSP for ${file.languageId}"))
 
             val initializationOptions = try {
                 Json.parseToJsonElement(provisionResult.initializationOptionsJson)
@@ -102,7 +103,7 @@ object LanguageServerManager {
                 error("Invalid JSON for workspaceConfig: ${e.message}")
             }
 
-            val client = LanguageServerClient(logger(languageName))
+            val client = LanguageServerClient(logger(file.languageId))
             client.initialize(provisionResult.binary, worktree, initializationOptions).fold(
                 onSuccess = { initializeResult ->
                     languageClients[key] = client
@@ -174,6 +175,7 @@ object LanguageServerManager {
     }
 
     private fun client(worktree: Worktree, languageId: String): LanguageServerClient {
+        println("client request: $worktree, languageId: $languageId")
         return checkNotNull(languageClients[worktree.uriString to languageId]) {
             "No language server client found for worktree: ${worktree.rootFile.absolutePath}, languageId: $languageId"
         }
