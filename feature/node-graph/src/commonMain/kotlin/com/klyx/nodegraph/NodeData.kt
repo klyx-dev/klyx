@@ -36,16 +36,55 @@ data class NodeData(
     companion object {
         fun from(node: Node, position: Offset): NodeData {
             val nodeId = generateId()
-            val pins = node.pins.mapIndexed { i, pin ->
-                NodePin(
-                    id = generateId(),
-                    label = pin.label,
-                    type = pin.type,
-                    direction = pin.direction,
-                    nodeId = nodeId,
-                    showInHeader = pin.showInHeaderIfPossible,
-                    defaultValue = pin.defaultValue
+            val pins = mutableListOf<NodePin>()
+            node.pins.forEach { pin ->
+                pins.add(
+                    NodePin(
+                        id = generateId(),
+                        label = pin.label,
+                        type = pin.type,
+                        direction = pin.direction,
+                        nodeId = nodeId,
+                        showInHeader = pin.showInHeaderIfPossible,
+                        defaultValue = pin.defaultValue
+                    )
                 )
+            }
+            if (node.supportsDynamicPins) {
+                val existingInputLabels = pins.filter { it.direction == PinDirection.Input }.map { it.label }
+                repeat(node.defaultDynamicInputCount) {
+                    val template = node.dynamicInputTemplate() ?: return@repeat
+                    val label = node.nextDynamicInputLabel(
+                        pins.filter { it.direction == PinDirection.Input }.map { it.label },
+                        template.label
+                    )
+                    pins.add(
+                        NodePin(
+                            id = generateId(),
+                            label = label,
+                            type = template.type,
+                            direction = PinDirection.Input,
+                            nodeId = nodeId,
+                        )
+                    )
+                }
+                val existingOutputLabels = pins.filter { it.direction == PinDirection.Output }.map { it.label }
+                repeat(node.defaultDynamicOutputCount) {
+                    val template = node.dynamicOutputTemplate() ?: return@repeat
+                    val label = node.nextDynamicOutputLabel(
+                        pins.filter { it.direction == PinDirection.Output }.map { it.label },
+                        template.label
+                    )
+                    pins.add(
+                        NodePin(
+                            id = generateId(),
+                            label = label,
+                            type = template.type,
+                            direction = PinDirection.Output,
+                            nodeId = nodeId,
+                        )
+                    )
+                }
             }
             return NodeData(
                 id = nodeId,

@@ -156,6 +156,8 @@ internal fun parseVariableDefault(raw: String, type: PinType): Any? = when (type
     PinType.Flow -> null
     is PinType.Wildcard -> null
     is PinType.Custom -> null
+    is PinType.List -> null
+    is PinType.Array -> null
 }
 
 internal data class AddVariableCmd(val variable: GraphVariable, val defaultValue: Any? = null) : GraphCommand {

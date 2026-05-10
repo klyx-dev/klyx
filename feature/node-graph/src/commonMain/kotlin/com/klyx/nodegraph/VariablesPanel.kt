@@ -89,14 +89,20 @@ internal fun VariablesPanel(
     val availableTypes by remember(state.registry, state.customEnums) {
         derivedStateOf {
             buildList {
-                addAll(listOf(PinType.Float, PinType.Integer, PinType.Boolean, PinType.String()))
-
+                val baseTypes = mutableListOf<PinType>()
+                baseTypes.addAll(listOf(PinType.Float, PinType.Integer, PinType.Boolean, PinType.String()))
                 state.registry.customTypes.values.forEach { customDef ->
-                    add(PinType.Custom(customDef.typeName, customDef.color))
+                    baseTypes.add(PinType.Custom(customDef.typeName, customDef.color))
                 }
+                state.registry.enumTypes.values.forEach(baseTypes::add)
+                state.customEnums.forEach(baseTypes::add)
 
-                state.registry.enumTypes.values.forEach(::add)
-                state.customEnums.forEach(::add)
+                addAll(baseTypes)
+
+                baseTypes.forEach { base ->
+                    add(PinType.List(base))
+                    add(PinType.Array(base))
+                }
             }
         }
     }

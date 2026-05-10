@@ -36,11 +36,10 @@ sealed class PinType(val color: Color = Color.White) {
 
     @Serializable
     data class Wildcard(
-        val allowedTypes: List<PinType> = emptyList() // empty = allow all
+        val allowedTypes: kotlin.collections.List<PinType> = emptyList()
     ) : PinType(StandardNodeColors.Types.AnyType) {
         fun accepts(type: PinType): kotlin.Boolean {
             if (allowedTypes.isEmpty()) return true
-            // allow if the exact type matches, or if connecting another Wildcard
             return type in allowedTypes || type is Wildcard
         }
     }
@@ -48,7 +47,7 @@ sealed class PinType(val color: Color = Color.White) {
     @Serializable
     data class Enum(
         val enumName: kotlin.String,
-        val entries: List<kotlin.String>,
+        val entries: kotlin.collections.List<kotlin.String>,
         val enumColor: Color = StandardNodeColors.Types.Enum
     ) : PinType(enumColor) {
 
@@ -64,6 +63,16 @@ sealed class PinType(val color: Color = Color.White) {
         val typeName: kotlin.String,
         val typeColor: Color = StandardNodeColors.Types.ObjectReference
     ) : PinType(typeColor)
+
+    @Serializable
+    data class List(
+        val elementType: PinType = Wildcard()
+    ) : PinType(StandardNodeColors.Types.List)
+
+    @Serializable
+    data class Array(
+        val elementType: PinType = Wildcard()
+    ) : PinType(StandardNodeColors.Types.Array)
 
     companion object {
         private val builtinCasts: Map<Pair<PinType, PinType>, (Any?) -> Any?> = mapOf(
@@ -113,13 +122,18 @@ sealed class PinType(val color: Color = Color.White) {
         /**
          * Returns true if [from] can be automatically cast to [to].
          */
+        private fun elementsCompatible(from: PinType, to: PinType): kotlin.Boolean =
+            from == to || (from is Wildcard && from.accepts(to)) || (to is Wildcard && to.accepts(from))
+
         fun canAutoCast(from: PinType, to: PinType): kotlin.Boolean = when {
-            from == Flow && to != Flow -> false // Flow cannot connect to data
-            to == Flow && from != Flow -> false // data cannot connect to Flow
+            from == Flow && to != Flow -> false
+            to == Flow && from != Flow -> false
             from is Wildcard -> from.accepts(to)
             to is Wildcard -> to.accepts(from)
             from is String && to is String -> true
-            from == to -> true // exact match
+            from == to -> true
+            from is List && to is List -> elementsCompatible(from.elementType, to.elementType)
+            from is Array && to is Array -> elementsCompatible(from.elementType, to.elementType)
             (from to to) in builtinCasts -> true
             (from to to) in customCasts -> true
             else -> false
@@ -137,7 +151,14 @@ sealed class PinType(val color: Color = Color.White) {
     }
 }
 
-val PinType.typeName
+internal fun PinType.containsWildcard(): kotlin.Boolean = when (this) {
+    is PinType.Wildcard -> true
+    is PinType.List -> elementType.containsWildcard()
+    is PinType.Array -> elementType.containsWildcard()
+    else -> false
+}
+
+val PinType.typeName: kotlin.String
     get() = when (this) {
         PinType.Boolean -> "Boolean"
         PinType.Float -> "Float"
@@ -147,6 +168,8 @@ val PinType.typeName
         is PinType.Wildcard -> "Any"
         is PinType.Enum -> this.enumName
         is PinType.Custom -> this.typeName
+        is PinType.List -> "List<${elementType.typeName}>"
+        is PinType.Array -> "Array<${elementType.typeName}>"
     }
 
 inline fun <reified T : Enum<T>> PinType.Companion.enum(
@@ -192,3 +215,9 @@ fun EnumType(
 @Suppress("FunctionName")
 fun CustomType(typeName: String, typeColor: Color = StandardNodeColors.Types.ObjectReference) =
     PinType.Custom(typeName, typeColor)
+
+@Suppress("FunctionName")
+fun ListType(elementType: PinType = PinType.Wildcard()) = PinType.List(elementType)
+
+@Suppress("FunctionName")
+fun ArrayType(elementType: PinType = PinType.Wildcard()) = PinType.Array(elementType)

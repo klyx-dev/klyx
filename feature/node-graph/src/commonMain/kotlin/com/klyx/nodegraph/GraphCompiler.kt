@@ -94,17 +94,36 @@ internal object GraphCompiler {
         val connsByOutput = buildConnsByOutput(connList)
         val (pinOwner, allPinsByUuid) = buildPinMaps(nodeList)
 
-        val resolveType = { pinId: Uuid ->
+        val resolved = HashMap<Uuid, PinType>()
+        val resolving = HashSet<Uuid>()
+
+        fun resolvePin(pinId: Uuid): PinType {
+            resolved[pinId]?.let { return it }
+            if (!resolving.add(pinId)) return PinType.Wildcard()
+
             val pin = allPinsByUuid[pinId]
-            if (pin == null) PinType.Wildcard()
-            else if (pin.type !is PinType.Wildcard) pin.type
+            val result = if (pin == null) PinType.Wildcard()
+            else if (!pin.type.containsWildcard()) pin.type
             else {
-                val srcPinId = connByInput[pinId]
-                if (srcPinId != null) {
-                    val srcPin = allPinsByUuid[srcPinId]
-                    if (srcPin != null && srcPin.type !is PinType.Wildcard) srcPin.type else pin.type
-                } else pin.type
+                if (pin.direction == PinDirection.Output && pin.type.containsWildcard()) {
+                    val inferred = snapshotInferredOutputType(
+                        pin, nodeList, allPinsByUuid, connByInput, registry, ::resolvePin
+                    )
+                    if (inferred != null && !inferred.containsWildcard()) inferred
+                    else pin.type
+                } else {
+                    val srcPinId = connByInput[pinId]
+                    if (srcPinId != null) {
+                        val resolvedSrc = resolvePin(srcPinId)
+                        if (!resolvedSrc.containsWildcard()) resolvedSrc
+                        else pin.type
+                    } else pin.type
+                }
             }
+
+            resolving.remove(pinId)
+            resolved[pinId] = result
+            return result
         }
 
         val compiled = Array(nodeList.size) { i ->
@@ -116,7 +135,7 @@ internal object GraphCompiler {
                 connByInput = connByInput, connsByOutput = connsByOutput,
                 pinOwner = pinOwner, allPinsByUuid = allPinsByUuid,
                 variablesById = variablesById, variableMemory = variableMemory,
-                resolveType = resolveType
+                resolveType = ::resolvePin
             )
         }
 
@@ -234,6 +253,8 @@ internal object GraphCompiler {
                         PinType.Flow -> null
                         is PinType.Wildcard -> raw
                         is PinType.Custom -> raw
+                        is PinType.List -> raw
+                        is PinType.Array -> raw
                     }
                 } else {
                     when (p.type) {
@@ -245,6 +266,8 @@ internal object GraphCompiler {
                         PinType.Flow -> null
                         is PinType.Wildcard -> null
                         is PinType.Custom -> null
+                        is PinType.List -> null
+                        is PinType.Array -> null
                     }
                 }
             }
@@ -271,5 +294,23 @@ internal object GraphCompiler {
             }
         }
         return pinOwner to allPinsByUuid
+    }
+
+    private fun snapshotInferredOutputType(
+        outPin: NodePin,
+        nodeList: List<NodeData>,
+        allPinsByUuid: Map<Uuid, NodePin>,
+        connByInput: Map<Uuid, Uuid>,
+        registry: NodeRegistry,
+        resolveType: (Uuid) -> PinType,
+    ): PinType? {
+        val node = nodeList.find { it.id == outPin.nodeId } ?: return null
+        val def = registry.findNodeByKey(node.definitionKey) ?: return null
+
+        val inputTypes = node.pins
+            .filter { it.type != PinType.Flow && it.direction == PinDirection.Input }
+            .associate { it.label to resolveType(it.id) }
+
+        return def.inferOutputTypes(inputTypes)[outPin.label]
     }
 }

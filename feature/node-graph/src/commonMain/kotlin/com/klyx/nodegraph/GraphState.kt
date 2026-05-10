@@ -260,6 +260,64 @@ class GraphState @PublishedApi internal constructor(
         undoStack.push(AddNodeCmd(newNode))
     }
 
+    /**
+     * Adds a dynamic input pin to an existing node instance.
+     * The node's definition must support dynamic pins ([Node.supportsDynamicPins]).
+     * Returns the newly created pin, or null if not supported.
+     */
+    fun addDynamicInputPin(nodeId: Uuid): NodePin? {
+        val node = nodes.find { it.id == nodeId } ?: return null
+        val def = registry.findNodeByKey(node.definitionKey) ?: return null
+        if (!def.supportsDynamicPins) return null
+        val template = def.dynamicInputTemplate() ?: return null
+
+        val existingLabels = node.pins.filter { it.direction == PinDirection.Input }.map { it.label }
+        val label = def.nextDynamicInputLabel(existingLabels, template.label)
+
+        val newPin = NodePin(
+            id = generateId(),
+            label = label,
+            type = template.type,
+            direction = PinDirection.Input,
+            nodeId = nodeId,
+        )
+        val idx = nodes.indexOfFirst { it.id == nodeId }
+        if (idx < 0) return null
+        nodes[idx] = node.copy(pins = node.pins + newPin)
+        markDirty()
+        return newPin
+    }
+
+    /**
+     * Removes a dynamic pin from an existing node instance.
+     * The node's definition must support dynamic pins ([Node.supportsDynamicPins]).
+     * Returns true if the pin was removed.
+     */
+    fun removeDynamicPin(nodeId: Uuid, pinId: Uuid): Boolean {
+        val node = nodes.find { it.id == nodeId } ?: return false
+        val def = registry.findNodeByKey(node.definitionKey) ?: return false
+        if (!def.supportsDynamicPins) return false
+
+        val pin = node.pins.find { it.id == pinId } ?: return false
+        val remainingInputs = node.pins.count { it.direction == PinDirection.Input } -
+                (if (pin.direction == PinDirection.Input) 1 else 0)
+        val remainingOutputs = node.pins.count { it.direction == PinDirection.Output } -
+                (if (pin.direction == PinDirection.Output) 1 else 0)
+        if (remainingInputs < (def.dynamicInputTemplate()?.let { 1 } ?: 0) ||
+            remainingOutputs < (def.dynamicOutputTemplate()?.let { 1 } ?: 0)) {
+            return false
+        }
+
+        val idx = nodes.indexOfFirst { it.id == nodeId }
+        if (idx < 0) return false
+        nodes[idx] = node.copy(pins = node.pins - pin)
+        connections.removeAll { it.outputPinId == pinId || it.inputPinId == pinId }
+        pinValues.remove(pinId)
+        pinRelativeOffsets.remove(pinId)
+        markDirty()
+        return true
+    }
+
     fun addConnection(outputPinId: Uuid, inputPinId: Uuid) {
         val old = connections.find { it.inputPinId == inputPinId }
         if (old != null) undoStack.push(RemoveConnectionCmd(old))
@@ -709,21 +767,23 @@ class GraphState @PublishedApi internal constructor(
 }
 
 internal fun GraphState.resolveType(pinId: Uuid, visited: MutableSet<Uuid> = mutableSetOf()): PinType {
-    // return a generic wildcard if we hit a cyclic loop or a missing pin
     if (!visited.add(pinId)) return PinType.Wildcard()
     val pin = allPinsSnapshot()[pinId] ?: return PinType.Wildcard()
 
-    if (pin.type !is PinType.Wildcard) return pin.type
+    if (!pin.type.containsWildcard()) return pin.type
 
-    // Wildcard output. infer from node's inferOutputTypes
-    if (pin.direction == PinDirection.Output) {
+    // Wildcard output: infer from node's inferOutputTypes
+    if (pin.direction == PinDirection.Output && pin.type.containsWildcard()) {
         return inferredOutputType(pin, visited)
     }
 
-    // Wildcard input. trace to connected output pin
+    // Input pin: trace to connected output pin to resolve wildcard elements
     if (pin.direction == PinDirection.Input) {
         val srcId = connections.find { it.inputPinId == pinId }?.outputPinId
-        if (srcId != null) return resolveType(srcId, visited)
+        if (srcId != null) {
+            val srcResolved = resolveType(srcId, visited)
+            if (!srcResolved.containsWildcard()) return srcResolved
+        }
     }
 
     return pin.type

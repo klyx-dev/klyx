@@ -47,6 +47,39 @@ abstract class Node {
      * The compiler uses this to skip the flow handler entirely for pure nodes.
      */
     open val isFlowNode get() = pins.any { it.type == PinType.Flow }
+
+    /** Whether this node supports dynamically adding/removing pins at runtime. */
+    open val supportsDynamicPins: Boolean = false
+
+    /** Template for creating new dynamic input pins. null = dynamic inputs not supported. */
+    open fun dynamicInputTemplate(): Pin? = null
+
+    /** Template for creating new dynamic output pins. null = dynamic outputs not supported. */
+    open fun dynamicOutputTemplate(): Pin? = null
+
+    /** Number of default dynamic input pins to create when instantiating this node. */
+    open val defaultDynamicInputCount: Int = 0
+
+    /** Number of default dynamic output pins to create when instantiating this node. */
+    open val defaultDynamicOutputCount: Int = 0
+
+    /** Generates the next available label for a dynamic input pin. */
+    open fun nextDynamicInputLabel(existingLabels: List<String>, templateLabel: String): String {
+        val maxNum = existingLabels.mapNotNull { l ->
+            val prefix = templateLabel.trimEnd(' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0')
+            if (l.startsWith(prefix)) l.removePrefix(prefix).toIntOrNull() else null
+        }.maxOrNull() ?: 0
+        return "${templateLabel.trimEnd(' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0')}${maxNum + 1}"
+    }
+
+    /** Generates the next available label for a dynamic output pin. */
+    open fun nextDynamicOutputLabel(existingLabels: List<String>, templateLabel: String): String {
+        val maxNum = existingLabels.mapNotNull { l ->
+            val prefix = templateLabel.trimEnd(' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0')
+            if (l.startsWith(prefix)) l.removePrefix(prefix).toIntOrNull() else null
+        }.maxOrNull() ?: 0
+        return "${templateLabel.trimEnd(' ', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0')}${maxNum + 1}"
+    }
 }
 
 /** Any node with no Flow pins. pure functional computation. */
@@ -132,12 +165,20 @@ class Inputs internal constructor(
     private val values: Array<Any?>,
     private val labelIndex: Map<String, Int>, // label -> slot index
 ) {
+    /** All input pin labels available at compile time. */
+    val labels: Set<String> get() = labelIndex.keys
     fun float(label: String): Float = (values[slot(label)] as? Number)?.toFloat() ?: 0f
     fun int(label: String): Int = (values[slot(label)] as? Number)?.toInt() ?: 0
     fun boolean(label: String): Boolean = values[slot(label)] as? Boolean ?: false
     fun string(label: String): String = values[slot(label)] as? String ?: ""
     fun stringOrNull(label: String): String? = values[slot(label)] as? String
     fun any(label: String): Any? = values[slot(label)]
+
+    @Suppress("UNCHECKED_CAST")
+    fun list(label: String): List<Any?> = (values[slot(label)] as? List<Any?>) ?: emptyList()
+
+    @Suppress("UNCHECKED_CAST")
+    fun array(label: String): Array<Any?> = (values[slot(label)] as? Array<Any?>) ?: emptyArray()
 
     @Suppress("NOTHING_TO_INLINE")
     @JvmName("_get")

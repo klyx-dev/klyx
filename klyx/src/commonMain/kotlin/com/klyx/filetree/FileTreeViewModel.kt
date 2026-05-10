@@ -347,7 +347,7 @@ class FileTreeViewModel(private val notifier: Notifier) : ViewModel() {
 
     fun refreshTree() {
         viewModelScope.launch {
-            isRefreshing.value = true
+            isRefreshing.update { true }
 
             try {
                 delay(300)
@@ -369,7 +369,7 @@ class FileTreeViewModel(private val notifier: Notifier) : ViewModel() {
             } catch (e: Exception) {
                 notifier.toast("Refresh failed: ${e.message}")
             } finally {
-                isRefreshing.value = false
+                isRefreshing.update { false }
             }
         }
     }

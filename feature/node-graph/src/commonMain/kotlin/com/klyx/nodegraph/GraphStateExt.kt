@@ -39,12 +39,12 @@ fun GraphState.setVariable(name: String, value: Any?) {
             PinType.Boolean -> value is Boolean
             PinType.String -> value is String
             is PinType.Custom -> {
-                // for custom types, check if the class name matches the registered typeName
-                // (handle both simple names and fully qualified names just in case)
                 val className = value::class.simpleName
                 className == variable.type.typeName || value::class.qualifiedName?.endsWith(variable.type.typeName) == true
             }
 
+            is PinType.List -> value is List<*>
+            is PinType.Array -> value is Array<*>
             else -> false
         }
 

@@ -71,7 +71,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.klyx.nodegraph.icon.Add
 import com.klyx.nodegraph.icon.ArrowRight
+import com.klyx.nodegraph.icon.Close
 import com.klyx.nodegraph.icon.Delete
 import com.klyx.nodegraph.icon.Duplicate
 import com.klyx.nodegraph.icon.ElectricBolt
@@ -349,6 +351,46 @@ internal fun NodeCard(
                     )
                 }
             )
+
+            if (n!!.supportsDynamicPins && n.dynamicInputTemplate() != null) {
+                DropdownItem(
+                    text = { Text("Add Input", color = Color(0xFF4FC3F7), fontSize = 12.sp) },
+                    onClick = {
+                        state.addDynamicInputPin(node.id)
+                        showMenu = false
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = Color(0xFF4FC3F7)
+                        )
+                    }
+                )
+
+                val lastDynamicInput = node.pins.lastOrNull {
+                    it.direction == PinDirection.Input
+                }
+                if (lastDynamicInput != null) {
+                    DropdownItem(
+                        text = { Text("Remove Input", color = Color(0xFFFFB74D), fontSize = 12.sp) },
+                        onClick = {
+                            state.removeDynamicPin(node.id, lastDynamicInput.id)
+                            showMenu = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color(0xFFFFB74D)
+                            )
+                        }
+                    )
+                }
+            }
+
             DropdownItem(
                 text = { Text("Disconnect All", color = Color(0xFFFFB74D), fontSize = 12.sp) },
                 onClick = {
@@ -536,6 +578,8 @@ private fun PinRow(
                         inputPin.type is PinType.Flow
                                 || inputPin.type is PinType.Wildcard
                                 || inputPin.type is PinType.Custom
+                                || inputPin.type is PinType.List
+                                || inputPin.type is PinType.Array
                     }
                 }
 
@@ -720,7 +764,7 @@ private fun PinDot(pin: NodePin, state: GraphState, modifier: Modifier = Modifie
             val wire = state.liveWire ?: return@derivedStateOf false
             if (!wire.anchorIsOutput) return@derivedStateOf false
             val fromPin = state.allPinsSnapshot()[wire.anchorPinId] ?: return@derivedStateOf false
-            fromPin.nodeId != pin.nodeId && fromPin.type == pin.type
+            fromPin.nodeId != pin.nodeId && PinType.canAutoCast(fromPin.type, pin.type)
         }
     }
     val isCompatibleOutputTarget by remember(pin.id) {
@@ -729,7 +773,7 @@ private fun PinDot(pin: NodePin, state: GraphState, modifier: Modifier = Modifie
             val wire = state.liveWire ?: return@derivedStateOf false
             if (wire.anchorIsOutput) return@derivedStateOf false
             val fromPin = state.allPinsSnapshot()[wire.anchorPinId] ?: return@derivedStateOf false
-            fromPin.nodeId != pin.nodeId && fromPin.type == pin.type
+            fromPin.nodeId != pin.nodeId && PinType.canAutoCast(pin.type, fromPin.type)
         }
     }
 

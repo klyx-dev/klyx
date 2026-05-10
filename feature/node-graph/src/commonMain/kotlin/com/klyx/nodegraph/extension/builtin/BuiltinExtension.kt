@@ -184,7 +184,7 @@ object BuiltinExtension : GraphExtension {
     override val version = "1.0.0"
 
     override fun install(registry: NodeRegistry) {
-        registry.install(Loops, Std, Maths, Comparisons, Strings)
+        registry.install(Loops, Std, Maths, Comparisons, Strings, Lists)
 
         registry.register(
             BranchNode, SequenceNode, DelayNode, AndNode, NotNode,

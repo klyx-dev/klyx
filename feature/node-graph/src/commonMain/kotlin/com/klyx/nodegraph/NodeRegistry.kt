@@ -143,7 +143,7 @@ class NodeRegistry {
 inline fun NodeRegistry(
     installBuiltins: Boolean = true,
     includeDefaultStartNode: Boolean = false,
-    builder: NodeGraphBuilder.() -> Unit
+    builder: NodeGraphBuilder.() -> Unit = {}
 ): NodeRegistry {
     val registry = NodeRegistry()
     nodeGraph(registry) {

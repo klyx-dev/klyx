@@ -20,6 +20,9 @@ object StandardNodeColors {
         val AnyType = Color(0xFF9E9E9E)
 
         val Enum = Color(0xFF1B5E20)
+
+        val List = Color(0xFFAB47BC)
+        val Array = Color(0xFF42A5F5)
     }
 
     /**
