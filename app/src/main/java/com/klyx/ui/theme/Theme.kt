@@ -1,15 +1,26 @@
 package com.klyx.ui.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialExpressiveTheme
 import androidx.compose.material3.MotionScheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import com.klyx.data.preferences.LocalAppSettings
+import com.klyx.ui.animation.LocalReduceMotion
+import com.klyx.ui.animation.orSnap
 
 private val lightScheme = lightColorScheme(
     primary = primaryLight,
@@ -87,13 +98,27 @@ private val darkScheme = darkColorScheme(
     surfaceContainerHighest = surfaceContainerHighestDark,
 )
 
+val LocalIsDarkMode = staticCompositionLocalOf { false }
+
+private fun ColorScheme.applyAmoled(): ColorScheme {
+    return this.copy(
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceContainerLowest = Color.Black,
+        surfaceContainerLow = Color(0xFF0A0A0A),
+        surfaceContainer = Color(0xFF121212)
+    )
+}
+
 @Composable
 fun KlyxTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = LocalIsDarkMode.current,
+    amoled: Boolean = false,
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit
 ) {
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -104,10 +129,57 @@ fun KlyxTheme(
         else -> lightScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
+    val reduceMotion = LocalReduceMotion.current
+    val finalColorScheme = if (darkTheme && amoled) colorScheme.applyAmoled() else colorScheme
+
+    MaterialExpressiveTheme(
+        colorScheme = finalColorScheme,
         typography = Typography,
-        motionScheme = MotionScheme.expressive(),
+        motionScheme = reducedMotionScheme(reduceMotion),
         content = content
     )
+}
+
+private fun reducedMotionScheme(reduceMotion: Boolean) = object : MotionScheme {
+
+    val expressive = MotionScheme.expressive()
+
+    override fun <T> defaultSpatialSpec(): FiniteAnimationSpec<T> {
+        return expressive.defaultSpatialSpec<T>().orSnap(reduceMotion)
+    }
+
+    override fun <T> fastSpatialSpec(): FiniteAnimationSpec<T> {
+        return expressive.fastSpatialSpec<T>().orSnap(reduceMotion)
+    }
+
+    override fun <T> slowSpatialSpec(): FiniteAnimationSpec<T> {
+        return expressive.slowSpatialSpec<T>().orSnap(reduceMotion)
+    }
+
+    override fun <T> defaultEffectsSpec(): FiniteAnimationSpec<T> {
+        return expressive.defaultEffectsSpec<T>().orSnap(reduceMotion)
+    }
+
+    override fun <T> fastEffectsSpec(): FiniteAnimationSpec<T> {
+        return expressive.fastEffectsSpec<T>().orSnap(reduceMotion)
+    }
+
+    override fun <T> slowEffectsSpec(): FiniteAnimationSpec<T> {
+        return expressive.slowEffectsSpec<T>().orSnap(reduceMotion)
+    }
+}
+
+@Composable
+fun KlyxThemeSurface(content: @Composable BoxScope.() -> Unit) {
+    KlyxTheme(amoled = LocalAppSettings.current.appearance.amoledDarkMode) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            content = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    content = content
+                )
+            }
+        )
+    }
 }

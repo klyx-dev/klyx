@@ -1,4 +1,18 @@
 package com.klyx.data.database
 
-class KlyxDatabase {
+import androidx.room.Database
+import androidx.room.RoomDatabase
+
+@Database(
+    entities = [
+        RecentProjectEntity::class,
+        RecentFileEntity::class
+    ],
+    version = 2
+)
+abstract class KlyxDatabase : RoomDatabase() {
+
+    abstract fun recentProjectDao(): RecentProjectDao
+
+    abstract fun recentFileDao(): RecentFileDao
 }

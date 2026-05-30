@@ -14,8 +14,30 @@
 
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+-keepattributes SourceFile,LineNumberTable
 
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-dontwarn com.sun.nio.file.ExtendedOpenOption
+-dontwarn org.joni.**
+
+-keep class com.itsaky.androidide.treesitter.** { *; }
+
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+-keep class androidx.documentfile.** { *; }
+-keep class androidx.activity.result.** { *; }
+-keep class androidx.activity.result.contract.** { *; }
+
+-dontobfuscate
+
+-keep class org.joni.** { *; }
+-keep class org.eclipse.tm4e.** { *; }
+-keep class io.github.rosemoe.sora.langs.textmate.** { *; }
+
+-keepclassmembers enum * { *; }
+-keepattributes *Annotation*

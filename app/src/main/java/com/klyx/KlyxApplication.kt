@@ -11,6 +11,7 @@ import org.koin.plugin.module.dsl.startKoin
 class KlyxApplication : Application() {
     override fun onCreate() {
         super.onCreate()
+        System.loadLibrary("klyx")
 
         startKoin<KlyxApplication> {
             androidLogger(if (BuildConfig.DEBUG) Level.DEBUG else Level.INFO)

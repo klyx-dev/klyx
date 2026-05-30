@@ -1,11 +1,16 @@
 [versions]
-agp = "9.2.0-rc01"
+agp = "9.1.1"
+arrow = "2.2.2.1"
+coil = "3.4.0"
 core-ktx = "1.18.0"
 androidx-lifecycle = "2.10.0"
 activity-compose = "1.13.0"
+desugar_jdk_libs = "2.1.5"
+documentfile = "1.1.0"
 kotest = "6.1.11"
 kotlin = "2.3.20"
 compose-bom = "2026.04.01"
+smooth-corner-rect-android-compose = "v1.0.0"
 
 # Test
 junit = "4.13.2"
@@ -14,7 +19,9 @@ espresso-core = "3.7.0"
 
 datastore = "1.2.1"
 kotlinx-collections-immutable = "0.4.0"
-kotlinx-coroutines = "1.10.2"
+kotlinx-coroutines = "1.11.0"
+kotlinx-serialization = "1.11.0"
+ktreesitter = "0.25.0"
 material = "1.14.0-beta01"
 material3 = "1.5.0-alpha18"
 nav3 = "1.1.1"
@@ -24,15 +31,24 @@ ksp = "2.3.6"
 
 room-runtime = "2.8.4"
 accompanist = "0.37.3"
+appcompat = "1.7.1"
+utilcodex = "1.31.1"
+zoomable = "2.12.0"
 
 [libraries]
 # Test
+androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
+arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
+arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junit-version" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -64,8 +80,13 @@ kotest-runner-junit4 = { module = "io.kotest:kotest-runner-junit4", version.ref 
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 
+ktreesitter = { module = "io.github.tree-sitter:ktreesitter", version.ref = "ktreesitter" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
+
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+smooth-corner-rect-android-compose = { module = "com.github.racra:smooth-corner-rect-android-compose", version.ref = "smooth-corner-rect-android-compose" }
 
 # Koin
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin" }
@@ -75,12 +96,22 @@ koin-annotations = { module = "io.insert-koin:koin-annotations" }
 koin-compose = { module = "io.insert-koin:koin-compose" }
 koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
 
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
+utilcodex = { module = "com.blankj:utilcodex", version.ref = "utilcodex" }
+zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
+
+sora-editor = { module = "io.github.rosemoe:editor" }
+sora-editor-compose = { module = "io.github.rosemoe:editor-compose" }
+sora-language-treesitter = { module = "io.github.rosemoe:language-treesitter" }
+sora-oniguruma-native = { module = "io.github.rosemoe:oniguruma-native" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 koin-compiler = { id = "io.insert-koin.compiler.plugin", version.ref = "koin-plugin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
+ktreesitter = { id = "io.github.tree-sitter.ktreesitter-plugin", version.ref = "ktreesitter" }

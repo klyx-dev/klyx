@@ -1,3 +1,13 @@
 <resources>
-    <string name="app_name">Klyx</string>
+    <string name="app_name" translatable="false">Klyx</string>
+    <string name="open_project">Open Project</string>
+    <string name="loading">Loading…</string>
+    <string name="refresh">Refresh</string>
+    <string name="open_folder_desc">Open a folder to load your workspace and start editing files.</string>
+    <string name="ready_to_code">Ready to code?</string>
+    <string name="unsupported_file_msg">The file \"%1$s\" cannot be displayed in the editor because it is either binary or uses an unsupported text encoding.</string>
+    <string name="unsupported_file">Unsupported File</string>
+    <string name="close">Close</string>
+    <string name="oom_description">Not enough memory to complete this action. Please try closing other apps, or restarting the app.</string>
+    <string name="smth_went_wrong">Something went wrong: %1$s</string>
 </resources>

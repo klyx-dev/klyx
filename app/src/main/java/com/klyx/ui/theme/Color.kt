@@ -1,6 +1,14 @@
 package com.klyx.ui.theme
 
+import androidx.annotation.ColorInt
+import androidx.annotation.FloatRange
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
+import androidx.core.graphics.ColorUtils
 
 val primaryLight = Color(0xFF415F91)
 val onPrimaryLight = Color(0xFFFFFFFF)
@@ -74,7 +82,84 @@ val surfaceContainerDark = Color(0xFF1D2024)
 val surfaceContainerHighDark = Color(0xFF282A2F)
 val surfaceContainerHighestDark = Color(0xFF33353A)
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun Color.takeIf(predicate: Boolean) = if (predicate) this else Color.Unspecified
 
+@Suppress("NOTHING_TO_INLINE")
+inline fun Color.takeUnless(predicate: Boolean) = takeIf(!predicate)
 
+fun Color.blend(
+    color: Color,
+    @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
+): Color = Color(ColorUtils.blendARGB(this.toArgb(), color.toArgb(), fraction))
 
+@Composable
+fun Color.inverse(
+    fraction: (Boolean) -> Float = { 0.5f },
+    darkMode: Boolean = LocalIsDarkMode.current,
+): Color = if (darkMode) {
+    blend(Color.White, fraction(true))
+} else {
+    blend(Color.Black, fraction(false))
+}
 
+fun Color.inverseByLuma(
+    fraction: (Boolean) -> Float = { 0.5f },
+): Color = if (luminance() < 0.3f) {
+    blend(Color.White, fraction(true))
+} else {
+    blend(Color.Black, fraction(false))
+}
+
+@Composable
+fun Color.inverse(
+    fraction: (Boolean) -> Float = { 0.5f },
+    color: (Boolean) -> Color,
+    darkMode: Boolean = LocalIsDarkMode.current,
+): Color = if (darkMode) blend(color(true), fraction(true)) else blend(color(true), fraction(false))
+
+fun Int.blend(
+    color: Color,
+    @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
+): Int = ColorUtils.blendARGB(this, color.toArgb(), fraction)
+
+@Composable
+@ReadOnlyComposable
+fun Color.harmonizeWithPrimary(
+    @FloatRange(
+        from = 0.0,
+        to = 1.0
+    ) fraction: Float = 0.2f
+): Color = blend(MaterialTheme.colorScheme.primary, fraction)
+
+fun @receiver:ColorInt Int.toColor() = Color(this)
+
+inline val Green: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = Color(0xFFBADB94).harmonizeWithPrimary(0.2f)
+
+inline val Red: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = Color(0xFFE06565).harmonizeWithPrimary(0.2f)
+
+inline val Blue: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = Color(0xFF0088CC).harmonizeWithPrimary(0.2f)
+
+inline val Black: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = Color(0xFF142329).harmonizeWithPrimary(0.2f)
+
+inline val StrongBlack: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = Color(0xFF141414).harmonizeWithPrimary(0.07f)
+
+inline val White: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = Color(0xFFFFFFFF).harmonizeWithPrimary(0.07f)

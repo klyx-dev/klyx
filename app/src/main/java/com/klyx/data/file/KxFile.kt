@@ -1,0 +1,242 @@
+package com.klyx.data.file
+
+import android.content.ContentResolver
+import android.content.Intent
+import android.net.Uri
+import android.os.Environment
+import android.provider.DocumentsContract
+import android.util.Log
+import androidx.core.net.toFile
+import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
+import com.blankj.utilcode.util.UriUtils
+import com.klyx.util.applicationContext
+import com.klyx.util.context
+import com.klyx.util.isFileUri
+import com.klyx.util.withApplicationContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
+import java.io.File
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
+
+@Serializable
+class KxFile : java.io.Serializable {
+
+    private val uriString: String
+
+    @Transient
+    @kotlin.jvm.Transient
+    private var _raw: DocumentFile? = null
+
+    @Transient
+    @kotlin.jvm.Transient
+    private var originalFile: File? = null
+
+    val raw: DocumentFile
+        get() {
+            if (_raw == null) {
+                _raw = originalFile?.let { DocumentFile.fromFile(it) }
+                    ?: uriString.toUri().let { uri ->
+                        val context = applicationContext()
+                        if (DocumentsContract.isTreeUri(uri)) DocumentFile.fromTreeUri(context, uri)
+                        else DocumentFile.fromSingleUri(context, uri)
+                    }
+            }
+            return _raw!!
+        }
+
+    val file: File? get() = originalFile ?: if (uri.isFileUri) uri.toFile() else null
+
+    val uri get() = raw.uri
+
+    constructor(raw: DocumentFile) {
+        this._raw = raw
+        this.uriString = raw.uri.toString()
+        this.originalFile = if (raw.uri.isFileUri) raw.uri.toFile() else null
+    }
+
+    constructor(file: File) {
+        this.originalFile = file
+        this.uriString = file.toUri().toString()
+    }
+
+    val isSafDocument by lazy { file == null }
+
+    val name get() = file?.name ?: raw.name ?: error("Invalid file: $uri")
+    val path get() = file?.path ?: raw.uri.path ?: error("Invalid uri: $uri")
+    val absolutePath get() = file?.absolutePath ?: path
+
+    val parent get() = file?.parent ?: raw.parentFile?.uri?.toString()
+    val parentFile get() = file?.parentFile?.let(::KxFile) ?: raw.parentFile?.let(::KxFile)
+
+    val exists get() = file?.exists() ?: raw.exists()
+    val canRead get() = file?.canRead() ?: raw.canRead()
+    val canWrite get() = file?.canWrite() ?: raw.canWrite()
+    val canExecute get() = file?.canExecute() ?: false
+
+    val length get() = file?.length() ?: raw.length()
+    val lastModified get() = file?.lastModified() ?: raw.lastModified()
+
+    val extension
+        get() = file?.extension ?: run {
+            if (name.startsWith(".") && name.count { it == '.' } == 1) {
+                ""
+            } else if (name.contains(".")) {
+                name.substringAfterLast(".")
+            } else {
+                ""
+            }
+        }
+
+    val isHidden get() = file?.isHidden ?: name.startsWith(".")
+    val isFile get() = file?.isFile ?: raw.isFile
+    val isDirectory get() = file?.isDirectory ?: raw.isDirectory
+
+    fun mkdirs() =
+        file?.mkdirs() ?: unsupported("use filesystem for creating directories with SAF uri")
+
+    fun mkdir() = file?.mkdir() ?: unsupported("use filesystem for creating directory with SAF uri")
+    fun createNewFile() =
+        file?.createNewFile() ?: unsupported("use filesystem for creating a file with SAF uri")
+
+    fun delete() = file?.delete() ?: raw.delete()
+    fun deleteRecursively() = file?.deleteRecursively() ?: raw.deleteRecursively()
+
+    fun renameTo(dest: KxFile) = file?.renameTo(File(dest.absolutePath)) ?: raw.renameTo(dest.name)
+
+    fun setReadable(readable: Boolean, ownerOnly: Boolean = true) =
+        file?.setReadable(readable, ownerOnly) ?: unsupported()
+
+    fun setWritable(writable: Boolean, ownerOnly: Boolean = true) =
+        file?.setWritable(writable, ownerOnly) ?: unsupported()
+
+    fun setExecutable(executable: Boolean, ownerOnly: Boolean = true) =
+        file?.setExecutable(executable, ownerOnly) ?: unsupported()
+
+    fun list() = file?.list()?.asList() ?: raw.listFiles().mapNotNull { it.name }
+    fun listFiles(filter: (KxFile) -> Boolean = { true }): List<KxFile> {
+        return (file?.listFiles()?.map(::KxFile) ?: raw.listFiles().map(::KxFile)).filter(filter)
+    }
+
+    fun readBytes() = inputStream().use { it.readBytes() }
+    fun readText(charset: Charset = StandardCharsets.UTF_8) =
+        inputStream().bufferedReader(charset).use { it.readText() }
+
+    fun writeBytes(bytes: ByteArray) = outputStream().use { it.write(bytes) }
+    fun writeText(text: String, charset: Charset = StandardCharsets.UTF_8) =
+        outputStream().bufferedWriter(charset).use { it.write(text) }
+
+    fun readLines(charset: Charset = StandardCharsets.UTF_8) =
+        inputStream().bufferedReader(charset).use { it.readLines() }
+
+    override fun toString() = absolutePath
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is KxFile) return false
+        return uri == other.uri
+    }
+
+    override fun hashCode() = uri.hashCode()
+
+    fun inputStream() = withApplicationContext {
+        file?.inputStream()
+            ?: checkNotNull(context.contentResolver.openInputStream(raw.uri)) {
+                "InputStream is null. Probably the provider recently crashed."
+            }
+    }
+
+    fun outputStream() = withApplicationContext {
+        file?.outputStream()
+            ?: checkNotNull(context.contentResolver.openOutputStream(raw.uri)) {
+                "OutputStream is null. Probably the provider recently crashed."
+            }
+    }
+
+    private fun DocumentFile.deleteRecursively(): Boolean {
+        if (!exists()) return true // Already deleted or non-existent
+
+        return try {
+            if (isDirectory) {
+                val children = listFiles()
+                var success = true
+                for (child in children) {
+                    success = success && child.deleteRecursively()
+                }
+                success && delete()
+            } else {
+                delete()
+            }
+        } catch (e: Exception) {
+            Log.e("KxFile", "Error deleting ${uri}: ${e.message}")
+            false
+        }
+    }
+}
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun File.wrap() = KxFile(this)
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun Uri.wrap() = KxFile(this)
+
+@Suppress("NOTHING_TO_INLINE")
+inline fun DocumentFile.wrap() = KxFile(this)
+
+fun KxFile(path: String) = KxFile(File(path))
+
+fun KxFile(uri: Uri): KxFile {
+    val context = applicationContext()
+
+    val fallback = {
+        if (DocumentsContract.isTreeUri(uri)) {
+            DocumentFile.fromTreeUri(context, uri)!!
+        } else {
+            DocumentFile.fromSingleUri(context, uri)!!
+        }
+    }
+
+    return when (uri.scheme) {
+        ContentResolver.SCHEME_CONTENT -> {
+            val resolvedFile = try {
+                UriUtils.uri2FileNoCacheCopy(uri)
+            } catch (_: SecurityException) {
+                null
+            } catch (e: Throwable) {
+                e.printStackTrace()
+                null
+            }
+
+            if (DocumentsContract.isTreeUri(uri)) {
+                try {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                } catch (_: Throwable) {
+                }
+            }
+
+            if (resolvedFile != null) {
+                KxFile(resolvedFile)
+            } else {
+                KxFile(fallback())
+            }
+        }
+
+        ContentResolver.SCHEME_FILE -> KxFile(uri.toFile())
+        else -> KxFile(fallback())
+    }
+}
+
+private fun unsupported(message: String? = null): Nothing =
+    throw UnsupportedOperationException(message)
+
+fun KxFile.resolveName(): String {
+    return when (absolutePath) {
+        Environment.getExternalStorageDirectory().absolutePath -> "Internal Storage"
+        applicationContext().dataDir.absolutePath -> "App Data"
+        else -> name
+    }
+}
