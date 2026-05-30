@@ -51,9 +51,11 @@ jobs:
 
       - name: Install CMake
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake
-          cmake --version
+          CMAKE_VERSION=4.3.3
+          wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
+          tar -xzf cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
+          echo "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin" >> $GITHUB_PATH
+          "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin/cmake" --version
 
       - name: Restore keystore
         run: |
