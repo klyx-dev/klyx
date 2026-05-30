@@ -1,0 +1,132 @@
+name: Android CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths-ignore: [ "**/*.md" ]
+  # pull_request:
+  #   branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
+  APP_NAME: "Klyx"
+  APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          docker system prune -af || true
+          df -h
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Android SDK + NDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK
+        run: |
+          yes | sdkmanager "ndk;29.0.14206865"
+
+      - name: Restore keystore
+        run: |
+          echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
+
+      - name: Restore signing properties
+        run: |
+          echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
+
+      - name: Cache Gradle
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make Gradle executable
+        run: chmod +x gradlew
+
+      - name: Generate Tree-sitter bindings
+        run: ./gradlew generateGrammarFiles
+
+      - name: Build Release APK
+        env:
+          CI: true
+          CI_PROVIDER: github
+
+          CI_WORKFLOW: ${{ github.workflow }}
+          CI_JOB: ${{ github.job }}
+          CI_RUN_ID: ${{ github.run_id }}
+          CI_RUN_NUMBER: ${{ github.run_number }}
+          CI_ATTEMPT: ${{ github.run_attempt }}
+          CI_ACTOR: ${{ github.actor }}
+          CI_EVENT: ${{ github.event_name }}
+
+          GIT_COMMIT: ${{ github.sha }}
+          GIT_BRANCH: ${{ github.ref_name }}
+          GIT_REF: ${{ github.ref }}
+          GIT_REF_TYPE: ${{ github.ref_type }}
+          GIT_REPO: ${{ github.repository }}
+          GIT_REPO_OWNER: ${{ github.repository_owner }}
+
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+
+          CI_OS: ${{ runner.os }}
+          CI_ARCH: ${{ runner.arch }}
+
+          KLYX_STORE_API_KEY: ${{ secrets.KLYX_STORE_API_KEY }}
+
+          ENABLE_STRICT_MODE: false
+          ENABLE_EXPERIMENTAL: true
+
+        run: |
+          ./gradlew assembleRelease
+
+      - name: Collect APKs
+        run: |
+          mkdir -p artifacts
+          
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          
+          find . -type f -path "*/build/outputs/apk/**/*.apk" | while read APK; do
+            VARIANT=$(basename "$(dirname "$APK")")
+            cp "$APK" "artifacts/klyx-${VARIANT}-${SHORT_SHA}.apk"
+          done
+          
+          ls -lah artifacts
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v6
+        with:
+          name: android-apks
+          path: artifacts/*.apk
+          retention-days: 15
+          if-no-files-found: error
+
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f /tmp/klyx.keystore /tmp/sign.properties
