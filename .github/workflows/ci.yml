@@ -120,7 +120,7 @@ jobs:
           ls -lah artifacts
 
       - name: Upload APKs
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: android-apks
           path: artifacts/*.apk
