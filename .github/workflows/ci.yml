@@ -45,11 +45,15 @@ jobs:
       - name: Setup Android SDK + NDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK and CMake
+      - name: Install NDK
         run: |
-          yes | sdkmanager \
-            "ndk;29.0.14206865" \
-            "cmake;4.3.2"
+          yes | sdkmanager "ndk;29.0.14206865"
+
+      - name: Install CMake
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake
+          cmake --version
 
       - name: Restore keystore
         run: |

@@ -1,7 +1,7 @@
 [submodule "external/sora-editor"]
 	path = external/sora-editor
 	url = https://github.com/itsvks19/sora-editor.git
-	branch = compose
+	branch = klyx
 [submodule "languages/java/tree-sitter-java"]
 	path = languages/java/tree-sitter-java
 	url = https://github.com/tree-sitter/tree-sitter-java
