@@ -12,5 +12,9 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
 .cmake
+**/build/
+**/.cxx
+**/**/.cmake
+**/**/build
+
