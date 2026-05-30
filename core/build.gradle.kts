@@ -1,95 +1,42 @@
 plugins {
-    alias(libs.plugins.klyx.multiplatform)
-    alias(libs.plugins.klyx.multiplatform.compose)
-    alias(libs.plugins.klyx.buildConfig)
-    alias(libs.plugins.kotlinx.atomicfu)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.android.library)
 }
 
-kotlin {
-    android { namespace = "com.klyx.core" }
+android {
+    namespace = "com.klyx.core"
 
-    sourceSets {
-        val androidMain by getting
-        val desktopMain by getting
-        val commonMain by getting
+    compileSdk {
+        version = release(37)
+    }
 
-        val commonJvmAndroid by creating {
-            dependsOn(commonMain)
-        }
+    defaultConfig {
+        minSdk = 28
 
-        androidMain.dependsOn(commonJvmAndroid)
-        desktopMain.dependsOn(commonJvmAndroid)
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles("consumer-rules.pro")
+    }
 
-        val skikoMain by creating {
-            dependsOn(commonMain)
-
-            dependencies {
-                implementation(libs.jetbrains.skiko)
-            }
-        }
-
-        desktopMain.dependsOn(skikoMain)
-        appleMain.get().dependsOn(skikoMain)
-
-        commonMain {
-            dependencies {
-                api(libs.koin.compose)
-
-                implementation(libs.compose.components.resources)
-
-                implementation(libs.androidx.lifecycle.viewmodel)
-                implementation(libs.androidx.lifecycle.runtime.compose)
-
-                api(libs.kotlinx.serialization.json)
-                implementation(libs.json5k)
-                api(libs.tomlkt)
-                implementation(libs.kotlinx.datetime)
-                api(libs.ktor.client.core)
-                api(libs.ktor.client.cio)
-                api(libs.ktor.client.content.negotiation)
-                api(libs.ktor.serialization.kotlinx.json)
-                implementation(libs.commons.compress)
-                api(libs.koin.core)
-                api(libs.kmp.process)
-
-                implementation(kotlin("reflect"))
-                api(libs.kotlinx.io.core)
-                api(libs.kotlinx.io.okio)
-                api(libs.okio)
-                api(libs.kotlinx.coroutines.core)
-
-                api(libs.filekit.dialogs)
-                api(libs.filekit.dialogs.compose)
-
-                api(libs.arrow.core)
-                api(libs.arrow.fx.coroutines)
-
-                implementation(libs.kfswatch)
-                api(libs.semver)
-                implementation(libs.multiplatform.settings.no.arg)
-                implementation(projects.icons)
-            }
-        }
-
-        androidMain {
-            dependencies {
-                api(libs.utilcodex)
-                api(libs.androidx.documentfile)
-                implementation(libs.koin.android)
-                implementation(libs.kotlinx.coroutines.android)
-                implementation(libs.material)
-            }
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }
 
-atomicfu {
-    transformJvm = false
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-Xcontext-parameters",
+            "-Xexplicit-backing-fields",
+            "-Xreturn-value-checker=full",
+        )
+    }
 }
 
-compose.resources {
-    publicResClass = true
-    packageOfResClass = "com.klyx.core.res"
-    generateResClass = auto
+dependencies {
+    implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.material)
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.junit)
 }

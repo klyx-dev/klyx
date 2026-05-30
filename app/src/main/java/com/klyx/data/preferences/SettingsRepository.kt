@@ -1,0 +1,19 @@
+package com.klyx.data.preferences
+
+import kotlinx.coroutines.flow.map
+import org.koin.core.annotation.Single
+
+@Single
+class SettingsRepository(private val dataStore: SettingsDataStore) {
+
+    val settings = dataStore.data
+    val appearanceSettings = settings.map { it.appearance }
+
+    val appTheme = settings.map { it.appearance.theme }
+
+    suspend fun updateAppTheme(theme: AppTheme) = dataStore.update {
+        copy(
+            appearance = appearance.copy(theme = theme)
+        )
+    }
+}

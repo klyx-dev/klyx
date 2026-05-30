@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/sora-editor" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/external/sora-editor/oniguruma-native/src/main/cpp/oniguruma" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/c/tree-sitter-c" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/comment/tree-sitter-comment" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/css/tree-sitter-css" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/html/tree-sitter-html" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/java/tree-sitter-java" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/javascript/tree-sitter-javascript" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/languages/python/tree-sitter-python" vcs="Git" />
+  </component>
+</project>

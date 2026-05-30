@@ -1,9 +1,25 @@
-[submodule "tree-sitter/json/tree-sitter-json"]
-	path = tree-sitter/json/tree-sitter-json
-	url = https://github.com/tree-sitter/tree-sitter-json
-[submodule "tree-sitter/python/tree-sitter-python"]
-	path = tree-sitter/python/tree-sitter-python
+[submodule "external/sora-editor"]
+	path = external/sora-editor
+	url = https://github.com/itsvks19/sora-editor.git
+	branch = compose
+[submodule "languages/java/tree-sitter-java"]
+	path = languages/java/tree-sitter-java
+	url = https://github.com/tree-sitter/tree-sitter-java
+[submodule "languages/python/tree-sitter-python"]
+	path = languages/python/tree-sitter-python
 	url = https://github.com/tree-sitter/tree-sitter-python
-[submodule "editor/tree-sitter/src/main/cpp/external/tree-sitter"]
-	path = editor/tree-sitter/src/main/cpp/external/tree-sitter
-	url = https://github.com/tree-sitter/tree-sitter.git
+[submodule "languages/html/tree-sitter-html"]
+	path = languages/html/tree-sitter-html
+	url = https://github.com/tree-sitter/tree-sitter-html
+[submodule "languages/c/tree-sitter-c"]
+	path = languages/c/tree-sitter-c
+	url = https://github.com/tree-sitter/tree-sitter-c
+[submodule "languages/javascript/tree-sitter-javascript"]
+	path = languages/javascript/tree-sitter-javascript
+	url = https://github.com/tree-sitter/tree-sitter-javascript
+[submodule "languages/css/tree-sitter-css"]
+	path = languages/css/tree-sitter-css
+	url = https://github.com/tree-sitter/tree-sitter-css
+[submodule "languages/comment/tree-sitter-comment"]
+	path = languages/comment/tree-sitter-comment
+	url = https://github.com/stsewd/tree-sitter-comment

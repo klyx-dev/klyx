@@ -1,18 +1,16 @@
 @file:Suppress("UnstableApiUsage")
 
-rootProject.name = "KlyxEditor"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
-pluginManagement {
-    //includeBuild("ktreesitter-plugin")
-    includeBuild("build-logic")
+rootProject.name = "Klyx"
 
+pluginManagement {
     repositories {
         google {
-            mavenContent {
-                includeGroupAndSubgroups("androidx")
-                includeGroupAndSubgroups("com.android")
-                includeGroupAndSubgroups("com.google")
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
             }
         }
         mavenCentral()
@@ -20,49 +18,27 @@ pluginManagement {
     }
 }
 
-dependencyResolutionManagement {
-    repositories {
-        google {
-            mavenContent {
-                includeGroupAndSubgroups("androidx")
-                includeGroupAndSubgroups("com.android")
-                includeGroupAndSubgroups("com.google")
-            }
-        }
-        mavenCentral()
-        mavenLocal()
-        maven { url = uri("https://jitpack.io") }
-    }
-}
-
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 
-include(":klyx", ":androidApp")
-include(":core")
-include(":project")
-include(":util")
-include(":icons")
-include(
-    ":editor:editor",
-    ":editor:language",
-    ":editor:languages",
-    ":editor:tree-sitter"
-)
-include(
-    ":feature:mcp",
-    ":feature:extension",
-    ":feature:settings",
-    ":feature:node-graph",
-)
-include(
-    ":feature:terminal:emulator",
-    ":feature:terminal:ui",
-    ":feature:terminal:android"
-)
-include(":lsp:api", ":lsp:server")
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://jitpack.io") {
+            content {
+                includeGroup("com.github.racra")
+            }
+        }
+    }
+}
 
-//file("tree-sitter").listFiles { file -> file.isDirectory && file.name != "build" }?.forEach {
-//    include(":tree-sitter:${it.name}")
-//}
+includeBuild("external/sora-editor")
+
+include(":app", ":core", ":editor")
+
+file("languages").listFiles { it.isDirectory }?.forEach {
+    include(":languages:${it.name}")
+}

@@ -1,4 +1,0 @@
-headers = terminal.h
-package = com.klyx.terminal.c
-compilerOpts = -Isrc/nativeInterop/include
-strictEnums = true
