@@ -27,7 +27,7 @@ material3 = "1.5.0-alpha20"
 nav3 = "1.1.2"
 koin = "4.2.1"
 koin-plugin = "1.0.0"
-ksp = "2.3.8"
+ksp = "2.3.9"
 
 room-runtime = "2.8.4"
 accompanist = "0.37.3"
