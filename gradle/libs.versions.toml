@@ -10,7 +10,7 @@ documentfile = "1.1.0"
 kotest = "6.1.11"
 kotlin = "2.3.21"
 compose-bom = "2026.05.01"
-smooth-corner-rect-android-compose = "v1.0.0"
+smooth-corner-rect-android-compose = "1.0.0"
 
 # Test
 junit = "4.13.2"
