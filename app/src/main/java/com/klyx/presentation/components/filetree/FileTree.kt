@@ -71,6 +71,7 @@ object FileTree {
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FileTree(
     viewModel: FileTreeViewModel,

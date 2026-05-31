@@ -75,8 +75,8 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -402,9 +402,9 @@ fun HomeScreen(
     var nodeToCreateFolder by remember { mutableStateOf<FileNode?>(null) }
 
     selectedNodeForAction?.let { node ->
-        val sheetState = rememberModalBottomSheetState(
-            skipPartiallyExpanded = true,
-            confirmValueChange = { true }
+        val sheetState = rememberBottomSheetState(
+            initialValue = Hidden,
+            enabledValues = setOf(Hidden, Expanded)
         )
 
         val dismiss: () -> Unit = {
