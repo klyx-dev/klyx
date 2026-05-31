@@ -9,7 +9,7 @@ desugar_jdk_libs = "2.1.5"
 documentfile = "1.1.0"
 kotest = "6.1.11"
 kotlin = "2.3.20"
-compose-bom = "2026.04.01"
+compose-bom = "2026.05.01"
 smooth-corner-rect-android-compose = "v1.0.0"
 
 # Test
