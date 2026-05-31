@@ -49,9 +49,11 @@ android {
         resValues = true
     }
 
-    sourceSets["main"].kotlin.apply {
-        val generatedSrc = generateTask.generatedSrc.get().asFile
-        directories += generatedSrc.resolve("androidMain/kotlin").absolutePath
+    sourceSets {
+        getByName("main") {
+            val generatedSrc = generateTask.generatedSrc.get().asFile
+            kotlin.directories += generatedSrc.resolve("androidMain/kotlin").absolutePath
+        }
     }
 }
 
