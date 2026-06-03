@@ -8,7 +8,7 @@ activity-compose = "1.13.0"
 desugar_jdk_libs = "2.1.5"
 documentfile = "1.1.0"
 kotest = "6.1.11"
-kotlin = "2.3.21"
+kotlin = "2.4.0"
 compose-bom = "2026.05.01"
 smooth-corner-rect-android-compose = "1.0.0"
 
