@@ -13,6 +13,7 @@ import com.klyx.data.editor.rememberEditorColorScheme
 import com.klyx.data.preferences.EditorSettings
 import com.klyx.data.preferences.LocalAppSettings
 import com.klyx.ui.provider.LocalTreeSitter
+import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import io.github.rosemoe.sora.compose.CodeEditor
 import io.github.rosemoe.sora.compose.invalidate
 import io.github.rosemoe.sora.compose.rememberCodeEditorState
@@ -24,7 +25,7 @@ fun CodeEditorDemo(
     modifier: Modifier = Modifier,
     settings: EditorSettings = LocalAppSettings.current.editor,
     fontSize: TextUnit = settings.fontSize.sp,
-    fontFamily: FontFamily = settings.currentFontFamily,
+    fontFamily: FontFamily = JetBrainsMonoFontFamily,
     indicatorWaveLength: Float = settings.indicatorWaveLength,
     indicatorWaveWidth: Float = settings.indicatorWaveWidth,
     indicatorWaveAmplitude: Float = settings.indicatorWaveAmplitude,

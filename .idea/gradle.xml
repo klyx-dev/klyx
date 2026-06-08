@@ -60,6 +60,7 @@
             <option value="$PROJECT_DIR$/languages/java" />
             <option value="$PROJECT_DIR$/languages/javascript" />
             <option value="$PROJECT_DIR$/languages/python" />
+            <option value="$PROJECT_DIR$/terminal" />
           </set>
         </option>
       </GradleProjectSettings>

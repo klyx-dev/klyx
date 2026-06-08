@@ -45,7 +45,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,6 +70,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
+import com.klyx.core.App
+import com.klyx.core.LocalApp
 import com.klyx.presentation.components.FullscreenPopup
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.lessSpringySpec
@@ -287,7 +289,11 @@ fun Toast(
     }
 }
 
-val LocalToastHostState = compositionLocalOf { ToastHostState() }
+val App.toastHost by lazy { ToastHostState() }
+
+val LocalToastHostState = compositionLocalWithComputedDefaultOf {
+    LocalApp.currentValue.toastHost
+}
 
 @Stable
 class ToastHostState {

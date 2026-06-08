@@ -8,7 +8,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
+import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 import com.klyx.util.findActivity
 import com.klyx.util.isGestureNavigation
 
@@ -28,8 +28,7 @@ fun ImmersiveModeHandler(
             val windowInsetsController = WindowCompat.getInsetsController(window, view)
 
             if (isImmersiveModeEnabled) {
-                windowInsetsController.systemBarsBehavior =
-                    WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                windowInsetsController.systemBarsBehavior = BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 
                 if (context.isGestureNavigation()) {
                     windowInsetsController.hide(WindowInsetsCompat.Type.statusBars())

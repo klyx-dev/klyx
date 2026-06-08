@@ -2,6 +2,7 @@
 agp = "9.2.1"
 arrow = "2.2.2.1"
 coil = "3.4.0"
+commons-compress = "1.28.0"
 core-ktx = "1.18.0"
 androidx-lifecycle = "2.10.0"
 activity-compose = "1.13.0"
@@ -10,7 +11,9 @@ documentfile = "1.1.0"
 kotest = "6.1.11"
 kotlin = "2.3.21"
 compose-bom = "2026.05.01"
+kotlinx-io = "0.9.0"
 smooth-corner-rect-android-compose = "1.0.0"
+ktor = "3.4.2"
 
 # Test
 junit = "4.13.2"
@@ -41,6 +44,7 @@ androidx-documentfile = { module = "androidx.documentfile:documentfile", version
 arrow-core = { module = "io.arrow-kt:arrow-core", version.ref = "arrow" }
 arrow-fx-coroutines = { module = "io.arrow-kt:arrow-fx-coroutines", version.ref = "arrow" }
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commons-compress" }
 desugar_jdk_libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugar_jdk_libs" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junit-version" }
@@ -80,11 +84,18 @@ kotest-runner-junit4 = { module = "io.kotest:kotest-runner-junit4", version.ref 
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
 
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 ktreesitter = { module = "io.github.tree-sitter:ktreesitter", version.ref = "ktreesitter" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanist" }
 
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
 smooth-corner-rect-android-compose = { module = "com.github.racra:smooth-corner-rect-android-compose", version.ref = "smooth-corner-rect-android-compose" }
 

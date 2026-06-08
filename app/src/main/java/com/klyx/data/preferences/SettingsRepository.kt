@@ -11,6 +11,12 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
 
     val appTheme = settings.map { it.appearance.theme }
 
+    suspend fun updateTerminalSettings(block: (TerminalSettings) -> TerminalSettings) {
+        dataStore.updateData {
+            it.copy(terminal = block(it.terminal))
+        }
+    }
+
     suspend fun updateAppTheme(theme: AppTheme) = dataStore.update {
         copy(
             appearance = appearance.copy(theme = theme)

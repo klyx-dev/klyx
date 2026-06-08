@@ -1,14 +1,8 @@
 package com.klyx.data.preferences
 
-import android.graphics.Typeface
-import android.net.Uri
 import androidx.compose.runtime.compositionLocalOf
-import androidx.compose.ui.text.font.FontFamily
-import com.klyx.ui.theme.JetBrainsMonoFontFamily
-import com.klyx.util.context
-import com.klyx.util.withApplicationContext
+import com.klyx.terminal.emulator.CursorStyle
 import kotlinx.serialization.Serializable
-import java.io.File
 
 val LocalAppSettings = compositionLocalOf<AppSettings> {
     error("AppSettings not present.")
@@ -17,7 +11,15 @@ val LocalAppSettings = compositionLocalOf<AppSettings> {
 @Serializable
 data class AppSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
-    val editor: EditorSettings = EditorSettings()
+    val editor: EditorSettings = EditorSettings(),
+    val terminal: TerminalSettings = TerminalSettings()
+)
+
+@Serializable
+data class TerminalSettings(
+    val currentUser: String? = null,
+    val openAsRoot: Boolean = false,
+    val cursorStyle: CursorStyle = CursorStyle.Block
 )
 
 enum class AppTheme(val displayName: String) {
@@ -207,31 +209,7 @@ data class EditorSettings(
      * Select the first completion item on enter for software keyboard
      */
     val selectCompletionItemOnEnterForSoftKbd: Boolean = true,
-) {
-
-    val currentFontFamily: FontFamily
-        get() {
-            return if (customFontUri != null) {
-                withApplicationContext {
-                    try {
-                        val tempFile = File.createTempFile("custom_font", ".ttf", context.cacheDir)
-                        context.contentResolver.openInputStream(Uri.parse(customFontUri)).use { inputStream ->
-                            tempFile.outputStream().use { output ->
-                                inputStream?.copyTo(output)
-                            }
-                        }
-                        val typeface = Typeface.createFromFile(tempFile)
-                        FontFamily(typeface)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        JetBrainsMonoFontFamily
-                    }
-                }
-            } else {
-                JetBrainsMonoFontFamily
-            }
-        }
-}
+)
 
 @Serializable
 @JvmInline

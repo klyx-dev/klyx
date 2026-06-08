@@ -128,6 +128,7 @@ import com.klyx.data.file.openWith
 import com.klyx.data.file.share
 import com.klyx.data.file.shareableUri
 import com.klyx.data.file.wrap
+import com.klyx.data.preferences.FontManager
 import com.klyx.data.preferences.LocalAppSettings
 import com.klyx.editor.TreeSitter
 import com.klyx.icons.Klyx
@@ -830,7 +831,7 @@ private fun MainMenu(
                     icon = painterResource(R.drawable.terminal_2_24px),
                     onClick = {
                         showMenu = false
-
+                        navigator.navigateTo(Screen.Terminal)
                     }
                 )
 
@@ -1220,9 +1221,15 @@ private fun TextFileEditor(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
+                val fontManager: FontManager = koinInject()
+                var currentFont by remember { mutableStateOf(JetBrainsMonoFontFamily) }
+                LaunchedEffect(settings.customFontUri) {
+                    currentFont = fontManager.getFontFamily(settings.customFontUri)
+                }
+
                 CodeEditor(
                     state = state,
-                    fontFamily = settings.currentFontFamily,
+                    fontFamily = currentFont,
                     fontSize = settings.fontSize.sp,
                     modifier = Modifier.fillMaxSize()
                 )

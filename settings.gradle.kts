@@ -37,7 +37,7 @@ dependencyResolutionManagement {
 
 includeBuild("external/sora-editor")
 
-include(":app", ":core", ":editor")
+include(":app", ":terminal", ":editor", ":core")
 
 file("languages").listFiles { it.isDirectory }?.forEach {
     include(":languages:${it.name}")

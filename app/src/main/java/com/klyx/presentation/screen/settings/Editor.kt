@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.R
 import com.klyx.data.preferences.EditorSettings
+import com.klyx.data.preferences.FontManager
 import com.klyx.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.MouseMode
 import com.klyx.data.preferences.updateEditorSettings
@@ -93,6 +95,7 @@ import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -151,8 +154,11 @@ fun SettingScreens.Editor() {
         }
         var localStickyMax by remember(settings.stickyScrollMaxLines) { mutableFloatStateOf(settings.stickyScrollMaxLines.toFloat()) }
 
-        var localFontFamily by remember(settings.customFontUri) {
-            mutableStateOf(settings.currentFontFamily)
+        val fontManager: FontManager = koinInject()
+        var localFontFamily by remember { mutableStateOf(JetBrainsMonoFontFamily) }
+
+        LaunchedEffect(settings.customFontUri) {
+            localFontFamily = fontManager.getFontFamily(settings.customFontUri)
         }
 
         LazyColumn(
@@ -194,20 +200,16 @@ fun SettingScreens.Editor() {
             item {
                 SettingsSubsection("Common") {
                     FontFamilySettingItem(
-                        currentFontFamily = settings.currentFontFamily,
+                        currentFontFamily = localFontFamily,
                         customFontUri = settings.customFontUri,
                         onClearCustomFont = {
                             scope.launch {
-                                val newSettings =
-                                    updateEditorSettings { copy(customFontUri = null) }
-                                localFontFamily = newSettings.currentFontFamily
+                                updateEditorSettings { copy(customFontUri = null) }
                             }
                         },
                         onCustomFontPicked = { uriString ->
                             scope.launch {
-                                val newSettings =
-                                    updateEditorSettings { copy(customFontUri = uriString) }
-                                localFontFamily = newSettings.currentFontFamily
+                                updateEditorSettings { copy(customFontUri = uriString) }
                             }
                         }
                     )

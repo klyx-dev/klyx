@@ -16,12 +16,16 @@ sealed interface Screen : NavKey {
     @Serializable
     data object Settings : Screen
 
+    @Serializable
+    data object Terminal : Screen
+
     companion object {
         fun config() = SavedStateConfiguration {
             serializersModule = SerializersModule {
                 polymorphic(Screen::class) {
                     subclass(Home::class)
                     subclass(Settings::class)
+                    subclass(Terminal::class)
                     subclass(SettingsScreen.Editor::class)
                     subclass(SettingsScreen.Appearance::class)
                     subclass(SettingsScreen.DeveloperOptions::class)

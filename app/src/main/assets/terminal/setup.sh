@@ -53,12 +53,14 @@ ARGS="$ARGS --link2symlink"
 ARGS="$ARGS --sysvipc"
 ARGS="$ARGS -L"
 
-COMMAND="(cd $SANDBOX_DIR && tar -xvf $TMP_DIR/sandbox.tar.gz)"
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/system/bin:/system/xbin"
+
+COMMAND="(cd $SANDBOX_DIR && tar -xmf $TMP_DIR/sandbox.tar.gz)"
 
 if [ "$FDROID" = false ]; then
-    $LINKER $LOCAL/bin/proot $ARGS /system/bin/sh -c "$COMMAND"
+    $PROOT $ARGS /system/bin/sh -c "$COMMAND"
 else
-    $LOCAL/bin/proot $ARGS /system/bin/sh -c "$COMMAND"
+    $PROOT $ARGS /system/bin/sh -c "$COMMAND"
 fi
 
 info "Setting up the Ubuntu container..."
@@ -121,8 +123,6 @@ echo "$linesToAdd" | while IFS= read -r line; do
 done
 
 rm "$TMP_DIR"/sandbox.tar.gz
-# DO NOT REMOVE THIS FILE JUST DON'T, TRUST ME
-touch $DATADIR/.terminal_setup_ok_DO_NOT_REMOVE
 
 if [ $# -gt 0 ]; then
     # shellcheck disable=SC2068

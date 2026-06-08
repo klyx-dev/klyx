@@ -138,6 +138,7 @@ kotlin {
             "-Xreturn-value-checker=check",
             "-Xcontext-sensitive-resolution",
             "-opt-in=kotlin.contracts.ExperimentalContracts",
+            "-opt-in=kotlin.uuid.ExperimentalUuidApi",
             "-opt-in=io.github.rosemoe.sora.compose.ExperimentalEditorApi",
         )
     }
@@ -194,8 +195,14 @@ dependencies {
     implementation(libs.sora.editor.compose)
     implementation(libs.sora.oniguruma.native)
 
+    implementation(libs.ktor.client.core)
+    implementation(libs.ktor.client.cio)
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
     implementation(libs.arrow.core)
     implementation(libs.arrow.fx.coroutines)
+    implementation(libs.apache.commons.compress)
 
     implementation(libs.smooth.corner.rect.android.compose)
     implementation(libs.kotlinx.serialization.json)
@@ -203,6 +210,7 @@ dependencies {
     implementation(libs.zoomable)
 
     implementation(projects.core)
+    implementation(projects.terminal)
     implementation(projects.editor)
 
     testImplementation(libs.junit)

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSerializable
@@ -36,6 +37,7 @@ val LocalNavigator = staticCompositionLocalOf<Navigator> {
     error("No value provided for 'LocalNavigator'.")
 }
 
+@Stable
 class Navigator(
     private val backStack: NavBackStack<Screen>
 ) : MutableList<Screen> by backStack, StateObject by backStack {
