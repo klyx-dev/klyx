@@ -93,6 +93,9 @@ import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.util.humanBytes
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -104,28 +107,33 @@ private fun rememberIsOnline(): Boolean {
     val context = LocalContext.current
     var isOnline by remember { mutableStateOf(false) }
 
-    DisposableEffect(context) {
+    LaunchedEffect(context) {
         val connectivityManager =
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        isOnline = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                isOnline = true
+        callbackFlow {
+            trySend(capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true)
+
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    trySend(true)
+                }
+
+                override fun onLost(network: Network) {
+                    trySend(false)
+                }
             }
 
-            override fun onLost(network: Network) {
-                isOnline = false
+            connectivityManager.registerDefaultNetworkCallback(callback)
+
+            awaitClose {
+                connectivityManager.unregisterNetworkCallback(callback)
             }
-        }
-
-        connectivityManager.registerDefaultNetworkCallback(callback)
-
-        onDispose {
-            connectivityManager.unregisterNetworkCallback(callback)
+        }.collectLatest { connected ->
+            isOnline = connected
         }
     }
 
