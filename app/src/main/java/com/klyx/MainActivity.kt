@@ -55,7 +55,6 @@ import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.data.file.wrap
 import com.klyx.data.terminal.SessionBinder
 import com.klyx.event.GlobalEventBus
-import com.klyx.event.terminal.TerminalNotificationTapEvent
 import com.klyx.event.terminal.TerminateAllSessionEvent
 import com.klyx.platform.service.TerminalService
 import com.klyx.presentation.components.dialogs.AllFilesAccessDialog
@@ -73,6 +72,7 @@ import com.klyx.presentation.screen.settings.Appearance
 import com.klyx.presentation.screen.settings.DeveloperOptions
 import com.klyx.presentation.screen.settings.Editor
 import com.klyx.presentation.screen.settings.SystemDiagnostics
+import com.klyx.presentation.screen.settings.TerminalSettings
 import com.klyx.presentation.viewmodel.EditorViewModel
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.ComposeActivity
@@ -226,6 +226,9 @@ class MainActivity : ComposeActivity() {
         }
         settingsEntry<SettingsScreen.Appearance> {
             ProvideGoogleSansTypography { SettingScreens.Appearance() }
+        }
+        settingsEntry<SettingsScreen.Terminal> {
+            ProvideGoogleSansTypography { TerminalSettings() }
         }
         settingsEntry<SettingsScreen.DeveloperOptions> {
             ProvideGoogleSansTypography { SettingScreens.DeveloperOptions() }

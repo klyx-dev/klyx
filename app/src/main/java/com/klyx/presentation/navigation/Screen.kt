@@ -28,6 +28,7 @@ sealed interface Screen : NavKey {
                     subclass(Terminal::class)
                     subclass(SettingsScreen.Editor::class)
                     subclass(SettingsScreen.Appearance::class)
+                    subclass(SettingsScreen.Terminal::class)
                     subclass(SettingsScreen.DeveloperOptions::class)
                     subclass(SettingsScreen.SystemDiagnostics::class)
                     subclass(SettingsScreen.About::class)
@@ -44,6 +45,9 @@ sealed interface SettingsScreen : Screen {
 
     @Serializable
     data object Appearance : SettingsScreen
+
+    @Serializable
+    data object Terminal : SettingsScreen
 
     @Serializable
     data object DeveloperOptions : SettingsScreen

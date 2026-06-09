@@ -79,6 +79,7 @@ import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.Navigator
 import com.klyx.presentation.navigation.Screen
+import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.viewmodel.TerminalUiState
 import com.klyx.presentation.viewmodel.TerminalViewModel
 import com.klyx.terminal.emulator.TerminalSession
@@ -187,7 +188,7 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
                 actions = {
                     FilledIconButton(
                         modifier = Modifier.padding(start = 12.dp, top = 4.dp),
-                        onClick = { },
+                        onClick = { navigator.navigateTo(SettingsScreen.Terminal) },
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             contentColor = MaterialTheme.colorScheme.onSurface

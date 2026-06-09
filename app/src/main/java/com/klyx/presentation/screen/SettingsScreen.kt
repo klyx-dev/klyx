@@ -35,10 +35,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.BuildConfig
+import com.klyx.presentation.model.IconSource
 import com.klyx.presentation.model.SettingsCategory
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.SettingsScreen
@@ -97,6 +99,13 @@ fun SettingsScreen() {
                 )
             }
 
+            item {
+                SettingsCategoryItem(
+                    category = SettingsCategory.Terminal,
+                    onClick = { navigator.navigateTo(SettingsScreen.Terminal) }
+                )
+            }
+
             if (BuildConfig.DEBUG) {
                 item {
                     SettingsCategoryItem(
@@ -135,6 +144,9 @@ private fun SettingsCategory.colors(): CategoryColors {
         when (this) {
             SettingsCategory.Editor -> CategoryColors(Color(0xFF2D333B), Color(0xFFADBAC7))
             SettingsCategory.Appearance -> CategoryColors(Color(0xFF7D5260), Color(0xFFFFD8E4))
+
+            SettingsCategory.Terminal -> CategoryColors(Color(0xFF202A25), Color(0xFF81C995))
+
             SettingsCategory.DeveloperOptions -> CategoryColors(
                 Color(0xFF324F34),
                 Color(0xFFCBEFD0)
@@ -151,6 +163,9 @@ private fun SettingsCategory.colors(): CategoryColors {
         when (this) {
             SettingsCategory.Editor -> CategoryColors(Color(0xFFF6F8FA), Color(0xFF24292F))
             SettingsCategory.Appearance -> CategoryColors(Color(0xFFFFD8E4), Color(0xFF631835))
+
+            SettingsCategory.Terminal -> CategoryColors(Color(0xFFE6F4EA), Color(0xFF0D5323))
+
             SettingsCategory.DeveloperOptions -> CategoryColors(
                 Color(0xFFCBEFD0),
                 Color(0xFF042106)
@@ -201,12 +216,23 @@ private fun SettingsCategoryItem(
                     .clip(CircleShape)
                     .background(colors.container)
             ) {
-                Icon(
-                    imageVector = category.icon,
-                    contentDescription = null,
-                    tint = colors.onContainer,
-                    modifier = Modifier.size(24.dp)
-                )
+                when (val iconSource = category.icon) {
+                    is IconSource.Vector -> {
+                        Icon(
+                            imageVector = iconSource.imageVector,
+                            contentDescription = null,
+                            tint = colors.onContainer
+                        )
+                    }
+
+                    is IconSource.DrawableRes -> {
+                        Icon(
+                            painter = painterResource(iconSource.id),
+                            contentDescription = null,
+                            tint = colors.onContainer
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.width(16.dp))

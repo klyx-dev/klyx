@@ -31,6 +31,10 @@ suspend inline fun updateEditorSettings(
     noinline transform: suspend EditorSettings.() -> EditorSettings
 ) = updateSettings { copy(editor = transform(editor)) }.editor
 
+suspend inline fun updateTerminalSettings(
+    noinline transform: suspend TerminalSettings.() -> TerminalSettings
+) = updateSettings { copy(terminal = transform(terminal)) }.terminal
+
 suspend inline fun updateAppearanceSettings(
     noinline transform: suspend AppearanceSettings.() -> AppearanceSettings
 ) = updateSettings { copy(appearance = transform(appearance)) }.appearance
