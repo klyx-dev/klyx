@@ -23,3 +23,6 @@
 [submodule "languages/comment/tree-sitter-comment"]
 	path = languages/comment/tree-sitter-comment
 	url = https://github.com/stsewd/tree-sitter-comment
+[submodule "proot"]
+	path = app/src/main/cpp/proot
+	url = https://github.com/itsvks19/proot
