@@ -33,6 +33,10 @@ android {
             }
         }
 
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
+
         buildConfigField("String", "COMPOSE_VERSION", "\"${libs.versions.compose.bom.get()}\"")
         buildConfigField("String", "TREESITTER_VERSION", "\"${libs.versions.ktreesitter.get()}\"")
     }
