@@ -118,23 +118,35 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p artifacts
-          
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          
-          find . -type f -path "*/build/outputs/apk/**/*.apk" | while read APK; do
-            VARIANT=$(basename "$(dirname "$APK")")
-            cp "$APK" "artifacts/klyx-${VARIANT}-${SHORT_SHA}.apk"
-          done
-          
+
+          find app/build/outputs/apk -type f -name "*.apk" -exec cp {} artifacts/ \;
+
+          echo "Found APKs:"
           ls -lah artifacts
 
-      - name: Upload APKs
+      - name: Upload ARM64 APK
         uses: actions/upload-artifact@v7
         with:
-          name: android-apks
-          path: artifacts/*.apk
+          name: apk-arm64-v8a
+          path: artifacts/*arm64-v8a*.apk
           retention-days: 15
-          if-no-files-found: error
+          if-no-files-found: ignore
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: apk-x86_64
+          path: artifacts/*x86_64*.apk
+          retention-days: 15
+          if-no-files-found: ignore
+
+      - name: Upload Universal APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: apk-universal
+          path: artifacts/*universal*.apk
+          retention-days: 15
+          if-no-files-found: ignore
 
       - name: Cleanup sensitive files
         if: always()
