@@ -45,4 +45,4 @@ Contributions, bug reports, and feature requests are welcome.
 
 ## License
 
-Licensed under the MIT License. See [LICENSE](LICENSE) for details.
+Licensed under the GNU General Public License v3.0 (GPL-3.0). See [LICENSE](LICENSE) for details.
