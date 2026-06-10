@@ -1,7 +1,7 @@
 [versions]
 agp = "9.2.1"
 arrow = "2.2.2.1"
-coil = "3.4.0"
+coil = "3.5.0"
 commons-compress = "1.28.0"
 core-ktx = "1.18.0"
 androidx-lifecycle = "2.10.0"
