@@ -10,14 +10,10 @@
               <build path="$PROJECT_DIR$/external/sora-editor" name="sora-editor">
                 <projects>
                   <project path="$PROJECT_DIR$/external/sora-editor" />
-                  <project path="$PROJECT_DIR$/external/sora-editor/app" />
                   <project path="$PROJECT_DIR$/external/sora-editor/editor" />
                   <project path="$PROJECT_DIR$/external/sora-editor/editor-bom" />
                   <project path="$PROJECT_DIR$/external/sora-editor/editor-compose" />
                   <project path="$PROJECT_DIR$/external/sora-editor/editor-lsp" />
-                  <project path="$PROJECT_DIR$/external/sora-editor/language-java" />
-                  <project path="$PROJECT_DIR$/external/sora-editor/language-monarch" />
-                  <project path="$PROJECT_DIR$/external/sora-editor/language-textmate" />
                   <project path="$PROJECT_DIR$/external/sora-editor/language-treesitter" />
                   <project path="$PROJECT_DIR$/external/sora-editor/oniguruma-native" />
                 </projects>
@@ -40,16 +36,12 @@
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/editor" />
             <option value="$PROJECT_DIR$/external/sora-editor" />
-            <option value="$PROJECT_DIR$/external/sora-editor/app" />
             <option value="$PROJECT_DIR$/external/sora-editor/build-logic" />
             <option value="$PROJECT_DIR$/external/sora-editor/build-logic/convention" />
             <option value="$PROJECT_DIR$/external/sora-editor/editor" />
             <option value="$PROJECT_DIR$/external/sora-editor/editor-bom" />
             <option value="$PROJECT_DIR$/external/sora-editor/editor-compose" />
             <option value="$PROJECT_DIR$/external/sora-editor/editor-lsp" />
-            <option value="$PROJECT_DIR$/external/sora-editor/language-java" />
-            <option value="$PROJECT_DIR$/external/sora-editor/language-monarch" />
-            <option value="$PROJECT_DIR$/external/sora-editor/language-textmate" />
             <option value="$PROJECT_DIR$/external/sora-editor/language-treesitter" />
             <option value="$PROJECT_DIR$/external/sora-editor/oniguruma-native" />
             <option value="$PROJECT_DIR$/languages" />
