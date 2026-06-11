@@ -24,9 +24,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.ChevronRight
-import androidx.compose.material.icons.rounded.Description
-import androidx.compose.material.icons.rounded.Folder
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -48,17 +48,23 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.isSpecified
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.R
+import com.klyx.data.file.KxFile
 import com.klyx.presentation.viewmodel.FileTreeUiState
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.orSnap
@@ -268,11 +274,20 @@ private fun FileTreeItem(
                     Spacer(modifier = Modifier.width(24.dp))
                 }
 
+                val fileIcon = iconForFile(node.file)
                 Icon(
-                    imageVector = if (node.isDirectory) Icons.Rounded.Folder else Icons.Rounded.Description,
+                    painter = fileIcon.painter,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
-                    tint = if (isSelected) fg else if (node.isDirectory) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (isSelected) {
+                        fg
+                    } else if (node.isDirectory) {
+                        MaterialTheme.colorScheme.primary
+                    } else if (fileIcon.tint.isSpecified) {
+                        fileIcon.tint
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -286,5 +301,88 @@ private fun FileTreeItem(
                 )
             }
         }
+    }
+}
+
+data class FileIcon(val painter: Painter, val tint: Color = Color.Unspecified)
+
+@Composable
+fun iconForFile(file: KxFile): FileIcon {
+    if (file.isDirectory) {
+        return FileIcon(painterResource(R.drawable.folder_24px))
+    }
+
+    if (file.canExecute) {
+        return FileIcon(painterResource(R.drawable.terminal_2_24px))
+    }
+
+    val name = file.name.lowercase()
+
+    when (name) {
+        "license",
+        "license.md" -> return FileIcon(painterResource(R.drawable.license_24px))
+
+        "copying" -> return FileIcon(painterResource(R.drawable.copyright_24px))
+
+        ".gitattributes",
+        ".editorconfig",
+        "readme",
+        "readme.txt" -> return FileIcon(painterResource(R.drawable.description_24px))
+
+        "makefile",
+        "cmakelists.txt" -> return FileIcon(rememberVectorPainter(Icons.Rounded.Code))
+
+        ".gitignore" -> return FileIcon(rememberVectorPainter(Icons.Rounded.Block))
+        ".env" -> return FileIcon(painterResource(R.drawable.key_24px))
+    }
+
+    val extension = file.extension.lowercase()
+
+    return when (extension) {
+        "kt", "kts" -> FileIcon(painterResource(R.drawable.language_kotlin))
+        "java" -> FileIcon(painterResource(R.drawable.language_java))
+        "c", "h" -> FileIcon(painterResource(R.drawable.language_c))
+        "cpp", "cc", "cxx", "hpp", "hh", "hxx" -> FileIcon(painterResource(R.drawable.language_cpp))
+
+        "cs" -> FileIcon(painterResource(R.drawable.language_csharp))
+        "go" -> FileIcon(painterResource(R.drawable.language_go))
+        "lua" -> FileIcon(painterResource(R.drawable.language_lua))
+        "js", "mjs", "cjs" -> FileIcon(painterResource(R.drawable.language_javascript))
+        "ts", "mts", "cts" -> FileIcon(painterResource(R.drawable.language_typescript))
+        "py", "pyw" -> FileIcon(painterResource(R.drawable.language_python))
+        "php" -> FileIcon(painterResource(R.drawable.language_php))
+        "rs" -> FileIcon(painterResource(R.drawable.language_rust))
+        "swift" -> FileIcon(painterResource(R.drawable.language_swift))
+        "sh", "bash", "zsh", "fish" -> FileIcon(painterResource(R.drawable.terminal_2_24px))
+
+        "html", "htm" -> FileIcon(painterResource(R.drawable.language_html5))
+        "css" -> FileIcon(painterResource(R.drawable.language_css3))
+        "xml" -> FileIcon(painterResource(R.drawable.code_xml_24px))
+        "json", "jsonc" -> FileIcon(painterResource(R.drawable.code_json))
+
+        "md", "mdx", "rst" -> FileIcon(painterResource(R.drawable.markdown_24px))
+
+        "pdf" -> FileIcon(painterResource(R.drawable.pdf_box))
+
+        "png", "jpg", "jpeg", "gif",
+        "webp", "bmp", "svg", "ico",
+        "avif", "heic", "heif" -> FileIcon(painterResource(R.drawable.image_24px))
+
+        "mp4", "mkv", "webm", "avi",
+        "mov", "m4v", "3gp", "wmv",
+        "flv", /* "ts" */
+            -> FileIcon(painterResource(R.drawable.video_file_24px))
+
+        "mp3", "wav", "ogg", "opus",
+        "flac", "aac", "m4a", "wma",
+        "amr" -> FileIcon(painterResource(R.drawable.audio_file_24px))
+
+        "zip", "7z", "rar", "tar",
+        "gz", "xz", "bz2", "tgz",
+        "apk", "jar", "aar" -> FileIcon(painterResource(R.drawable.archive_24px))
+
+        "ttf", "otf", "woff", "woff2" -> FileIcon(painterResource(R.drawable.font_download_24px))
+        "txt" -> FileIcon(painterResource(R.drawable.description_24px))
+        else -> FileIcon(painterResource(R.drawable.draft_24px))
     }
 }

@@ -6,28 +6,67 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Reads the first 512 bytes of a file to determine if it is text file or binary file.
+ * Returns true if the file is likely a text file that can be opened in an editor.
  */
-suspend fun isTextFile(uri: Uri, contentResolver: ContentResolver) = withContext(Dispatchers.IO) {
+suspend fun isTextFile(
+    uri: Uri,
+    contentResolver: ContentResolver,
+): Boolean = withContext(Dispatchers.IO) {
     try {
-        contentResolver.openInputStream(uri)?.use { inputStream ->
-            val buffer = ByteArray(512)
-            val bytesRead = inputStream.read(buffer)
+        val mimeType = contentResolver.getType(uri)
 
-            // An empty file is a perfectly valid text file
-            if (bytesRead == -1) return@withContext true
+        // Known text types
+        if (mimeType?.startsWith("text/") == true) {
+            return@withContext true
+        }
 
-            // Scan the read bytes for a NULL character (0x00)
+        // Known binary types
+        if (
+            mimeType == "application/pdf" ||
+            mimeType == "application/zip" ||
+            mimeType == "application/vnd.android.package-archive" ||
+            mimeType?.startsWith("image/") == true ||
+            mimeType?.startsWith("video/") == true ||
+            mimeType?.startsWith("audio/") == true
+        ) {
+            return@withContext false
+        }
+
+        contentResolver.openInputStream(uri)?.use { input ->
+            val buffer = ByteArray(4096)
+            val bytesRead = input.read(buffer)
+
+            // Empty files are valid text files.
+            if (bytesRead <= 0) {
+                return@withContext true
+            }
+
+            var suspicious = 0
+
             for (i in 0 until bytesRead) {
-                if (buffer[i] == 0.toByte()) {
-                    return@withContext false // Found NULL byte -> It's a binary file!
+                val b = buffer[i].toInt() and 0xFF
+
+                // NULL byte => almost certainly binary.
+                if (b == 0) {
+                    return@withContext false
+                }
+
+                val printable =
+                    b == 0x09 || // tab
+                            b == 0x0A || // newline
+                            b == 0x0D || // carriage return
+                            b in 0x20..0x7E
+
+                if (!printable) {
+                    suspicious++
                 }
             }
 
-            true
+            // More than 30% non-printable bytes => likely binary.
+            suspicious.toFloat() / bytesRead < 0.30f
         } ?: false
     } catch (_: Exception) {
-        false // If we can't read it, treat it as unreadable/binary
+        false
     }
 }
 

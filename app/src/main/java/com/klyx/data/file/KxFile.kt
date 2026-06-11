@@ -13,6 +13,7 @@ import com.blankj.utilcode.util.UriUtils
 import com.klyx.util.applicationContext
 import com.klyx.util.context
 import com.klyx.util.isFileUri
+import com.klyx.util.isTextFile
 import com.klyx.util.withApplicationContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -60,6 +61,8 @@ class KxFile : java.io.Serializable {
         this.originalFile = file
         this.uriString = file.toUri().toString()
     }
+
+    val mimeType get() = applicationContext().contentResolver.getType(uri)
 
     val isSafDocument by lazy { file == null }
 
@@ -240,3 +243,5 @@ fun KxFile.resolveName(): String {
         else -> name
     }
 }
+
+suspend fun KxFile.isTextFile() = isTextFile(uri, applicationContext().contentResolver)

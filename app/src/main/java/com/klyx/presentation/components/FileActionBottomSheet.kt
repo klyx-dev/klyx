@@ -33,8 +33,6 @@ import androidx.compose.material.icons.automirrored.rounded.ExitToApp
 import androidx.compose.material.icons.automirrored.rounded.NoteAdd
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.rounded.AccountTree
-import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.ContentCut
 import androidx.compose.material.icons.rounded.ContentPaste
@@ -80,7 +78,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.toClipEntry
@@ -88,13 +87,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.data.editor.icon
+import com.klyx.R
 import com.klyx.data.file.FileStatInfo
 import com.klyx.data.file.KxFile
 import com.klyx.data.file.calculateTotalSize
 import com.klyx.data.file.resolveName
 import com.klyx.data.file.statInfo
 import com.klyx.data.file.symlinkTarget
+import com.klyx.presentation.components.filetree.iconForFile
 import com.klyx.presentation.components.subcomponents.AutoSizeText
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.util.asLocalDateTime
@@ -174,8 +174,10 @@ fun FileActionBottomSheet(
                                     .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                                 contentAlignment = Alignment.Center
                             ) {
+                                val icon = iconForFile(file)
+
                                 Image(
-                                    painterResource(file.icon()),
+                                    painter = icon.painter,
                                     contentDescription = "File Icon",
                                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
                                     modifier = Modifier.size(32.dp),
@@ -352,7 +354,7 @@ private fun InfoItems(
         FileInfoSegmentedListItem(
             headline = "Name",
             supporting = file.resolveName(),
-            icon = FileIcon.Drawable(file.icon()),
+            icon = iconForFile(file).painter,
             iconDescription = "File icon",
             shape = infoSegmentItemShape,
         )
@@ -360,7 +362,7 @@ private fun InfoItems(
         FileInfoSegmentedListItem(
             headline = "Path",
             supporting = file.path,
-            icon = Icons.Rounded.AccountTree.fileIcon,
+            icon = painterResource(R.drawable.account_tree_24px),
             iconDescription = "File icon",
             shape = infoSegmentItemShape,
             onClick = { copyText(file.path) },
@@ -392,7 +394,7 @@ private fun InfoItems(
         FileInfoSegmentedListItem(
             headline = "Size",
             supporting = sizeText,
-            icon = Icons.Rounded.Storage.fileIcon,
+            icon = rememberVectorPainter(Icons.Rounded.Storage),
             iconDescription = null,
             shape = infoSegmentItemShape,
         )
@@ -400,7 +402,7 @@ private fun InfoItems(
         FileInfoSegmentedListItem(
             headline = "Last modified",
             supporting = file.lastModified.milliseconds.asLocalDateTime().formatDateTime(),
-            icon = Icons.Rounded.EditCalendar.fileIcon,
+            icon = rememberVectorPainter(Icons.Rounded.EditCalendar),
             iconDescription = null,
             shape = infoSegmentItemShape,
         )
@@ -413,7 +415,7 @@ private fun InfoItems(
             FileInfoSegmentedListItem(
                 headline = "Permissions",
                 supporting = statInfo!!.permissions,
-                icon = Icons.Rounded.AdminPanelSettings.fileIcon,
+                icon = painterResource(R.drawable.admin_panel_settings_24px),
                 iconDescription = "Permission icon",
                 shape = infoSegmentItemShape,
                 onClick = { copyText(statInfo!!.permissions) }
@@ -428,7 +430,7 @@ private fun InfoItems(
             FileInfoSegmentedListItem(
                 headline = "Symbolic link",
                 supporting = "→ $target",
-                icon = Icons.Rounded.Link.fileIcon,
+                icon = rememberVectorPainter(Icons.Rounded.Link),
                 iconDescription = null,
                 shape = infoSegmentItemShape,
             )
@@ -730,18 +732,11 @@ fun LazyListScope.fileActions(
     }
 }
 
-private inline val ImageVector.fileIcon get() = FileIcon.Image(this)
-
-private sealed interface FileIcon {
-    data class Image(val imageVector: ImageVector) : FileIcon
-    data class Drawable(val drawableId: Int) : FileIcon
-}
-
 @Composable
 private fun FileInfoSegmentedListItem(
     headline: String,
     supporting: String,
-    icon: FileIcon,
+    icon: Painter,
     iconDescription: String?,
     shape: Shape,
     onClick: (() -> Unit)? = null,
@@ -767,21 +762,10 @@ private fun FileInfoSegmentedListItem(
             headlineContent = { Text(headline) },
             supportingContent = { Text(supporting) },
             leadingContent = {
-                when (icon) {
-                    is FileIcon.Drawable -> {
-                        Icon(
-                            painterResource(icon.drawableId),
-                            contentDescription = iconDescription,
-                        )
-                    }
-
-                    is FileIcon.Image -> {
-                        Icon(
-                            imageVector = icon.imageVector,
-                            contentDescription = iconDescription,
-                        )
-                    }
-                }
+                Icon(
+                    painter = icon,
+                    contentDescription = iconDescription,
+                )
             }
         )
     }

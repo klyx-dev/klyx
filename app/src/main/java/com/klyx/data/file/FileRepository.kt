@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import com.klyx.data.fs.FileSystem
+import com.klyx.util.isTextFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
@@ -64,19 +65,7 @@ class FileRepository(
                 return@withContext FileCategory.IMAGE
             }
 
-            contentResolver.openInputStream(uri)?.use { inputStream ->
-                val buffer = ByteArray(512)
-                val bytesRead = inputStream.read(buffer)
-
-                if (bytesRead == -1) return@withContext FileCategory.TEXT // empty file
-
-                for (i in 0 until bytesRead) {
-                    if (buffer[i] == 0.toByte()) {
-                        return@withContext FileCategory.BINARY_UNSUPPORTED
-                    }
-                }
-                return@withContext FileCategory.TEXT
-            } ?: FileCategory.ERROR
+            if (isTextFile(uri, contentResolver)) FileCategory.TEXT else FileCategory.BINARY_UNSUPPORTED
         } catch (_: Exception) {
             FileCategory.ERROR
         }

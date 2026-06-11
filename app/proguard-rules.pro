@@ -12,6 +12,10 @@
     native <methods>;
 }
 
+-keep class com.klyx.native.** { *; }
+
+-keep @androidx.annotation.Keep class * { *; }
+
 -keepclassmembers enum * { *; }
 -keepattributes *Annotation*
 

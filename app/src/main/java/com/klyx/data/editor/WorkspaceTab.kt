@@ -1,10 +1,8 @@
 package com.klyx.data.editor
 
 import android.net.Uri
-import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
-import com.klyx.R
 import com.klyx.data.file.KxFile
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -44,14 +42,5 @@ sealed class WorkspaceTab {
     @Stable
     data object Welcome : WorkspaceTab() {
         override val title: String = "Welcome"
-    }
-}
-
-@DrawableRes
-fun KxFile.icon(): Int {
-    return if (isDirectory) {
-        R.drawable.folder_24px
-    } else {
-        R.drawable.docs_24px
     }
 }
