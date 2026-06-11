@@ -60,11 +60,9 @@ dependencies {
     }
 
     testImplementation(libs.junit)
-    testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.bundles.kotest.unit)
 
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.kotest.runner.junit4)
-    androidTestImplementation(libs.kotest.assertions.core)
+    androidTestImplementation(libs.bundles.kotest.android)
 }

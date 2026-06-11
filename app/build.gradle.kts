@@ -21,8 +21,8 @@ android {
         applicationId = "com.klyx"
         minSdk = 28
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (property("project.versionCode") as String).toInt()
+        versionName = property("project.version") as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -102,8 +102,6 @@ android {
     }
 
     compileOptions {
-        isCoreLibraryDesugaringEnabled = true
-
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
@@ -168,22 +166,14 @@ koinCompiler {
 }
 
 dependencies {
-    coreLibraryDesugaring(libs.desugar.jdk.libs)
-
     implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.bundles.androidx.compose)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.datastore.preferences)
 
-    implementation(libs.androidx.nav3.runtime)
-    implementation(libs.androidx.nav3.ui)
+    implementation(libs.bundles.navigation3)
     implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.material)
 
@@ -192,31 +182,20 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
 
     implementation(platform(libs.koin.bom))
-    implementation(libs.koin.android)
-    implementation(libs.koin.compose)
-    implementation(libs.koin.compose.viewmodel)
-    implementation(libs.koin.annotations)
+    implementation(libs.bundles.koin)
 
     implementation(libs.kotlinx.collections.immutable)
 
-    implementation(libs.androidx.room.runtime)
+    implementation(libs.bundles.room)
     ksp(libs.androidx.room.compiler)
-    implementation(libs.androidx.room.ktx)
 
     implementation(libs.androidx.documentfile)
     implementation(libs.utilcodex)
 
-    implementation(libs.sora.editor)
-    implementation(libs.sora.editor.compose)
-    implementation(libs.sora.oniguruma.native)
+    implementation(libs.bundles.sora.editor)
+    implementation(libs.bundles.ktor)
 
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.cio)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.kotlinx.json)
-
-    implementation(libs.arrow.core)
-    implementation(libs.arrow.fx.coroutines)
+    implementation(libs.bundles.arrow)
     implementation(libs.apache.commons.compress)
 
     implementation(libs.smooth.corner.rect.android.compose)
@@ -229,15 +208,13 @@ dependencies {
     implementation(projects.editor)
 
     testImplementation(libs.junit)
-    testImplementation(libs.kotest.runner.junit5)
-    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.bundles.kotest.unit)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.kotest.runner.junit4)
-    androidTestImplementation(libs.kotest.assertions.core)
+    androidTestImplementation(libs.bundles.kotest.android)
 
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)

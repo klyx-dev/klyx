@@ -126,3 +126,50 @@ koin-compiler = { id = "io.insert-koin.compiler.plugin", version.ref = "koin-plu
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
 ktreesitter = { id = "io.github.tree-sitter.ktreesitter-plugin", version.ref = "ktreesitter" }
+
+[bundles]
+androidx-compose = [
+    "androidx-activity-compose",
+    "androidx-compose-material3",
+    "androidx-compose-ui",
+    "androidx-compose-ui-graphics",
+    "androidx-compose-ui-tooling-preview",
+    "androidx-lifecycle-runtime-compose"
+]
+koin = [
+    "koin-android",
+    "koin-compose",
+    "koin-compose-viewmodel",
+    "koin-annotations"
+]
+ktor = [
+    "ktor-client-core",
+    "ktor-client-cio",
+    "ktor-client-content-negotiation",
+    "ktor-serialization-kotlinx-json"
+]
+sora-editor = [
+    "sora-editor",
+    "sora-editor-compose",
+    "sora-oniguruma-native"
+]
+arrow = [
+    "arrow-core",
+    "arrow-fx-coroutines"
+]
+room = [
+    "androidx-room-runtime",
+    "androidx-room-ktx"
+]
+navigation3 = [
+    "androidx-nav3-runtime",
+    "androidx-nav3-ui"
+]
+kotest-unit = [
+    "kotest-runner-junit5",
+    "kotest-assertions-core"
+]
+kotest-android = [
+    "kotest-runner-junit4",
+    "kotest-assertions-core"
+]
