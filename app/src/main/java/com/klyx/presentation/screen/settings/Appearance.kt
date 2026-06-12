@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.rounded.Animation
 import androidx.compose.material.icons.rounded.Contrast
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -36,6 +37,7 @@ import com.klyx.ui.theme.LocalIsDarkMode
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreens.Appearance() {
     val navigator = LocalNavigator.current

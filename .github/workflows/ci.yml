@@ -2,11 +2,20 @@ name: Android CI
 
 on:
   workflow_dispatch:
+
   push:
-    branches: [ main ]
-    paths-ignore: [ "**/*.md" ]
+    branches:
+      - main
+    paths-ignore:
+      - "*.md"
+      - "**/*.md"
+
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
+    paths-ignore:
+      - "*.md"
+      - "**/*.md"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

@@ -43,9 +43,7 @@ tasks.withType<Test>().configureEach {
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
-            "-Xcontext-parameters",
-            "-Xexplicit-backing-fields",
-            "-Xreturn-value-checker=full",
+            "-Xreturn-value-checker=check",
         )
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -145,6 +146,7 @@ private fun rememberIsOnline(): Boolean {
     return isOnline
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
     val navigator = LocalNavigator.current
@@ -442,12 +444,25 @@ private fun UserSetup(onUserCreated: (String) -> Unit) {
                 )
 
                 var userName by remember { mutableStateOf("") }
+                val isRoot by remember {
+                    derivedStateOf {
+                        userName.equals("root", ignoreCase = true)
+                    }
+                }
+
                 val isValid by remember {
-                    derivedStateOf { userName.matches("^[a-z][-a-z0-9_]*$".toRegex()) }
+                    derivedStateOf {
+                        userName.matches("^[a-z][-a-z0-9_]*$".toRegex()) && !isRoot
+                    }
                 }
 
                 val errorMessage by remember {
-                    derivedStateOf { if (!isValid && userName.isNotEmpty()) "Lowercase letters and numbers only" else null }
+                    derivedStateOf {
+                        if (userName.isEmpty()) null
+                        else if (isRoot) "You cannot use your username as \"root\""
+                        else if (!isValid) "Lowercase letters and numbers only"
+                        else null
+                    }
                 }
 
                 OutlinedTextField(
@@ -464,7 +479,7 @@ private fun UserSetup(onUserCreated: (String) -> Unit) {
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { if (isValid) onUserCreated(userName) }),
-                    isError = !isValid && userName.isNotEmpty(),
+                    isError = errorMessage != null,
                     shape = AbsoluteSmoothCornerShape(16.dp, 60),
                     modifier = Modifier.fillMaxWidth()
                 )

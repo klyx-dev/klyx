@@ -99,6 +99,7 @@ import org.koin.compose.koinInject
 import java.util.Locale
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreens.Editor() {
     val navigator = LocalNavigator.current

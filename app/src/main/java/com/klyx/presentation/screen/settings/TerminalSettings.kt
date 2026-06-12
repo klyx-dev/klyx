@@ -7,9 +7,8 @@ import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AdminPanelSettings
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.TextFormat
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -22,7 +21,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.klyx.R
 import com.klyx.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateTerminalSettings
 import com.klyx.presentation.navigation.LocalNavigator
@@ -34,6 +35,7 @@ import com.klyx.terminal.emulator.CursorStyle
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TerminalSettings() {
     val navigator = LocalNavigator.current
@@ -87,7 +89,7 @@ fun TerminalSettings() {
                         onClick = {},
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Rounded.Person,
+                                painterResource(R.drawable.person_24px),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary
                             )
@@ -105,7 +107,7 @@ fun TerminalSettings() {
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Rounded.AdminPanelSettings,
+                                painterResource(R.drawable.admin_panel_settings_24px),
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary
                             )

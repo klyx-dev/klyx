@@ -19,6 +19,7 @@ import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -55,6 +56,7 @@ import kotlinx.collections.immutable.toImmutableList
 import org.koin.compose.viewmodel.koinViewModel
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreens.SystemDiagnostics(
     viewModel: DiagnosticsViewModel = koinViewModel()

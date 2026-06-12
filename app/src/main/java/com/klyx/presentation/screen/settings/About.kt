@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -103,6 +104,7 @@ private val CoreMaintainer = Contributor(
     telegramUrl = "https://t.me/itsvks19",
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingScreens.About() {
     val navigator = LocalNavigator.current

@@ -146,8 +146,6 @@ ksp {
 kotlin {
     compilerOptions {
         freeCompilerArgs.addAll(
-            "-Xcontext-parameters",
-            "-Xexplicit-backing-fields",
             "-Xreturn-value-checker=check",
             "-Xcontext-sensitive-resolution",
             "-opt-in=kotlin.contracts.ExperimentalContracts",
