@@ -197,7 +197,7 @@ private fun AboutHeroCard(
     onVersionLongPress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val heroShape = AbsoluteSmoothCornerShape(30.dp, 60)
+    val heroShape = AbsoluteSmoothCornerShape(30.dp, 30)
     val haptic = LocalHapticFeedback.current
 
     Surface(
