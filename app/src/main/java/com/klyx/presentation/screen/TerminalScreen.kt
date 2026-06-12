@@ -1,5 +1,6 @@
 package com.klyx.presentation.screen
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
@@ -45,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -69,6 +71,7 @@ import com.klyx.data.terminal.FileDownloadState
 import com.klyx.data.terminal.FileDownloadStatus
 import com.klyx.data.terminal.KlyxExtraKeysClient
 import com.klyx.data.terminal.KlyxTerminalClient
+import com.klyx.data.terminal.KlyxTerminalTheme
 import com.klyx.data.terminal.SessionBinder
 import com.klyx.data.terminal.SessionManager
 import com.klyx.data.terminal.TerminalManager
@@ -93,6 +96,7 @@ import com.klyx.terminal.ui.rememberTerminalSessionClient
 import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.ui.theme.LocalIsDarkMode
 import com.klyx.util.humanBytes
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -275,6 +279,8 @@ private fun TerminalEmulator(
     onTitleChange: (String?) -> Unit,
     terminalSettings: TerminalSettings
 ) {
+    applyTerminalTheme()
+
     if (!isServiceBound) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -327,14 +333,13 @@ private fun TerminalEmulator(
         cursorStyle = terminalSettings.cursorStyle
     )
 
-    var session by remember { mutableStateOf<TerminalSession?>(null) }
-
-    LaunchedEffect(sessionClient, user) {
-        session = SessionManager.currentSessionOrNewSession(
+    val session by produceState<TerminalSession?>(null) {
+        val session = SessionManager.currentSessionOrNewSession(
             user = user,
             client = sessionClient
         )
-        onTitleChange(session!!.title)
+        value = session
+        onTitleChange(session.title)
     }
 
     if (session != null) {
@@ -377,6 +382,22 @@ private fun TerminalEmulator(
             Text("Creating session...", fontFamily = JetBrainsMonoFontFamily)
             Spacer(Modifier.height(16.dp))
             CircularWavyProgressIndicator()
+        }
+    }
+}
+
+@SuppressLint("ComposableNaming")
+@Composable
+private fun applyTerminalTheme() {
+    val isDark = LocalIsDarkMode.current
+    val surfaceColor = MaterialTheme.colorScheme.surface
+
+    LaunchedEffect(isDark, surfaceColor) {
+        KlyxTerminalTheme.apply(isDark, surfaceColor)
+
+        SessionManager.sessions.values.forEach { session ->
+            session.emulator?.colors?.reset()
+            session.onColorsChanged()
         }
     }
 }
