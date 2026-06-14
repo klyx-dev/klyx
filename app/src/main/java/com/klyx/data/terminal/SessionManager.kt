@@ -50,6 +50,9 @@ object SessionManager {
 
         val envMap = mutableMapOf<String, String>()
 
+        envMap["PROOT_NO_SECCOMP"] = "1"
+        envMap["PROOT_FORCE_FOREIGN_BINARY"] = "0"
+        envMap["LD_PRELOAD"] = ""
         envMap["PROOT_TMP_DIR"] = tmpDir.absolutePath
         envMap["COLORTERM"] = "truecolor"
         envMap["TERM"] = "xterm-256color"

@@ -57,11 +57,7 @@ export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/syste
 
 COMMAND="(cd $SANDBOX_DIR && tar -xmf $TMP_DIR/sandbox.tar.gz)"
 
-if [ "$FDROID" = false ]; then
-    $PROOT $ARGS /system/bin/sh -c "$COMMAND"
-else
-    $PROOT $ARGS /system/bin/sh -c "$COMMAND"
-fi
+PROOT_NO_SECCOMP=1 $PROOT $ARGS /system/bin/sh -c "$COMMAND"
 
 info "Setting up the Ubuntu container..."
 
