@@ -28,8 +28,9 @@ object TerminalInstaller {
     private const val SYMLINKS_ENTRY = "SYMLINKS.txt"
     private const val SYMLINKS_DELIM = "←"
 
-    suspend fun uninstall() {
-
+    suspend fun uninstall() = withContext(Dispatchers.IO) {
+        if (Paths.prefix.exists()) Paths.prefix.deleteRecursively()
+        if (Paths.versionFile.exists()) Paths.versionFile.delete()
     }
 
     suspend fun installLatest(progress: InstallProgressListener) {

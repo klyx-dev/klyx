@@ -48,7 +48,7 @@ object SessionManager {
     ) = withContext(Dispatchers.IO) {
         val prefix = Paths.prefix
         val home = Paths.home.absolutePath
-        val bash = prefix.resolve("bin/bash").absolutePath
+        val shellFile = findExecutable()
         val linker = "/system/bin/linker64"
 
         val env = mutableListOf(
@@ -64,16 +64,15 @@ object SessionManager {
             "TERM=xterm-256color",
             "LANG=en_US.UTF-8",
             "COLORTERM=truecolor",
-            "SHELL=$bash",
+            "SHELL=${shellFile.absolutePath}",
             "TERMUX_PACKAGE_MANAGER=apt",
             "TERMUX_PACKAGE_ARCH=${currentArchitecture()}",
             "TERMUX__SE_PROCESS_CONTEXT=${getSeLinuxContext()}",
-            "TERMUX_EXEC__PROC_SELF_EXE=$bash",
+            "TERMUX_EXEC__PROC_SELF_EXE=${shellFile.absolutePath}",
             "TERMUX_EXEC__SYSTEM_LINKER_EXEC__MODE=force",
             "LD_PRELOAD=${prefix.resolve("lib/libtermux-exec-linker-ld-preload.so").absolutePath}",
             "PATH=${prefix.absolutePath}/bin:${System.getenv("PATH").orEmpty()}",
             "TERM_PROGRAM=klyx",
-            "KLYX_DEBUG=${BuildConfig.DEBUG}",
             "TERM_PROGRAM_VERSION=${BuildConfig.VERSION_NAME}"
         )
 
@@ -81,6 +80,11 @@ object SessionManager {
         if (certPath.exists()) {
             env += "SSL_CERT_FILE=${certPath.absolutePath}"
             env += "CURL_CA_BUNDLE=${certPath.absolutePath}"
+        }
+
+        if (BuildConfig.DEBUG) {
+            env += "KLYX_DEBUG=true"
+            env += "DEBUG=true"
         }
 
         env += listOf(
@@ -105,7 +109,7 @@ object SessionManager {
         TerminalSession(
             shellPath = linker,
             cwd = home,
-            args = listOf(linker, bash),
+            args = listOf(linker, shellFile.absolutePath),
             env = env,
             client = client
         ).also { session ->

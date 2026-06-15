@@ -26,16 +26,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.klyx.data.fs.Paths
 import com.klyx.presentation.components.dialogs.TerminalWipeConfirmationDialog
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.SettingScreens
 import com.klyx.presentation.screen.settings.components.SettingsItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
-import com.klyx.terminal.prefix
-import com.klyx.terminal.versionFile
+import com.klyx.terminal.TerminalInstaller
 import com.klyx.ui.widgets.LocalToastHostState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,9 +50,8 @@ fun SettingScreens.DeveloperOptions() {
             onDismiss = { showWipeDialog = false },
             onConfirm = {
                 showWipeDialog = false
-                scope.launch(Dispatchers.IO) {
-                    if (Paths.prefix.exists()) Paths.prefix.deleteRecursively()
-                    if (Paths.versionFile.exists()) Paths.versionFile.delete()
+                scope.launch {
+                    TerminalInstaller.uninstall()
                     toastHostState.showToast("Terminal environment wiped")
                 }
             }
