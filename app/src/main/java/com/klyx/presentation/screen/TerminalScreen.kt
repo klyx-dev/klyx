@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -20,31 +21,29 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -52,10 +51,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -67,15 +66,12 @@ import com.klyx.core.event.subscribe
 import com.klyx.core.globalOf
 import com.klyx.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.TerminalSettings
-import com.klyx.data.terminal.ExtraKeys
-import com.klyx.data.terminal.FileDownloadState
-import com.klyx.data.terminal.FileDownloadStatus
+import com.klyx.data.terminal.ExtraTerminalKeys
 import com.klyx.data.terminal.KlyxExtraKeysClient
 import com.klyx.data.terminal.KlyxTerminalClient
 import com.klyx.data.terminal.KlyxTerminalTheme
 import com.klyx.data.terminal.SessionBinder
 import com.klyx.data.terminal.SessionManager
-import com.klyx.data.terminal.TerminalManager
 import com.klyx.event.GlobalEventBus
 import com.klyx.event.terminal.TerminateAllSessionEvent
 import com.klyx.icons.Klyx
@@ -98,7 +94,6 @@ import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.ui.theme.LocalIsDarkMode
-import com.klyx.util.humanBytes
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -132,17 +127,10 @@ private fun rememberIsOnline(): Boolean {
                     trySend(false)
                 }
             }
-
             connectivityManager.registerDefaultNetworkCallback(callback)
-
-            awaitClose {
-                connectivityManager.unregisterNetworkCallback(callback)
-            }
-        }.collectLatest { connected ->
-            isOnline = connected
-        }
+            awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
+        }.collectLatest { isOnline = it }
     }
-
     return isOnline
 }
 
@@ -158,8 +146,6 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
                 navigator.navigateBack()
             }
         }
-
-        TerminalManager.updateSandboxExtractionState()
     }
 
     Scaffold(
@@ -185,25 +171,19 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
                     FilledIconButton(
-                        modifier = Modifier.padding(start = 12.dp, top = 4.dp),
+                        modifier = Modifier.padding(end = 12.dp, top = 4.dp),
                         onClick = { navigator.navigateTo(SettingsScreen.Terminal) },
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Settings,
-                            contentDescription = "Terminal Settings"
-                        )
+                        Icon(Icons.Outlined.Settings, contentDescription = "Terminal Settings")
                     }
                 }
             )
@@ -244,31 +224,184 @@ private fun TerminalContent(
                 binder.bind(context)
             }
         }
-
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    if (uiState.needsDownload) {
+    if (uiState.isChecking) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularWavyProgressIndicator()
+        }
+    } else if (!uiState.isInstalled || uiState.isInstalling || uiState.error != null) {
         TerminalSetup(uiState, viewModel)
     } else {
-        var user by remember { mutableStateOf(terminalSettings.currentUser) }
+        TerminalEmulator(
+            isServiceBound = isServiceBound,
+            navigator = navigator,
+            onTitleChange = onTitleChange,
+            terminalSettings = terminalSettings
+        )
+    }
+}
 
-        if (user == null && !terminalSettings.openAsRoot) {
-            UserSetup { selectedUser ->
-                viewModel.setUsername(selectedUser)
-                user = selectedUser
+@Composable
+private fun TerminalSetup(
+    uiState: TerminalUiState,
+    viewModel: TerminalViewModel
+) {
+    val isOnline = rememberIsOnline()
+
+    LaunchedEffect(uiState.isInstalled, uiState.isInstalling, uiState.error, isOnline) {
+        if (!uiState.isInstalled && !uiState.isInstalling && uiState.error == null && isOnline) {
+            viewModel.startInstallation()
+        }
+    }
+
+    val headerTitle = when {
+        uiState.error != null -> "Installation Failed"
+        uiState.isInstalling && uiState.currentStep.contains("Download", ignoreCase = true) -> "Downloading Terminal"
+        uiState.isInstalling -> "Extracting Environment"
+        !isOnline -> "Network Required"
+        else -> "Terminal Setup"
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = AbsoluteSmoothCornerShape(32.dp, 60),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.terminal_2_24px),
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+
+                Text(
+                    text = headerTitle,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                AnimatedVisibility(visible = !isOnline && !uiState.isInstalling && uiState.error == null) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                text = "Waiting for network connection...",
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontFamily = JetBrainsMonoFontFamily
+                            )
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = uiState.isInstalling) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        val animatedProgress by animateFloatAsState(
+                            targetValue = uiState.progress,
+                            animationSpec = tween<Float>(durationMillis = 300).orSnap(),
+                            label = "setup_progress"
+                        )
+
+                        Text(
+                            text = uiState.currentStep,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontFamily = JetBrainsMonoFontFamily,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier.basicMarquee()
+                        )
+
+                        LinearWavyProgressIndicator(
+                            progress = { animatedProgress },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(CircleShape),
+                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                        )
+
+                        if (uiState.progressText.isNotEmpty()) {
+                            Text(
+                                text = uiState.progressText,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = JetBrainsMonoFontFamily,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.End)
+                            )
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = uiState.error != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Warning,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Text(
+                                    text = uiState.error ?: "Unknown error",
+                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = JetBrainsMonoFontFamily
+                                )
+                            }
+                        }
+
+                        Button(
+                            onClick = { viewModel.startInstallation() },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Retry Installation", fontFamily = GoogleSansRounded, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
             }
-        } else {
-            val resolvedUser = if (terminalSettings.openAsRoot) "root" else user!!
-
-            TerminalEmulator(
-                isServiceBound = isServiceBound,
-                user = resolvedUser,
-                navigator = navigator,
-                onTitleChange = onTitleChange,
-                terminalSettings = terminalSettings
-            )
         }
     }
 }
@@ -276,7 +409,6 @@ private fun TerminalContent(
 @Composable
 private fun TerminalEmulator(
     isServiceBound: Boolean,
-    user: String,
     navigator: Navigator,
     onTitleChange: (String?) -> Unit,
     terminalSettings: TerminalSettings
@@ -336,10 +468,7 @@ private fun TerminalEmulator(
     )
 
     val session by produceState<TerminalSession?>(null) {
-        val session = SessionManager.currentSessionOrNewSession(
-            user = user,
-            client = sessionClient
-        )
+        val session = SessionManager.currentSessionOrNewSession(client = sessionClient)
         value = session
         onTitleChange(session.title)
     }
@@ -366,7 +495,7 @@ private fun TerminalEmulator(
 
             ExtraKeys(
                 extraKeysInfo = ExtraKeysInfo(
-                    propertiesInfo = json.encodeToString(ExtraKeys),
+                    propertiesInfo = json.encodeToString(ExtraTerminalKeys),
                     style = ExtraKeyStyle.ArrowsOnly,
                     extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
                 ),
@@ -400,279 +529,6 @@ private fun applyTerminalTheme() {
         SessionManager.sessions.values.forEach { session ->
             session.emulator?.colors?.reset()
             session.onColorsChanged()
-        }
-    }
-}
-
-@Composable
-private fun UserSetup(onUserCreated: (String) -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            shape = AbsoluteSmoothCornerShape(32.dp, 60),
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            modifier = Modifier.fillMaxWidth(0.85f)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                modifier = Modifier.padding(24.dp)
-            ) {
-
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .background(MaterialTheme.colorScheme.secondaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.terminal_2_24px),
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
-                }
-
-                Text(
-                    text = "Create Sandbox User",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                var userName by remember { mutableStateOf("") }
-                val isRoot by remember {
-                    derivedStateOf {
-                        userName.equals("root", ignoreCase = true)
-                    }
-                }
-
-                val isValid by remember {
-                    derivedStateOf {
-                        userName.matches("^[a-z][-a-z0-9_]*$".toRegex()) && !isRoot
-                    }
-                }
-
-                val errorMessage by remember {
-                    derivedStateOf {
-                        if (userName.isEmpty()) null
-                        else if (isRoot) "You cannot use your username as \"root\""
-                        else if (!isValid) "Lowercase letters and numbers only"
-                        else null
-                    }
-                }
-
-                OutlinedTextField(
-                    value = userName,
-                    onValueChange = { userName = it.lowercase().trim() },
-                    placeholder = { Text("username") },
-                    supportingText = {
-                        Text(
-                            text = errorMessage ?: "Used for terminal login",
-                            fontFamily = JetBrainsMonoFontFamily,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { if (isValid) onUserCreated(userName) }),
-                    isError = errorMessage != null,
-                    shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Button(
-                    onClick = { onUserCreated(userName) },
-                    shape = AbsoluteSmoothCornerShape(16.dp, 60),
-                    enabled = isValid,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                ) {
-                    Text(
-                        text = "Initialize",
-                        fontFamily = GoogleSansRounded,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TerminalSetup(
-    uiState: TerminalUiState,
-    viewModel: TerminalViewModel
-) {
-    val isOnline = rememberIsOnline()
-
-    LaunchedEffect(uiState.needsDownload, isOnline) {
-        if (uiState.needsDownload && isOnline) {
-            viewModel.startDownloads()
-        }
-    }
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-        ) {
-
-            Icon(
-                painter = painterResource(R.drawable.terminal_2_24px),
-                contentDescription = null,
-                modifier = Modifier.size(72.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-
-            Text(
-                text = "Initializing Sandbox",
-                style = MaterialTheme.typography.headlineSmall,
-                fontFamily = GoogleSansRounded,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            if (!isOnline && uiState.needsDownload) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.errorContainer
-                ) {
-                    Text(
-                        text = "Waiting for network connection...",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontFamily = JetBrainsMonoFontFamily
-                    )
-                }
-            }
-
-            if (uiState.error == null) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    uiState.files.forEach { file ->
-                        DownloadItemCard(file = file)
-                    }
-                }
-            }
-
-            uiState.error?.let {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Error: $it",
-                        modifier = Modifier.padding(16.dp),
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontFamily = JetBrainsMonoFontFamily
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DownloadItemCard(file: FileDownloadState) {
-    val isDone = file.status == FileDownloadStatus.Done
-
-    val animatedProgress by animateFloatAsState(
-        targetValue = file.progress,
-        animationSpec = tween<Float>(durationMillis = 300).orSnap(),
-        label = "download_progress"
-    )
-
-    Surface(
-        shape = AbsoluteSmoothCornerShape(16.dp, 60),
-        color = if (isDone) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerLow,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = file.displayName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontFamily = JetBrainsMonoFontFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isDone) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                )
-
-                Text(
-                    text = when (file.status) {
-                        FileDownloadStatus.Pending -> "Pending"
-                        FileDownloadStatus.Downloading -> "${(file.progress * 100).toInt()}%"
-                        FileDownloadStatus.Extracting -> "Extracting..."
-                        FileDownloadStatus.Done -> "Complete"
-                        FileDownloadStatus.Failed -> "Failed"
-                    },
-                    style = MaterialTheme.typography.labelMedium,
-                    fontFamily = JetBrainsMonoFontFamily,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            if (!isDone) {
-                when (file.status) {
-                    FileDownloadStatus.Downloading -> {
-                        LinearWavyProgressIndicator(
-                            progress = { animatedProgress },
-                            modifier = Modifier.fillMaxWidth(),
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                        )
-                        Text(
-                            text = "${file.downloaded.humanBytes()} / ${file.total.humanBytes()}",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontFamily = JetBrainsMonoFontFamily,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.align(Alignment.End)
-                        )
-                    }
-
-                    FileDownloadStatus.Extracting -> {
-                        LinearWavyProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                        )
-                    }
-
-                    FileDownloadStatus.Pending -> {
-                        LinearWavyProgressIndicator(
-                            progress = { 0f },
-                            modifier = Modifier.fillMaxWidth(),
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                        )
-                    }
-
-                    FileDownloadStatus.Failed -> {
-                        LinearProgressIndicator(
-                            progress = { 1f },
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
         }
     }
 }

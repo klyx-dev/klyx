@@ -42,7 +42,7 @@ android {
     }
 
     signingConfigs {
-        val releaseConfig by creating {
+        create("releaseConfig") {
             val isCI = System.getenv("GITHUB_ACTIONS")?.toBoolean() ?: false
 
             val propPath = if (isCI) {
@@ -86,7 +86,8 @@ android {
         }
 
         debug {
-            applicationIdSuffix = ".debug"
+            //applicationIdSuffix = ".debug"
+            signingConfig = releaseConfig
             versionNameSuffix = "-debug"
             resValue("string", "app_name", "Klyx [D]")
         }

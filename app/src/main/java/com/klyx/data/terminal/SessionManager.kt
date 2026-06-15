@@ -1,17 +1,24 @@
 package com.klyx.data.terminal
 
+import android.util.Log
 import com.klyx.BuildConfig
 import com.klyx.data.fs.Paths
 import com.klyx.event.GlobalEventBus
 import com.klyx.event.terminal.NewSessionEvent
 import com.klyx.event.terminal.SessionTerminateEvent
 import com.klyx.event.terminal.TerminateAllSessionEvent
+import com.klyx.platform.currentArchitecture
+import com.klyx.terminal.bin
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
+import com.klyx.terminal.home
+import com.klyx.terminal.prefix
+import com.klyx.terminal.rootFs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 import kotlin.uuid.Uuid
 
 object SessionManager {
@@ -22,97 +29,117 @@ object SessionManager {
 
     suspend fun getOrCreateSession(
         id: Uuid,
-        user: String,
         client: TerminalSessionClient
     ): TerminalSession {
         return lock.withLock { sessions[id] }?.let { session ->
             if (session.isRunning.value) session else null
-        } ?: newSession(user, client, id)
+        } ?: newSession(client, id)
     }
 
     suspend fun currentSessionOrNewSession(
-        user: String,
         client: TerminalSessionClient
     ): TerminalSession {
-        return getOrCreateSession(currentSessionId ?: Uuid.generateV7(), user, client)
+        return getOrCreateSession(currentSessionId ?: Uuid.generateV7(), client)
     }
 
     suspend fun newSession(
-        user: String,
         client: TerminalSessionClient,
         id: Uuid = Uuid.generateV7()
     ) = withContext(Dispatchers.IO) {
-        val filesDir = Paths.filesDir
-        val tmpDir = Paths.tempDir.resolve("terminal/$id").also { it.mkdirs() }
-        val sandboxDir = Paths.dataDir.resolve("sandbox").also { it.mkdirs() }
+        val prefix = Paths.prefix
+        val home = Paths.home.absolutePath
+        val bash = prefix.resolve("bin/bash").absolutePath
+        val linker = "/system/bin/linker64"
 
-        val cwd = if (user == "root") "/" else "/home/$user"
+        val env = mutableListOf(
+            "HOME=$home",
+            "PREFIX=${prefix.absolutePath}",
+            "TERMUX__ROOTFS=${Paths.rootFs.absolutePath}",
+            "TERMUX__PREFIX=${prefix.absolutePath}",
+            "TERMUX__HOME=$home",
+            "TERMUX_APP__DATA_DIR=${Paths.dataDir.absolutePath}",
+            "TERMUX_APP__LEGACY_DATA_DIR=${Paths.dataDir.absolutePath}",
+            "TERMUX_APP__PACKAGE_NAME=com.klyx",
+            "TMPDIR=${prefix.resolve("tmp").absolutePath}",
+            "TERM=xterm-256color",
+            "LANG=en_US.UTF-8",
+            "COLORTERM=truecolor",
+            "SHELL=$bash",
+            "TERMUX_PACKAGE_MANAGER=apt",
+            "TERMUX_PACKAGE_ARCH=${currentArchitecture()}",
+            "TERMUX__SE_PROCESS_CONTEXT=${getSeLinuxContext()}",
+            "TERMUX_EXEC__PROC_SELF_EXE=$bash",
+            "TERMUX_EXEC__SYSTEM_LINKER_EXEC__MODE=force",
+            "LD_PRELOAD=${prefix.resolve("lib/libtermux-exec-linker-ld-preload.so").absolutePath}",
+            "PATH=${prefix.absolutePath}/bin:${System.getenv("PATH").orEmpty()}",
+            "TERM_PROGRAM=klyx",
+            "KLYX_DEBUG=${BuildConfig.DEBUG}",
+            "TERM_PROGRAM_VERSION=${BuildConfig.VERSION_NAME}"
+        )
 
-        val envMap = mutableMapOf<String, String>()
-
-        envMap["PROOT_NO_SECCOMP"] = "1"
-        envMap["PROOT_FORCE_FOREIGN_BINARY"] = "0"
-        envMap["LD_PRELOAD"] = ""
-        envMap["PROOT_TMP_DIR"] = tmpDir.absolutePath
-        envMap["COLORTERM"] = "truecolor"
-        envMap["TERM"] = "xterm-256color"
-        envMap["USER"] = user
-        envMap["HOME"] = cwd
-        envMap["TZ"] = "UTC"
-        envMap["WKDIR"] = cwd
-        envMap["PUBLIC_HOME"] = Paths.externalFilesDir.absolutePath
-        envMap["LANG"] = "C.UTF-8"
-        envMap["DEBUG"] = BuildConfig.DEBUG.toString()
-
-        val usrDir = filesDir.resolve("usr")
-
-        envMap["LOCAL"] = usrDir.absolutePath
-        envMap["PROOT"] = Paths.nativeLibraryDir.resolve("libproot.so").absolutePath
-        envMap["PROOT_LOADER"] = Paths.nativeLibraryDir.resolve("libloader.so").absolutePath
-
-        envMap["PATH"] =
-            "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/system/bin:/system/xbin"
-
-        envMap["SANDBOX_DIR"] = sandboxDir.absolutePath
-        envMap["PROMPT_DIRTRIM"] = "2"
-        envMap["LINKER"] = "/system/bin/linker64"
-        envMap["LINKER32"] = "/system/bin/linker"
-        envMap["TMP_DIR"] = Paths.tempDir.absolutePath
-        envMap["TMPDIR"] = Paths.tempDir.absolutePath
-        envMap["DATADIR"] = Paths.dataDir.absolutePath
-        envMap["PENDING_CMD"] = "false"
-        envMap["DISPLAY"] = ":0"
-
-        val env = envMap.map { "${it.key}=${it.value}" }
-
-        val bin = filesDir.resolve("usr/bin")
-        val sandboxSH = bin.resolve("sandbox")
-        val setupSH = bin.resolve("setup")
-
-        val argsv = arrayOf("-c", sandboxSH.toString())
-        val shell = "/system/bin/sh"
-
-        val args = if (TerminalManager.environmentState.value.isSandboxExtractionNeeded) {
-            listOf("-c", setupSH.absolutePath, *argsv)
-        } else {
-            listOf("-c", sandboxSH.absolutePath)
+        val certPath = prefix.resolve("etc/tls/cert.pem")
+        if (certPath.exists()) {
+            env += "SSL_CERT_FILE=${certPath.absolutePath}"
+            env += "CURL_CA_BUNDLE=${certPath.absolutePath}"
         }
 
-        withContext(Dispatchers.Main) {
-            TerminalSession(
-                shellPath = shell,
-                cwd = filesDir.absolutePath,
-                args = args,
-                env = env,
-                client = client
-            ).also { session ->
-                GlobalEventBus.publish(NewSessionEvent(id, session))
-                lock.withLock {
-                    sessions[id] = session
-                    currentSessionId = id
-                }
+        env += listOf(
+            "ANDROID_ART_ROOT",
+            "ANDROID_ASSETS",
+            "ANDROID_DATA",
+            "ANDROID_I18N_ROOT",
+            "ANDROID_ROOT",
+            "ANDROID_RUNTIME_ROOT",
+            "ANDROID_STORAGE",
+            "ANDROID_TZDATA_ROOT",
+            "ASEC_MOUNTPOINT",
+            "BOOTCLASSPATH",
+            "DEX2OATBOOTCLASSPATH",
+            "EXTERNAL_STORAGE",
+            "LOOP_MOUNTPOINT",
+            "SYSTEMSERVERCLASSPATH",
+        ).mapNotNull { key ->
+            System.getenv(key)?.let { "$key=$it" }
+        }
+
+        TerminalSession(
+            shellPath = linker,
+            cwd = home,
+            args = listOf(linker, bash),
+            env = env,
+            client = client
+        ).also { session ->
+            GlobalEventBus.publish(NewSessionEvent(id, session))
+            lock.withLock {
+                sessions[id] = session
+                currentSessionId = id
             }
         }
+    }
+
+    private fun findExecutable(): File {
+        var executable: File? = null
+
+        val shellFile = Paths.bin.resolve("bash")
+        if (shellFile.isFile) {
+            if (!shellFile.canExecute()) {
+                if (!shellFile.setExecutable(true)) {
+                    Log.e("SessionManager", "Cannot set executable: ${shellFile.absolutePath}")
+                }
+            }
+            executable = shellFile
+        } else {
+            Log.e("SessionManager", "bin/bash not found")
+        }
+
+        return executable ?: File("/system/bin/sh")
+    }
+
+    private fun getSeLinuxContext() = try {
+        val process = Runtime.getRuntime().exec(arrayOf("/system/bin/cat", "/proc/self/attr/current"))
+        process.inputStream.bufferedReader().readLine()?.trim() ?: ""
+    } catch (_: Exception) {
+        ""
     }
 
     suspend fun terminate(id: Uuid) {

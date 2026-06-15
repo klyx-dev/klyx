@@ -21,16 +21,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.klyx.R
 import com.klyx.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateTerminalSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
-import com.klyx.presentation.screen.settings.components.SettingsItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
-import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import com.klyx.terminal.emulator.CursorStyle
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
@@ -79,43 +75,6 @@ fun TerminalSettings() {
                 bottom = 16.dp
             )
         ) {
-
-            item {
-                SettingsSubsection(title = "Session") {
-
-                    SettingsItem(
-                        title = "Current User",
-                        subtitle = settings.currentUser ?: "Not initialized",
-                        onClick = {},
-                        leadingIcon = {
-                            Icon(
-                                painterResource(R.drawable.person_24px),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Open as Root",
-                        subtitle = "Start terminal sessions as the root user",
-                        checked = settings.openAsRoot,
-                        onCheckedChange = { isChecked ->
-                            scope.launch {
-                                updateTerminalSettings { copy(openAsRoot = isChecked) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                painterResource(R.drawable.admin_panel_settings_24px),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-                }
-            }
-
             item {
                 SettingsSubsection(title = "Emulator") {
                     SelectorItem(

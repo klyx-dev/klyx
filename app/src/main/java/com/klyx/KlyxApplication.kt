@@ -39,7 +39,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
         launch {
             withContext(Dispatchers.IO) {
-                setupTerminalFiles()
+                //setupTerminalFiles()
             }
         }
     }

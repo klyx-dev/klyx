@@ -2,7 +2,7 @@ package com.klyx.data.terminal
 
 import kotlinx.serialization.Serializable
 
-val ExtraKeys = listOf(
+val ExtraTerminalKeys = listOf(
     listOf(
         ExtraKey(key = "ESC"),
         ExtraKey(key = "/", popup = ExtraKey(key = "\\\\")),

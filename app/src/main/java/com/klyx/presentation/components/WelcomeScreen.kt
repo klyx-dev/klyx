@@ -49,24 +49,24 @@ fun WelcomeScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = KlyxIcons.Klyx,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
+//        Box(
+//            modifier = Modifier
+//                .size(96.dp)
+//                .background(
+//                    color = MaterialTheme.colorScheme.primaryContainer,
+//                    shape = CircleShape
+//                ),
+//            contentAlignment = Alignment.Center
+//        ) {
+//            Icon(
+//                imageVector = KlyxIcons.Klyx,
+//                contentDescription = null,
+//                modifier = Modifier.size(48.dp),
+//                tint = MaterialTheme.colorScheme.onPrimaryContainer
+//            )
+//        }
+//
+//        Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "K L Y X",

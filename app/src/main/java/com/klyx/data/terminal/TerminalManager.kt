@@ -92,7 +92,7 @@ object TerminalManager : KoinComponent {
 
             environmentState.update {
                 it.copy(
-                    needsDownload = downloads.isNotEmpty(),
+                    needsDownload = false,
                     isSandboxExtractionNeeded = extractionNeeded,
                     files = downloads.map { d ->
                         FileDownloadState(
@@ -181,16 +181,5 @@ object TerminalManager : KoinComponent {
     private fun isRootFsInstalled(): Boolean {
         val osRelease = sandbox.resolve("etc/os-release")
         return osRelease.exists()
-    }
-
-    private fun packageOutPath(name: String): File = Paths.tempDir.resolve("$name.tar.gz")
-
-    private fun packageDownloadableFile(name: String) =
-        DownloadableFile(url = packageUrl(name), outputPath = packageOutPath(name).toString())
-
-    private fun packageUrl(name: String) = when (val arch = currentArchitecture()) {
-        Architecture.Aarch64 -> "https://github.com/klyx-dev/klyx-packages/raw/refs/heads/main/$name/$name-aarch64.tar.gz"
-        Architecture.X8664 -> "https://github.com/klyx-dev/klyx-packages/raw/refs/heads/main/$name/$name-x86_64.tar.gz"
-        else -> error("Unsupported ABI: $arch")
     }
 }
