@@ -1,5 +1,7 @@
 -dontwarn com.sun.nio.file.ExtendedOpenOption
 -dontwarn org.joni.**
+-dontwarn com.github.luben.zstd.**
+-dontwarn org.tukaani.xz.**
 
 -keep class kotlin.UInt { *; }
 -keep class kotlin.UShort { *; }
