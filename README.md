@@ -29,7 +29,7 @@ cd klyx
 
 ## Requirements
 
-* Android 8.0 (API 26) or later
+* Android 9.0 (API 28) or later
 * Android Studio Meerkat or newer
 * Android SDK and NDK
 
