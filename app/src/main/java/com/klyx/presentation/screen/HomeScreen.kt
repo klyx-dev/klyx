@@ -1446,22 +1446,8 @@ private fun WorkspaceTab.TextFile.createEditorState(): CodeEditorState {
 
     LaunchedEffect(Unit) {
         state.lineNumberMarginLeft = with(density) { 5.dp.toPx() }
-        context(treeSitter) { state.editorLanguage = language() }
+        state.editorLanguage = treeSitter.getLanguageForExtension(file.extension)
     }
 
     return state
-}
-
-context(ts: TreeSitter)
-private fun WorkspaceTab.TextFile.language() = with(ts) {
-    when (file.extension) {
-        "java" -> java()
-        "py" -> python()
-        "html", "htm" -> html()
-        "c", "h" -> c()
-        "css" -> css()
-        "js" -> javascript()
-        "jsx" -> jsx()
-        else -> EmptyLanguage()
-    }
 }

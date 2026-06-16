@@ -39,6 +39,6 @@ includeBuild("external/sora-editor")
 
 include(":app", ":terminal", ":editor", ":core")
 
-file("languages").listFiles { it.isDirectory }?.forEach {
+file("languages").listFiles { it.isDirectory && it.name.startsWith("tree-sitter-") }?.forEach {
     include(":languages:${it.name}")
 }
