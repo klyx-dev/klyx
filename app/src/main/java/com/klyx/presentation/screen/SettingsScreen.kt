@@ -108,14 +108,14 @@ fun SettingsScreen() {
                 )
             }
 
-            if (BuildConfig.DEBUG) {
+            //if (BuildConfig.DEBUG) {
                 item {
                     SettingsCategoryItem(
                         category = SettingsCategory.DeveloperOptions,
                         onClick = { navigator.navigateTo(SettingsScreen.DeveloperOptions) }
                     )
                 }
-            }
+            //}
 
             item {
                 SettingsCategoryItem(
