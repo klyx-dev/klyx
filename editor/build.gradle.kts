@@ -98,7 +98,8 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             "jsx" to listOf("jsx"),
             "html" to listOf("html", "htm"),
             "python" to listOf("py"),
-            "rust" to listOf("rs")
+            "rust" to listOf("rs"),
+            "kotlin" to listOf("kt", "kts"),
         )
 
         // Accumulators for TreeSitter.kt
