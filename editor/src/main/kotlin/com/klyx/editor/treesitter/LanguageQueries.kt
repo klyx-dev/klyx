@@ -1,8 +1,10 @@
 package com.klyx.editor.treesitter
 
 import android.content.Context
+import android.util.Log
 import io.github.treesitter.ktreesitter.Language
 import io.github.treesitter.ktreesitter.Query
+import io.github.treesitter.ktreesitter.QueryError
 
 data class LanguageQueries(
     val languageName: String,
@@ -68,20 +70,25 @@ data class LanguageQueries(
         ): LanguageQueries {
             val highlights = loadQuery(context, languageName, "highlights")
                 ?: throw IllegalArgumentException("Missing highlights query for $languageName")
-            val indents = loadQuery(context, languageName, "indents")
-            val folds = loadQuery(context, languageName, "folds")
-            val locals = loadQuery(context, languageName, "locals")
-            val injections = loadQuery(context, languageName, "injections")
-            val tags = loadQuery(context, languageName, "tags")
+
+            fun parseQuery(queryName: String): Query? {
+                return try {
+                    val query = loadQuery(context, languageName, queryName)
+                    query?.let { Query(language, it) }
+                } catch (e: QueryError) {
+                    Log.w("Klyx", "Failed to parse query: $queryName.scm for language '$languageName'", e)
+                    null
+                }
+            }
 
             return LanguageQueries(
                 languageName = languageName,
                 highlights = Query(language, highlights),
-                indents = indents?.let { Query(language, it) },
-                folds = folds?.let { Query(language, it) },
-                locals = locals?.let { Query(language, it) },
-                injections = injections?.let { Query(language, it) },
-                tags = tags?.let { Query(language, it) }
+                indents = parseQuery("indents"),
+                folds = parseQuery("folds"),
+                locals = parseQuery("locals"),
+                injections = parseQuery("injections"),
+                tags = parseQuery("tags")
             )
         }
 
