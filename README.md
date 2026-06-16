@@ -23,7 +23,7 @@ Download the latest release from the [Releases](https://github.com/klyx-dev/klyx
 ```bash
 git clone --recurse-submodules https://github.com/klyx-dev/klyx.git
 cd klyx
-./gradlew generateGrammarFiles
+./gradlew prepareTreeSitter
 ./gradlew assembleDebug
 ```
 

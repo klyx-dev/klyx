@@ -32,3 +32,6 @@
 [submodule "languages/tree-sitter-comment"]
 	path = languages/tree-sitter-comment
 	url = https://github.com/stsewd/tree-sitter-comment
+[submodule "languages/tree-sitter-typescript"]
+	path = languages/tree-sitter-typescript
+	url = https://github.com/tree-sitter/tree-sitter-typescript

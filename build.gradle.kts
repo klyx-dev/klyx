@@ -1,6 +1,6 @@
 import com.android.build.api.dsl.LibraryExtension
-import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import io.github.treesitter.ktreesitter.plugin.GrammarExtension
+import io.github.treesitter.ktreesitter.plugin.GrammarFilesTask
 import java.util.Locale
 
 plugins {
@@ -14,10 +14,14 @@ plugins {
     alias(libs.plugins.ktreesitter) apply false
 }
 
-tasks.register("generateGrammarFiles") {
+tasks.register("prepareTreeSitter") {
     group = "build setup"
     description = "Generate all tree-sitter grammar files"
-    dependsOn(subprojects.mapNotNull { it.tasks.findByName("generateGrammarFiles") })
+    dependsOn(
+        subprojects
+            .filter { it.path.startsWith(":languages:tree-sitter-") }
+            .map { it.tasks.named("generateGrammarFiles") }
+    )
 }
 
 subprojects {
@@ -45,11 +49,11 @@ subprojects {
             packageName = "com.klyx.languages.$langName"
         }
 
-        val generateTask = tasks.named("generateGrammarFiles")
+        val generateTask = tasks.named<GrammarFilesTask>("generateGrammarFiles")
 
         generateTask.configure {
             doLast {
-                val genSrcDir = (property("generatedSrc") as DirectoryProperty).get().asFile
+                val genSrcDir = generatedSrc.get().asFile
 
                 val targetDir = genSrcDir.resolve("androidMain/kotlin")
                 if (targetDir.exists()) {
@@ -76,7 +80,7 @@ subprojects {
                 }
 
                 val bindingFile = genSrcDir.resolve("jni/binding.c")
-                val cmakeFile = (property("cmakeListsFile") as RegularFileProperty).get().asFile
+                val cmakeFile = cmakeListsFile.get().asFile
 
                 if (bindingFile.exists()) {
                     var content = bindingFile.readText()
@@ -84,7 +88,10 @@ subprojects {
 
                     val hasTreeSitterSubdir =
                         projectDir.resolve("bindings/c/tree_sitter/tree-sitter-${langName}.h").exists() ||
-                                projectDir.resolve("src/tree_sitter/tree-sitter-${langName}.h").exists()
+                                projectDir.resolve("src/tree_sitter/tree-sitter-${langName}.h").exists() ||
+                                projectDir.parentFile.resolve("bindings/c/tree_sitter/tree-sitter-${langName}.h")
+                                    .exists()
+
                     val hasAnyHeader = hasTreeSitterSubdir ||
                             projectDir.resolve("bindings/c/tree-sitter-${langName}.h").exists() ||
                             projectDir.resolve("src/tree-sitter-${langName}.h").exists()
@@ -125,6 +132,11 @@ subprojects {
                         )
                     }
 
+                    val includePaths = mutableListOf($$"${CMAKE_CURRENT_SOURCE_DIR}/../../src")
+                    if (projectDir.parentFile.resolve("bindings/c").exists()) {
+                        includePaths.add($$"${CMAKE_CURRENT_SOURCE_DIR}/../../../bindings/c")
+                    }
+
                     // ensure src/ is in the include directories so <tree_sitter/parser.h> resolves
                     val includeDirString =
                         $$"target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)"
@@ -146,11 +158,15 @@ subprojects {
             defaultConfig {
                 minSdk = 28
                 resValue("string", "version", versionStr)
+
+                ndk {
+                    abiFilters += listOf("arm64-v8a", "x86_64")
+                }
             }
 
             externalNativeBuild {
                 cmake {
-                    path = (generateTask.get().property("cmakeListsFile") as RegularFileProperty).get().asFile
+                    path = generateTask.get().cmakeListsFile.get().asFile
                     buildStagingDirectory = file(".cmake")
                     version = property("cmake.version") as String
                 }
@@ -167,7 +183,7 @@ subprojects {
 
             sourceSets {
                 getByName("main") {
-                    val genSrcDir = (generateTask.get().property("generatedSrc") as DirectoryProperty).get().asFile
+                    val genSrcDir = generateTask.get().generatedSrc.get().asFile
                     kotlin.directories += genSrcDir.resolve("androidMain/kotlin").absolutePath
                 }
             }

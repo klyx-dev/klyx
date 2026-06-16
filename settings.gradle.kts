@@ -39,6 +39,16 @@ includeBuild("external/sora-editor")
 
 include(":app", ":terminal", ":editor", ":core")
 
-file("languages").listFiles { it.isDirectory && it.name.startsWith("tree-sitter-") }?.forEach {
-    include(":languages:${it.name}")
+file("languages").listFiles()?.filter { it.isDirectory && it.name.startsWith("tree-sitter-") }?.forEach { repoDir ->
+    val innerGrammars = repoDir.listFiles { f -> f.isDirectory && (f.name == "typescript" || f.name == "tsx") }
+
+    if (innerGrammars.isNullOrEmpty()) {
+        include(":languages:${repoDir.name}")
+    } else {
+        innerGrammars.forEach { subFolder ->
+            val projectName = if (subFolder.name == "typescript") repoDir.name else "tree-sitter-${subFolder.name}"
+            include(":languages:$projectName")
+            project(":languages:$projectName").projectDir = subFolder
+        }
+    }
 }

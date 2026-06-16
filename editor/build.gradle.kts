@@ -96,6 +96,8 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             "cpp" to listOf("cpp", "cc", "cxx", "hpp", "hh", "hxx"),
             "javascript" to listOf("js"),
             "jsx" to listOf("jsx"),
+            "typescript" to listOf("ts"),
+            "tsx" to listOf("tsx"),
             "html" to listOf("html", "htm"),
             "python" to listOf("py"),
             "rust" to listOf("rs"),
@@ -230,11 +232,11 @@ val generateTreeSitterRegistry by tasks.registering(GenerateTreeSitterTask::clas
     group = "build setup"
     description = "Generates the TreeSitter class dynamically based on installed submodules"
 
-    val languagesDir = rootProject.file("languages")
-    val modules = languagesDir.listFiles { it -> it.isDirectory && it.name.startsWith("tree-sitter-") }
-        ?.map { it.name.removePrefix("tree-sitter-") } ?: emptyList()
+    val activeModules = provider {
+        rootProject.project("languages").subprojects.map { it.name.removePrefix("tree-sitter-") }
+    }
 
-    languageModules.set(modules)
+    languageModules.set(activeModules)
 }
 
 androidComponents {
