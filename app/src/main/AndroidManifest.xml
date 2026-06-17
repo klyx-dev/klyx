@@ -65,5 +65,16 @@
             android:name=".platform.service.TerminalService"
             android:exported="false"
             android:foregroundServiceType="specialUse" />
+
+        <provider
+            android:name=".terminal.TerminalDocumentsProvider"
+            android:authorities="${applicationId}.terminal.documents"
+            android:exported="true"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
     </application>
 </manifest>

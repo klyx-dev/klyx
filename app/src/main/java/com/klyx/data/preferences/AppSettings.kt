@@ -27,6 +27,7 @@ data class TerminalSettings(
     val cursorBlink: Boolean = true,
     val scrollbackLines: Int = 2000,
     val extraKeysStyle: ExtraKeyStyle = ExtraKeyStyle.ArrowsOnly,
+    val exposeTerminalHomeViaSaf: Boolean = false,
 )
 
 enum class AppTheme(val displayName: String) {

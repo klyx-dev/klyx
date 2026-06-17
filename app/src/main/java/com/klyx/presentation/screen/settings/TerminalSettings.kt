@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FlashOn
 import androidx.compose.material.icons.rounded.Keyboard
@@ -67,6 +68,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -86,6 +88,8 @@ import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import com.klyx.terminal.BellSoundType
 import com.klyx.terminal.BootstrapUpdateChecker
 import com.klyx.terminal.InstallProgressListener
+import com.klyx.terminal.SafExposureState
+import com.klyx.terminal.TerminalDocumentsProvider
 import com.klyx.terminal.TerminalInstaller
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.prefix
@@ -102,6 +106,7 @@ import kotlinx.coroutines.launch
 fun TerminalSettings() {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val toastHostState = LocalToastHostState.current
 
@@ -576,7 +581,6 @@ fun TerminalSettings() {
                     if (isInvalidAndHasLatest) {
                         InvalidBootstrapVersionCard(
                             version = installedVersion ?: "?",
-                            to = latestVersion ?: "?",
                             onClick = { showReinstallDialog = true }
                         )
                     }
@@ -603,6 +607,32 @@ fun TerminalSettings() {
                             }
                         )
                     }
+
+                    var safExposed by remember { mutableStateOf(settings.exposeTerminalHomeViaSaf) }
+                    LaunchedEffect(settings.exposeTerminalHomeViaSaf) {
+                        safExposed = settings.exposeTerminalHomeViaSaf
+                    }
+
+                    SwitchSettingItem(
+                        title = "Expose Terminal Home via SAF",
+                        subtitle = "Allow file managers to access the terminal home directory through the Storage Access Framework.",
+                        checked = safExposed,
+                        onCheckedChange = { enabled ->
+                            safExposed = enabled
+                            SafExposureState.enabled = enabled
+                            TerminalDocumentsProvider.notifyRootsChanged(context)
+                            scope.launch {
+                                updateTerminalSettings { copy(exposeTerminalHomeViaSaf = enabled) }
+                            }
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.FolderOpen,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    )
                 }
             }
         }
@@ -712,7 +742,7 @@ private fun UpdateAvailableBootstrapCard(from: String, to: String, onClick: () -
 }
 
 @Composable
-private fun InvalidBootstrapVersionCard(version: String, to: String, onClick: () -> Unit) {
+private fun InvalidBootstrapVersionCard(version: String, onClick: () -> Unit) {
     Surface(
         onClick = onClick,
         color = MaterialTheme.colorScheme.surfaceContainer,
