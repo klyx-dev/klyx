@@ -1,5 +1,6 @@
 package com.klyx.terminal
 
+import android.content.Context
 import android.os.Build
 import android.os.Environment
 import android.system.ErrnoException
@@ -14,9 +15,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.zip.ZipFile
 import java.io.File
+import java.nio.file.CopyOption
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.EnumSet
 
 interface InstallProgressListener {
     fun step(label: String)
@@ -31,6 +36,45 @@ object TerminalInstaller {
     suspend fun uninstall() = withContext(Dispatchers.IO) {
         if (Paths.prefix.exists()) Paths.prefix.deleteRecursively()
         if (Paths.versionFile.exists()) Paths.versionFile.delete()
+    }
+
+    suspend fun installFromAsset(context: Context, assetName: String, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
+        progress.step("Wiping existing installation")
+        uninstall()
+
+        val tempZip = File.createTempFile("bootstrap_asset", ".zip", Paths.prefix.parentFile).apply {
+            deleteOnExit()
+        }
+
+        try {
+            progress.step("Copying $assetName from assets")
+            progress.progress(0, 1)
+
+            context.assets.open(assetName).use { input ->
+                tempZip.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            progress.progress(1, 1)
+            extractBootstrap(tempZip, progress)
+
+            progress.step("Finalizing setup")
+            Paths.home.mkdirs()
+            Paths.projects.mkdirs()
+            setupStorageSymlinks(progress)
+            Paths.versionFile.parentFile?.mkdirs()
+            Paths.versionFile.writeText("debug-asset")
+
+            progress.step("Bootstrap installed from asset")
+        } catch (e: Exception) {
+            progress.warn("Installation from asset failed: ${e.message}")
+            throw e
+        } finally {
+            if (tempZip.exists()) {
+                tempZip.delete()
+            }
+        }
     }
 
     suspend fun installLatest(progress: InstallProgressListener) {
@@ -105,7 +149,10 @@ object TerminalInstaller {
         return remote.toVersionParts().compareTo(local.toVersionParts()) > 0
     }
 
-    private fun String.toVersionParts() = split(".").map { it.toInt() }
+    private val versionRegex = Regex("""^\d{4}\.\d{2}\.\d{2}\.\d+$""")
+    fun isValidBootstrapVersion(version: String) = versionRegex.matches(version)
+
+    private fun String.toVersionParts() = split(".").map { it.toIntOrNull() ?: 0 }
 
     private suspend fun extractBootstrap(file: File, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
         progress.step("Preparing extraction staging")
@@ -313,9 +360,36 @@ object TerminalInstaller {
     }
 
     private fun swapStagingIntoPrefix(staging: File, prefix: File) {
-        if (prefix.exists()) {
-            prefix.deleteRecursively()
+        if (!prefix.exists()) {
+            // Fresh install. atomic rename
+            Os.rename(staging.absolutePath, prefix.absolutePath)
+            return
         }
-        Os.rename(staging.absolutePath, prefix.absolutePath)
+        // update. merge staging into existing prefix, only overwriting
+        // files that exist in the new bootstrap. Any user-installed
+        // packages or configs outside the bootstrap are preserved.
+        val stagingRoot = staging.toPath()
+        val prefixRoot = prefix.toPath()
+        Files.walk(stagingRoot).use { stream ->
+            stream.forEach { stagingPath ->
+                val relative = stagingRoot.relativize(stagingPath)
+                val targetPath = prefixRoot.resolve(relative)
+                if (Files.isDirectory(stagingPath)) {
+                    Files.createDirectories(targetPath)
+                } else if (Files.isSymbolicLink(stagingPath)) {
+                    val linkTarget = Files.readSymbolicLink(stagingPath)
+                    Files.deleteIfExists(targetPath)
+                    Files.createSymbolicLink(targetPath, linkTarget)
+                } else {
+                    Files.copy(
+                        stagingPath,
+                        targetPath,
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.COPY_ATTRIBUTES
+                    )
+                }
+            }
+        }
+        staging.deleteRecursively()
     }
 }

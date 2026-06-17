@@ -1,7 +1,9 @@
 package com.klyx.data.preferences
 
 import androidx.compose.runtime.compositionLocalOf
+import com.klyx.terminal.BellSoundType
 import com.klyx.terminal.emulator.CursorStyle
+import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import kotlinx.serialization.Serializable
 
 val LocalAppSettings = compositionLocalOf<AppSettings> {
@@ -17,9 +19,14 @@ data class AppSettings(
 
 @Serializable
 data class TerminalSettings(
-    val currentUser: String? = null,
-    val openAsRoot: Boolean = false,
-    val cursorStyle: CursorStyle = CursorStyle.Block
+    val cursorStyle: CursorStyle = CursorStyle.Block,
+    val bellEnabled: Boolean = true,
+    val bellVolume: Float = 1.0f,
+    val bellSoundType: BellSoundType = BellSoundType.Gentle,
+    val fontSize: Float = 15f,
+    val cursorBlink: Boolean = true,
+    val scrollbackLines: Int = 2000,
+    val extraKeysStyle: ExtraKeyStyle = ExtraKeyStyle.ArrowsOnly,
 )
 
 enum class AppTheme(val displayName: String) {

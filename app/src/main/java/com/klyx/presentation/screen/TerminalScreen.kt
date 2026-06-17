@@ -62,12 +62,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -99,7 +99,6 @@ import com.klyx.presentation.navigation.Screen
 import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.viewmodel.TerminalUiState
 import com.klyx.presentation.viewmodel.TerminalViewModel
-import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.ui.Terminal
 import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import com.klyx.terminal.ui.extrakeys.ExtraKeys
@@ -491,14 +490,26 @@ private fun TerminalEmulator(
 
     val sessionClient = rememberTerminalSessionClient(
         onTitleChanged = { onTitleChange(it.title) },
-        cursorStyle = terminalSettings.cursorStyle
+        cursorStyle = terminalSettings.cursorStyle,
+        bellEnabled = terminalSettings.bellEnabled,
+        bellVolume = terminalSettings.bellVolume,
+        bellSoundType = terminalSettings.bellSoundType
     )
+
+    LaunchedEffect(terminalSettings.cursorStyle) {
+        sessions.forEach { entry ->
+            entry.session.updateTerminalSessionClient(sessionClient)
+        }
+    }
 
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(sessions.isEmpty()) {
         if (sessions.isEmpty()) {
-            sessionManager.newSession(client = sessionClient)
+            sessionManager.newSession(
+                client = sessionClient,
+                transcriptRows = terminalSettings.scrollbackLines
+            )
         }
     }
 
@@ -515,7 +526,14 @@ private fun TerminalEmulator(
                 currentSessionId = currentEntry?.id,
                 onSelect = { id -> sessionManager.switchTo(id) },
                 onClose = { id -> scope.launch { sessionManager.terminate(id) } },
-                onNewSession = { scope.launch { sessionManager.newSession(client = sessionClient) } }
+                onNewSession = {
+                    scope.launch {
+                        sessionManager.newSession(
+                            client = sessionClient,
+                            transcriptRows = terminalSettings.scrollbackLines
+                        )
+                    }
+                }
             )
 
             val extraKeysClient = remember(session) { KlyxExtraKeysClient(session) }
@@ -533,21 +551,24 @@ private fun TerminalEmulator(
                     modifier = Modifier.weight(1f),
                     session = session,
                     fontFamily = JetBrainsMonoFontFamily,
-                    fontSize = 15.sp,
-                    client = terminalClient
+                    fontSize = terminalSettings.fontSize.sp,
+                    client = terminalClient,
+                    cursorBlink = terminalSettings.cursorBlink
                 )
             }
 
-            ExtraKeys(
-                extraKeysInfo = ExtraKeysInfo(
-                    propertiesInfo = json.encodeToString(ExtraTerminalKeys),
-                    style = ExtraKeyStyle.ArrowsOnly,
-                    extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
-                ),
-                state = extraKeysState,
-                client = extraKeysClient,
-                modifier = Modifier.height(75.dp)
-            )
+            if (terminalSettings.extraKeysStyle != ExtraKeyStyle.None) {
+                ExtraKeys(
+                    extraKeysInfo = ExtraKeysInfo(
+                        propertiesInfo = json.encodeToString(ExtraTerminalKeys),
+                        style = terminalSettings.extraKeysStyle,
+                        extraKeyAliasMap = ExtraKeysConstants.CONTROL_CHARS_ALIASES
+                    ),
+                    state = extraKeysState,
+                    client = extraKeysClient,
+                    modifier = Modifier.height(75.dp)
+                )
+            }
         }
     } else {
         Column(

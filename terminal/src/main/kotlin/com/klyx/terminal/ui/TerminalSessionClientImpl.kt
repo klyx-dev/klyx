@@ -3,40 +3,62 @@ package com.klyx.terminal.ui
 import android.content.ClipData
 import android.util.Log
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.Clipboard
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.toClipEntry
+import com.klyx.terminal.BellSoundType
 import com.klyx.terminal.TerminalBell
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
 
-/**
- * Returns the default implementation of [TerminalSessionClient].
- */
 @Composable
 fun rememberTerminalSessionClient(
     onSessionFinished: (TerminalSession) -> Unit = {},
     onTitleChanged: (TerminalSession) -> Unit = {},
     onColorsChanged: (TerminalSession) -> Unit = {},
     cursorStyle: CursorStyle = CursorStyle.default(),
+    bellEnabled: Boolean = true,
+    bellVolume: Float = 1.0f,
+    bellSoundType: BellSoundType = BellSoundType.Gentle,
 ): TerminalSessionClient {
     val clipboard = LocalClipboard.current
-    return remember(clipboard, cursorStyle) {
+    val client = remember(clipboard, onSessionFinished, onTitleChanged, onColorsChanged) {
         TerminalSessionClientImpl(
             clipboard,
             cursorStyle,
+            bellEnabled,
+            bellVolume,
+            bellSoundType,
             onSessionFinished,
             onTitleChanged,
             onColorsChanged
         )
     }
+
+    LaunchedEffect(cursorStyle) {
+        client.updateCursorStyle(cursorStyle)
+    }
+
+    LaunchedEffect(bellEnabled) {
+        client.updateBellEnabled(bellEnabled)
+    }
+
+    LaunchedEffect(bellVolume, bellSoundType) {
+        client.updateBellSound(bellVolume, bellSoundType)
+    }
+
+    return client
 }
 
 private class TerminalSessionClientImpl(
     private val clipboard: Clipboard,
     cursorStyle: CursorStyle,
+    bellEnabled: Boolean,
+    bellVolume: Float,
+    bellSoundType: BellSoundType,
     val onSessionFinish: (TerminalSession) -> Unit,
     val onTitleChange: (TerminalSession) -> Unit,
     val onColorsChange: (TerminalSession) -> Unit,
@@ -46,9 +68,26 @@ private class TerminalSessionClientImpl(
         private const val TAG = "TerminalClient"
     }
 
-    private val bell = TerminalBell()
+    private val bell = TerminalBell(bellVolume, bellSoundType)
 
-    override val terminalCursorStyle = cursorStyle
+    override var terminalCursorStyle: CursorStyle? = cursorStyle
+        private set
+
+    @Volatile
+    private var bellEnabled = bellEnabled
+
+    fun updateCursorStyle(style: CursorStyle) {
+        terminalCursorStyle = style
+    }
+
+    fun updateBellEnabled(enabled: Boolean) {
+        bellEnabled = enabled
+    }
+
+    fun updateBellSound(volume: Float, soundType: BellSoundType) {
+        bell.updateVolume(volume)
+        bell.updateSoundType(soundType)
+    }
 
     override fun onTextChanged(changedSession: TerminalSession) {}
 
@@ -73,7 +112,9 @@ private class TerminalSessionClientImpl(
     }
 
     override fun onBell(session: TerminalSession) {
-        bell.ring()
+        if (bellEnabled) {
+            bell.ring()
+        }
     }
 
     override fun onColorsChanged(session: TerminalSession) = onColorsChange(session)

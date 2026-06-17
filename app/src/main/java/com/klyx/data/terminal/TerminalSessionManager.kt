@@ -11,6 +11,7 @@ import com.klyx.event.terminal.SessionTerminateEvent
 import com.klyx.event.terminal.TerminateAllSessionEvent
 import com.klyx.platform.currentArchitecture
 import com.klyx.terminal.bin
+import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
 import com.klyx.terminal.home
@@ -62,14 +63,22 @@ interface TerminalSessionManager : Global {
     /** Creates a brand-new session and marks it as current. */
     suspend fun newSession(
         client: TerminalSessionClient,
-        id: Uuid = Uuid.generateV7()
+        id: Uuid = Uuid.generateV7(),
+        transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS,
     ): TerminalSession
 
     /** Returns the session for [id] if it is still running, otherwise creates a new one. */
-    suspend fun getOrCreateSession(id: Uuid, client: TerminalSessionClient): TerminalSession
+    suspend fun getOrCreateSession(
+        id: Uuid,
+        client: TerminalSessionClient,
+        transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS,
+    ): TerminalSession
 
     /** Returns the [currentSession] if available, otherwise creates a new one. */
-    suspend fun currentSessionOrNewSession(client: TerminalSessionClient): TerminalSession
+    suspend fun currentSessionOrNewSession(
+        client: TerminalSessionClient,
+        transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS,
+    ): TerminalSession
 
     /** Selects an existing session as current. No-op if [id] is unknown. */
     fun switchTo(id: Uuid)
@@ -109,18 +118,20 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
 
     override suspend fun getOrCreateSession(
         id: Uuid,
-        client: TerminalSessionClient
+        client: TerminalSessionClient,
+        transcriptRows: Int
     ): TerminalSession {
         val existing = lock.withLock { _sessions.value.firstOrNull { it.id == id }?.session }
         if (existing != null && existing.isRunning.value) return existing
-        return newSession(client, id)
+        return newSession(client, id, transcriptRows)
     }
 
     override suspend fun currentSessionOrNewSession(
-        client: TerminalSessionClient
+        client: TerminalSessionClient,
+        transcriptRows: Int
     ): TerminalSession {
         val id = _currentSessionId.value ?: Uuid.generateV7()
-        return getOrCreateSession(id, client)
+        return getOrCreateSession(id, client, transcriptRows)
     }
 
     override fun switchTo(id: Uuid) {
@@ -132,7 +143,8 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
 
     override suspend fun newSession(
         client: TerminalSessionClient,
-        id: Uuid
+        id: Uuid,
+        transcriptRows: Int
     ): TerminalSession = withContext(Dispatchers.IO) {
         val prefix = Paths.prefix
         val home = Paths.home.absolutePath
@@ -199,7 +211,8 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
             cwd = home,
             args = listOf(linker, shellFile.absolutePath),
             env = env,
-            client = client
+            client = client,
+            transcriptRows = transcriptRows
         ).also { session ->
             GlobalEventBus.publish(NewSessionEvent(id, session))
             lock.withLock {

@@ -97,6 +97,7 @@ fun Terminal(
     fontSize: TextUnit = 18.sp,
     fontFamily: FontFamily = FontFamily.Monospace,
     enableKeyLogging: Boolean = false,
+    cursorBlink: Boolean = true,
 ) {
     val state = rememberTerminalState(
         shell = shell,
@@ -113,7 +114,8 @@ fun Terminal(
         modifier = modifier,
         client = terminalClient,
         fontSize = fontSize,
-        fontFamily = fontFamily
+        fontFamily = fontFamily,
+        cursorBlink = cursorBlink
     )
 }
 
@@ -125,6 +127,7 @@ fun Terminal(
     fontSize: TextUnit = 18.sp,
     fontFamily: FontFamily = FontFamily.Monospace,
     enableKeyLogging: Boolean = false,
+    cursorBlink: Boolean = true,
 ) {
     val state = rememberTerminalState(
         client = client,
@@ -137,7 +140,8 @@ fun Terminal(
         modifier = modifier,
         client = client,
         fontSize = fontSize,
-        fontFamily = fontFamily
+        fontFamily = fontFamily,
+        cursorBlink = cursorBlink
     )
 }
 
@@ -148,6 +152,7 @@ fun Terminal(
     client: TerminalClient = rememberTerminalClient(),
     fontSize: TextUnit = 18.sp,
     fontFamily: FontFamily = FontFamily.Monospace,
+    cursorBlink: Boolean = true,
 ) {
     val session = remember(state) { state.session }
     val enableKeyLogging = remember(state) { state.enableKeyLogging }
@@ -222,7 +227,7 @@ fun Terminal(
         }
     }
 
-    var cursorBlinkState by remember { mutableStateOf(true) }
+    var cursorBlinkState by remember(cursorBlink) { mutableStateOf(cursorBlink) }
     var cursorBlinkerEnabled by remember { mutableStateOf(false) }
     var cursorBlinkerRate by remember { mutableIntStateOf(0) }
 
