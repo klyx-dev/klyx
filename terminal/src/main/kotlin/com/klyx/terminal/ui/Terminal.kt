@@ -172,7 +172,7 @@ fun Terminal(
         ).also { state.metrics = it }
     }
 
-    var emulator by remember { mutableStateOf(session.emulator) }
+    var emulator by remember(session) { mutableStateOf(session.emulator) }
     var topRow by remember(state) { state.topRow }
 
     val selectionState = remember { TextSelectionState() }
@@ -457,9 +457,10 @@ fun Terminal(
         val width = constraints.maxWidth
         val height = constraints.maxHeight
 
-        LaunchedEffect(width, height, painter) {
+        LaunchedEffect(width, height, painter, session) {
             updateSize(width, height)
             state.size = IntSize(width, height)
+            state.invalidate()
         }
 
         CompositionLocalProvider(LocalEmulator provides emulator) {

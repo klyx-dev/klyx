@@ -14,7 +14,9 @@ import androidx.core.app.NotificationCompat
 import com.klyx.MainActivity
 import com.klyx.R
 import com.klyx.core.event.subscribeIn
-import com.klyx.data.terminal.SessionManager
+import com.klyx.core.unsafe.GlobalApp
+import com.klyx.core.unsafe.UnsafeGlobalAccess
+import com.klyx.data.terminal.TerminalSessionManager
 import com.klyx.event.GlobalEventBus
 import com.klyx.event.terminal.NewSessionEvent
 import com.klyx.event.terminal.SessionTerminateEvent
@@ -29,6 +31,9 @@ class TerminalService : Service() {
 
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+
+    @OptIn(UnsafeGlobalAccess::class)
+    private val sessionManager: TerminalSessionManager by lazy { GlobalApp.global() }
 
     private var daemonRunning = false
     private var wakeLock: PowerManager.WakeLock? = null
@@ -68,7 +73,7 @@ class TerminalService : Service() {
         }
 
         GlobalEventBus.subscribeIn<SessionTerminateEvent>(serviceScope) { event ->
-            if (SessionManager.sessions.isEmpty()) {
+            if (sessionManager.sessions.value.isEmpty()) {
                 daemonRunning = false
                 stopSelf()
             } else {
@@ -82,7 +87,7 @@ class TerminalService : Service() {
         when (intent?.action) {
             ACTION_EXIT -> {
                 serviceScope.launch {
-                    SessionManager.terminateAll()
+                    sessionManager.terminateAll()
                     daemonRunning = false
                     stopSelf()
                 }
@@ -105,7 +110,7 @@ class TerminalService : Service() {
     override fun onDestroy() {
         CoroutineScope(Dispatchers.IO).launch {
             withContext(NonCancellable) {
-                SessionManager.terminateAll()
+                sessionManager.terminateAll()
             }
         }
 
@@ -177,7 +182,7 @@ class TerminalService : Service() {
     }
 
     private fun getNotificationContentText(isWakeLockHeld: Boolean): String {
-        val count = SessionManager.sessions.size
+        val count = sessionManager.sessions.value.size
         val s = if (count == 1) "session" else "sessions"
         val wakeHeld = if (isWakeLockHeld) " (wake lock held)" else ""
         return "$count $s running$wakeHeld"

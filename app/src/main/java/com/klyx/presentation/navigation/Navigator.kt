@@ -123,9 +123,22 @@ private fun roundedNavEntryDecorator() = NavEntryDecorator<Screen> { entry ->
 }
 
 @Composable
-fun rememberNavigator(startScreen: Screen = Screen.Home): Navigator {
+fun rememberNavigator(
+    startScreen: Screen = Screen.Home,
+    initialScreenOnTop: Screen? = null
+): Navigator {
     val backStack = rememberNavBackStack(configuration = Screen.config(), startScreen)
-    return remember(backStack) { Navigator(backStack = backStack) }
+    return remember(backStack) {
+        Navigator(backStack = backStack).also { navigator ->
+            // Seed an extra screen on top of the start screen for a deep link
+            // (e.g. notification tap), so it renders directly without first
+            // showing the start screen and animating a transition. Guard on the
+            // back stack size so a restored (non-fresh) stack is left untouched.
+            if (initialScreenOnTop != null && backStack.size == 1) {
+                navigator.navigateTo(initialScreenOnTop)
+            }
+        }
+    }
 }
 
 @Composable

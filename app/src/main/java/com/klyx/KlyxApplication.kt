@@ -3,7 +3,10 @@ package com.klyx
 import android.app.Application
 import com.klyx.core.App
 import com.klyx.core.initApp
-import com.klyx.data.terminal.SessionBinder
+import com.klyx.data.terminal.TerminalSessionBinderImpl
+import com.klyx.data.terminal.DefaultTerminalSessionManager
+import com.klyx.data.terminal.TerminalSessionBinder
+import com.klyx.data.terminal.TerminalSessionManager
 import com.klyx.event.initializeGlobalEventBus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -36,6 +39,7 @@ class KlyxApplication : Application(), CoroutineScope by GlobalScope {
 
     private fun initializeGlobals() {
         initializeGlobalEventBus(app)
-        app.setGlobal(SessionBinder())
+        app.setGlobal<TerminalSessionBinder>(TerminalSessionBinderImpl())
+        app.setGlobal<TerminalSessionManager>(DefaultTerminalSessionManager())
     }
 }

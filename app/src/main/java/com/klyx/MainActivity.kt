@@ -53,12 +53,13 @@ import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.data.file.wrap
-import com.klyx.data.terminal.SessionBinder
+import com.klyx.data.terminal.TerminalSessionBinder
 import com.klyx.event.GlobalEventBus
 import com.klyx.event.terminal.TerminateAllSessionEvent
 import com.klyx.platform.service.TerminalService
 import com.klyx.presentation.components.dialogs.AllFilesAccessDialog
 import com.klyx.presentation.components.dialogs.LegacyStorageAccessDialog
+import com.klyx.presentation.components.dialogs.NotificationPermissionDialog
 import com.klyx.presentation.navigation.Screen
 import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.navigation.rememberNavigator
@@ -99,13 +100,13 @@ class MainActivity : ComposeActivity() {
         super.onCreate(savedInstanceState)
 
         GlobalEventBus.subscribeIn<TerminateAllSessionEvent>(lifecycleScope) {
-            app.global<SessionBinder>().unbind(this)
+            app.global<TerminalSessionBinder>().unbind(this)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        app.global<SessionBinder>().unbind(this)
+        app.global<TerminalSessionBinder>().unbind(this)
     }
 
     @Composable
@@ -143,6 +144,22 @@ class MainActivity : ComposeActivity() {
             hasStoragePermission = readGranted && writeGranted
         }
 
+        fun hasNotificationPermission(): Boolean {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+            return ContextCompat.checkSelfPermission(
+                this@MainActivity,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        }
+
+        var showNotificationDialog by remember { mutableStateOf(!hasNotificationPermission()) }
+
+        val notificationPermissionLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission()
+        ) { _ ->
+            showNotificationDialog = false
+        }
+
         DisposableEffect(lifecycleOwner) {
             val observer = LifecycleEventObserver { _, event ->
                 if (event == Lifecycle.Event.ON_RESUME) {
@@ -158,7 +175,15 @@ class MainActivity : ComposeActivity() {
             onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
         }
 
-        val navigator = rememberNavigator()
+        // When the activity is (re)created directly from the terminal notification,
+        // seed the back stack with Terminal on top so it renders instantly without
+        // first showing Home and animating the transition.
+        val launchedFromNotification = remember {
+            intent?.action == TerminalService.ACTION_NOTIFICATION_TAP
+        }
+        val navigator = rememberNavigator(
+            initialScreenOnTop = if (launchedFromNotification) Screen.Terminal else null
+        )
         val entryProvider = remember { appScreenEntryProvider() }
 
         val navigateToTerminal by pendingTerminalNav.collectAsStateWithLifecycle()
@@ -205,6 +230,17 @@ class MainActivity : ComposeActivity() {
                     }
                 )
             }
+        } else if (showNotificationDialog) {
+            NotificationPermissionDialog(
+                onDismiss = { showNotificationDialog = false },
+                onConfirm = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        showNotificationDialog = false
+                    }
+                }
+            )
         }
     }
 

@@ -6,13 +6,18 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,11 +27,17 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,6 +46,7 @@ import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -45,16 +57,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -70,8 +86,9 @@ import com.klyx.data.terminal.ExtraTerminalKeys
 import com.klyx.data.terminal.KlyxExtraKeysClient
 import com.klyx.data.terminal.KlyxTerminalClient
 import com.klyx.data.terminal.KlyxTerminalTheme
-import com.klyx.data.terminal.SessionBinder
-import com.klyx.data.terminal.SessionManager
+import com.klyx.data.terminal.TerminalSessionBinder
+import com.klyx.data.terminal.TerminalSessionEntry
+import com.klyx.data.terminal.TerminalSessionManager
 import com.klyx.event.GlobalEventBus
 import com.klyx.event.terminal.TerminateAllSessionEvent
 import com.klyx.icons.Klyx
@@ -94,12 +111,15 @@ import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.ui.theme.LocalIsDarkMode
+import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
+import kotlin.uuid.Uuid
 
 private val json = Json { prettyPrint = true; encodeDefaults = true; explicitNulls = false }
 
@@ -198,7 +218,10 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
             TerminalContent(
                 viewModel = viewModel,
                 navigator = navigator,
-                onTitleChange = { sessionTitle = it }
+                onTitleChange = {
+                    println("title change: $it")
+                    sessionTitle = it
+                }
             )
         }
     }
@@ -214,7 +237,7 @@ private fun TerminalContent(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val terminalSettings = LocalAppSettings.current.terminal
 
-    val binder = globalOf<SessionBinder>()
+    val binder = globalOf<TerminalSessionBinder>()
     val isServiceBound by binder.isServiceBound.collectAsStateWithLifecycle()
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -462,20 +485,40 @@ private fun TerminalEmulator(
         return
     }
 
+    val sessionManager = globalOf<TerminalSessionManager>()
+    val sessions by sessionManager.sessions.collectAsStateWithLifecycle()
+    val currentEntry by sessionManager.currentSession.collectAsStateWithLifecycle()
+
     val sessionClient = rememberTerminalSessionClient(
         onTitleChanged = { onTitleChange(it.title) },
         cursorStyle = terminalSettings.cursorStyle
     )
 
-    val session by produceState<TerminalSession?>(null) {
-        val session = SessionManager.currentSessionOrNewSession(client = sessionClient)
-        value = session
-        onTitleChange(session.title)
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(sessions.isEmpty()) {
+        if (sessions.isEmpty()) {
+            sessionManager.newSession(client = sessionClient)
+        }
     }
+
+    LaunchedEffect(currentEntry?.id) {
+        onTitleChange(currentEntry?.session?.title)
+    }
+
+    val session = currentEntry?.session
 
     if (session != null) {
         Column(modifier = Modifier.fillMaxSize()) {
-            val extraKeysClient = remember(session) { KlyxExtraKeysClient(session!!) }
+            TerminalSessionTabs(
+                sessions = sessions,
+                currentSessionId = currentEntry?.id,
+                onSelect = { id -> sessionManager.switchTo(id) },
+                onClose = { id -> scope.launch { sessionManager.terminate(id) } },
+                onNewSession = { scope.launch { sessionManager.newSession(client = sessionClient) } }
+            )
+
+            val extraKeysClient = remember(session) { KlyxExtraKeysClient(session) }
             val extraKeysState = rememberExtraKeysState()
 
             val terminalClient = remember {
@@ -485,13 +528,15 @@ private fun TerminalEmulator(
                 )
             }
 
-            Terminal(
-                modifier = Modifier.weight(1f),
-                session = session!!,
-                fontFamily = JetBrainsMonoFontFamily,
-                fontSize = 15.sp,
-                client = terminalClient
-            )
+            key(currentEntry?.id) {
+                Terminal(
+                    modifier = Modifier.weight(1f),
+                    session = session,
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontSize = 15.sp,
+                    client = terminalClient
+                )
+            }
 
             ExtraKeys(
                 extraKeysInfo = ExtraKeysInfo(
@@ -522,13 +567,198 @@ private fun TerminalEmulator(
 private fun applyTerminalTheme() {
     val isDark = LocalIsDarkMode.current
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val sessionManager = globalOf<TerminalSessionManager>()
 
     LaunchedEffect(isDark, surfaceColor) {
         KlyxTerminalTheme.apply(isDark, surfaceColor)
 
-        SessionManager.sessions.values.forEach { session ->
-            session.emulator?.colors?.reset()
-            session.onColorsChanged()
+        sessionManager.sessions.value.forEach { entry ->
+            entry.session.emulator?.colors?.reset()
+            entry.session.onColorsChanged()
+        }
+    }
+}
+
+@Composable
+private fun TerminalSessionTabs(
+    sessions: ImmutableList<TerminalSessionEntry>,
+    currentSessionId: Uuid?,
+    onSelect: (Uuid) -> Unit,
+    onClose: (Uuid) -> Unit,
+    onNewSession: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    val listState = rememberLazyListState()
+
+    val currentIndex = sessions.indexOfFirst { it.id == currentSessionId }
+    LaunchedEffect(currentSessionId, sessions.size) {
+        if (currentIndex >= 0) {
+            listState.animateScrollToItem(currentIndex)
+        }
+    }
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 6.dp, vertical = 6.dp),
+        shape = AbsoluteSmoothCornerShape(20.dp, 60),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 6.dp, vertical = 6.dp)
+        ) {
+            LazyRow(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(AbsoluteSmoothCornerShape(16.dp, 60)),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                itemsIndexed(sessions, key = { _, entry -> entry.id }) { index, entry ->
+                    SessionChip(
+                        index = index,
+                        entry = entry,
+                        selected = entry.id == currentSessionId,
+                        canClose = sessions.size > 1,
+                        onClick = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onSelect(entry.id)
+                        },
+                        onClose = {
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onClose(entry.id)
+                        },
+                        modifier = Modifier.animateItem(
+                            fadeInSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow).orSnap(),
+                            placementSpec = spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                                visibilityThreshold = IntOffset.VisibilityThreshold
+                            ).orSnap(),
+                            fadeOutSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow).orSnap()
+                        )
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(6.dp))
+
+            FilledIconButton(
+                onClick = {
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onNewSession()
+                },
+                modifier = Modifier.size(46.dp),
+                shape = AbsoluteSmoothCornerShape(18.dp, 60),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = "New terminal session"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionChip(
+    index: Int,
+    entry: TerminalSessionEntry,
+    selected: Boolean,
+    canClose: Boolean,
+    onClick: () -> Unit,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val container by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = tween(220),
+        label = "SessionChipContainer"
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onPrimary
+        else MaterialTheme.colorScheme.onSurface,
+        animationSpec = tween(220),
+        label = "SessionChipContent"
+    )
+
+    val isRunning by entry.session.isRunning.collectAsStateWithLifecycle()
+    val title = entry.session.title?.takeIf { it.isNotBlank() } ?: "Session ${index + 1}"
+    val pid = entry.session.pid
+    // shellPid: 0 = not yet started, >0 = running pid, -1 = finished (exitStatus valid).
+    val pidText = when {
+        isRunning && pid > 0 -> "pid $pid"
+        pid < 0 -> {
+            val status = entry.session.exitStatus
+            when {
+                status < 0 -> "killed"
+                status == 0 -> "finished"
+                else -> "exited ($status)"
+            }
+        }
+
+        else -> "starting..."
+    }
+
+    Surface(
+        onClick = onClick,
+        shape = AbsoluteSmoothCornerShape(18.dp, 60),
+        color = container,
+        contentColor = content,
+        modifier = modifier.height(46.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 14.dp, end = if (canClose) 6.dp else 14.dp)
+        ) {
+            Column(
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.widthIn(max = 150.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    color = content,
+                    maxLines = 1,
+                    modifier = Modifier.basicMarquee()
+                )
+                Text(
+                    text = pidText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontSize = 9.sp,
+                    lineHeight = 10.sp,
+                    color = content.copy(alpha = 0.7f),
+                    maxLines = 1
+                )
+            }
+            if (canClose) {
+                Spacer(Modifier.width(6.dp))
+                IconButton(
+                    onClick = onClose,
+                    modifier = Modifier.size(30.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Close session",
+                        tint = content,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
         }
     }
 }
