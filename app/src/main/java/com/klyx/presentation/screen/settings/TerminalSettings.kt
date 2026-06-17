@@ -1,5 +1,6 @@
 package com.klyx.presentation.screen.settings
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
@@ -7,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,7 +22,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +41,6 @@ import androidx.compose.material.icons.rounded.TextFormat
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -48,6 +48,8 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -56,6 +58,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -89,6 +92,8 @@ import com.klyx.terminal.prefix
 import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.widgets.LocalToastHostState
+import com.klyx.util.humanBytes
+import com.klyx.util.sliderSteps
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 
@@ -109,23 +114,26 @@ fun TerminalSettings() {
     var showUpdateDialog by remember { mutableStateOf(false) }
     var showReinstallDialog by remember { mutableStateOf(false) }
     var isUpdating by remember { mutableStateOf(false) }
+    var updateStep by remember { mutableStateOf("") }
+    var updateProgress by remember { mutableFloatStateOf(0f) }
+    var updateProgressText by remember { mutableStateOf("") }
 
     val isInstalledVersionValid = installedVersion != null &&
-        TerminalInstaller.isValidBootstrapVersion(installedVersion!!)
+            TerminalInstaller.isValidBootstrapVersion(installedVersion!!)
 
     val isUpdateAvailable = latestVersion != null && installedVersion != null &&
-        isInstalledVersionValid &&
-        latestVersion != installedVersion &&
-        TerminalInstaller.isNewer(latestVersion!!, installedVersion!!)
+            isInstalledVersionValid &&
+            latestVersion != installedVersion &&
+            TerminalInstaller.isNewer(latestVersion!!, installedVersion!!)
 
     val isInvalidAndHasLatest = latestVersion != null &&
-        installedVersion != null &&
-        !isInstalledVersionValid
+            installedVersion != null &&
+            !isInstalledVersionValid
 
     LaunchedEffect(Unit) {
         try {
             installedVersion = TerminalInstaller.installedVersion()
-            latestVersion = BootstrapUpdateChecker.latestVersion()
+            //latestVersion = BootstrapUpdateChecker.latestVersion()
         } catch (_: Exception) {
             // ignore.
         }
@@ -139,20 +147,38 @@ fun TerminalSettings() {
             onConfirm = {
                 showUpdateDialog = false
                 isUpdating = true
+                updateStep = "Preparing..."
+                updateProgress = 0f
+                updateProgressText = ""
                 scope.launch {
                     try {
                         TerminalInstaller.installLatest(
                             progress = object : InstallProgressListener {
-                                override fun step(label: String) {}
-                                override fun progress(done: Long, total: Long) {}
-                                override fun warn(message: String) {}
+                                override fun step(label: String) {
+                                    updateStep = label
+                                }
+
+                                override fun progress(done: Long, total: Long) {
+                                    val percent = if (total > 0) done.toFloat() / total.toFloat() else 0f
+                                    val text = if (updateStep.contains("Downloading", ignoreCase = true)) {
+                                        "${done.humanBytes()} / ${total.humanBytes()}"
+                                    } else {
+                                        "$done / $total files"
+                                    }
+                                    updateProgress = percent
+                                    updateProgressText = text
+                                }
+
+                                override fun warn(message: String) {
+                                    Log.w("TerminalSettings", message)
+                                }
                             }
                         )
                         installedVersion = TerminalInstaller.installedVersion()
                         latestVersion = null
-                        toastHostState.showToast("Bootstrap updated successfully")
+                        launch { toastHostState.showToast("Bootstrap updated successfully") }
                     } catch (e: Exception) {
-                        toastHostState.showToast("Update failed: ${e.message}")
+                        launch { toastHostState.showToast("Update failed: ${e.message}") }
                     } finally {
                         isUpdating = false
                     }
@@ -168,20 +194,38 @@ fun TerminalSettings() {
             onConfirm = {
                 showReinstallDialog = false
                 isUpdating = true
+                updateStep = "Preparing..."
+                updateProgress = 0f
+                updateProgressText = ""
                 scope.launch {
                     try {
                         TerminalInstaller.installLatest(
                             progress = object : InstallProgressListener {
-                                override fun step(label: String) {}
-                                override fun progress(done: Long, total: Long) {}
-                                override fun warn(message: String) {}
+                                override fun step(label: String) {
+                                    updateStep = label
+                                }
+
+                                override fun progress(done: Long, total: Long) {
+                                    val percent = if (total > 0) done.toFloat() / total.toFloat() else 0f
+                                    val text = if (updateStep.contains("Downloading", ignoreCase = true)) {
+                                        "${done.humanBytes()} / ${total.humanBytes()}"
+                                    } else {
+                                        "$done / $total files"
+                                    }
+                                    updateProgress = percent
+                                    updateProgressText = text
+                                }
+
+                                override fun warn(message: String) {
+                                    Log.w("TerminalSettings", message)
+                                }
                             }
                         )
                         installedVersion = TerminalInstaller.installedVersion()
                         latestVersion = null
-                        toastHostState.showToast("Bootstrap installed successfully")
+                        launch { toastHostState.showToast("Bootstrap installed successfully") }
                     } catch (e: Exception) {
-                        toastHostState.showToast("Installation failed: ${e.message}")
+                        launch { toastHostState.showToast("Installation failed: ${e.message}") }
                     } finally {
                         isUpdating = false
                     }
@@ -260,7 +304,7 @@ fun TerminalSettings() {
                                 label = "Bell Volume",
                                 value = settings.bellVolume,
                                 valueRange = 0f..1f,
-                                steps = 10,
+                                steps = (0f..1f).sliderSteps(increment = 0.1f),
                                 onValueChange = { volume ->
                                     scope.launch {
                                         updateTerminalSettings { copy(bellVolume = volume) }
@@ -312,7 +356,7 @@ fun TerminalSettings() {
                         label = "Font Size",
                         value = settings.fontSize,
                         valueRange = 8f..30f,
-                        steps = 22,
+                        steps = (8f..30f).sliderSteps(1f),
                         onValueChange = { size ->
                             scope.launch {
                                 updateTerminalSettings { copy(fontSize = size) }
@@ -478,21 +522,12 @@ fun TerminalSettings() {
                         }
                     }
 
-                    isUpdating.BootstrappingRow {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = "Updating bootstrap...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                    if (isUpdating) {
+                        BootstrapUpdateProgressDialog(
+                            step = updateStep,
+                            progress = updateProgress,
+                            progressText = updateProgressText
+                        )
                     }
 
                     isChecking.BootstrappingRow {
@@ -500,10 +535,8 @@ fun TerminalSettings() {
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                            LoadingIndicator(modifier = Modifier.size(24.dp))
+
                             Text(
                                 text = "Checking for updates...",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -661,7 +694,7 @@ private fun UpdateAvailableBootstrapCard(from: String, to: String, onClick: () -
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "$from → $to",
+                    text = "$from -> $to",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -990,7 +1023,7 @@ private fun BootstrapUpdateWarningDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "$currentVersion → $latestVersion",
+                    text = "$currentVersion -> $latestVersion",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -1058,6 +1091,90 @@ private fun BootstrapUpdateWarningDialog(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BootstrapUpdateProgressDialog(
+    step: String,
+    progress: Float,
+    progressText: String
+) {
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false
+        )
+    ) {
+        Surface(
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+//                    CircularWavyProgressIndicator(
+//                        modifier = Modifier.size(36.dp),
+//                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+//                        trackColor = MaterialTheme.colorScheme.primaryContainer
+//                    )
+                    LoadingIndicator()
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "Updating Bootstrap...",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = step,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.basicMarquee(),
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LinearWavyProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(CircleShape),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+
+                if (progressText.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = progressText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.End)
+                    )
                 }
             }
         }

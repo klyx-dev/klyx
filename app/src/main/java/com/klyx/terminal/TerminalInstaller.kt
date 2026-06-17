@@ -119,6 +119,10 @@ object TerminalInstaller {
             extractBootstrap(tempZip, progress)
 
             withContext(Dispatchers.IO) {
+                if (tempZip.exists()) tempZip.delete()
+            }
+
+            withContext(Dispatchers.IO) {
                 Paths.home.mkdirs()
                 Paths.projects.mkdirs()
                 setupStorageSymlinks(progress)
@@ -132,6 +136,10 @@ object TerminalInstaller {
             withContext(Dispatchers.IO) {
                 if (tempZip.exists()) {
                     tempZip.delete()
+                }
+                val staging = Paths.prefix.resolveSibling(Paths.prefix.name + ".staging")
+                if (staging.exists()) {
+                    staging.deleteRecursively()
                 }
             }
         }
@@ -221,7 +229,7 @@ object TerminalInstaller {
         replaySymlinks(staging, symlinks, progress)
 
         progress.step("Swapping staging into prefix")
-        swapStagingIntoPrefix(staging, prefix)
+        swapStagingIntoPrefix(staging, prefix, progress)
 
         progress.step("Bootstrap installed successfully")
     }
@@ -359,7 +367,7 @@ object TerminalInstaller {
         progress.step("Storage symlinks ready")
     }
 
-    private fun swapStagingIntoPrefix(staging: File, prefix: File) {
+    private fun swapStagingIntoPrefix(staging: File, prefix: File, progress: InstallProgressListener) {
         if (!prefix.exists()) {
             // Fresh install. atomic rename
             Os.rename(staging.absolutePath, prefix.absolutePath)
@@ -370,23 +378,37 @@ object TerminalInstaller {
         // packages or configs outside the bootstrap are preserved.
         val stagingRoot = staging.toPath()
         val prefixRoot = prefix.toPath()
+        val totalFiles = Files.walk(stagingRoot).use { stream ->
+            stream.count()
+        }
+        var swappedCount = 0L
         Files.walk(stagingRoot).use { stream ->
             stream.forEach { stagingPath ->
+                swappedCount++
+                progress.progress(swappedCount, totalFiles)
                 val relative = stagingRoot.relativize(stagingPath)
                 val targetPath = prefixRoot.resolve(relative)
-                if (Files.isDirectory(stagingPath)) {
-                    Files.createDirectories(targetPath)
-                } else if (Files.isSymbolicLink(stagingPath)) {
-                    val linkTarget = Files.readSymbolicLink(stagingPath)
-                    Files.deleteIfExists(targetPath)
-                    Files.createSymbolicLink(targetPath, linkTarget)
-                } else {
-                    Files.copy(
-                        stagingPath,
-                        targetPath,
-                        StandardCopyOption.REPLACE_EXISTING,
-                        StandardCopyOption.COPY_ATTRIBUTES
-                    )
+                try {
+                    when {
+                        Files.isSymbolicLink(stagingPath) -> {
+                            val linkTarget = Files.readSymbolicLink(stagingPath)
+                            Files.deleteIfExists(targetPath)
+                            Files.createSymbolicLink(targetPath, linkTarget)
+                        }
+                        Files.isDirectory(stagingPath) -> {
+                            Files.createDirectories(targetPath)
+                        }
+                        else -> {
+                            Files.copy(
+                                stagingPath,
+                                targetPath,
+                                StandardCopyOption.REPLACE_EXISTING,
+                                StandardCopyOption.COPY_ATTRIBUTES
+                            )
+                        }
+                    }
+                } catch (e: Exception) {
+                    progress.warn("Failed to process $relative: ${e.message}")
                 }
             }
         }

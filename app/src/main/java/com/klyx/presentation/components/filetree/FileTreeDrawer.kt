@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.FolderShared
 import androidx.compose.material.icons.rounded.FolderSpecial
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerState
@@ -80,7 +81,9 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
+import com.klyx.data.fs.Paths
 import com.klyx.presentation.viewmodel.FileTreeViewModel
+import com.klyx.terminal.home
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.GoogleSansRounded
@@ -207,6 +210,10 @@ fun FileTreeDrawer(
             onSelectAppDirectory = {
                 dismiss()
                 viewModel.addRootNode(Uri.fromFile(context.dataDir))
+            },
+            onSelectTerminalHome = {
+                dismiss()
+                viewModel.addRootNode(Uri.fromFile(Paths.home))
             }
         )
     }
@@ -406,6 +413,7 @@ fun ProjectLocationBottomSheet(
     onDismissRequest: () -> Unit,
     onSelectInternalStorage: () -> Unit,
     onSelectAppDirectory: () -> Unit,
+    onSelectTerminalHome: () -> Unit,
     onSelectSystemPicker: () -> Unit
 ) {
     ModalBottomSheet(
@@ -507,6 +515,45 @@ fun ProjectLocationBottomSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Surface(
+                onClick = onSelectTerminalHome,
+                shape = RoundedCornerShape(16.dp),
+                color = Color.Transparent
+            ) {
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    headlineContent = {
+                        Text(
+                            "Terminal Home",
+                            fontFamily = GoogleSansRounded,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    },
+                    supportingContent = {
+                        Text($$"Open the terminal's home directory ($HOME). This is the default working directory where your files, projects, and personal data are stored inside the terminal environment.")
+                    },
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painterResource(R.drawable.terminal_2_24px),
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                            )
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Surface(
                 onClick = onSelectSystemPicker,
                 shape = RoundedCornerShape(16.dp),
                 color = Color.Transparent
@@ -528,7 +575,7 @@ fun ProjectLocationBottomSheet(
                             modifier = Modifier
                                 .size(48.dp)
                                 .background(
-                                    MaterialTheme.colorScheme.tertiaryContainer,
+                                    MaterialTheme.colorScheme.surfaceContainerHighest,
                                     CircleShape
                                 ),
                             contentAlignment = Alignment.Center
@@ -536,7 +583,7 @@ fun ProjectLocationBottomSheet(
                             Icon(
                                 Icons.Rounded.FolderShared,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

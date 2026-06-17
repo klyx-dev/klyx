@@ -866,7 +866,7 @@ private fun EditorTabs(
     PrimaryScrollableTabRow(
         selectedTabIndex = activeTabIndex,
         containerColor = Color.Transparent,
-        edgePadding = 8.dp,
+        edgePadding = 4.dp,
         indicator = {},
         divider = {},
         modifier = Modifier.verticalScroll(rememberScrollState())
@@ -896,10 +896,10 @@ private fun EditorTabs(
                         horizontalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .padding(
-                                start = 8.dp,
-                                top = 4.dp,
-                                bottom = 4.dp,
-                                end = 4.dp
+                                start = 6.dp,
+                                top = 2.dp,
+                                bottom = 2.dp,
+                                end = 2.dp
                             )
                             .animateContentSize()
                     ) {
@@ -924,11 +924,11 @@ private fun EditorTabs(
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
 
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
+                                .size(20.dp)
                                 .clip(CircleShape)
                                 .clickable { onTabClose(tab.id) },
                             contentAlignment = Alignment.Center
@@ -936,7 +936,7 @@ private fun EditorTabs(
                             Icon(
                                 imageVector = Icons.Rounded.Close,
                                 contentDescription = "Close ${tab.title}",
-                                modifier = Modifier.size(16.dp),
+                                modifier = Modifier.size(14.dp),
                                 tint = LocalContentColor.current
                             )
                         }

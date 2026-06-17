@@ -1,15 +1,13 @@
 package com.klyx.util
 
 import android.app.Activity
-import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.ContextWrapper
-import android.content.Intent
-import android.widget.Toast
 import com.klyx.R
 import kotlinx.coroutines.CancellationException
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.math.roundToInt
 
 fun Throwable.extractMessage() = withApplicationContext {
     if (this is OutOfMemoryError) {
@@ -41,4 +39,11 @@ inline fun <T> tryOrNull(block: () -> T): T? {
     } catch (_: Throwable) {
         null
     }
+}
+
+fun ClosedFloatingPointRange<Float>.sliderSteps(
+    increment: Float
+): Int {
+    require(increment > 0f)
+    return ((endInclusive - start) / increment).roundToInt() - 1
 }
