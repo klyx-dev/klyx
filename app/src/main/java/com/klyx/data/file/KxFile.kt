@@ -10,6 +10,8 @@ import androidx.core.net.toFile
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
+import com.klyx.data.fs.Paths
+import com.klyx.terminal.home
 import com.klyx.util.applicationContext
 import com.klyx.util.context
 import com.klyx.util.isFileUri
@@ -192,6 +194,9 @@ fun KxFile(path: String) = KxFile(File(path))
 fun KxFile(uri: Uri): KxFile {
     val context = applicationContext()
 
+    val localFile = resolveFromOwnProvider(uri)
+    if (localFile != null) return KxFile(localFile)
+
     val fallback = {
         if (DocumentsContract.isTreeUri(uri)) {
             DocumentFile.fromTreeUri(context, uri)!!
@@ -236,10 +241,22 @@ fun KxFile(uri: Uri): KxFile {
 private fun unsupported(message: String? = null): Nothing =
     throw UnsupportedOperationException(message)
 
+private fun resolveFromOwnProvider(uri: Uri): File? {
+    val context = applicationContext()
+    val providerAuthority = "${context.packageName}.terminal.documents"
+    if (uri.authority != providerAuthority) return null
+    return when {
+        DocumentsContract.isTreeUri(uri) -> File(DocumentsContract.getTreeDocumentId(uri))
+        DocumentsContract.isDocumentUri(context, uri) -> File(DocumentsContract.getDocumentId(uri))
+        else -> null
+    }
+}
+
 fun KxFile.resolveName(): String {
     return when (absolutePath) {
         Environment.getExternalStorageDirectory().absolutePath -> "Internal Storage"
-        applicationContext().dataDir.absolutePath -> "App Data"
+        Paths.dataDir.absolutePath -> "App Data"
+        Paths.home.absolutePath -> "Terminal Home"
         else -> name
     }
 }

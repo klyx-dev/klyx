@@ -117,8 +117,9 @@ val LocalApp = staticCompositionLocalOf<App> {
 fun Application.initApp(then: App.() -> Unit = {}): App {
     val koin = GlobalContext.get()
     val app: App? = koin.getOrNull()
-    return (app ?: App(this, koinApplication()).also(koin::declare))
-        .also(then)
+    return (app ?: App(this, koinApplication())
+        .also(koin::declare))
+        .apply(then)
 }
 
 /**
@@ -128,7 +129,7 @@ fun Application.initApp(then: App.() -> Unit = {}): App {
  */
 @OptIn(UnsafeGlobalAccess::class)
 inline fun debug(crossinline block: suspend App.() -> Unit) {
-    if (com.klyx.core.BuildConfig.IS_DEBUG_MODE) {
+    if (BuildConfig.IS_DEBUG_MODE) {
         val app = GlobalApp
         app.backgroundScope.launch { block(app) }
     }
