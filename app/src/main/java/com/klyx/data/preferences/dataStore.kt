@@ -19,10 +19,6 @@ import java.io.OutputStream
 
 typealias SettingsDataStore = DataStore<AppSettings>
 
-suspend inline fun SettingsDataStore.update(
-    noinline transform: suspend AppSettings.() -> AppSettings
-) = updateData(transform)
-
 suspend inline fun updateSettings(
     noinline transform: suspend AppSettings.() -> AppSettings
 ) = applicationContext().dataStore.updateData(transform)

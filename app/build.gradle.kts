@@ -139,7 +139,7 @@ android {
 }
 
 ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
+    arg("room.schemaLocation", file("$buildDir/generated/room/schemas").absolutePath)
     arg("room.incremental", "true")
     arg("room.generateKotlin", "true")
 }

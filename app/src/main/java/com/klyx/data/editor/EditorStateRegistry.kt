@@ -2,10 +2,11 @@ package com.klyx.data.editor
 
 import io.github.rosemoe.sora.compose.CodeEditorState
 import org.koin.core.annotation.Single
+import java.util.concurrent.ConcurrentHashMap
 
 @Single
 class EditorStateRegistry {
-    private val states = mutableMapOf<String, CodeEditorState>()
+    private val states = ConcurrentHashMap<String, CodeEditorState>()
 
     operator fun get(tabId: String) = states[tabId]
     operator fun set(tabId: String, state: CodeEditorState) = register(tabId, state)
@@ -23,4 +24,6 @@ class EditorStateRegistry {
     fun clear() {
         states.clear()
     }
+
+    val size: Int get() = states.size
 }

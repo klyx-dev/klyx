@@ -70,6 +70,9 @@ internal class DefaultEventBus(
     private val stickyCache = ConcurrentHashMap<KClass<*>, Any>()
 
     private val registryLock = Any()
+    // uses synchronized intentionally. all critical sections are fast, non-suspending operations.
+    // Mutex.withLock would require the calling functions to be suspend, which doesn't work for
+    // non-suspend EventBus methods like subscribe(), cancel(), subscriberCount(), reset(), close().
     private val registry = HashMap<KClass<*>, MutableList<SubscriberRecord<*>>>()
 
     private val closed = AtomicBoolean(false)

@@ -13,7 +13,6 @@ import com.blankj.utilcode.util.UriUtils
 import com.klyx.data.fs.Paths
 import com.klyx.terminal.home
 import com.klyx.util.applicationContext
-import com.klyx.util.context
 import com.klyx.util.isFileUri
 import com.klyx.util.isTextFile
 import com.klyx.util.withApplicationContext
@@ -147,14 +146,14 @@ class KxFile : java.io.Serializable {
 
     fun inputStream() = withApplicationContext {
         file?.inputStream()
-            ?: checkNotNull(context.contentResolver.openInputStream(raw.uri)) {
+            ?: checkNotNull(contentResolver.openInputStream(raw.uri)) {
                 "InputStream is null. Probably the provider recently crashed."
             }
     }
 
     fun outputStream() = withApplicationContext {
         file?.outputStream()
-            ?: checkNotNull(context.contentResolver.openOutputStream(raw.uri)) {
+            ?: checkNotNull(contentResolver.openOutputStream(raw.uri)) {
                 "OutputStream is null. Probably the provider recently crashed."
             }
     }

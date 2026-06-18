@@ -12,9 +12,7 @@ import android.system.StructStat
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.core.net.toFile
 import com.klyx.util.applicationContext
-import com.klyx.util.context
 import com.klyx.util.tryOrNull
 import com.klyx.util.withApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -179,19 +177,19 @@ fun KxFile.openWith() = withApplicationContext {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        context.startActivity(
+        startActivity(
             Intent.createChooser(intent, "Open with")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
-            context,
+            applicationContext,
             "No application found to open this file",
             Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
         Toast.makeText(
-            context,
+            applicationContext,
             "Could not open file: ${e.localizedMessage}",
             Toast.LENGTH_LONG
         ).show()
@@ -209,20 +207,20 @@ fun KxFile.share() = withApplicationContext {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        context.startActivity(
+        startActivity(
             Intent
                 .createChooser(intent, "Share file")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
-            context,
+            applicationContext,
             "No application available for sharing",
             Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
         Toast.makeText(
-            context,
+            applicationContext,
             "Could not share file: ${e.localizedMessage}",
             Toast.LENGTH_LONG
         ).show()

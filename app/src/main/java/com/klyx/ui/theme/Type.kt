@@ -11,7 +11,6 @@ import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
 import com.klyx.R
-import com.klyx.util.context
 import com.klyx.util.withApplicationContext
 import androidx.compose.ui.text.font.Font as ComposeFont
 
@@ -214,6 +213,6 @@ val GoogleSansTypography = Typography(
 
 val JetBrainsMonoFontFamily by lazy {
     withApplicationContext {
-        FontFamily(Typeface.createFromAsset(context.assets, "fonts/JetBrainsMono-Regular.ttf"))
+        FontFamily(Typeface.createFromAsset(assets, "fonts/JetBrainsMono-Regular.ttf"))
     }
 }

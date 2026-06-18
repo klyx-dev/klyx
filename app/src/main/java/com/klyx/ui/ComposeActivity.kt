@@ -53,10 +53,10 @@ abstract class ComposeActivity : ComponentActivity() {
 
     private fun hideSystemBarsOnLandscape() {
         val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            this.display
+            this.display ?: return
         } else {
             @Suppress("DEPRECATION")
-            windowManager.defaultDisplay
+            windowManager.defaultDisplay ?: return
         }
 
         when (display.rotation) {
@@ -86,16 +86,6 @@ abstract class ComposeActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        hideSystemBarsOnLandscape()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        hideSystemBarsOnLandscape()
-    }
-
-    override fun onRestart() {
-        super.onRestart()
         hideSystemBarsOnLandscape()
     }
 }

@@ -22,10 +22,9 @@ import com.klyx.event.terminal.NewSessionEvent
 import com.klyx.event.terminal.SessionTerminateEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import java.lang.ref.WeakReference
 
 class TerminalService : Service() {
 
@@ -42,10 +41,10 @@ class TerminalService : Service() {
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
 
-    private val binder = LocalBinder()
+    private val binder = LocalBinder(WeakReference(this))
 
-    inner class LocalBinder : Binder() {
-        fun getService(): TerminalService = this@TerminalService
+    class LocalBinder(private val service: WeakReference<TerminalService>) : Binder() {
+        fun getService(): TerminalService? = service.get()
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
@@ -82,6 +81,12 @@ class TerminalService : Service() {
         }
     }
 
+    fun onBound() {
+        if (!daemonRunning) {
+            daemonRunning = true
+        }
+    }
+
     @SuppressLint("WakelockTimeout")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -108,12 +113,6 @@ class TerminalService : Service() {
     }
 
     override fun onDestroy() {
-        CoroutineScope(Dispatchers.IO).launch {
-            withContext(NonCancellable) {
-                sessionManager.terminateAll()
-            }
-        }
-
         daemonRunning = false
         if (wakeLock?.isHeld == true) {
             wakeLock?.release()

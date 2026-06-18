@@ -32,12 +32,6 @@ android {
         }
     }
 
-    testOptions {
-        unitTests.all {
-            it.useJUnitPlatform()
-        }
-    }
-
     buildFeatures {
         buildConfig = true
         compose = true

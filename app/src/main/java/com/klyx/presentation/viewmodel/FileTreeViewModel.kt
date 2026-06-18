@@ -73,7 +73,7 @@ class FileTreeViewModel(
 
     val visibleNodes = uiState.map { state ->
         buildVisibleNodes(state)
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
         restoreSession()

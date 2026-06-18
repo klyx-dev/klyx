@@ -10,8 +10,11 @@ import com.klyx.data.repository.DiagnosticsRepository
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.KoinViewModel
@@ -30,8 +33,8 @@ class DiagnosticsViewModel(
     private val repository: DiagnosticsRepository
 ) : ViewModel() {
 
-    val state: StateFlow<DiagnosticsState>
-        field = MutableStateFlow(DiagnosticsState())
+    private val _state = MutableStateFlow(DiagnosticsState())
+    val state: StateFlow<DiagnosticsState> = _state
 
     init {
         loadDiagnostics()
@@ -39,21 +42,30 @@ class DiagnosticsViewModel(
 
     private fun loadDiagnostics() {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val deviceInfo = repository.getDeviceInfo()
-                val displayCapabilities = repository.getDisplayCapabilities()
-                val editorInfo = repository.getEditorInfo()
-                val runtimeCapabilities = repository.getRuntimeCapabilities()
-                val storageCapabilities = repository.getStorageCapabilities()
+            _state.update { it.copy(isLoading = true) }
+            try {
+                withContext(Dispatchers.IO) {
+                    coroutineScope {
+                        val deviceInfoDeferred = async { repository.getDeviceInfo() }
+                        val displayCapabilitiesDeferred = async { repository.getDisplayCapabilities() }
+                        val editorInfoDeferred = async { repository.getEditorInfo() }
+                        val runtimeCapabilitiesDeferred = async { repository.getRuntimeCapabilities() }
+                        val storageCapabilitiesDeferred = async { repository.getStorageCapabilities() }
 
-                state.value = DiagnosticsState(
-                    deviceInfo = deviceInfo,
-                    displayCapabilities = displayCapabilities,
-                    editorInfo = editorInfo,
-                    runtimeCapabilities = runtimeCapabilities,
-                    storageCapabilities = storageCapabilities,
-                    isLoading = false
-                )
+                        _state.update {
+                            it.copy(
+                                deviceInfo = deviceInfoDeferred.await(),
+                                displayCapabilities = displayCapabilitiesDeferred.await(),
+                                editorInfo = editorInfoDeferred.await(),
+                                runtimeCapabilities = runtimeCapabilitiesDeferred.await(),
+                                storageCapabilities = storageCapabilitiesDeferred.await(),
+                                isLoading = false
+                            )
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+                _state.update { it.copy(isLoading = false) }
             }
         }
     }

@@ -115,6 +115,7 @@ class EditorViewModel(
     }
 
     fun closeTab(tabId: String) {
+        editorStateRegistry.unregister(tabId)
         _uiState.update { state ->
             val tabIndex = state.openTabs.indexOfFirst { it.id == tabId }
             if (tabIndex == -1) return@update state
@@ -150,6 +151,8 @@ class EditorViewModel(
         val state = _uiState.value
         val closedTabs = state.openTabs.filter { it.id != currentTabId }
 
+        closedTabs.forEach { tab -> editorStateRegistry.unregister(tab.id) }
+
         _uiState.update {
             it.copy(
                 openTabs = it.openTabs
@@ -171,6 +174,7 @@ class EditorViewModel(
     }
 
     fun closeAllTabs() {
+        _uiState.value.openTabs.forEach { tab -> editorStateRegistry.unregister(tab.id) }
         _uiState.update {
             it.copy(
                 openTabs = persistentListOf(),

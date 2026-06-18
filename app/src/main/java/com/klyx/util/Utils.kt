@@ -10,10 +10,10 @@ import kotlin.contracts.contract
 import kotlin.math.roundToInt
 
 fun Throwable.extractMessage() = withApplicationContext {
-    if (this is OutOfMemoryError) {
-        context.getString(R.string.oom_description)
+    if (this@extractMessage is OutOfMemoryError) {
+        getString(R.string.oom_description)
     } else {
-        context.getString(
+        getString(
             R.string.smth_went_wrong,
             (localizedMessage?.takeIf { it.isNotBlank() } ?: message)?.decodeEscaped().orEmpty()
                 .ifEmpty {

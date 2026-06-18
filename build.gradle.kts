@@ -153,7 +153,10 @@ subprojects {
             namespace = "com.klyx.languages.$langName"
             ndkVersion = property("ndk.version") as String
 
-            compileSdk = 37
+            @Suppress("UnstableApiUsage")
+            compileSdk {
+                version = release(37)
+            }
 
             defaultConfig {
                 minSdk = 28

@@ -35,9 +35,9 @@ fun openUrl(url: String) = withApplicationContext {
     }
 
     try {
-        context.startActivity(intent)
+        startActivity(intent)
     } catch (_: ActivityNotFoundException) {
-        Toast.makeText(context, "No application found to open this URL", Toast.LENGTH_SHORT).show()
+        Toast.makeText(applicationContext, "No application found to open this URL", Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -49,20 +49,20 @@ fun shareText(text: String) = withApplicationContext {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        context.startActivity(
+        startActivity(
             Intent
                 .createChooser(intent, "Share via")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
-            context,
+            applicationContext,
             "No application available for sharing",
             Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
         Toast.makeText(
-            context,
+            applicationContext,
             "Could not share text: ${e.localizedMessage}",
             Toast.LENGTH_LONG
         ).show()

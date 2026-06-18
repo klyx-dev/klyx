@@ -55,10 +55,13 @@ class TerminalSessionBinderImpl : TerminalSessionBinder {
     }
 
     override fun unbind(context: Context) {
-        if (_isServiceBound.value) {
-            context.unbindService(connection)
+        if (_isServiceBound.compareAndSet(expect = true, update = false)) {
+            try {
+                context.unbindService(connection)
+            } catch (_: IllegalArgumentException) {
+                // Service not registered. already unbound or context mismatch
+            }
             _binder.update { null }
-            _isServiceBound.update { false }
         }
     }
 }

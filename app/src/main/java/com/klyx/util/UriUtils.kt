@@ -40,7 +40,7 @@ val Uri.shareableUri: Uri
 
 fun Uri.share() = withApplicationContext {
     try {
-        val mimeType = context.contentResolver.getType(this)
+        val mimeType = contentResolver.getType(this@share)
             ?: MimeTypeMap.getSingleton()
                 .getMimeTypeFromExtension(
                     MimeTypeMap.getFileExtensionFromUrl(this.toString())
@@ -54,20 +54,20 @@ fun Uri.share() = withApplicationContext {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
-        context.startActivity(
+        startActivity(
             Intent
                 .createChooser(intent, "Share via")
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     } catch (_: ActivityNotFoundException) {
         Toast.makeText(
-            context,
+            applicationContext,
             "No application available for sharing",
             Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
         Toast.makeText(
-            context,
+            applicationContext,
             "Could not share uri: ${e.localizedMessage}",
             Toast.LENGTH_LONG
         ).show()

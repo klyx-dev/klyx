@@ -25,12 +25,6 @@ sealed class WorkspaceTab {
         override val id: String = file.uri.toString(),
     ) : WorkspaceTab()
 
-//    data class BinaryFile(
-//        val file: KxFile,
-//        override val title: String = file.name,
-//        override val id: String = file.uri.toString()
-//    ) : WorkspaceTab()
-
     @Immutable
     data class ImageFile(
         val uri: Uri,

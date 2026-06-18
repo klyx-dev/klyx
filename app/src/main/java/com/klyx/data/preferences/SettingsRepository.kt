@@ -17,9 +17,9 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
         }
     }
 
-    suspend fun updateAppTheme(theme: AppTheme) = dataStore.update {
-        copy(
-            appearance = appearance.copy(theme = theme)
+    suspend fun updateAppTheme(theme: AppTheme) = dataStore.updateData {
+        it.copy(
+            appearance = it.appearance.copy(theme = theme)
         )
     }
 }
