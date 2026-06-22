@@ -8,7 +8,8 @@ import androidx.room.RoomDatabase
         RecentProjectEntity::class,
         RecentFileEntity::class
     ],
-    version = 2
+    version = 2,
+    exportSchema = true
 )
 abstract class KlyxDatabase : RoomDatabase() {
 

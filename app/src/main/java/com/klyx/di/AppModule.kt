@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import com.klyx.BuildConfig
 import com.klyx.data.database.KlyxDatabase
+import com.klyx.data.database.MIGRATION_1_2
 import com.klyx.data.preferences.SettingsDataStore
 import com.klyx.data.preferences.dataStore
 import org.koin.core.annotation.ComponentScan
@@ -19,19 +20,19 @@ object AppModule
 fun provideContentResolver(context: Context): ContentResolver = context.contentResolver
 
 @Singleton
-fun provideAppDatabase(context: Context): KlyxDatabase {
-    val builder = Room.databaseBuilder(
+fun provideAppDatabase(context: Context) = Room
+    .databaseBuilder(
         context = context.applicationContext,
         klass = KlyxDatabase::class.java,
         name = "klyx_database"
-    ).apply {
+    )
+    .addMigrations(MIGRATION_1_2)
+    .apply {
         if (BuildConfig.DEBUG) {
-            fallbackToDestructiveMigration(dropAllTables = false)
+            fallbackToDestructiveMigration(dropAllTables = true)
         }
     }
-
-    return builder.build()
-}
+    .build()
 
 @Singleton
 fun provideRecentFileDao(db: KlyxDatabase) = db.recentFileDao()

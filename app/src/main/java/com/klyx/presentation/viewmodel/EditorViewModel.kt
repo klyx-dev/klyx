@@ -9,8 +9,8 @@ import com.klyx.data.editor.EditorStateRegistry
 import com.klyx.data.editor.Save
 import com.klyx.data.editor.SaveAs
 import com.klyx.data.editor.WorkspaceTab
-import com.klyx.data.file.FileCategory
-import com.klyx.data.file.FileRepository
+import com.klyx.data.fs.FileCategory
+import com.klyx.data.fs.FileSystem
 import com.klyx.data.file.KxFile
 import com.klyx.data.repository.RecentFileRepository
 import com.klyx.util.stateInWhileSubscribed
@@ -50,7 +50,7 @@ sealed interface EditorEvent {
 
 @KoinViewModel
 class EditorViewModel(
-    private val fileRepository: FileRepository,
+    private val fileSystem: FileSystem,
     private val recentFileRepository: RecentFileRepository,
     private val editorStateRegistry: EditorStateRegistry
 ) : ViewModel() {
@@ -68,7 +68,6 @@ class EditorViewModel(
     val events = _events.receiveAsFlow()
 
     init {
-        //openTab(WorkspaceTab.Welcome)
         restoreSession()
     }
 
@@ -194,8 +193,8 @@ class EditorViewModel(
     fun openFile(uri: Uri, projectUri: Uri? = null) {
         viewModelScope.launch {
             try {
-                val file = fileRepository.wrapUri(uri)
-                val category = fileRepository.determineFileCategory(uri)
+                val file = fileSystem.wrapUri(uri)
+                val category = fileSystem.determineFileCategory(uri)
 
                 when (category) {
                     FileCategory.TEXT -> {
@@ -250,7 +249,7 @@ class EditorViewModel(
     fun handleFileRenamed(oldUri: Uri, newUri: Uri) {
         viewModelScope.launch {
             try {
-                val newFile = fileRepository.wrapUri(newUri)
+                val newFile = fileSystem.wrapUri(newUri)
 
                 val oldTab = _uiState.value.openTabs.find {
                     when (it) {

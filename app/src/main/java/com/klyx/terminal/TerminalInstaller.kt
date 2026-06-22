@@ -10,10 +10,10 @@ import arrow.core.compareTo
 import com.klyx.data.fs.Paths
 import com.klyx.data.fs.downloadFile
 import com.klyx.platform.currentArchitecture
-import com.klyx.util.applicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.zip.ZipFile
+import org.koin.core.annotation.Single
 import java.io.File
 import java.nio.file.CopyOption
 import java.nio.file.Files
@@ -29,16 +29,29 @@ interface InstallProgressListener {
     fun warn(message: String)
 }
 
-object TerminalInstaller {
-    private const val SYMLINKS_ENTRY = "SYMLINKS.txt"
-    private const val SYMLINKS_DELIM = "←"
+@Single
+class TerminalInstaller(private val context: Context) {
+
+    companion object {
+        private const val SYMLINKS_ENTRY = "SYMLINKS.txt"
+        private const val SYMLINKS_DELIM = "←"
+        private val versionRegex = Regex("""^\d{4}\.\d{2}\.\d{2}\.\d+$""")
+
+        fun isValidBootstrapVersion(version: String) = versionRegex.matches(version)
+
+        fun isNewer(remote: String, local: String): Boolean {
+            return remote.toVersionParts().compareTo(local.toVersionParts()) > 0
+        }
+
+        private fun String.toVersionParts() = split(".").map { it.toIntOrNull() ?: 0 }
+    }
 
     suspend fun uninstall() = withContext(Dispatchers.IO) {
         if (Paths.prefix.exists()) Paths.prefix.deleteRecursively()
         if (Paths.versionFile.exists()) Paths.versionFile.delete()
     }
 
-    suspend fun installFromAsset(context: Context, assetName: String, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
+    suspend fun installFromAsset(assetName: String, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
         progress.step("Wiping existing installation")
         uninstall()
 
@@ -152,15 +165,6 @@ object TerminalInstaller {
     suspend fun isInstalled() = withContext(Dispatchers.IO) {
         Paths.bin.exists() && Paths.versionFile.exists() && Paths.versionFile.readText().isNotBlank()
     }
-
-    fun isNewer(remote: String, local: String): Boolean {
-        return remote.toVersionParts().compareTo(local.toVersionParts()) > 0
-    }
-
-    private val versionRegex = Regex("""^\d{4}\.\d{2}\.\d{2}\.\d+$""")
-    fun isValidBootstrapVersion(version: String) = versionRegex.matches(version)
-
-    private fun String.toVersionParts() = split(".").map { it.toIntOrNull() ?: 0 }
 
     private suspend fun extractBootstrap(file: File, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
         progress.step("Preparing extraction staging")
@@ -345,7 +349,7 @@ object TerminalInstaller {
             }
 
             // Android/data/com.klyx
-            applicationContext().getExternalFilesDirs(null)
+            context.getExternalFilesDirs(null)
                 .forEachIndexed { index, dir ->
                     if (dir != null) {
                         symlink(dir, "external-$index")
@@ -354,7 +358,7 @@ object TerminalInstaller {
 
             // Android/media/com.klyx
             @Suppress("DEPRECATION")
-            applicationContext().externalMediaDirs
+            context.externalMediaDirs
                 .forEachIndexed { index, dir ->
                     if (dir != null) {
                         symlink(dir, "media-$index")

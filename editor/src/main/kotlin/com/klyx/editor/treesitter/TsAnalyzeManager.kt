@@ -1,6 +1,7 @@
 package com.klyx.editor.treesitter
 
 import android.os.Bundle
+import android.util.Log
 import androidx.annotation.WorkerThread
 import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
 import io.github.rosemoe.sora.lang.analysis.StyleReceiver
@@ -167,15 +168,17 @@ class TsAnalyzeManager(
             ensureActive()
 
             val activeInjections = mutableListOf<ActiveInjection>()
-            val precomputedLineSpans = compileDocumentSpans(
-                tree = newTree,
-                text = text,
-                documentLines = documentLines,
-                lineCount = currentLineCount,
-                scopedVariables = scopedVariables,
-                snapshotMapper = snapshotMapper,
-                outInjections = activeInjections
-            )
+            val precomputedLineSpans = runCatching {
+                compileDocumentSpans(
+                    tree = newTree,
+                    text = text,
+                    documentLines = documentLines,
+                    lineCount = currentLineCount,
+                    scopedVariables = scopedVariables,
+                    snapshotMapper = snapshotMapper,
+                    outInjections = activeInjections
+                )
+            }.getOrNull() ?: emptyArray()
 
             val computedBlocks = computeCodeBlocks(
                 tree = newTree,
@@ -222,21 +225,27 @@ class TsAnalyzeManager(
         val compiledStructure = Array<List<Span>>(totalLines) { emptyList() }
         val lineSegments = Array(totalLines) { mutableListOf<CaptureSegment>() }
 
-        val hostCaptures = queries.highlights(tree.rootNode)
-            .captures()
-            .map { (idx, match) -> match.captures[idx.toInt()] }
+        val hostCaptures = runCatching {
+            queries.highlights(tree.rootNode)
+                .captures()
+                .map { (idx, match) -> match.captures[idx.toInt()] }
+        }.getOrNull() ?: emptySequence()
 
         for (capture in hostCaptures) {
-            processCapture(
-                capture,
-                text,
-                documentLines,
-                totalLines,
-                scopedVariables,
-                snapshotMapper,
-                lineSegments,
-                isInjection = false
-            )
+            try {
+                processCapture(
+                    capture,
+                    text,
+                    documentLines,
+                    totalLines,
+                    scopedVariables,
+                    snapshotMapper,
+                    lineSegments,
+                    isInjection = false
+                )
+            } catch (e: Exception) {
+                Log.w("TsAnalyzeManager", "Failed to process capture: ${e.message}")
+            }
         }
 
         queries.injections?.let { injectionQuery ->

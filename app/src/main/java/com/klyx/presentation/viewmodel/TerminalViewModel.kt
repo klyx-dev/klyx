@@ -28,7 +28,8 @@ data class TerminalUiState(
 
 @KoinViewModel
 class TerminalViewModel(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val terminalInstaller: TerminalInstaller
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TerminalUiState())
@@ -42,7 +43,7 @@ class TerminalViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isChecking = true, error = null) }
             try {
-                if (TerminalInstaller.isInstalled()) {
+                if (terminalInstaller.isInstalled()) {
                     _uiState.update { it.copy(isChecking = false, isInstalled = true) }
                 } else {
                     _uiState.update { it.copy(isChecking = false, isInstalled = false) }
@@ -64,7 +65,7 @@ class TerminalViewModel(
             }
 
             try {
-                TerminalInstaller.installLatest(object : InstallProgressListener {
+                terminalInstaller.installLatest(object : InstallProgressListener {
                     private var currentPhase = ""
 
                     override fun step(label: String) {

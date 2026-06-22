@@ -170,6 +170,7 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
             "TERMUX__SE_PROCESS_CONTEXT=${getSeLinuxContext()}",
             "TERMUX_EXEC__PROC_SELF_EXE=${shellFile.absolutePath}",
             "TERMUX_EXEC__SYSTEM_LINKER_EXEC__MODE=force",
+            "LD_LIBRARY_PATH=${prefix.absolutePath}/lib",
             "LD_PRELOAD=${prefix.resolve("lib/libtermux-exec-linker-ld-preload.so").absolutePath}",
             "PATH=${prefix.absolutePath}/bin:${System.getenv("PATH").orEmpty()}",
             "TERM_PROGRAM=klyx",

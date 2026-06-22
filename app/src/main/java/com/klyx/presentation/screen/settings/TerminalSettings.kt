@@ -99,6 +99,7 @@ import com.klyx.ui.widgets.LocalToastHostState
 import com.klyx.util.humanBytes
 import com.klyx.util.sliderSteps
 import kotlinx.collections.immutable.toImmutableList
+import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -111,6 +112,7 @@ fun TerminalSettings() {
     val toastHostState = LocalToastHostState.current
 
     val settings = LocalAppSettings.current.terminal
+    val terminalInstaller: TerminalInstaller = koinInject()
 
     var installedVersion by remember { mutableStateOf<String?>(null) }
     var latestVersion by remember { mutableStateOf<String?>(null) }
@@ -137,7 +139,7 @@ fun TerminalSettings() {
 
     LaunchedEffect(Unit) {
         try {
-            installedVersion = TerminalInstaller.installedVersion()
+            installedVersion = terminalInstaller.installedVersion()
             //latestVersion = BootstrapUpdateChecker.latestVersion()
         } catch (_: Exception) {
             // ignore.
@@ -157,7 +159,7 @@ fun TerminalSettings() {
                 updateProgressText = ""
                 scope.launch {
                     try {
-                        TerminalInstaller.installLatest(
+                        terminalInstaller.installLatest(
                             progress = object : InstallProgressListener {
                                 override fun step(label: String) {
                                     updateStep = label
@@ -179,7 +181,7 @@ fun TerminalSettings() {
                                 }
                             }
                         )
-                        installedVersion = TerminalInstaller.installedVersion()
+                        installedVersion = terminalInstaller.installedVersion()
                         latestVersion = null
                         launch { toastHostState.showToast("Bootstrap updated successfully") }
                     } catch (e: Exception) {
@@ -204,7 +206,7 @@ fun TerminalSettings() {
                 updateProgressText = ""
                 scope.launch {
                     try {
-                        TerminalInstaller.installLatest(
+                        terminalInstaller.installLatest(
                             progress = object : InstallProgressListener {
                                 override fun step(label: String) {
                                     updateStep = label
@@ -226,7 +228,7 @@ fun TerminalSettings() {
                                 }
                             }
                         )
-                        installedVersion = TerminalInstaller.installedVersion()
+                        installedVersion = terminalInstaller.installedVersion()
                         latestVersion = null
                         launch { toastHostState.showToast("Bootstrap installed successfully") }
                     } catch (e: Exception) {
@@ -558,7 +560,7 @@ fun TerminalSettings() {
                                 checkError = null
                                 scope.launch {
                                     try {
-                                        installedVersion = TerminalInstaller.installedVersion()
+                                        installedVersion = terminalInstaller.installedVersion()
                                         latestVersion = BootstrapUpdateChecker.latestVersion()
                                     } catch (e: Exception) {
                                         checkError = e.message ?: "Unknown error"
@@ -596,7 +598,7 @@ fun TerminalSettings() {
                                 checkError = null
                                 scope.launch {
                                     try {
-                                        installedVersion = TerminalInstaller.installedVersion()
+                                        installedVersion = terminalInstaller.installedVersion()
                                         latestVersion = BootstrapUpdateChecker.latestVersion()
                                     } catch (e: Exception) {
                                         checkError = e.message ?: "Unknown error"

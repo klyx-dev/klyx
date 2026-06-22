@@ -6,10 +6,10 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.klyx.data.file.FileRepository
 import com.klyx.data.file.KxFile
 import com.klyx.data.file.wrap
-import com.klyx.data.project.ProjectRepository
+import com.klyx.data.fs.FileSystem
+import com.klyx.data.repository.RecentProjectRepository
 import com.klyx.presentation.components.filetree.FileNode
 import com.klyx.presentation.components.filetree.FlatNode
 import com.klyx.util.tryOrNull
@@ -57,8 +57,8 @@ sealed interface ClipboardState {
 
 @KoinViewModel
 class FileTreeViewModel(
-    private val fileRepository: FileRepository,
-    private val projectRepository: ProjectRepository,
+    private val fileSystem: FileSystem,
+    private val recentProjectRepository: RecentProjectRepository,
 ) : ViewModel() {
 
     companion object {
@@ -82,17 +82,17 @@ class FileTreeViewModel(
     @SuppressLint("UseKtx")
     private fun restoreSession() {
         viewModelScope.launch {
-            projectRepository
-                .recentProjects()
+            recentProjectRepository
+                .getProjects()
                 .forEach {
                     val uri = Uri.parse(it.uri)
-                    val file = withContext(Dispatchers.IO) { fileRepository.wrapUri(uri) }
+                    val file = withContext(Dispatchers.IO) { fileSystem.wrapUri(uri) }
                     val node = tryOrNull { FileNode(file) }
                     if (node != null) {
                         addRootNode(node)
                         if (it.isExpanded) expandNode(node) else collapseNode(node)
                     } else {
-                        projectRepository.removeRecent(uri)
+                        recentProjectRepository.removeProject(uri)
                     }
                 }
         }
@@ -148,7 +148,7 @@ class FileTreeViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val success = when (clipboard) {
                 is ClipboardState.Copy, null -> {
-                    val result = fileRepository.copy(sourceNode.uri, targetParent.uri) != null
+                    val result = fileSystem.copy(sourceNode.uri, targetParent.uri) != null
                     if (result) {
                         invalidateParentCache(targetParent)
                     }
@@ -157,8 +157,8 @@ class FileTreeViewModel(
 
                 is ClipboardState.Cut -> {
                     val result = sourceNode.parent?.uri?.let {
-                        fileRepository.move(sourceNode.uri, it, targetParent.uri) != null
-                    } ?: (fileRepository.move(
+                        fileSystem.move(sourceNode.uri, it, targetParent.uri) != null
+                    } ?: (fileSystem.move(
                         sourceNode.uri,
                         sourceNode.uri,
                         targetParent.uri
@@ -170,8 +170,8 @@ class FileTreeViewModel(
                             val newUri = targetParent.uri.buildUpon()
                                 .appendPath(sourceNode.uri.lastPathSegment).build()
                             onMoveCompleted(sourceNode.uri, newUri)
-                            projectRepository.removeRecent(sourceNode.uri)
-                            projectRepository.addRecent(newUri, isNodeExpanded(sourceNode))
+                            recentProjectRepository.removeProject(sourceNode.uri)
+                            recentProjectRepository.addProject(newUri, sourceNode.name, isNodeExpanded(sourceNode))
                         }
                         _uiState.update {
                             it.copy(
@@ -211,7 +211,7 @@ class FileTreeViewModel(
         if (_uiState.value.rootNodes.any { it.uri == uri }) return
 
         viewModelScope.launch {
-            val file = withContext(Dispatchers.IO) { fileRepository.wrapUri(uri) }
+            val file = withContext(Dispatchers.IO) { fileSystem.wrapUri(uri) }
             addRootNode(FileNode(file))
         }
     }
@@ -225,7 +225,7 @@ class FileTreeViewModel(
             if (_uiState.value.rootNodes.isEmpty()) {
                 expandNode(node)
             }
-            launch { projectRepository.addRecent(node.uri, isNodeExpanded(node)) }
+            launch { recentProjectRepository.addProject(node.uri, node.name, isNodeExpanded(node)) }
 
             _uiState.update {
                 it.copy(rootNodes = (it.rootNodes + node).toImmutableList())
@@ -244,7 +244,7 @@ class FileTreeViewModel(
             _uiState.update {
                 it.copy(rootNodes = (it.rootNodes - node).toImmutableList())
             }
-            viewModelScope.launch { projectRepository.removeRecent(node.uri) }
+            viewModelScope.launch { recentProjectRepository.removeProject(node.uri) }
         }
     }
 
@@ -297,8 +297,9 @@ class FileTreeViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val childNodes = projectRepository
-                    .listFiles(parent.uri)
+                val childNodes = fileSystem
+                    .list(parent.uri)
+                    .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
                     .map(::FileNode)
                     .toImmutableList()
 
@@ -328,7 +329,7 @@ class FileTreeViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val newUri = fileRepository.rename(node.uri, newName)
+                val newUri = fileSystem.rename(node.uri, newName)
 
                 if (newUri != null) {
                     val newNode = FileNode(newUri)
@@ -340,8 +341,8 @@ class FileTreeViewModel(
                     }
 
                     if (isRootNode(node)) {
-                        projectRepository.removeRecent(node.uri)
-                        projectRepository.addRecent(newUri, isNodeExpanded(node))
+                        recentProjectRepository.removeProject(node.uri)
+                        recentProjectRepository.addProject(newUri, newNode.name, isNodeExpanded(node))
                     }
 
                     _uiState.update { it ->
@@ -394,11 +395,11 @@ class FileTreeViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val success = fileRepository.delete(node.uri)
+                val success = fileSystem.delete(node.uri)
 
                 if (success) {
                     if (isRootNode(node)) {
-                        projectRepository.removeRecent(node.uri)
+                        recentProjectRepository.removeProject(node.uri)
                     }
 
                     _uiState.update {
@@ -429,7 +430,7 @@ class FileTreeViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val newUri = fileRepository.createFile(parent.uri, fileName)
+                val newUri = fileSystem.createFile(parent.uri, fileName)
 
                 if (newUri != null) {
                     onSuccess(newUri.wrap())
@@ -455,7 +456,7 @@ class FileTreeViewModel(
     ) {
         viewModelScope.launch {
             try {
-                val newUri = fileRepository.createDirectory(parent.uri, folderName)
+                val newUri = fileSystem.createDirectory(parent.uri, folderName)
 
                 if (newUri != null) {
                     onSuccess(newUri.wrap())

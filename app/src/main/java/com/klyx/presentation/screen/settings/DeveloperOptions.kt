@@ -45,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +62,7 @@ import com.klyx.terminal.TerminalInstaller
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.widgets.LocalToastHostState
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -71,7 +71,7 @@ fun SettingScreens.DeveloperOptions() {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scope = rememberCoroutineScope()
     val toastHostState = LocalToastHostState.current
-    val context = LocalContext.current
+    val terminalInstaller: TerminalInstaller = koinInject()
 
     var showWipeDialog by remember { mutableStateOf(false) }
     var showAssetDialog by remember { mutableStateOf(false) }
@@ -84,7 +84,7 @@ fun SettingScreens.DeveloperOptions() {
             onConfirm = {
                 showWipeDialog = false
                 scope.launch {
-                    TerminalInstaller.uninstall()
+                    terminalInstaller.uninstall()
                     toastHostState.showToast("Terminal environment wiped")
                 }
             }
@@ -102,13 +102,13 @@ fun SettingScreens.DeveloperOptions() {
                 assetInstallLabel = "Starting..."
                 scope.launch {
                     try {
-                        TerminalInstaller.installFromAsset(
-                            context = context,
+                        terminalInstaller.installFromAsset(
                             assetName = assetName,
                             progress = object : InstallProgressListener {
                                 override fun step(label: String) {
                                     assetInstallLabel = label
                                 }
+
                                 override fun progress(done: Long, total: Long) {}
                                 override fun warn(message: String) {}
                             }
