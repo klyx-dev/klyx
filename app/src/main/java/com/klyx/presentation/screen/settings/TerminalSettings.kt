@@ -30,9 +30,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
-import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsOff
@@ -92,15 +92,15 @@ import com.klyx.terminal.SafExposureState
 import com.klyx.terminal.TerminalDocumentsProvider
 import com.klyx.terminal.TerminalInstaller
 import com.klyx.terminal.emulator.CursorStyle
-import com.klyx.terminal.prefix
+import com.klyx.terminal.rootFs
 import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import com.klyx.ui.theme.GoogleSansRounded
 import com.klyx.ui.widgets.LocalToastHostState
 import com.klyx.util.humanBytes
 import com.klyx.util.sliderSteps
 import kotlinx.collections.immutable.toImmutableList
-import org.koin.compose.koinInject
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -1066,7 +1066,7 @@ private fun BootstrapUpdateWarningDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append($$"This will download and extract the latest bootstrap, replacing all files in $PREFIX ($${Paths.prefix.absolutePath}/).\n\n")
+                        append($$"This will download and extract the latest bootstrap, replacing all files in $ROOTFS ($${Paths.rootFs.absolutePath}/).\n\n")
                         withStyle(
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,

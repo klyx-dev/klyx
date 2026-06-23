@@ -7,21 +7,17 @@ import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
 import arrow.core.compareTo
+import com.klyx.data.file.archive.extractXzTar
 import com.klyx.data.fs.Paths
 import com.klyx.data.fs.downloadFile
 import com.klyx.platform.currentArchitecture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.commons.compress.archivers.zip.ZipFile
 import org.koin.core.annotation.Single
 import java.io.File
-import java.nio.file.CopyOption
 import java.nio.file.Files
-import java.nio.file.LinkOption
-import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import java.nio.file.attribute.BasicFileAttributes
-import java.util.EnumSet
+import java.util.stream.Collectors
 
 interface InstallProgressListener {
     fun step(label: String)
@@ -29,12 +25,15 @@ interface InstallProgressListener {
     fun warn(message: String)
 }
 
+interface UninstallProgressListener {
+    fun progress(done: Long, total: Long)
+    fun step(message: String)
+}
+
 @Single
 class TerminalInstaller(private val context: Context) {
 
     companion object {
-        private const val SYMLINKS_ENTRY = "SYMLINKS.txt"
-        private const val SYMLINKS_DELIM = "←"
         private val versionRegex = Regex("""^\d{4}\.\d{2}\.\d{2}\.\d+$""")
 
         fun isValidBootstrapVersion(version: String) = versionRegex.matches(version)
@@ -46,16 +45,39 @@ class TerminalInstaller(private val context: Context) {
         private fun String.toVersionParts() = split(".").map { it.toIntOrNull() ?: 0 }
     }
 
-    suspend fun uninstall() = withContext(Dispatchers.IO) {
-        if (Paths.prefix.exists()) Paths.prefix.deleteRecursively()
-        if (Paths.versionFile.exists()) Paths.versionFile.delete()
+    suspend fun uninstall(
+        listener: UninstallProgressListener? = null
+    ) = withContext(Dispatchers.IO) {
+        val rootfs = Paths.rootFs
+
+        if (rootfs.exists()) {
+            val files = rootfs.walkBottomUp().toList()
+
+            val total = files.size.toLong()
+            var done = 0L
+
+            listener?.step("Removing rootfs")
+
+            for (file in files) {
+                listener?.step(file.name)
+                file.delete()
+                done++
+                listener?.progress(done, total)
+            }
+        }
+
+        Paths.versionFile.delete()
     }
 
-    suspend fun installFromAsset(assetName: String, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
+    suspend fun installFromAsset(
+        assetName: String,
+        progress: InstallProgressListener,
+        uninstallProgressListener: UninstallProgressListener? = null,
+    ) = withContext(Dispatchers.IO) {
         progress.step("Wiping existing installation")
-        uninstall()
+        uninstall(uninstallProgressListener)
 
-        val tempZip = File.createTempFile("bootstrap_asset", ".zip", Paths.prefix.parentFile).apply {
+        val temp = File.createTempFile("bootstrap_asset", ".tar.xz", Paths.tempDir).apply {
             deleteOnExit()
         }
 
@@ -64,13 +86,14 @@ class TerminalInstaller(private val context: Context) {
             progress.progress(0, 1)
 
             context.assets.open(assetName).use { input ->
-                tempZip.outputStream().use { output ->
+                temp.outputStream().use { output ->
                     input.copyTo(output)
                 }
             }
 
             progress.progress(1, 1)
-            extractBootstrap(tempZip, progress)
+            extractBootstrap(temp, progress)
+            addAndroidGroups(Paths.rootFs)
 
             progress.step("Finalizing setup")
             Paths.home.mkdirs()
@@ -84,8 +107,8 @@ class TerminalInstaller(private val context: Context) {
             progress.warn("Installation from asset failed: ${e.message}")
             throw e
         } finally {
-            if (tempZip.exists()) {
-                tempZip.delete()
+            if (temp.exists()) {
+                temp.delete()
             }
         }
     }
@@ -107,21 +130,21 @@ class TerminalInstaller(private val context: Context) {
             return
         }
 
-        val assetName = "bootstrap-${currentArchitecture()}.zip"
+        val assetName = "klyx-bootstrap-${currentArchitecture()}.tar.xz"
         val downloadUrl = "https://github.com/klyx-dev/klyx-bootstrap/releases/download/$latestVersion/$assetName"
 
-        val tempZip = withContext(Dispatchers.IO) {
-            File.createTempFile("bootstrap_download", ".zip", Paths.prefix.parentFile).apply {
+        val temp = withContext(Dispatchers.IO) {
+            File.createTempFile("bootstrap_download", ".tar.xz", Paths.tempDir).apply {
                 deleteOnExit()
             }
         }
 
         try {
-            progress.step("Downloading $assetName")
+            progress.step("Downloading Bootstrap (${currentArchitecture()})")
 
             downloadFile(
                 url = downloadUrl,
-                outputPath = tempZip.absolutePath,
+                outputPath = temp.absolutePath,
                 onDownload = { sent, total ->
                     if (total != null && total > 0) {
                         progress.progress(sent, total)
@@ -129,10 +152,10 @@ class TerminalInstaller(private val context: Context) {
                 }
             )
 
-            extractBootstrap(tempZip, progress)
+            extractBootstrap(temp, progress)
 
             withContext(Dispatchers.IO) {
-                if (tempZip.exists()) tempZip.delete()
+                if (temp.exists()) temp.delete()
             }
 
             withContext(Dispatchers.IO) {
@@ -147,10 +170,10 @@ class TerminalInstaller(private val context: Context) {
             throw e
         } finally {
             withContext(Dispatchers.IO) {
-                if (tempZip.exists()) {
-                    tempZip.delete()
+                if (temp.exists()) {
+                    temp.delete()
                 }
-                val staging = Paths.prefix.resolveSibling(Paths.prefix.name + ".staging")
+                val staging = Paths.rootFs.resolveSibling("${Paths.rootFs.name}.staging")
                 if (staging.exists()) {
                     staging.deleteRecursively()
                 }
@@ -163,120 +186,79 @@ class TerminalInstaller(private val context: Context) {
     }
 
     suspend fun isInstalled() = withContext(Dispatchers.IO) {
-        Paths.bin.exists() && Paths.versionFile.exists() && Paths.versionFile.readText().isNotBlank()
+        Paths.rootFs.exists() &&
+                Paths.rootFs.resolve("usr/bin/bash").exists() &&
+                Paths.versionFile.exists() &&
+                Paths.versionFile.readText().isNotBlank()
     }
 
-    private suspend fun extractBootstrap(file: File, progress: InstallProgressListener) = withContext(Dispatchers.IO) {
-        progress.step("Preparing extraction staging")
+    private fun addAndroidGroups(rootfs: File) {
+        val groupFile = File(rootfs, "etc/group")
+        val existing = groupFile.readLines()
+            .mapNotNull {
+                it.split(":").getOrNull(2)?.toIntOrNull()
+            }
+            .toSet()
 
-        val prefix = Paths.prefix
-        val staging = prefix.resolveSibling(prefix.name + ".staging")
+        val groups = File("/proc/self/status")
+            .readLines()
+            .firstOrNull { it.startsWith("Groups:") }
+            ?.removePrefix("Groups:")
+            ?.trim()
+            ?.split(Regex("\\s+"))
+            ?.mapNotNull(String::toIntOrNull)
+            .orEmpty()
 
-        if (staging.exists()) {
-            staging.deleteRecursively()
-        }
-        staging.mkdirs()
-
-        progress.step("Extracting bootstrap")
-        val symlinks = mutableListOf<Pair<String, String>>()
-
-        ZipFile.builder().setFile(file).get().use { archive ->
-            val entries = archive.entries.toList()
-
-            val totalEntries = entries.size.toLong()
-            var extractedCount = 0L
-
-            for (entry in entries) {
-                val rawName = entry.name
-                extractedCount++
-                progress.step(rawName)
-                progress.progress(extractedCount, totalEntries)
-
-                if (rawName == SYMLINKS_ENTRY) {
-                    val text = archive.getInputStream(entry).bufferedReader().use { it.readText() }
-                    for (line in text.lines()) {
-                        if (line.isBlank()) continue
-                        val parts = line.split(SYMLINKS_DELIM, limit = 2)
-                        if (parts.size == 2) {
-                            symlinks.add(Pair(parts[0], parts[1]))
-                        } else {
-                            progress.warn("Malformed SYMLINKS.txt line: $line")
-                        }
-                    }
-                    continue
+        val entries = buildString {
+            for (gid in groups) {
+                if (gid !in existing) {
+                    appendLine("android_gid_$gid:x:$gid:")
                 }
-
-                val dest = staging.resolve(rawName).normalize()
-                if (!dest.startsWith(staging)) {
-                    progress.warn("Skipping unsafe entry path: $rawName")
-                    continue
-                }
-
-                if (entry.isDirectory) {
-                    Files.createDirectories(dest.toPath())
-                    continue
-                }
-
-                if (entry.isUnixSymlink) continue
-
-                dest.parentFile?.let { Files.createDirectories(it.toPath()) }
-
-                archive.getInputStream(entry).use { input ->
-                    Files.copy(input, dest.toPath(), StandardCopyOption.REPLACE_EXISTING)
-                }
-
-                applyPermissions(dest, entry.unixMode, rawName)
             }
         }
 
-        progress.step("Replaying symlinks")
-        replaySymlinks(staging, symlinks, progress)
-
-        progress.step("Swapping staging into prefix")
-        swapStagingIntoPrefix(staging, prefix, progress)
-
-        progress.step("Bootstrap installed successfully")
-    }
-
-    private fun applyPermissions(destFile: File, mode: Int, rawName: String) {
-        if (mode != 0) {
-            val isExecutable = (mode and 0b001_000_000) != 0 // 0o100
-            destFile.setReadable(true, true)
-            destFile.setWritable(true, true)
-            destFile.setExecutable(isExecutable, true)
-        } else {
-            // Fallback just in case some weird file has mode 0
-            val forceExec = rawName.startsWith("bin/") ||
-                    rawName.startsWith("libexec/") ||
-                    rawName.startsWith("lib/apt/methods/") ||
-                    rawName == "lib/apt/apt-helper" ||
-                    rawName.endsWith(".sh")
-
-            destFile.setReadable(true, true)
-            destFile.setWritable(true, true)
-            destFile.setExecutable(forceExec, true)
+        if (entries.isNotEmpty()) {
+            groupFile.appendText("\n$entries")
         }
     }
 
-    private fun replaySymlinks(staging: File, symlinks: List<Pair<String, String>>, progress: InstallProgressListener) {
-        for ((target, linkRel) in symlinks) {
-            val cleanLinkRel = linkRel.removePrefix("./")
-            val linkAbs = staging.resolve(cleanLinkRel).normalize()
+    private suspend fun extractBootstrap(archive: File, progress: InstallProgressListener) =
+        withContext(Dispatchers.IO) {
+            progress.step("Preparing extraction staging")
 
-            if (!linkAbs.startsWith(staging)) continue
-            linkAbs.parentFile?.let { Files.createDirectories(it.toPath()) }
+            val rootfs = Paths.rootFs
+            val staging = rootfs.resolveSibling("${rootfs.name}.staging")
 
-            if (Files.exists(linkAbs.toPath(), LinkOption.NOFOLLOW_LINKS)) {
-                Files.delete(linkAbs.toPath())
+            if (staging.exists()) {
+                staging.deleteRecursively()
+            }
+            staging.mkdirs()
+
+            progress.step("Extracting bootstrap")
+            extractXzTar(
+                archive = archive,
+                destination = staging,
+            ) { extraction ->
+                progress.step(extraction.currentFile)
+
+                if (extraction.totalBytes > 0) {
+                    progress.progress(
+                        extraction.extractedBytes,
+                        extraction.totalBytes
+                    )
+                }
             }
 
-            try {
-                Os.symlink(target, linkAbs.absolutePath)
-            } catch (e: Exception) {
-                progress.warn("Failed to symlink ${linkAbs.absolutePath} -> $target: ${e.message}")
-            }
+            progress.step("Swapping staging into rootfs")
+
+            swapStagingIntoPrefix(
+                staging = staging,
+                rootfs = rootfs,
+                progress = progress
+            )
+
+            progress.step("Bootstrap installed successfully")
         }
-    }
 
     private suspend fun setupStorageSymlinks(progress: InstallProgressListener) = withContext(Dispatchers.IO) {
         progress.step("Setting up storage symlinks")
@@ -371,49 +353,48 @@ class TerminalInstaller(private val context: Context) {
         progress.step("Storage symlinks ready")
     }
 
-    private fun swapStagingIntoPrefix(staging: File, prefix: File, progress: InstallProgressListener) {
-        if (!prefix.exists()) {
+    private fun swapStagingIntoPrefix(staging: File, rootfs: File, progress: InstallProgressListener) {
+        if (!rootfs.exists()) {
             // Fresh install. atomic rename
-            Os.rename(staging.absolutePath, prefix.absolutePath)
+            Os.rename(staging.absolutePath, rootfs.absolutePath)
             return
         }
         // update. merge staging into existing prefix, only overwriting
         // files that exist in the new bootstrap. Any user-installed
         // packages or configs outside the bootstrap are preserved.
         val stagingRoot = staging.toPath()
-        val prefixRoot = prefix.toPath()
-        val totalFiles = Files.walk(stagingRoot).use { stream ->
-            stream.count()
-        }
+        val root = rootfs.toPath()
+        val paths = Files.walk(stagingRoot).collect(Collectors.toList())
+        val totalFiles = paths.size.toLong()
         var swappedCount = 0L
-        Files.walk(stagingRoot).use { stream ->
-            stream.forEach { stagingPath ->
-                swappedCount++
-                progress.progress(swappedCount, totalFiles)
-                val relative = stagingRoot.relativize(stagingPath)
-                val targetPath = prefixRoot.resolve(relative)
-                try {
-                    when {
-                        Files.isSymbolicLink(stagingPath) -> {
-                            val linkTarget = Files.readSymbolicLink(stagingPath)
-                            Files.deleteIfExists(targetPath)
-                            Files.createSymbolicLink(targetPath, linkTarget)
-                        }
-                        Files.isDirectory(stagingPath) -> {
-                            Files.createDirectories(targetPath)
-                        }
-                        else -> {
-                            Files.copy(
-                                stagingPath,
-                                targetPath,
-                                StandardCopyOption.REPLACE_EXISTING,
-                                StandardCopyOption.COPY_ATTRIBUTES
-                            )
-                        }
+        for (stagingPath in paths) {
+            swappedCount++
+            progress.progress(swappedCount, totalFiles)
+            val relative = stagingRoot.relativize(stagingPath)
+            val targetPath = root.resolve(relative)
+            try {
+                when {
+                    Files.isSymbolicLink(stagingPath) -> {
+                        val linkTarget = Files.readSymbolicLink(stagingPath)
+                        Files.deleteIfExists(targetPath)
+                        Files.createSymbolicLink(targetPath, linkTarget)
                     }
-                } catch (e: Exception) {
-                    progress.warn("Failed to process $relative: ${e.message}")
+
+                    Files.isDirectory(stagingPath) -> {
+                        Files.createDirectories(targetPath)
+                    }
+
+                    else -> {
+                        Files.deleteIfExists(targetPath)
+                        Files.copy(
+                            stagingPath,
+                            targetPath,
+                            StandardCopyOption.COPY_ATTRIBUTES
+                        )
+                    }
                 }
+            } catch (e: Exception) {
+                progress.warn("Failed to process $relative: ${e.message}")
             }
         }
         staging.deleteRecursively()

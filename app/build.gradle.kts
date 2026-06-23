@@ -139,7 +139,7 @@ android {
 }
 
 ksp {
-    arg("room.schemaLocation", file("$buildDir/generated/room/schemas").absolutePath)
+    arg("room.schemaLocation", layout.buildDirectory.file("generated/room/schemas").get().asFile.absolutePath)
     arg("room.incremental", "true")
     arg("room.generateKotlin", "true")
 }
@@ -196,6 +196,7 @@ dependencies {
 
     implementation(libs.bundles.arrow)
     implementation(libs.apache.commons.compress)
+    implementation(libs.xz)
 
     implementation(libs.smooth.corner.rect.android.compose)
     implementation(libs.kotlinx.serialization.json)

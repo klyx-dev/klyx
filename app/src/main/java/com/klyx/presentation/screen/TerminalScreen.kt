@@ -281,6 +281,7 @@ private fun TerminalSetup(
 
     val headerTitle = when {
         uiState.error != null -> "Installation Failed"
+        uiState.isChecking || uiState.currentStep.contains("checking for updates", ignoreCase = true)-> "Preparing Bootstrap"
         uiState.isInstalling && uiState.currentStep.contains("Download", ignoreCase = true) -> "Downloading Terminal"
         uiState.isInstalling -> "Extracting Environment"
         !isOnline -> "Network Required"

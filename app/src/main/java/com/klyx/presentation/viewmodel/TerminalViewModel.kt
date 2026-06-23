@@ -79,7 +79,7 @@ class TerminalViewModel(
                         val text = if (currentPhase.contains("Downloading", ignoreCase = true)) {
                             "${done.humanBytes()} / ${total.humanBytes()}"
                         } else {
-                            "$done / $total files"
+                            "${done.humanBytes()} / ${total.humanBytes()} (${(percent * 100f).toInt()}%)"
                         }
 
                         _uiState.update { it.copy(progress = percent, progressText = text) }

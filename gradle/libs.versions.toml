@@ -36,6 +36,7 @@ room-runtime = "2.8.4"
 
 
 utilcodex = "1.31.1"
+xz = "1.12"
 zoomable = "2.12.0"
 
 [libraries]
@@ -110,6 +111,7 @@ koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlinx-collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "kotlinx-collections-immutable" }
 utilcodex = { module = "com.blankj:utilcodex", version.ref = "utilcodex" }
+xz = { module = "org.tukaani:xz", version.ref = "xz" }
 zoomable = { module = "net.engawapg.lib:zoomable", version.ref = "zoomable" }
 
 sora-editor = { module = "io.github.rosemoe:editor" }

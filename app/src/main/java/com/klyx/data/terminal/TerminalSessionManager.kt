@@ -1,6 +1,5 @@
 package com.klyx.data.terminal
 
-import android.util.Log
 import androidx.compose.runtime.Immutable
 import com.klyx.BuildConfig
 import com.klyx.core.Global
@@ -9,14 +8,13 @@ import com.klyx.event.GlobalEventBus
 import com.klyx.event.terminal.NewSessionEvent
 import com.klyx.event.terminal.SessionTerminateEvent
 import com.klyx.event.terminal.TerminateAllSessionEvent
-import com.klyx.platform.currentArchitecture
-import com.klyx.terminal.bin
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
 import com.klyx.terminal.home
-import com.klyx.terminal.prefix
+import com.klyx.terminal.terminalArgs
 import com.klyx.terminal.rootFs
+import com.klyx.terminal.terminalEnv
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.mutate
@@ -30,7 +28,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.io.File
 import kotlin.uuid.Uuid
 
 /**
@@ -146,38 +143,10 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
         id: Uuid,
         transcriptRows: Int
     ): TerminalSession = withContext(Dispatchers.IO) {
-        val prefix = Paths.prefix
-        val home = Paths.home.absolutePath
-        val shellFile = findExecutable()
         val linker = "/system/bin/linker64"
 
-        val env = mutableListOf(
-            "HOME=$home",
-            "PREFIX=${prefix.absolutePath}",
-            "TERMUX__ROOTFS=${Paths.rootFs.absolutePath}",
-            "TERMUX__PREFIX=${prefix.absolutePath}",
-            "TERMUX__HOME=$home",
-            "TERMUX_APP__DATA_DIR=${Paths.dataDir.absolutePath}",
-            "TERMUX_APP__LEGACY_DATA_DIR=${Paths.dataDir.absolutePath}",
-            "TERMUX_APP__PACKAGE_NAME=com.klyx",
-            "TMPDIR=${prefix.resolve("tmp").absolutePath}",
-            "TERM=xterm-256color",
-            "LANG=en_US.UTF-8",
-            "COLORTERM=truecolor",
-            "SHELL=${shellFile.absolutePath}",
-            "TERMUX_PACKAGE_MANAGER=apt",
-            "TERMUX_PACKAGE_ARCH=${currentArchitecture()}",
-            "TERMUX__SE_PROCESS_CONTEXT=${getSeLinuxContext()}",
-            "TERMUX_EXEC__PROC_SELF_EXE=${shellFile.absolutePath}",
-            "TERMUX_EXEC__SYSTEM_LINKER_EXEC__MODE=force",
-            "LD_LIBRARY_PATH=${prefix.absolutePath}/lib",
-            "LD_PRELOAD=${prefix.resolve("lib/libtermux-exec-linker-ld-preload.so").absolutePath}",
-            "PATH=${prefix.absolutePath}/bin:${System.getenv("PATH").orEmpty()}",
-            "TERM_PROGRAM=klyx",
-            "TERM_PROGRAM_VERSION=${BuildConfig.VERSION_NAME}"
-        )
-
-        val certPath = prefix.resolve("etc/tls/cert.pem")
+        val env = terminalEnv().map { "${it.key}=${it.value}" }.toMutableList()
+        val certPath = Paths.rootFs.resolve("etc/tls/cert.pem")
         if (certPath.exists()) {
             env += "SSL_CERT_FILE=${certPath.absolutePath}"
             env += "CURL_CA_BUNDLE=${certPath.absolutePath}"
@@ -188,29 +157,10 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
             env += "DEBUG=true"
         }
 
-        env += listOf(
-            "ANDROID_ART_ROOT",
-            "ANDROID_ASSETS",
-            "ANDROID_DATA",
-            "ANDROID_I18N_ROOT",
-            "ANDROID_ROOT",
-            "ANDROID_RUNTIME_ROOT",
-            "ANDROID_STORAGE",
-            "ANDROID_TZDATA_ROOT",
-            "ASEC_MOUNTPOINT",
-            "BOOTCLASSPATH",
-            "DEX2OATBOOTCLASSPATH",
-            "EXTERNAL_STORAGE",
-            "LOOP_MOUNTPOINT",
-            "SYSTEMSERVERCLASSPATH",
-        ).mapNotNull { key ->
-            System.getenv(key)?.let { "$key=$it" }
-        }
-
         TerminalSession(
             shellPath = linker,
-            cwd = home,
-            args = listOf(linker, shellFile.absolutePath),
+            cwd = Paths.home.absolutePath,
+            args = listOf(linker) + terminalArgs(),
             env = env,
             client = client,
             transcriptRows = transcriptRows
@@ -253,24 +203,6 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
         }
         snapshot.forEach { it.session.finishIfRunning() }
         GlobalEventBus.publish(TerminateAllSessionEvent)
-    }
-
-    private fun findExecutable(): File {
-        var executable: File? = null
-
-        val shellFile = Paths.bin.resolve("bash")
-        if (shellFile.isFile) {
-            if (!shellFile.canExecute()) {
-                if (!shellFile.setExecutable(true)) {
-                    Log.e(TAG, "Cannot set executable: ${shellFile.absolutePath}")
-                }
-            }
-            executable = shellFile
-        } else {
-            Log.e(TAG, "bin/bash not found")
-        }
-
-        return executable ?: File("/system/bin/sh")
     }
 
     private fun getSeLinuxContext() = try {

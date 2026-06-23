@@ -35,3 +35,6 @@
 [submodule "languages/tree-sitter-typescript"]
 	path = languages/tree-sitter-typescript
 	url = https://github.com/tree-sitter/tree-sitter-typescript
+[submodule "app/src/main/cpp/proot"]
+	path = app/src/main/cpp/proot
+	url = https://github.com/itsvks19/proot
