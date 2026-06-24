@@ -10,7 +10,7 @@ fun terminalEnv() = mapOf(
     "TERM_PROGRAM_VERSION" to BuildConfig.VERSION_NAME,
     "COLORTERM" to "truecolor",
     "HOSTNAME" to "klyx",
-    "TMPDIR" to Paths.tempDir.absolutePath,
+    "TMPDIR" to "/tmp",
     "LANG" to "C.UTF-8",
     "LC_ALL" to "C.UTF-8",
 ) + processEnv()
