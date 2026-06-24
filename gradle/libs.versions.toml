@@ -8,7 +8,7 @@ androidx-lifecycle = "2.11.0"
 activity-compose = "1.13.0"
 
 documentfile = "1.1.0"
-kotest = "6.1.11"
+kotest = "6.2.1"
 kotlin = "2.4.0"
 compose-bom = "2026.06.00"
 kotlinx-io = "0.9.0"
