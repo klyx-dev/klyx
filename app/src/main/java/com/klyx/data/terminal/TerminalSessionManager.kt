@@ -62,6 +62,7 @@ interface TerminalSessionManager : Global {
         client: TerminalSessionClient,
         id: Uuid = Uuid.generateV7(),
         transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS,
+        showMotd: Boolean = true,
     ): TerminalSession
 
     /** Returns the session for [id] if it is still running, otherwise creates a new one. */
@@ -141,7 +142,8 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
     override suspend fun newSession(
         client: TerminalSessionClient,
         id: Uuid,
-        transcriptRows: Int
+        transcriptRows: Int,
+        showMotd: Boolean
     ): TerminalSession = withContext(Dispatchers.IO) {
         val linker = "/system/bin/linker64"
 
@@ -160,7 +162,7 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
         TerminalSession(
             shellPath = linker,
             cwd = Paths.home.absolutePath,
-            args = listOf(linker) + terminalArgs(),
+            args = listOf(linker) + terminalArgs(showMotd),
             env = env,
             client = client,
             transcriptRows = transcriptRows

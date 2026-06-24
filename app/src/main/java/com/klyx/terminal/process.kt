@@ -51,7 +51,7 @@ fun processEnv(): Map<String, String> {
 }
 
 @SuppressLint("SdCardPath")
-fun terminalArgs() = listOf(
+fun terminalArgs(showMotd: Boolean = true) = listOf(
     prootFile().absolutePath,
 
     "-0",
@@ -74,5 +74,6 @@ fun terminalArgs() = listOf(
     "-b", "${Paths.home.absolutePath}:/root",
 
     "/bin/sh", "-c",
-    "cat /etc/motd; /bin/bash --login"
+    if (showMotd) "cat /etc/motd; /bin/bash --login"
+    else "/bin/bash --login"
 )

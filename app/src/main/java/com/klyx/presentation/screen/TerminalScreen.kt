@@ -509,7 +509,8 @@ private fun TerminalEmulator(
         if (sessions.isEmpty()) {
             sessionManager.newSession(
                 client = sessionClient,
-                transcriptRows = terminalSettings.scrollbackLines
+                transcriptRows = terminalSettings.scrollbackLines,
+                showMotd = terminalSettings.showMotd
             )
         }
     }
@@ -531,7 +532,8 @@ private fun TerminalEmulator(
                     scope.launch {
                         sessionManager.newSession(
                             client = sessionClient,
-                            transcriptRows = terminalSettings.scrollbackLines
+                            transcriptRows = terminalSettings.scrollbackLines,
+                            showMotd = terminalSettings.showMotd
                         )
                     }
                 }

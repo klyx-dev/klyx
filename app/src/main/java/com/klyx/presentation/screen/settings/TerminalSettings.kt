@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.Notifications
@@ -419,6 +420,28 @@ fun TerminalSettings() {
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.TextFormat,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
+                    )
+                }
+            }
+
+            item {
+                SettingsSubsection(title = "Session") {
+                    SwitchSettingItem(
+                        title = "Show MOTD",
+                        subtitle = "Display the message of the day when a new terminal session is created.",
+                        checked = settings.showMotd,
+                        onCheckedChange = { showMotd ->
+                            scope.launch {
+                                updateTerminalSettings { copy(showMotd = showMotd) }
+                            }
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.Info,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.secondary
                             )
