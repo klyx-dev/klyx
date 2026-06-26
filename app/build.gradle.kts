@@ -42,7 +42,7 @@ android {
     }
 
     signingConfigs {
-        create("releaseConfig") {
+        create("release") {
             val isCI = System.getenv("GITHUB_ACTIONS")?.toBoolean() ?: false
 
             val propPath = if (isCI) {
@@ -72,7 +72,7 @@ android {
     }
 
     buildTypes {
-        val releaseConfig by signingConfigs.getting
+        val releaseConfig = signingConfigs.getByName("release")
 
         release {
             isMinifyEnabled = true

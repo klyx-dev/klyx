@@ -228,7 +228,7 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
     }
 }
 
-val generateTreeSitterRegistry by tasks.registering(GenerateTreeSitterTask::class) {
+val generateTreeSitterRegistry = tasks.register<GenerateTreeSitterTask>("generateTreeSitterRegistry") {
     group = "build setup"
     description = "Generates the TreeSitter class dynamically based on installed submodules"
 
