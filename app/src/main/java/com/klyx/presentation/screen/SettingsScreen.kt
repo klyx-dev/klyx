@@ -96,6 +96,13 @@ fun SettingsScreen() {
 
             item {
                 SettingsCategoryItem(
+                    category = SettingsCategory.FileTree,
+                    onClick = { navigator.navigateTo(SettingsScreen.FileTree) }
+                )
+            }
+
+            item {
+                SettingsCategoryItem(
                     category = SettingsCategory.Appearance,
                     onClick = { navigator.navigateTo(SettingsScreen.Appearance) }
                 )
@@ -160,6 +167,7 @@ private fun SettingsCategory.colors(): CategoryColors {
             )
 
             SettingsCategory.About -> CategoryColors(Color(0xFF3F474D), Color(0xFFDEE3EB))
+            SettingsCategory.FileTree -> CategoryColors(Color(0xFF2D4A3E), Color(0xFFA8E6CF))
         }
     } else {
         when (this) {
@@ -179,6 +187,7 @@ private fun SettingsCategory.colors(): CategoryColors {
             )
 
             SettingsCategory.About -> CategoryColors(Color(0xFFEFF1F7), Color(0xFF44474F))
+            SettingsCategory.FileTree -> CategoryColors(Color(0xFFD4EDDA), Color(0xFF155724))
         }
     }
 }

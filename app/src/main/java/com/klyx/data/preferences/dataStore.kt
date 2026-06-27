@@ -35,6 +35,10 @@ suspend inline fun updateAppearanceSettings(
     noinline transform: suspend AppearanceSettings.() -> AppearanceSettings
 ) = updateSettings { copy(appearance = transform(appearance)) }.appearance
 
+suspend inline fun updateFileTreeSettings(
+    noinline transform: suspend FileTreeSettings.() -> FileTreeSettings
+) = updateSettings { copy(fileTree = transform(fileTree)) }.fileTree
+
 val Context.dataStore by dataStore(
     fileName = "settings.json",
     serializer = SettingsSerializer,

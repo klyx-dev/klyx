@@ -72,6 +72,7 @@ import com.klyx.presentation.screen.settings.About
 import com.klyx.presentation.screen.settings.Appearance
 import com.klyx.presentation.screen.settings.DeveloperOptions
 import com.klyx.presentation.screen.settings.Editor
+import com.klyx.presentation.screen.settings.FileTree
 import com.klyx.presentation.screen.settings.SystemDiagnostics
 import com.klyx.presentation.screen.settings.TerminalSettings
 import com.klyx.presentation.viewmodel.EditorViewModel
@@ -274,6 +275,9 @@ class MainActivity : ComposeActivity() {
         }
         settingsEntry<SettingsScreen.About> {
             ProvideGoogleSansTypography { SettingScreens.About() }
+        }
+        settingsEntry<SettingsScreen.FileTree> {
+            ProvideGoogleSansTypography { SettingScreens.FileTree() }
         }
     }
 

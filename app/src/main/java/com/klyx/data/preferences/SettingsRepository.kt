@@ -22,4 +22,10 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
             appearance = it.appearance.copy(theme = theme)
         )
     }
+
+    suspend fun updateFileTreeSettings(block: (FileTreeSettings) -> FileTreeSettings) {
+        dataStore.updateData {
+            it.copy(fileTree = block(it.fileTree))
+        }
+    }
 }

@@ -14,7 +14,8 @@ val LocalAppSettings = compositionLocalOf<AppSettings> {
 data class AppSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val editor: EditorSettings = EditorSettings(),
-    val terminal: TerminalSettings = TerminalSettings()
+    val terminal: TerminalSettings = TerminalSettings(),
+    val fileTree: FileTreeSettings = FileTreeSettings()
 )
 
 @Serializable
@@ -29,6 +30,11 @@ data class TerminalSettings(
     val extraKeysStyle: ExtraKeyStyle = ExtraKeyStyle.ArrowsOnly,
     val exposeTerminalHomeViaSaf: Boolean = false,
     val showMotd: Boolean = true,
+)
+
+@Serializable
+data class FileTreeSettings(
+    val showHiddenFiles: Boolean = false
 )
 
 enum class AppTheme(val displayName: String) {

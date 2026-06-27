@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.klyx.data.file.KxFile
 import com.klyx.data.file.wrap
 import com.klyx.data.fs.FileSystem
+import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.repository.RecentProjectRepository
 import com.klyx.presentation.components.filetree.FileNode
 import com.klyx.presentation.components.filetree.FlatNode
@@ -27,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -59,6 +61,7 @@ sealed interface ClipboardState {
 class FileTreeViewModel(
     private val fileSystem: FileSystem,
     private val recentProjectRepository: RecentProjectRepository,
+    private val settingsRepository: SettingsRepository,
 ) : ViewModel() {
 
     companion object {
@@ -77,6 +80,20 @@ class FileTreeViewModel(
 
     init {
         restoreSession()
+        observeSettings()
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            var previous = settingsRepository.settings.first().fileTree
+            settingsRepository.settings.collect { settings ->
+                val current = settings.fileTree
+                if (current != previous) {
+                    previous = current
+                    refreshTree()
+                }
+            }
+        }
     }
 
     @SuppressLint("UseKtx")
@@ -297,8 +314,11 @@ class FileTreeViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
+                val showHidden = settingsRepository.settings.first().fileTree.showHiddenFiles
+
                 val childNodes = fileSystem
                     .list(parent.uri)
+                    .let { files -> if (showHidden) files else files.filter { !it.isHidden } }
                     .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
                     .map(::FileNode)
                     .toImmutableList()

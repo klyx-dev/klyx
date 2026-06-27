@@ -18,6 +18,7 @@ import com.klyx.util.isTextFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -29,10 +30,24 @@ class FileSystemImpl(
     private val content = context.contentResolver
 
     override suspend fun list(uri: Uri): List<KxFile> = withContext(Dispatchers.IO) {
-        if (DocumentsContract.isTreeUri(uri)) {
+        val localFile = uri.resolveToLocalFile()
+        if (localFile != null) {
+            localFile.listFiles()?.map(::KxFile).orEmpty()
+        } else if (DocumentsContract.isTreeUri(uri)) {
             listSafBatched(uri)
         } else {
             uri.wrap().listFiles()
+        }
+    }
+
+    private fun Uri.resolveToLocalFile(): File? {
+        if (scheme == "file") return toFile()
+        val providerAuthority = "${context.packageName}.terminal.documents"
+        if (authority != providerAuthority) return null
+        return when {
+            DocumentsContract.isTreeUri(this) -> File(DocumentsContract.getTreeDocumentId(this))
+            DocumentsContract.isDocumentUri(context, this) -> File(DocumentsContract.getDocumentId(this))
+            else -> null
         }
     }
 

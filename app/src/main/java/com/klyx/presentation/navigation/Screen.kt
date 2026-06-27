@@ -32,6 +32,7 @@ sealed interface Screen : NavKey {
                     subclass(SettingsScreen.DeveloperOptions::class)
                     subclass(SettingsScreen.SystemDiagnostics::class)
                     subclass(SettingsScreen.About::class)
+                    subclass(SettingsScreen.FileTree::class)
                 }
             }
         }
@@ -57,4 +58,7 @@ sealed interface SettingsScreen : Screen {
 
     @Serializable
     data object About : SettingsScreen
+
+    @Serializable
+    data object FileTree : SettingsScreen
 }

@@ -3,6 +3,7 @@ package com.klyx.presentation.model
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DeveloperMode
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Palette
@@ -56,5 +57,11 @@ sealed class SettingsCategory(
         title = "About",
         subtitle = "App info, version, and credits",
         icon = Icons.Rounded.Info.asIconSource
+    )
+
+    data object FileTree : SettingsCategory(
+        title = "File Tree",
+        subtitle = "Hidden files, browsing, and file display settings",
+        icon = Icons.Rounded.Folder.asIconSource
     )
 }

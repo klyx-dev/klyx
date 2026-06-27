@@ -42,6 +42,18 @@ fun SwitchSettingItem(
     val haptics = LocalHapticFeedback.current
 
     Surface(
+        onClick = {
+            if (enabled) {
+                val newValue = !checked
+                val feedbackType = if (newValue) {
+                    HapticFeedbackType.ToggleOn
+                } else {
+                    HapticFeedbackType.ToggleOff
+                }
+                haptics.performHapticFeedback(feedbackType)
+                onCheckedChange(newValue)
+            }
+        },
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
@@ -91,18 +103,7 @@ fun SwitchSettingItem(
 
             Switch(
                 checked = checked,
-                onCheckedChange = { newValue ->
-                    if (enabled) {
-                        val feedbackType = if (newValue) {
-                            HapticFeedbackType.ToggleOn
-                        } else {
-                            HapticFeedbackType.ToggleOff
-                        }
-
-                        haptics.performHapticFeedback(feedbackType)
-                        onCheckedChange(newValue)
-                    }
-                },
+                onCheckedChange = null,
                 enabled = enabled,
                 thumbContent = {
                     AnimatedContent(
