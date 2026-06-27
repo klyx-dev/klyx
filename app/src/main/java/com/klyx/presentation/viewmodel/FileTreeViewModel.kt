@@ -13,6 +13,7 @@ import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.repository.RecentProjectRepository
 import com.klyx.presentation.components.filetree.FileNode
 import com.klyx.presentation.components.filetree.FlatNode
+import com.klyx.system.firstAvailable
 import com.klyx.util.tryOrNull
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -24,9 +25,15 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -35,6 +42,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.KoinViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 @Immutable
 data class FileTreeUiState(
@@ -43,7 +51,11 @@ data class FileTreeUiState(
     val selectedNode: FileNode? = null,
     val expandedNodes: ImmutableSet<FileNode> = persistentSetOf(),
     val loadingNodes: ImmutableSet<FileNode> = persistentSetOf(),
-    val childrenNodeCache: ImmutableMap<FileNode, ImmutableList<FileNode>> = persistentMapOf()
+    val childrenNodeCache: ImmutableMap<FileNode, ImmutableList<FileNode>> = persistentMapOf(),
+    val searchQuery: String = "",
+    val searchResultCount: Int = 0,
+    val isSearching: Boolean = false,
+    val hasFastSearch: Boolean = false
 ) {
     fun isNodeExpanded(node: FileNode) = expandedNodes.contains(node)
     fun isNodeSelected(node: FileNode) = selectedNode == node
@@ -74,8 +86,18 @@ class FileTreeViewModel(
     private val _clipboardState = MutableStateFlow<ClipboardState?>(null)
     val clipboardState: StateFlow<ClipboardState?> = _clipboardState.asStateFlow()
 
-    val visibleNodes = uiState.map { state ->
-        buildVisibleNodes(state)
+    private val _searchEventFlow = MutableSharedFlow<KxFile>(extraBufferCapacity = 64)
+    val searchEventFlow: SharedFlow<KxFile> = _searchEventFlow.asSharedFlow()
+
+    private val _scrollTarget = MutableSharedFlow<FileNode>(extraBufferCapacity = 1)
+    val scrollTarget: SharedFlow<FileNode> = _scrollTarget.asSharedFlow()
+
+    val visibleNodes = combine(
+        _uiState.map { it.rootNodes },
+        _uiState.map { it.expandedNodes },
+        _uiState.map { it.childrenNodeCache }
+    ) { roots, expanded, cache ->
+        buildVisibleNodes(roots, expanded, cache)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
@@ -116,7 +138,9 @@ class FileTreeViewModel(
     }
 
     private fun buildVisibleNodes(
-        state: FileTreeUiState
+        roots: ImmutableList<FileNode>,
+        expanded: ImmutableSet<FileNode>,
+        cache: ImmutableMap<FileNode, ImmutableList<FileNode>>
     ): List<FlatNode> {
         val start = System.nanoTime()
         val result = mutableListOf<FlatNode>()
@@ -124,21 +148,21 @@ class FileTreeViewModel(
         fun dfs(node: FileNode, depth: Int, currentRoot: FileNode) {
             result += FlatNode(node, depth, currentRoot)
 
-            if (state.expandedNodes.contains(node)) {
-                state.childrenNodeCache[node]?.forEach { child ->
+            if (expanded.contains(node)) {
+                cache[node]?.forEach { child ->
                     dfs(child, depth + 1, currentRoot)
                 }
             }
         }
 
-        state.rootNodes.forEach { rootNode ->
+        roots.forEach { rootNode ->
             dfs(rootNode, 0, rootNode)
         }
 
-        Log.d(
-            "FileTree",
-            "visibleNodes=${result.size} took ${(System.nanoTime() - start) / 1_000_000} ms"
-        )
+//        Log.d(
+//            "FileTree",
+//            "visibleNodes=${result.size} took ${(System.nanoTime() - start) / 1_000_000} ms"
+//        )
         return result
     }
 
@@ -554,5 +578,95 @@ class FileTreeViewModel(
                 onFailure(t)
             }
         }
+    }
+
+    private var searchJob: Job? = null
+
+    fun search(query: String) {
+        searchJob?.cancel()
+        if (query.isBlank()) {
+            _uiState.update {
+                it.copy(searchQuery = "", searchResultCount = 0, isSearching = false)
+            }
+            return
+        }
+
+        _uiState.update { it.copy(searchQuery = query, searchResultCount = 0, isSearching = true) }
+
+        searchJob = viewModelScope.launch {
+            //delay(300.milliseconds)
+            val roots = _uiState.value.rootNodes.map { it.uri }
+            val hasFs = withContext(Dispatchers.IO) { firstAvailable("fdfind", "fd") != null }
+            _uiState.update { it.copy(hasFastSearch = hasFs) }
+            var count = 0
+
+            fileSystem.search(roots, query).collect { file ->
+                count++
+                _searchEventFlow.emit(file)
+                _uiState.update { it.copy(searchResultCount = count) }
+            }
+
+            _uiState.update { it.copy(isSearching = false, searchResultCount = count) }
+        }
+    }
+
+    fun clearSearch() {
+        searchJob?.cancel()
+        _uiState.update {
+            it.copy(searchQuery = "", searchResultCount = 0, isSearching = false)
+        }
+    }
+
+    fun selectSearchResult(file: KxFile) {
+        viewModelScope.launch {
+            clearSearch()
+
+            val fileNode = FileNode(file)
+            val rootNode = _uiState.value.rootNodes.firstOrNull { root ->
+                file.uri.toString().startsWith(root.uri.toString())
+            } ?: run {
+                selectNode(fileNode)
+                _scrollTarget.emit(fileNode)
+                return@launch
+            }
+
+            val path = mutableListOf<FileNode>()
+            var current = fileNode.parent
+            while (current != null && current != rootNode) {
+                path.add(current)
+                current = current.parent
+            }
+            path.reverse()
+
+            _uiState.update { it.copy(expandedNodes = (it.expandedNodes + rootNode).toImmutableSet()) }
+            loadChildrenSuspend(rootNode)
+
+            for (parent in path) {
+                _uiState.update { it.copy(expandedNodes = (it.expandedNodes + parent).toImmutableSet()) }
+                loadChildrenSuspend(parent)
+            }
+
+            val parentNode = fileNode.parent ?: rootNode
+            val children = _uiState.value.childrenNodeCache[parentNode]
+            val foundNode = children?.find { it.uri == file.uri } ?: fileNode
+
+            selectNode(foundNode)
+            _scrollTarget.emit(foundNode)
+        }
+    }
+
+    private suspend fun loadChildrenSuspend(parent: FileNode) {
+        if (_uiState.value.childrenNodeCache.contains(parent)) return
+        try {
+            val showHidden = settingsRepository.settings.first().fileTree.showHiddenFiles
+            val childNodes = fileSystem.list(parent.uri)
+                .let { files -> if (showHidden) files else files.filter { !it.isHidden } }
+                .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+                .map(::FileNode)
+                .toImmutableList()
+            _uiState.update {
+                it.copy(childrenNodeCache = (it.childrenNodeCache + (parent to childNodes)).toImmutableMap())
+            }
+        } catch (_: Exception) { }
     }
 }

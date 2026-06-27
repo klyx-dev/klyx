@@ -18,41 +18,51 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.FolderShared
 import androidx.compose.material.icons.rounded.FolderSpecial
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,6 +73,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -72,11 +83,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -84,6 +97,8 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
+import com.klyx.data.file.KxFile
+import com.klyx.data.file.resolveName
 import com.klyx.data.fs.Paths
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.terminal.home
@@ -91,6 +106,7 @@ import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.GoogleSansRounded
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -125,6 +141,14 @@ fun FileTreeDrawer(
         enabledValues = setOf(Hidden, Expanded)
     )
 
+    var showSearchSheet by remember { mutableStateOf(false) }
+    val searchSheetState = rememberBottomSheetState(
+        initialValue = Hidden,
+        enabledValues = setOf(Hidden, PartiallyExpanded, Expanded)
+    )
+
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
     val directoryPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null) {
@@ -149,8 +173,6 @@ fun FileTreeDrawer(
                 modifier = Modifier.width(drawerWidth),
                 drawerContentColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
-                val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-
                 val isOpening = drawerState.targetValue == DrawerValue.Open
                 val isFullyClosed =
                     drawerState.currentValue == DrawerValue.Closed && drawerState.targetValue == DrawerValue.Closed
@@ -163,34 +185,60 @@ fun FileTreeDrawer(
                     )
                 } else {
                     Column(modifier = Modifier.fillMaxSize()) {
-                        Surface(
-                            onClick = { showLocationPicker = true },
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            shape = RoundedCornerShape(10.dp),
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                                .clip(RoundedCornerShape(10.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
+                            Surface(
+                                onClick = { showLocationPicker = true },
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Add,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = stringResource(R.string.add_folder),
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Add,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(20.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.add_folder),
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                onClick = { showSearchSheet = true },
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainer,
+                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(42.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Search,
+                                        contentDescription = "Search",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
 
@@ -252,6 +300,236 @@ fun FileTreeDrawer(
                 viewModel.addRootNode(Uri.fromFile(Paths.home))
             }
         )
+    }
+
+    if (showSearchSheet) {
+        fun dismiss() {
+            scope.launch { searchSheetState.hide() }.invokeOnCompletion {
+                if (!searchSheetState.isVisible) {
+                    showSearchSheet = false
+                }
+            }
+        }
+
+        SearchBottomSheet(
+            sheetState = searchSheetState,
+            onDismissRequest = { showSearchSheet = false },
+            onQueryChange = viewModel::search,
+            query = uiState.searchQuery,
+            searchResultCount = uiState.searchResultCount,
+            isSearching = uiState.isSearching,
+            showFdHint = !uiState.hasFastSearch && uiState.rootNodes.any { it.uri.scheme == "file" },
+            searchEventFlow = viewModel.searchEventFlow,
+            searchRoots = uiState.rootNodes.map { it.uri },
+            onResultClick = { file ->
+                viewModel.selectSearchResult(file)
+                scope.launch { drawerState.open() }
+                dismiss()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SearchBottomSheet(
+    sheetState: SheetState,
+    onDismissRequest: () -> Unit,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    searchResultCount: Int,
+    isSearching: Boolean,
+    showFdHint: Boolean,
+    searchEventFlow: SharedFlow<KxFile>,
+    searchRoots: List<Uri>,
+    onResultClick: (KxFile) -> Unit
+) {
+    val resultList = remember { mutableStateListOf<KxFile>() }
+
+    LaunchedEffect(query) {
+        resultList.clear()
+        searchEventFlow.collect { file ->
+            resultList.add(file)
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.imePadding()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp)
+                .navigationBarsPadding()
+        ) {
+            Text(
+                text = "Search",
+                style = MaterialTheme.typography.titleLarge,
+                fontFamily = GoogleSansRounded,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(start = 16.dp, bottom = 16.dp)
+            )
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                placeholder = { Text(stringResource(R.string.search_files)) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = { onQueryChange("") }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Close,
+                                contentDescription = null
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    unfocusedBorderColor = Color.Transparent,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary
+                ),
+                textStyle = MaterialTheme.typography.bodyMedium
+            )
+
+            if (showFdHint && isSearching) {
+                Text(
+                    text = "Install fd-find for faster search: apt install fd-find",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (resultList.isNotEmpty()) {
+                if (searchResultCount > 0) {
+                    Text(
+                        text = "Found $searchResultCount files",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    items(resultList, key = { it.uri.toString() }) { file ->
+                        val relPath = file.uri.path?.let { path ->
+                            searchRoots.firstNotNullOfOrNull { root ->
+                                root.path?.let { rootPath ->
+                                    if (path.startsWith(rootPath)) {
+                                        path.removePrefix(rootPath).trimStart('/')
+                                    } else null
+                                }
+                            }
+                        }
+                        SearchResultItem(
+                            file = file,
+                            relativePath = relPath,
+                            onClick = { onResultClick(file) }
+                        )
+                    }
+                }
+            } else if (isSearching) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    LoadingIndicator()
+                }
+            } else if (query.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = stringResource(R.string.search_no_results),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchResultItem(
+    file: KxFile,
+    relativePath: String?,
+    onClick: (KxFile) -> Unit
+) {
+    Surface(
+        onClick = { onClick(file) },
+        shape = RoundedCornerShape(8.dp),
+        color = Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 1.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            val fileIcon = iconForFile(file)
+            Icon(
+                painter = fileIcon.painter,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = if (fileIcon.tint.isSpecified) fileIcon.tint
+                else if (file.isDirectory) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = file.resolveName(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (relativePath != null) {
+                    Text(
+                        text = relativePath,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        modifier = Modifier.basicMarquee()
+                    )
+                }
+            }
+        }
     }
 }
 

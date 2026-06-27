@@ -2,6 +2,7 @@ package com.klyx.data.fs
 
 import android.net.Uri
 import com.klyx.data.file.KxFile
+import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -38,4 +39,6 @@ interface FileSystem {
     suspend fun wrapUri(uri: Uri): KxFile
 
     suspend fun determineFileCategory(uri: Uri): FileCategory
+
+    suspend fun search(roots: List<Uri>, query: String, maxResults: Int = 500): Flow<KxFile>
 }

@@ -71,6 +71,7 @@ fun terminalArgs(showMotd: Boolean = true) = listOf(
     "-b", "/sdcard",
     "-b", "/storage",
     "-b", Paths.dataDir.canonicalPath,
+    "-b", Paths.dataDir.absolutePath,
     "-b", "${Paths.home.absolutePath}:/root",
 
     "/bin/sh", "-c",

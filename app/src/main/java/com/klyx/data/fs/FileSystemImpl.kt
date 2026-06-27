@@ -14,13 +14,30 @@ import androidx.documentfile.provider.DocumentFile
 import com.klyx.data.file.KxFile
 import com.klyx.data.file.PrefetchedFileMetadata
 import com.klyx.data.file.wrap
+import com.klyx.system.StdioDest
+import com.klyx.system.command
+import com.klyx.system.firstAvailable
+import com.klyx.system.streamLines
+import com.klyx.system.which
 import com.klyx.util.isTextFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.nio.file.FileVisitResult
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.atomic.AtomicInteger
 
 @Single
 class FileSystemImpl(
@@ -92,6 +109,237 @@ class FileSystemImpl(
         }
 
         return treeUri.wrap().listFiles()
+    }
+
+    override suspend fun search(
+        roots: List<Uri>,
+        query: String,
+        maxResults: Int
+    ): Flow<KxFile> = channelFlow {
+        if (query.isBlank()) return@channelFlow
+        val queryLower = query.lowercase()
+        val perRootMax = maxResults / roots.size.coerceAtLeast(1) + 1
+        val globalCount = AtomicInteger(0)
+
+        val onResult: (KxFile) -> Unit = { file ->
+            if (globalCount.getAndIncrement() < maxResults) {
+                trySend(file)
+            }
+        }
+
+        coroutineScope {
+            roots.forEach { root ->
+                launch {
+                    if (globalCount.get() >= maxResults) return@launch
+                    ensureActive()
+
+                    val localFile = root.resolveToLocalFile()
+                    if (localFile != null) {
+                        searchLocal(localFile, queryLower, perRootMax, onResult)
+                    } else if (DocumentsContract.isTreeUri(root)) {
+                        searchSaf(root, queryLower, perRootMax, onResult)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun searchLocal(
+        root: File,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ) {
+        searchLocalFind(root, query, maxResults, onResult)
+    }
+
+    private suspend fun searchLocalFind(
+        root: File,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ) {
+        val escapedQuery = query
+            .replace("\\", "\\\\")
+            .replace("*", "\\*")
+            .replace("?", "\\?")
+            .replace("[", "\\[")
+            .replace("]", "\\]")
+
+        if (searchLocalFd(root, escapedQuery, maxResults, onResult)) return
+        if (searchLocalFindCommand(root, escapedQuery, maxResults, onResult)) return
+        searchLocalWalk(root, query, maxResults, onResult)
+    }
+
+    private suspend fun searchLocalFd(
+        root: File,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ): Boolean {
+        val cmd = firstAvailable("fdfind", "fd") ?: return false
+        val count = AtomicInteger(0)
+        return try {
+            command(
+                cmd.substringAfterLast(File.separatorChar),
+                "--type", "f", "--type", "d",
+                "-i", "-g",
+                "--no-ignore",
+                "--hidden",
+                "*${query}*",
+                root.absolutePath
+            )
+                .stdout(StdioDest.Capture)
+                .stderr(StdioDest.Null)
+                .streamLines()
+                .collect { line ->
+                    println(line)
+                    if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
+                        onResult(KxFile(File(line)))
+                    }
+                }
+            true
+        } catch (e: IOException) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    private suspend fun searchLocalFindCommand(
+        root: File,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ): Boolean {
+        val cmd = which("find") ?: return false
+        val count = AtomicInteger(0)
+        return try {
+            command(
+                cmd.substringAfterLast(File.separatorChar),
+                root.absolutePath,
+                "-iname",
+                "*${query}*"
+            )
+                .stdout(StdioDest.Capture)
+                .stderr(StdioDest.Null)
+                .streamLines()
+                .collect { line ->
+                    if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
+                        onResult(KxFile(File(line)))
+                    }
+                }
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private suspend fun searchLocalWalk(
+        root: File,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ) {
+        try {
+            val topLevel = root.listFiles() ?: return
+            val walkCount = AtomicInteger(0)
+            coroutineScope {
+                topLevel.forEach { entry ->
+                    launch {
+                        if (walkCount.get() >= maxResults) return@launch
+                        if (entry.isFile) {
+                            if (entry.name.lowercase().contains(query)) {
+                                if (walkCount.getAndIncrement() < maxResults) {
+                                    onResult(KxFile(entry))
+                                }
+                            }
+                        } else if (entry.isDirectory) {
+                            try {
+                                Files.walkFileTree(entry.toPath(), object : SimpleFileVisitor<Path>() {
+                                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                                        if (walkCount.get() >= maxResults) return FileVisitResult.TERMINATE
+                                        if (file.fileName.toString().lowercase().contains(query)) {
+                                            if (walkCount.getAndIncrement() < maxResults) {
+                                                onResult(KxFile(file.toFile()))
+                                            }
+                                        }
+                                        return FileVisitResult.CONTINUE
+                                    }
+
+                                    override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
+                                        return FileVisitResult.SKIP_SUBTREE
+                                    }
+                                })
+                            } catch (_: Exception) {
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+    }
+
+    private fun searchSaf(
+        treeUri: Uri,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ) {
+        val columns = arrayOf(
+            Document.COLUMN_DOCUMENT_ID,
+            Document.COLUMN_DISPLAY_NAME,
+            Document.COLUMN_MIME_TYPE,
+            Document.COLUMN_SIZE,
+            Document.COLUMN_LAST_MODIFIED,
+            Document.COLUMN_FLAGS
+        )
+
+        val queue = ArrayDeque<String>()
+        queue.add(DocumentsContract.getTreeDocumentId(treeUri))
+        val seen = mutableSetOf<String>()
+        val safCount = AtomicInteger(0)
+
+        while (queue.isNotEmpty() && safCount.get() < maxResults) {
+            val dirDocId = queue.removeFirst()
+            if (!seen.add(dirDocId)) continue
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, dirDocId)
+
+            val cursor = content.query(childrenUri, columns, null, null, null)
+            cursor?.use { c ->
+                val idIdx = c.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
+                val nameIdx = c.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
+                val mimeIdx = c.getColumnIndex(Document.COLUMN_MIME_TYPE)
+                val sizeIdx = c.getColumnIndex(Document.COLUMN_SIZE)
+                val dateIdx = c.getColumnIndex(Document.COLUMN_LAST_MODIFIED)
+                val flagsIdx = c.getColumnIndex(Document.COLUMN_FLAGS)
+
+                while (c.moveToNext() && safCount.get() < maxResults) {
+                    val docId = c.getString(idIdx)
+                    val name = if (nameIdx >= 0) c.getString(nameIdx) ?: docId else docId
+                    val mimeType = if (mimeIdx >= 0) c.getString(mimeIdx) else null
+
+                    if (MIME_TYPE_DIR == mimeType) {
+                        queue.add(docId)
+                    }
+
+                    if (name.lowercase().contains(query)) {
+                        if (safCount.getAndIncrement() < maxResults) {
+                            val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                            val raw = DocumentFile.fromSingleUri(context, childUri)!!
+                            val metadata = PrefetchedFileMetadata(
+                                name = name,
+                                mimeType = mimeType,
+                                size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
+                                lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
+                                flags = if (flagsIdx >= 0) c.getInt(flagsIdx) else 0
+                            )
+                            onResult(KxFile(raw, metadata))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {

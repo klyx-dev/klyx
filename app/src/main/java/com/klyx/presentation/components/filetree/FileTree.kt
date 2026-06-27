@@ -5,10 +5,12 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -39,12 +41,14 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -88,6 +92,16 @@ fun FileTree(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val visibleNodes by viewModel.visibleNodes.collectAsStateWithLifecycle()
     val pullToRefreshState = rememberPullToRefreshState()
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(Unit) {
+        viewModel.scrollTarget.collect { target ->
+            val index = visibleNodes.indexOfFirst { it.node.uri == target.uri }
+            if (index >= 0) {
+                listState.animateScrollToItem(index)
+            }
+        }
+    }
 
     PullToRefreshBox(
         modifier = modifier,
@@ -115,6 +129,7 @@ fun FileTree(
                 )
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(
@@ -183,6 +198,27 @@ private fun FileTreeItem(
         label = "selection_shift"
     )
 
+    val pulseScale = remember { Animatable(1f) }
+    LaunchedEffect(isSelected) {
+        if (isSelected) {
+            pulseScale.snapTo(1f)
+            pulseScale.animateTo(
+                targetValue = 1.05f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            )
+            pulseScale.animateTo(
+                targetValue = 1f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessHigh
+                )
+            )
+        }
+    }
+
     Column(
         modifier = modifier
             .width(IntrinsicSize.Max)
@@ -197,6 +233,10 @@ private fun FileTreeItem(
                 .fillMaxWidth()
                 .padding(horizontal = 8.dp)
                 .clip(shape)
+                .graphicsLayer {
+                    scaleX = pulseScale.value
+                    scaleY = pulseScale.value
+                }
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = ripple(),

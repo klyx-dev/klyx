@@ -1,14 +1,19 @@
 package com.klyx.system
 
 import android.annotation.SuppressLint
+import android.os.Environment
 import com.klyx.data.fs.Paths
 import com.klyx.terminal.home
 import com.klyx.terminal.processEnv
 import com.klyx.terminal.prootFile
 import com.klyx.terminal.rootFs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.concurrent.TimeUnit
@@ -118,6 +123,19 @@ class CommandBuilder internal constructor(
         return child
     }
 
+    suspend fun stream(): Flow<ProcessOutputEvent> {
+        stdoutDest = StdioDest.Capture
+        stderrDest = StdioDest.Capture
+        val child = spawnRaw()
+        val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
+        if (stdinBytes != null) {
+            withContext(Dispatchers.IO) {
+                child.process.outputStream.use { it.write(stdinBytes) }
+            }
+        }
+        return child.flow()
+    }
+
     suspend fun status(): Int {
         val child = spawnRaw()
         return withContext(Dispatchers.IO) {
@@ -160,9 +178,9 @@ class CommandBuilder internal constructor(
                     "-b", "/sys",
                     "-b", "/sdcard",
                     "-b", "/storage",
-                    "-b", Paths.dataDir.canonicalPath,
+                    "-b", Paths.dataDir.canonicalPath, // /data/data/com.klyx
+                    "-b", Paths.dataDir.absolutePath, // /data/user/0/com.klyx
                     "-b", "${homePath}:/root",
-                    "--",
                     resolved.path,
                 )
                 prootArgs.addAll(args)
@@ -178,6 +196,7 @@ class CommandBuilder internal constructor(
         } catch (_: Throwable) {
             // Running outside Android (JVM tests, etc.)
             // processEnv() not available, proceed with just user env
+            envMap.putAll(System.getenv())
         }
         envMap.putAll(env)
 
@@ -265,6 +284,36 @@ data class ProcessOutput(
     }
 }
 
+sealed interface ProcessOutputEvent {
+    data class Stdout(val data: ByteArray) : ProcessOutputEvent {
+        val text: String get() = data.decodeToString()
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as Stdout
+            return data.contentEquals(other.data)
+        }
+
+        override fun hashCode(): Int = data.contentHashCode()
+    }
+
+    data class Stderr(val data: ByteArray) : ProcessOutputEvent {
+        val text: String get() = data.decodeToString()
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (javaClass != other?.javaClass) return false
+            other as Stderr
+            return data.contentEquals(other.data)
+        }
+
+        override fun hashCode(): Int = data.contentHashCode()
+    }
+
+    data class ExitCode(val code: Int) : ProcessOutputEvent
+}
+
 class ChildProcess internal constructor(
     internal val process: Process,
 ) {
@@ -297,6 +346,47 @@ class ChildProcess internal constructor(
     }
 
     suspend fun waitForTimeout(timeout: Duration) = waitForTimeout(timeout.inWholeMilliseconds)
+
+    fun flow(): Flow<ProcessOutputEvent> = channelFlow {
+        val bufferSize = 8192
+
+        val outJob = launch(Dispatchers.IO) {
+            try {
+                val buffer = ByteArray(bufferSize)
+                var bytesRead: Int
+                while (process.inputStream.read(buffer).also { bytesRead = it } >= 0) {
+                    if (bytesRead > 0) {
+                        send(ProcessOutputEvent.Stdout(buffer.copyOf(bytesRead)))
+                    }
+                }
+            } catch (_: IOException) {}
+        }
+
+        val errJob = launch(Dispatchers.IO) {
+            try {
+                val buffer = ByteArray(bufferSize)
+                var bytesRead: Int
+                while (process.errorStream.read(buffer).also { bytesRead = it } >= 0) {
+                    if (bytesRead > 0) {
+                        send(ProcessOutputEvent.Stderr(buffer.copyOf(bytesRead)))
+                    }
+                }
+            } catch (_: IOException) {}
+        }
+
+        try {
+            withContext(Dispatchers.IO) {
+                process.waitFor()
+            }
+            outJob.join()
+            errJob.join()
+            send(ProcessOutputEvent.ExitCode(process.exitValue()))
+        } finally {
+            if (process.isAlive) {
+                process.destroyForcibly()
+            }
+        }
+    }
 
     fun kill(): ChildProcess = ChildProcess(process.destroyForcibly())
     fun terminate() = process.destroy()
