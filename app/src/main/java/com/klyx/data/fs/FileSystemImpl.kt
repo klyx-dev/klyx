@@ -4,12 +4,15 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.DocumentsContract
+import android.provider.DocumentsContract.Document
 import android.provider.DocumentsContract.Document.MIME_TYPE_DIR
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
 import com.klyx.data.file.KxFile
+import com.klyx.data.file.PrefetchedFileMetadata
 import com.klyx.data.file.wrap
 import com.klyx.util.isTextFile
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +29,54 @@ class FileSystemImpl(
     private val content = context.contentResolver
 
     override suspend fun list(uri: Uri): List<KxFile> = withContext(Dispatchers.IO) {
-        uri.wrap().listFiles()
+        if (DocumentsContract.isTreeUri(uri)) {
+            listSafBatched(uri)
+        } else {
+            uri.wrap().listFiles()
+        }
+    }
+
+    private fun listSafBatched(treeUri: Uri): List<KxFile> {
+        val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
+        val columns = arrayOf(
+            Document.COLUMN_DOCUMENT_ID,
+            Document.COLUMN_DISPLAY_NAME,
+            Document.COLUMN_MIME_TYPE,
+            Document.COLUMN_SIZE,
+            Document.COLUMN_LAST_MODIFIED,
+            Document.COLUMN_FLAGS
+        )
+
+        val cursor = content.query(childrenUri, columns, null, null, null)
+        cursor?.use { c ->
+            val idIdx = c.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
+            val nameIdx = c.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
+            val mimeIdx = c.getColumnIndex(Document.COLUMN_MIME_TYPE)
+            val sizeIdx = c.getColumnIndex(Document.COLUMN_SIZE)
+            val dateIdx = c.getColumnIndex(Document.COLUMN_LAST_MODIFIED)
+            val flagsIdx = c.getColumnIndex(Document.COLUMN_FLAGS)
+
+            val results = mutableListOf<KxFile>()
+            while (c.moveToNext()) {
+                val docId = c.getString(idIdx)
+                val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                val raw = DocumentFile.fromSingleUri(context, childUri)!!
+
+                val name = if (nameIdx >= 0) c.getString(nameIdx) ?: docId else docId
+                val metadata = PrefetchedFileMetadata(
+                    name = name,
+                    mimeType = if (mimeIdx >= 0) c.getString(mimeIdx) else null,
+                    size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
+                    lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
+                    flags = if (flagsIdx >= 0) c.getInt(flagsIdx) else 0
+                )
+                results.add(KxFile(raw, metadata))
+            }
+            return results
+        }
+
+        return treeUri.wrap().listFiles()
     }
 
     override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
@@ -84,10 +134,10 @@ class FileSystemImpl(
         val flags = getDocumentFlags(uri)
 
         FileCapabilities(
-            canWrite = flags and DocumentsContract.Document.FLAG_SUPPORTS_WRITE != 0,
-            canDelete = flags and DocumentsContract.Document.FLAG_SUPPORTS_DELETE != 0,
-            canRename = flags and DocumentsContract.Document.FLAG_SUPPORTS_RENAME != 0,
-            canCreate = flags and DocumentsContract.Document.FLAG_DIR_SUPPORTS_CREATE != 0
+            canWrite = flags and Document.FLAG_SUPPORTS_WRITE != 0,
+            canDelete = flags and Document.FLAG_SUPPORTS_DELETE != 0,
+            canRename = flags and Document.FLAG_SUPPORTS_RENAME != 0,
+            canCreate = flags and Document.FLAG_DIR_SUPPORTS_CREATE != 0
         )
     }
 
@@ -103,7 +153,7 @@ class FileSystemImpl(
     override suspend fun exists(uri: Uri): Boolean = withContext(Dispatchers.IO) {
         uri.file?.exists() ?: content.query(
             uri,
-            arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID),
+            arrayOf(Document.COLUMN_DOCUMENT_ID),
             null,
             null,
             null
@@ -217,7 +267,7 @@ class FileSystemImpl(
     }
 
     private suspend fun getDocumentFlags(uri: Uri): Int = withContext(Dispatchers.IO) {
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_FLAGS)
+        val projection = arrayOf(Document.COLUMN_FLAGS)
 
         context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) return@withContext cursor.getInt(0)

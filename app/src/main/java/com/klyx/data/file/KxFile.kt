@@ -35,6 +35,10 @@ class KxFile : java.io.Serializable {
     @kotlin.jvm.Transient
     private var originalFile: File? = null
 
+    @Transient
+    @kotlin.jvm.Transient
+    private var prefetched: PrefetchedFileMetadata? = null
+
     val raw: DocumentFile
         get() {
             if (_raw == null) {
@@ -63,11 +67,15 @@ class KxFile : java.io.Serializable {
         this.uriString = file.toUri().toString()
     }
 
+    internal constructor(raw: DocumentFile, prefetched: PrefetchedFileMetadata) : this(raw) {
+        this.prefetched = prefetched
+    }
+
     val mimeType get() = applicationContext().contentResolver.getType(uri)
 
     val isSafDocument by lazy { file == null }
 
-    val name get() = file?.name ?: raw.name ?: error("Invalid file: $uri")
+    val name get() = prefetched?.name ?: file?.name ?: raw.name ?: error("Invalid file: $uri")
     val path get() = file?.path ?: raw.uri.path ?: error("Invalid uri: $uri")
     val absolutePath get() = file?.absolutePath ?: path
 
@@ -79,11 +87,11 @@ class KxFile : java.io.Serializable {
     val canWrite get() = file?.canWrite() ?: raw.canWrite()
     val canExecute get() = file?.canExecute() ?: false
 
-    val length get() = file?.length() ?: raw.length()
-    val lastModified get() = file?.lastModified() ?: raw.lastModified()
+    val length get() = prefetched?.size ?: file?.length() ?: raw.length()
+    val lastModified get() = prefetched?.lastModified ?: file?.lastModified() ?: raw.lastModified()
 
     val extension
-        get() = file?.extension ?: run {
+        get() = prefetched?.extension ?: file?.extension ?: run {
             if (name.startsWith(".") && name.count { it == '.' } == 1) {
                 ""
             } else if (name.contains(".")) {
@@ -93,9 +101,9 @@ class KxFile : java.io.Serializable {
             }
         }
 
-    val isHidden get() = file?.isHidden ?: name.startsWith(".")
-    val isFile get() = file?.isFile ?: raw.isFile
-    val isDirectory get() = file?.isDirectory ?: raw.isDirectory
+    val isHidden get() = prefetched?.isHidden ?: file?.isHidden ?: name.startsWith(".")
+    val isFile get() = prefetched?.isFile ?: file?.isFile ?: raw.isFile
+    val isDirectory get() = prefetched?.isDirectory ?: file?.isDirectory ?: raw.isDirectory
 
     fun mkdirs() =
         file?.mkdirs() ?: unsupported("use filesystem for creating directories with SAF uri")
@@ -177,6 +185,25 @@ class KxFile : java.io.Serializable {
             false
         }
     }
+}
+
+internal data class PrefetchedFileMetadata(
+    val name: String,
+    val mimeType: String?,
+    val size: Long,
+    val lastModified: Long,
+    val flags: Int
+) {
+    val isDirectory: Boolean get() = DocumentsContract.Document.MIME_TYPE_DIR == mimeType
+    val isFile: Boolean get() = !isDirectory
+
+    val extension: String get() = when {
+        name.startsWith(".") && name.count { it == '.' } == 1 -> ""
+        name.contains(".") -> name.substringAfterLast(".")
+        else -> ""
+    }
+
+    val isHidden: Boolean get() = name.startsWith(".")
 }
 
 @Suppress("NOTHING_TO_INLINE")
