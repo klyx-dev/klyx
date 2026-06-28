@@ -2,10 +2,10 @@ package com.klyx.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.klyx.data.diagnostics.DisplayCapabilities
-import com.klyx.data.diagnostics.EditorInfo
-import com.klyx.data.diagnostics.RuntimeCapabilities
-import com.klyx.data.diagnostics.StorageCapabilities
+import com.klyx.api.data.diagnostics.DisplayCapabilities
+import com.klyx.api.data.diagnostics.EditorInfo
+import com.klyx.api.data.diagnostics.RuntimeCapabilities
+import com.klyx.api.data.diagnostics.StorageCapabilities
 import com.klyx.data.repository.DiagnosticsRepository
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf

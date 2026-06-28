@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.klyx.BuildConfig
-import com.klyx.platform.currentArchitecture
+import com.klyx.api.platform.currentArchitecture
 import com.klyx.presentation.components.dialogs.TerminalWipeConfirmationDialog
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.SettingScreens
@@ -59,7 +59,7 @@ import com.klyx.presentation.screen.settings.components.SettingsItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.terminal.InstallProgressListener
 import com.klyx.terminal.TerminalInstaller
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 import com.klyx.ui.widgets.LocalToastHostState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject

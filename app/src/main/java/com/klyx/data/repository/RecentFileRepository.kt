@@ -3,7 +3,7 @@ package com.klyx.data.repository
 import android.net.Uri
 import com.klyx.data.database.RecentFileDao
 import com.klyx.data.database.RecentFileEntity
-import com.klyx.data.file.KxFile
+import com.klyx.api.data.file.KxFile
 import org.koin.core.annotation.Single
 
 @Single

@@ -1,6 +1,11 @@
 package com.klyx.data.preferences
 
 import android.content.Context
+import com.klyx.api.data.preferences.AppSettings
+import com.klyx.api.data.preferences.AppearanceSettings
+import com.klyx.api.data.preferences.EditorSettings
+import com.klyx.api.data.preferences.FileTreeSettings
+import com.klyx.api.data.preferences.TerminalSettings
 import android.util.Log
 import androidx.datastore.core.CorruptionException
 import androidx.datastore.core.DataStore

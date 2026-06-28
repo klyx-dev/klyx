@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 
 @Composable
 fun WelcomeScreen(

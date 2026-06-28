@@ -2,6 +2,7 @@ package com.klyx.presentation.navigation
 
 import androidx.navigation3.runtime.NavKey
 import androidx.savedstate.serialization.SavedStateConfiguration
+import com.klyx.api.ui.ScreenId
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
@@ -19,6 +20,9 @@ sealed interface Screen : NavKey {
     @Serializable
     data object Terminal : Screen
 
+    @Serializable
+    data class Custom(val id: ScreenId) : Screen
+
     companion object {
         fun config() = SavedStateConfiguration {
             serializersModule = SerializersModule {
@@ -26,6 +30,7 @@ sealed interface Screen : NavKey {
                     subclass(Home::class)
                     subclass(Settings::class)
                     subclass(Terminal::class)
+                    subclass(Custom::class)
                     subclass(SettingsScreen.Editor::class)
                     subclass(SettingsScreen.Appearance::class)
                     subclass(SettingsScreen.Terminal::class)

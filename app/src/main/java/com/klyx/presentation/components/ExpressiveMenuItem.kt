@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 
 @Composable
 fun ExpressiveMenuItem(

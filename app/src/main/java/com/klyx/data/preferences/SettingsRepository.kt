@@ -1,5 +1,10 @@
 package com.klyx.data.preferences
 
+import com.klyx.api.data.preferences.AppSettings
+import com.klyx.api.data.preferences.AppTheme
+import com.klyx.api.data.preferences.EditorSettings
+import com.klyx.api.data.preferences.FileTreeSettings
+import com.klyx.api.data.preferences.TerminalSettings
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
@@ -11,9 +16,19 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
 
     val appTheme = settings.map { it.appearance.theme }
 
-    suspend fun updateTerminalSettings(block: (TerminalSettings) -> TerminalSettings) {
+    suspend fun updateSettings(transform: suspend (AppSettings) -> AppSettings) {
+        dataStore.updateData(transform)
+    }
+
+    suspend fun updateTerminalSettings(block: suspend (TerminalSettings) -> TerminalSettings) {
         dataStore.updateData {
             it.copy(terminal = block(it.terminal))
+        }
+    }
+
+    suspend fun updateEditorSettings(block: suspend (EditorSettings) -> EditorSettings) {
+        dataStore.updateData {
+            it.copy(editor = block(it.editor))
         }
     }
 

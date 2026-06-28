@@ -1,6 +1,6 @@
 package com.klyx.data.editor
 
-import com.klyx.data.preferences.EditorSettings
+import com.klyx.api.data.preferences.EditorSettings
 import io.github.rosemoe.sora.compose.CodeEditorState
 
 fun CodeEditorState.applyEditorSettings(settings: EditorSettings) {

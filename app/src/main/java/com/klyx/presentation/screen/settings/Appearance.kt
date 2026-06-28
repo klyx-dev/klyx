@@ -25,15 +25,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.klyx.data.preferences.AppTheme
-import com.klyx.data.preferences.LocalAppSettings
+import com.klyx.api.data.preferences.AppTheme
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateAppearanceSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.SettingScreens
 import com.klyx.presentation.screen.settings.components.SelectorItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
-import com.klyx.ui.theme.LocalIsDarkMode
+import com.klyx.api.ui.theme.LocalIsDarkMode
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 

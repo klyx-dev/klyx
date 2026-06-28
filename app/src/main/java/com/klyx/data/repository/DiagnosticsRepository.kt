@@ -10,10 +10,10 @@ import android.os.Process
 import android.os.StatFs
 import android.view.Display
 import com.klyx.BuildConfig
-import com.klyx.data.diagnostics.DisplayCapabilities
-import com.klyx.data.diagnostics.EditorInfo
-import com.klyx.data.diagnostics.RuntimeCapabilities
-import com.klyx.data.diagnostics.StorageCapabilities
+import com.klyx.api.data.diagnostics.DisplayCapabilities
+import com.klyx.api.data.diagnostics.EditorInfo
+import com.klyx.api.data.diagnostics.RuntimeCapabilities
+import com.klyx.api.data.diagnostics.StorageCapabilities
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 import org.koin.core.annotation.Single

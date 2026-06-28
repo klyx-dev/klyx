@@ -34,7 +34,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

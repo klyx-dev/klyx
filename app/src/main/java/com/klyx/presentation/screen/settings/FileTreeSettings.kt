@@ -22,7 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.klyx.data.preferences.LocalAppSettings
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateFileTreeSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.SettingScreens

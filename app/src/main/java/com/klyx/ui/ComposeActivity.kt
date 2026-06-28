@@ -16,7 +16,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_DEFAULT
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
 import com.klyx.ui.provider.KlyxCompositionLocals
-import com.klyx.ui.theme.LocalIsDarkMode
+import com.klyx.api.ui.theme.LocalIsDarkMode
 
 abstract class ComposeActivity : ComponentActivity() {
 

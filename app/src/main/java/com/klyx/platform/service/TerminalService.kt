@@ -16,10 +16,10 @@ import com.klyx.R
 import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
-import com.klyx.data.terminal.TerminalSessionManager
+import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.event.GlobalEventBus
-import com.klyx.event.terminal.NewSessionEvent
-import com.klyx.event.terminal.SessionTerminateEvent
+import com.klyx.api.event.terminal.NewSessionEvent
+import com.klyx.api.event.terminal.SessionTerminateEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

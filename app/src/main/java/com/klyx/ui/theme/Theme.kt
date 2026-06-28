@@ -14,11 +14,11 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import com.klyx.data.preferences.LocalAppSettings
+import com.klyx.api.ui.theme.*
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
 
@@ -97,8 +97,6 @@ private val darkScheme = darkColorScheme(
     surfaceContainerHigh = surfaceContainerHighDark,
     surfaceContainerHighest = surfaceContainerHighestDark,
 )
-
-val LocalIsDarkMode = staticCompositionLocalOf { false }
 
 private fun ColorScheme.applyAmoled(): ColorScheme {
     return this.copy(

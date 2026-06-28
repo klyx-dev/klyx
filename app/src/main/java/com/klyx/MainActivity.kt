@@ -49,13 +49,17 @@ import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
+import com.klyx.api.NavDestination
+import com.klyx.api.Navigator
+import com.klyx.api.data.file.wrap
+import com.klyx.api.data.terminal.TerminalSessionBinder
+import com.klyx.api.event.terminal.TerminalNotificationTapEvent
+import com.klyx.api.event.terminal.TerminateAllSessionEvent
+import com.klyx.api.ui.ScreenRegistry
 import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
-import com.klyx.data.file.wrap
-import com.klyx.data.terminal.TerminalSessionBinder
 import com.klyx.event.GlobalEventBus
-import com.klyx.event.terminal.TerminateAllSessionEvent
 import com.klyx.platform.service.TerminalService
 import com.klyx.presentation.components.dialogs.AllFilesAccessDialog
 import com.klyx.presentation.components.dialogs.LegacyStorageAccessDialog
@@ -182,10 +186,33 @@ class MainActivity : ComposeActivity() {
         val launchedFromNotification = remember {
             intent?.action == TerminalService.ACTION_NOTIFICATION_TAP
         }
+        LaunchedEffect(launchedFromNotification) {
+            if (launchedFromNotification) {
+                GlobalEventBus.publish(TerminalNotificationTapEvent)
+            }
+        }
         val navigator = rememberNavigator(
             initialScreenOnTop = if (launchedFromNotification) Screen.Terminal else null
         )
         val entryProvider = remember { appScreenEntryProvider() }
+
+        LaunchedEffect(navigator) {
+            app.setGlobal<Navigator>(object : Navigator {
+                override fun navigateTo(destination: NavDestination) {
+                    val screen: Screen = when (destination) {
+                        is NavDestination.Home -> Screen.Home
+                        is NavDestination.Settings -> Screen.Settings
+                        is NavDestination.Terminal -> Screen.Terminal
+                        is NavDestination.Custom -> Screen.Custom(destination.id)
+                    }
+                    navigator.navigateTo(screen)
+                }
+
+                override fun navigateBack() {
+                    navigator.navigateBack()
+                }
+            })
+        }
 
         val navigateToTerminal by pendingTerminalNav.collectAsStateWithLifecycle()
 
@@ -279,6 +306,16 @@ class MainActivity : ComposeActivity() {
         settingsEntry<SettingsScreen.FileTree> {
             ProvideGoogleSansTypography { SettingScreens.FileTree() }
         }
+
+        entry<Screen.Custom> { screen ->
+            val registry = app.global<ScreenRegistry>()
+            val entry = registry.registeredScreens.find { it.id == screen.id }
+            if (entry != null) {
+                entry.content()
+            } else {
+                UnknownScreen(screen)
+            }
+        }
     }
 
     @Composable
@@ -290,11 +327,22 @@ class MainActivity : ComposeActivity() {
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Oops! Something went wrong.\nThis screen isn't available right now.\n\n(${screen::class.qualifiedName})",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.error
-                )
+                if (screen is Screen.Custom) {
+                    Text(
+                        text = "Screen \"${screen.id}\" is not registered.\n\n" +
+                            "If you're a plugin developer, make sure to\n" +
+                            "register the screen via ctx.screens.register()\n" +
+                            "before navigating to it.",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                } else {
+                    Text(
+                        text = "Oops! Something went wrong.\nThis screen isn't available right now.\n\n(${screen::class.qualifiedName})",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }
@@ -354,6 +402,9 @@ class MainActivity : ComposeActivity() {
             }
         } else if (intent.action == TerminalService.ACTION_NOTIFICATION_TAP) {
             pendingTerminalNav.value = true
+            lifecycleScope.launch {
+                GlobalEventBus.publish(TerminalNotificationTapEvent)
+            }
         }
 
         setIntent(Intent())

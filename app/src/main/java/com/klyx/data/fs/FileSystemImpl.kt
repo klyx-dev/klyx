@@ -11,9 +11,12 @@ import android.webkit.MimeTypeMap
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
-import com.klyx.data.file.KxFile
-import com.klyx.data.file.PrefetchedFileMetadata
-import com.klyx.data.file.wrap
+import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.PrefetchedFileMetadata
+import com.klyx.api.data.file.wrap
+import com.klyx.api.data.fs.FileCapabilities
+import com.klyx.api.data.fs.FileCategory
+import com.klyx.api.data.fs.FileSystem
 import com.klyx.system.StdioDest
 import com.klyx.system.command
 import com.klyx.system.firstAvailable

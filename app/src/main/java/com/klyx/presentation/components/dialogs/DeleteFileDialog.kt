@@ -35,7 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.klyx.data.file.KxFile
+import com.klyx.api.data.file.KxFile
 import com.klyx.data.file.isProtectedPath
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

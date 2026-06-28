@@ -9,7 +9,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 
 @Composable
 fun SettingsSubsectionHeader(title: String) {

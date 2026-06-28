@@ -78,10 +78,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.R
-import com.klyx.data.preferences.EditorSettings
+import com.klyx.api.data.preferences.EditorSettings
 import com.klyx.data.preferences.FontManager
-import com.klyx.data.preferences.LocalAppSettings
-import com.klyx.data.preferences.MouseMode
+import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.api.data.preferences.MouseMode
 import com.klyx.data.preferences.updateEditorSettings
 import com.klyx.presentation.components.CodeEditorDemo
 import com.klyx.presentation.navigation.LocalNavigator
@@ -92,7 +92,7 @@ import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SettingsSubsectionHeader
 import com.klyx.presentation.screen.settings.components.SliderSettingsItem
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
-import com.klyx.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject

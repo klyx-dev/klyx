@@ -46,7 +46,6 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,14 +96,14 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
-import com.klyx.data.file.KxFile
-import com.klyx.data.file.resolveName
+import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.resolveName
 import com.klyx.data.fs.Paths
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.terminal.home
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.launch

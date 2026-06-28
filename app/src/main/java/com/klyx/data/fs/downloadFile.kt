@@ -1,6 +1,6 @@
 package com.klyx.data.fs
 
-import com.klyx.data.file.KxFile
+import com.klyx.api.data.file.KxFile
 import com.klyx.network.httpClient
 import io.ktor.client.content.ProgressListener
 import io.ktor.client.plugins.onDownload

@@ -77,8 +77,8 @@ import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.lessSpringySpec
 import com.klyx.ui.animation.orSnap
 import com.klyx.ui.provider.LocalScreenSize
-import com.klyx.ui.theme.blend
-import com.klyx.ui.theme.harmonizeWithPrimary
+import com.klyx.api.ui.theme.blend
+import com.klyx.api.ui.theme.harmonizeWithPrimary
 import com.klyx.util.extractMessage
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope

@@ -7,9 +7,9 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.klyx.data.file.KxFile
-import com.klyx.data.file.wrap
-import com.klyx.data.fs.FileSystem
+import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.wrap
+import com.klyx.api.data.fs.FileSystem
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.repository.RecentProjectRepository
 import com.klyx.presentation.components.filetree.FileNode

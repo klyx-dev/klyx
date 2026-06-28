@@ -2,6 +2,7 @@ package com.klyx.data.terminal
 
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
+import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.terminal.emulator.TerminalSession

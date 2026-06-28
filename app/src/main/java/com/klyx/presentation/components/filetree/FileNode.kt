@@ -2,8 +2,8 @@ package com.klyx.presentation.components.filetree
 
 import android.net.Uri
 import androidx.compose.runtime.Immutable
-import com.klyx.data.file.KxFile
-import com.klyx.data.file.resolveName
+import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.resolveName
 import kotlinx.serialization.Serializable
 
 @Immutable

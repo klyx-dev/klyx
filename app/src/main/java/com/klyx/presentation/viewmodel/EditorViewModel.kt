@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.klyx.data.editor.EditorAction
+import com.klyx.api.data.editor.EditorAction
 import com.klyx.data.editor.EditorStateRegistry
-import com.klyx.data.editor.Save
-import com.klyx.data.editor.SaveAs
-import com.klyx.data.editor.WorkspaceTab
-import com.klyx.data.fs.FileCategory
-import com.klyx.data.fs.FileSystem
-import com.klyx.data.file.KxFile
+import com.klyx.api.data.editor.Save
+import com.klyx.api.data.editor.SaveAs
+import com.klyx.api.data.editor.WorkspaceTab
+import com.klyx.api.data.fs.FileCategory
+import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.file.KxFile
 import com.klyx.data.repository.RecentFileRepository
 import com.klyx.util.stateInWhileSubscribed
 import io.github.rosemoe.sora.compose.CodeEditorState
@@ -308,6 +308,7 @@ class EditorViewModel(
                                 }
 
                                 is WorkspaceTab.Welcome -> {}
+                                is WorkspaceTab.Custom -> {}
                             }
                         }
                     }

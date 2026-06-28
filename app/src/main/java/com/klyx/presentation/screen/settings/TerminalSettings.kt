@@ -79,7 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.klyx.data.fs.Paths
-import com.klyx.data.preferences.LocalAppSettings
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateTerminalSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
@@ -95,7 +95,7 @@ import com.klyx.terminal.TerminalInstaller
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.rootFs
 import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
-import com.klyx.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.GoogleSansRounded
 import com.klyx.ui.widgets.LocalToastHostState
 import com.klyx.util.humanBytes
 import com.klyx.util.sliderSteps

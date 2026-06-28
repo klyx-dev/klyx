@@ -45,7 +45,7 @@ import com.klyx.presentation.model.IconSource
 import com.klyx.presentation.model.SettingsCategory
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.SettingsScreen
-import com.klyx.ui.theme.LocalIsDarkMode
+import com.klyx.api.ui.theme.LocalIsDarkMode
 
 object SettingScreens
 

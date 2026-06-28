@@ -4,7 +4,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.net.Uri
 import androidx.compose.ui.text.font.FontFamily
-import com.klyx.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single

@@ -10,10 +10,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.data.editor.applyEditorSettings
 import com.klyx.data.editor.rememberEditorColorScheme
-import com.klyx.data.preferences.EditorSettings
-import com.klyx.data.preferences.LocalAppSettings
+import com.klyx.api.data.preferences.EditorSettings
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.ui.provider.LocalTreeSitter
-import com.klyx.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import io.github.rosemoe.sora.compose.CodeEditor
 import io.github.rosemoe.sora.compose.invalidate
 import io.github.rosemoe.sora.compose.rememberCodeEditorState

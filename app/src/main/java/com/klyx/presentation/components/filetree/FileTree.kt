@@ -65,7 +65,7 @@ import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
-import com.klyx.data.file.KxFile
+import com.klyx.api.data.file.KxFile
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.orSnap
 

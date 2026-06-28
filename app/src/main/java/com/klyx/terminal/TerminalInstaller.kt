@@ -10,7 +10,7 @@ import arrow.core.compareTo
 import com.klyx.data.file.archive.extractXzTar
 import com.klyx.data.fs.Paths
 import com.klyx.data.fs.downloadFile
-import com.klyx.platform.currentArchitecture
+import com.klyx.api.platform.currentArchitecture
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single

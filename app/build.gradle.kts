@@ -203,6 +203,7 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.zoomable)
 
+    implementation(projects.klyxApi)
     implementation(projects.core)
     implementation(projects.terminal)
     implementation(projects.editor)

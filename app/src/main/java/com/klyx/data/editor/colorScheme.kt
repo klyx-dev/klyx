@@ -11,7 +11,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import com.klyx.ui.theme.LocalIsDarkMode
+import com.klyx.api.ui.theme.LocalIsDarkMode
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 
 val LocalKlyxEditorColorScheme = compositionLocalOf<KlyxEditorColorScheme> {

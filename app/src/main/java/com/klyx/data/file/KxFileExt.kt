@@ -12,6 +12,9 @@ import android.system.StructStat
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import com.klyx.api.data.file.FileStatInfo
+import com.klyx.api.data.file.KxFile
+import com.klyx.native.Os as NativeOs
 import com.klyx.util.applicationContext
 import com.klyx.util.tryOrNull
 import com.klyx.util.withApplicationContext
@@ -226,3 +229,47 @@ fun KxFile.share() = withApplicationContext {
         ).show()
     }
 }
+
+val KxFile.statInfo: FileStatInfo?
+    get() {
+        val stat = try {
+            if (file != null) {
+                Os.stat(file!!.absolutePath)
+            } else if (!isDirectory) {
+                applicationContext().contentResolver
+                    .openFileDescriptor(uri, "r")
+                    ?.use { Os.fstat(it.fileDescriptor) }
+            } else null
+        } catch (_: Exception) {
+            null
+        } ?: return null
+
+        val ownerName = try {
+            NativeOs.getpwuid(stat.st_uid)?.pw_name ?: stat.st_uid.toString()
+        } catch (_: Exception) {
+            stat.st_uid.toString()
+        }
+
+        val groupName = try {
+            NativeOs.getgrgid(stat.st_gid)?.gr_name ?: stat.st_gid.toString()
+        } catch (_: Exception) {
+            stat.st_gid.toString()
+        }
+
+        return FileStatInfo(
+            mode = stat.st_mode,
+            permissions = permissionsString,
+            ownerUid = stat.st_uid,
+            ownerName = ownerName,
+            groupGid = stat.st_gid,
+            groupName = groupName,
+            hardLinks = stat.st_nlink,
+            inode = stat.st_ino,
+            deviceId = stat.st_dev,
+            blockSize = stat.st_blksize,
+            blocksAllocated = stat.st_blocks,
+            lastAccessed = stat.st_atim.tv_sec,
+            lastModified = stat.st_mtim.tv_sec,
+            lastChanged = stat.st_ctim.tv_sec,
+        )
+    }

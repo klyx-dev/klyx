@@ -116,21 +116,20 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.klyx.R
-import com.klyx.data.editor.EditorAction
+import com.klyx.api.data.editor.EditorAction
 import com.klyx.data.editor.EditorStateRegistry
 import com.klyx.data.editor.KlyxEditorColorScheme
-import com.klyx.data.editor.Save
-import com.klyx.data.editor.SaveAs
-import com.klyx.data.editor.WorkspaceTab
+import com.klyx.api.data.editor.Save
+import com.klyx.api.data.editor.SaveAs
+import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.data.editor.applyEditorSettings
-import com.klyx.data.file.KxFile
+import com.klyx.api.data.file.KxFile
 import com.klyx.data.file.openWith
 import com.klyx.data.file.share
 import com.klyx.data.file.shareableUri
-import com.klyx.data.file.wrap
+import com.klyx.api.data.file.wrap
 import com.klyx.data.preferences.FontManager
-import com.klyx.data.preferences.LocalAppSettings
-import com.klyx.editor.TreeSitter
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.components.AnimatedTab
@@ -164,9 +163,9 @@ import com.klyx.presentation.viewmodel.EditorViewModel
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.presentation.viewmodel.HomeViewModel
 import com.klyx.ui.provider.LocalTreeSitter
-import com.klyx.ui.theme.GoogleSansRounded
-import com.klyx.ui.theme.JetBrainsMonoFontFamily
-import com.klyx.ui.theme.LocalIsDarkMode
+import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.ui.widgets.LocalToastHostState
 import com.klyx.ui.widgets.showFailureToast
 import com.klyx.util.share
@@ -177,7 +176,6 @@ import io.github.rosemoe.sora.compose.ExperimentalEditorApi
 import io.github.rosemoe.sora.compose.content
 import io.github.rosemoe.sora.compose.rememberCodeEditorState
 import io.github.rosemoe.sora.event.ContentChangeEvent
-import io.github.rosemoe.sora.lang.EmptyLanguage
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
@@ -1170,6 +1168,16 @@ private fun EditorPager(
                     onNewFileClick = onNewFileClick,
                     onOpenProjectClick = onOpenProjectClick
                 )
+            }
+
+            is WorkspaceTab.Custom -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clipToBounds()
+                ) {
+                    tab.content()
+                }
             }
         }
     }
