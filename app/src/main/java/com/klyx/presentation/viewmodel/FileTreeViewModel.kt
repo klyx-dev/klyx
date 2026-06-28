@@ -14,6 +14,7 @@ import com.klyx.data.repository.RecentProjectRepository
 import com.klyx.presentation.components.filetree.FileNode
 import com.klyx.presentation.components.filetree.FlatNode
 import com.klyx.system.firstAvailable
+import com.klyx.util.stateInWhileSubscribed
 import com.klyx.util.tryOrNull
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -26,23 +27,21 @@ import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.KoinViewModel
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.TimeSource
 
 @Immutable
 data class FileTreeUiState(
@@ -93,12 +92,12 @@ class FileTreeViewModel(
     val scrollTarget: SharedFlow<FileNode> = _scrollTarget.asSharedFlow()
 
     val visibleNodes = combine(
-        _uiState.map { it.rootNodes },
-        _uiState.map { it.expandedNodes },
-        _uiState.map { it.childrenNodeCache }
+        _uiState.map { it.rootNodes }.distinctUntilChanged(),
+        _uiState.map { it.expandedNodes }.distinctUntilChanged(),
+        _uiState.map { it.childrenNodeCache }.distinctUntilChanged()
     ) { roots, expanded, cache ->
         buildVisibleNodes(roots, expanded, cache)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateInWhileSubscribed(emptyList())
 
     init {
         restoreSession()
@@ -142,7 +141,7 @@ class FileTreeViewModel(
         expanded: ImmutableSet<FileNode>,
         cache: ImmutableMap<FileNode, ImmutableList<FileNode>>
     ): List<FlatNode> {
-        val start = System.nanoTime()
+        val now = TimeSource.Monotonic.markNow()
         val result = mutableListOf<FlatNode>()
 
         fun dfs(node: FileNode, depth: Int, currentRoot: FileNode) {
@@ -161,7 +160,7 @@ class FileTreeViewModel(
 
 //        Log.d(
 //            "FileTree",
-//            "visibleNodes=${result.size} took ${(System.nanoTime() - start) / 1_000_000} ms"
+//            "visibleNodes=${result.size} took ${(now.elapsedNow().inWholeMilliseconds} ms"
 //        )
         return result
     }
@@ -667,6 +666,7 @@ class FileTreeViewModel(
             _uiState.update {
                 it.copy(childrenNodeCache = (it.childrenNodeCache + (parent to childNodes)).toImmutableMap())
             }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 }

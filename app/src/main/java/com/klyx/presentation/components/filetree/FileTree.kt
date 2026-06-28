@@ -2,7 +2,6 @@ package com.klyx.presentation.components.filetree
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -63,13 +61,11 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.coerceAtLeast
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
 import com.klyx.data.file.KxFile
-import com.klyx.presentation.viewmodel.FileTreeUiState
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.orSnap
 
@@ -134,27 +130,20 @@ fun FileTree(
                 ) {
                     items(
                         visibleNodes,
-                        key = { it.node.uri.toString() }
+                        key = { "${it.rootNode.uri}#${it.node.uri}#${it.depth}" }
                     ) { item ->
                         FileTreeItem(
-                            modifier = Modifier.animateItem(
-                                fadeInSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow).orSnap(),
-                                placementSpec = spring(
-                                    stiffness = Spring.StiffnessMediumLow,
-                                    visibilityThreshold = IntOffset.VisibilityThreshold,
-                                ).orSnap(),
-                                fadeOutSpec = spring<Float>(stiffness = Spring.StiffnessMediumLow).orSnap()
-                            ),
                             node = item.node,
                             depth = item.depth,
-                            state = state,
+                            isExpanded = state.isNodeExpanded(item.node),
+                            isSelected = state.isNodeSelected(item.node),
+                            isLoading = state.isLoading(item.node),
                             onClick = { node ->
                                 if (node.isDirectory) {
                                     viewModel.toggleNode(node)
                                 } else {
                                     onNodeClick(node, item.rootNode)
                                 }
-
                                 viewModel.selectNode(node)
                             },
                             onLongClick = { node ->
@@ -174,15 +163,13 @@ fun FileTree(
 private fun FileTreeItem(
     node: FileNode,
     depth: Int,
-    state: FileTreeUiState,
+    isExpanded: Boolean,
+    isSelected: Boolean,
+    isLoading: Boolean,
     onClick: (FileNode) -> Unit,
     onLongClick: (FileNode) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isExpanded = state.isNodeExpanded(node)
-    val isSelected = state.isNodeSelected(node)
-    val isLoading = state.isLoading(node)
-
     val bg by animateColorAsState(
         targetValue = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
@@ -230,7 +217,7 @@ private fun FileTreeItem(
             shape = shape,
             color = bg,
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(horizontal = 8.dp)
                 .clip(shape)
                 .graphicsLayer {
@@ -336,8 +323,7 @@ private fun FileTreeItem(
                     text = node.name,
                     style = MaterialTheme.typography.labelLarge,
                     color = fg,
-                    fontWeight = if (node.isDirectory) FontWeight.SemiBold else FontWeight.Medium,
-                    modifier = Modifier.fillMaxWidth()
+                    fontWeight = if (node.isDirectory) FontWeight.SemiBold else FontWeight.Medium
                 )
             }
         }
@@ -410,7 +396,7 @@ fun iconForFile(file: KxFile): FileIcon {
 
         "mp4", "mkv", "webm", "avi",
         "mov", "m4v", "3gp", "wmv",
-        "flv", /* "ts" */
+        "flv",
             -> FileIcon(painterResource(R.drawable.video_file_24px))
 
         "mp3", "wav", "ogg", "opus",

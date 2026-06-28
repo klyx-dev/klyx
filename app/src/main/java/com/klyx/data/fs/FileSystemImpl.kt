@@ -51,7 +51,18 @@ class FileSystemImpl(
         if (localFile != null) {
             localFile.listFiles()?.map(::KxFile).orEmpty()
         } else if (DocumentsContract.isTreeUri(uri)) {
-            listSafBatched(uri)
+            if (DocumentsContract.isDocumentUri(context, uri)) {
+                val docId = DocumentsContract.getDocumentId(uri)
+                val parts = uri.encodedPath?.split("/") ?: emptyList()
+                val rootTreeUri = if (parts.size >= 3) {
+                    uri.buildUpon().encodedPath("/tree/${parts[2]}").build()
+                } else {
+                    uri
+                }
+                listSafBatched(rootTreeUri, docId)
+            } else {
+                listSafBatched(uri)
+            }
         } else {
             uri.wrap().listFiles()
         }
@@ -68,9 +79,9 @@ class FileSystemImpl(
         }
     }
 
-    private fun listSafBatched(treeUri: Uri): List<KxFile> {
-        val treeDocId = DocumentsContract.getTreeDocumentId(treeUri)
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, treeDocId)
+    private fun listSafBatched(treeUri: Uri, parentDocId: String? = null): List<KxFile> {
+        val docId = parentDocId ?: DocumentsContract.getTreeDocumentId(treeUri)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, docId)
         val columns = arrayOf(
             Document.COLUMN_DOCUMENT_ID,
             Document.COLUMN_DISPLAY_NAME,
