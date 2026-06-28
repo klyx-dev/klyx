@@ -2,6 +2,7 @@ package com.klyx.presentation.viewmodel
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -630,12 +631,36 @@ class FileTreeViewModel(
             }
 
             val path = mutableListOf<FileNode>()
-            var current = fileNode.parent
-            while (current != null && current != rootNode) {
-                path.add(current)
-                current = current.parent
+
+            if (DocumentsContract.isTreeUri(rootNode.uri)) {
+                try {
+                    val rootTreeUri = rootNode.uri
+                    val treeDocId = DocumentsContract.getTreeDocumentId(rootTreeUri)
+                    val fileDocId = DocumentsContract.getDocumentId(file.uri)
+
+                    val relativePart = if (fileDocId.length > treeDocId.length) {
+                        fileDocId.removePrefix(treeDocId).trimStart('/')
+                    } else null
+
+                    if (relativePart != null) {
+                        val dirs = relativePart.split('/').dropLast(1)
+                        var cumulative = treeDocId
+                        for (dir in dirs) {
+                            cumulative = "$cumulative/$dir"
+                            val parentUri = DocumentsContract.buildDocumentUriUsingTree(rootTreeUri, cumulative)
+                            path.add(FileNode(KxFile(parentUri)))
+                        }
+                    }
+                } catch (_: Exception) {
+                }
+            } else {
+                var current = fileNode.parent
+                while (current != null && current != rootNode) {
+                    path.add(current)
+                    current = current.parent
+                }
+                path.reverse()
             }
-            path.reverse()
 
             _uiState.update { it.copy(expandedNodes = (it.expandedNodes + rootNode).toImmutableSet()) }
             loadChildrenSuspend(rootNode)
@@ -645,7 +670,11 @@ class FileTreeViewModel(
                 loadChildrenSuspend(parent)
             }
 
-            val parentNode = fileNode.parent ?: rootNode
+            val parentNode = if (DocumentsContract.isTreeUri(rootNode.uri)) {
+                path.lastOrNull() ?: rootNode
+            } else {
+                fileNode.parent ?: rootNode
+            }
             val children = _uiState.value.childrenNodeCache[parentNode]
             val foundNode = children?.find { it.uri == file.uri } ?: fileNode
 

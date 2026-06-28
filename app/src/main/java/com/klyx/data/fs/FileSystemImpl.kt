@@ -204,7 +204,6 @@ class FileSystemImpl(
                 .stderr(StdioDest.Null)
                 .streamLines()
                 .collect { line ->
-                    println(line)
                     if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
                         onResult(KxFile(File(line)))
                     }

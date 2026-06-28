@@ -320,7 +320,7 @@ fun FileTreeDrawer(
             isSearching = uiState.isSearching,
             showFdHint = !uiState.hasFastSearch && uiState.rootNodes.any { it.uri.scheme == "file" },
             searchEventFlow = viewModel.searchEventFlow,
-            searchRoots = uiState.rootNodes.map { it.uri },
+            searchRoots = uiState.rootNodes,
             onResultClick = { file ->
                 viewModel.selectSearchResult(file)
                 scope.launch { drawerState.open() }
@@ -341,7 +341,7 @@ private fun SearchBottomSheet(
     isSearching: Boolean,
     showFdHint: Boolean,
     searchEventFlow: SharedFlow<KxFile>,
-    searchRoots: List<Uri>,
+    searchRoots: List<FileNode>,
     onResultClick: (KxFile) -> Unit
 ) {
     val resultList = remember { mutableStateListOf<KxFile>() }
@@ -436,18 +436,26 @@ private fun SearchBottomSheet(
                         .weight(1f)
                 ) {
                     items(resultList, key = { it.uri.toString() }) { file ->
-                        val relPath = file.uri.path?.let { path ->
+                        val (relPath, rootName) = file.uri.path?.let { path ->
                             searchRoots.firstNotNullOfOrNull { root ->
-                                root.path?.let { rootPath ->
+                                root.uri.path?.let { rootPath ->
                                     if (path.startsWith(rootPath)) {
-                                        path.removePrefix(rootPath).trimStart('/')
+                                        Pair(
+                                            path.removePrefix(rootPath).trimStart('/'),
+                                            root.name
+                                        )
                                     } else null
                                 }
                             }
+                        } ?: Pair(null, null)
+                        val displayPath = if (rootName != null && relPath != null) {
+                            if (searchRoots.size > 1) "$rootName › $relPath" else relPath
+                        } else {
+                            relPath
                         }
                         SearchResultItem(
                             file = file,
-                            relativePath = relPath,
+                            relativePath = displayPath,
                             onClick = { onResultClick(file) }
                         )
                     }
