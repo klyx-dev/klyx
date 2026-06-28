@@ -291,19 +291,18 @@ class FileSystemImpl(
         }
     }
 
-    private fun searchSaf(
+    private suspend fun searchSaf(
         treeUri: Uri,
         query: String,
         maxResults: Int,
         onResult: (KxFile) -> Unit
-    ) {
+    ) = withContext(Dispatchers.IO) {
         val columns = arrayOf(
             Document.COLUMN_DOCUMENT_ID,
             Document.COLUMN_DISPLAY_NAME,
             Document.COLUMN_MIME_TYPE,
             Document.COLUMN_SIZE,
-            Document.COLUMN_LAST_MODIFIED,
-            Document.COLUMN_FLAGS
+            Document.COLUMN_LAST_MODIFIED
         )
 
         val queue = ArrayDeque<String>()
@@ -316,39 +315,41 @@ class FileSystemImpl(
             if (!seen.add(dirDocId)) continue
             val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, dirDocId)
 
-            val cursor = content.query(childrenUri, columns, null, null, null)
-            cursor?.use { c ->
-                val idIdx = c.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
-                val nameIdx = c.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
-                val mimeIdx = c.getColumnIndex(Document.COLUMN_MIME_TYPE)
-                val sizeIdx = c.getColumnIndex(Document.COLUMN_SIZE)
-                val dateIdx = c.getColumnIndex(Document.COLUMN_LAST_MODIFIED)
-                val flagsIdx = c.getColumnIndex(Document.COLUMN_FLAGS)
+            try {
+                val cursor = content.query(childrenUri, columns, null, null, null) ?: continue
+                cursor.use { c ->
+                    val idIdx = c.getColumnIndex(Document.COLUMN_DOCUMENT_ID)
+                    val nameIdx = c.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
+                    val mimeIdx = c.getColumnIndex(Document.COLUMN_MIME_TYPE)
+                    val sizeIdx = c.getColumnIndex(Document.COLUMN_SIZE)
+                    val dateIdx = c.getColumnIndex(Document.COLUMN_LAST_MODIFIED)
 
-                while (c.moveToNext() && safCount.get() < maxResults) {
-                    val docId = c.getString(idIdx)
-                    val name = if (nameIdx >= 0) c.getString(nameIdx) ?: docId else docId
-                    val mimeType = if (mimeIdx >= 0) c.getString(mimeIdx) else null
+                    while (c.moveToNext() && safCount.get() < maxResults) {
+                        val docId = c.getString(idIdx)
+                        val name = if (nameIdx >= 0) c.getString(nameIdx) ?: docId else docId
+                        val mimeType = if (mimeIdx >= 0) c.getString(mimeIdx) else null
 
-                    if (MIME_TYPE_DIR == mimeType) {
-                        queue.add(docId)
-                    }
+                        if (MIME_TYPE_DIR == mimeType) {
+                            queue.add(docId)
+                        }
 
-                    if (name.lowercase().contains(query)) {
-                        if (safCount.getAndIncrement() < maxResults) {
-                            val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                            val raw = DocumentFile.fromSingleUri(context, childUri)!!
-                            val metadata = PrefetchedFileMetadata(
-                                name = name,
-                                mimeType = mimeType,
-                                size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
-                                lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
-                                flags = if (flagsIdx >= 0) c.getInt(flagsIdx) else 0
-                            )
-                            onResult(KxFile(raw, metadata))
+                        if (name.lowercase().contains(query)) {
+                            if (safCount.getAndIncrement() < maxResults) {
+                                val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                                val raw = DocumentFile.fromSingleUri(context, childUri)!!
+                                val metadata = PrefetchedFileMetadata(
+                                    name = name,
+                                    mimeType = mimeType,
+                                    size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
+                                    lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
+                                    flags = 0
+                                )
+                                onResult(KxFile(raw, metadata))
+                            }
                         }
                     }
                 }
+            } catch (_: Exception) {
             }
         }
     }
