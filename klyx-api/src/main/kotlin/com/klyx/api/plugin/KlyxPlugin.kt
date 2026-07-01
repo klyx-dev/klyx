@@ -17,7 +17,16 @@ interface KlyxPlugin {
     suspend fun onUnload()
 }
 
+@Deprecated(
+    message = "Use currentPluginContext() instead",
+    replaceWith = ReplaceWith("currentPluginContext()", "com.klyx.api.plugin.currentPluginContext")
+)
 val KlyxPlugin.context: PluginContext by runtime()
+
+@Deprecated(
+    message = "Use currentLifecycleOwner() instead",
+    replaceWith = ReplaceWith("currentLifecycleOwner()", "com.klyx.api.plugin.currentLifecycleOwner")
+)
 val KlyxPlugin.lifecycleOwner: PluginLifecycleOwner by runtime()
 
 suspend fun currentLifecycleOwner(): LifecycleOwner {
