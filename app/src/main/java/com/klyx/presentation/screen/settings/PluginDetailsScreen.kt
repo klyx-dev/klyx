@@ -62,8 +62,8 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.util.openUrl
-import com.klyx.data.fs.Paths
-import com.klyx.data.fs.pluginsDir
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.fs.pluginsDir
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginManager
 import com.klyx.presentation.navigation.LocalNavigator

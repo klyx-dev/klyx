@@ -14,7 +14,8 @@ import android.provider.DocumentsProvider
 import android.util.Log
 import android.webkit.MimeTypeMap
 import com.klyx.R
-import com.klyx.data.fs.Paths
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.terminal.home
 import com.klyx.data.preferences.dataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking

@@ -8,9 +8,13 @@ import android.system.Os
 import android.util.Log
 import arrow.core.compareTo
 import com.klyx.data.file.archive.extractXzTar
-import com.klyx.data.fs.Paths
+import com.klyx.api.data.fs.Paths
 import com.klyx.data.fs.downloadFile
 import com.klyx.api.platform.currentArchitecture
+import com.klyx.api.terminal.home
+import com.klyx.api.terminal.projects
+import com.klyx.api.terminal.rootFs
+import com.klyx.api.terminal.versionFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single

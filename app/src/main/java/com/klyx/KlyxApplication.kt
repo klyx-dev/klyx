@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
+import com.klyx.api.data.fs.pluginsDir
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.terminal.TerminalManager
@@ -23,7 +24,6 @@ import com.klyx.api.ui.ToolbarRegistration
 import com.klyx.api.ui.ToolbarRegistry
 import com.klyx.core.App
 import com.klyx.core.initApp
-import com.klyx.data.fs.pluginsDir
 import com.klyx.data.terminal.DefaultTerminalSessionManager
 import com.klyx.data.terminal.TerminalSessionBinderImpl
 import com.klyx.event.initializeGlobalEventBus
@@ -39,7 +39,6 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.annotation.KoinApplication
 import org.koin.core.context.GlobalContext
 import org.koin.plugin.module.dsl.startKoin
-import java.io.File
 
 @KoinApplication
 class KlyxApplication : Application() {
@@ -70,7 +69,6 @@ class KlyxApplication : Application() {
             sessionManager = DefaultTerminalSessionManager()
         )
         app.setGlobal(terminalManager)
-        app.setGlobal(KlyxPaths(this))
         app.setGlobal(auto<FileSystem>())
         app.setGlobal(MutableScreenRegistry())
         app.setGlobal(MutableToolbarRegistry())
@@ -86,28 +84,6 @@ class KlyxApplication : Application() {
     ) : TerminalManager
 
     private inline fun <reified T> auto(): T = GlobalContext.get().get()
-
-    private class KlyxPaths(private val application: Application) : Paths {
-        override val filesDir: File get() = application.filesDir
-        override val tempDir: File get() = application.cacheDir
-        override val externalFilesDir
-            get() = application.getExternalFilesDir(null)
-                ?: error("shared storage is not currently available.")
-        override val nativeLibraryDir get() = File(application.applicationInfo.nativeLibraryDir)
-        override val dataDir: File get() = application.dataDir
-        override val externalCacheDir get() = application.externalCacheDir
-        override val noBackupFilesDir: File get() = application.noBackupFilesDir
-        override val codeCacheDir: File get() = application.codeCacheDir
-        override val externalCacheDirs: Array<File> get() = application.externalCacheDirs
-        override val externalFilesDirs: Array<File> get() = application.getExternalFilesDirs(null)
-
-        override val rootFs get() = dataDir.canonicalFile.resolve("rootfs")
-        override val homeDir get() = filesDir.canonicalFile.resolve("home")
-        override val projectsDir get() = homeDir.resolve("projects")
-        override val versionFile get() = rootFs.resolve(".bootstrap-version")
-        override val proot get() = File(nativeLibraryDir, "libproot.so")
-        override val prootLoader get() = File(nativeLibraryDir, "libloader.so")
-    }
 
     private class MutableScreenRegistry : ScreenRegistry {
 
@@ -156,7 +132,7 @@ class KlyxApplication : Application() {
         fun ToolbarAction.resolve(info: PluginInfo): ToolbarAction {
             val resolved = when (val icon = icon) {
                 is ToolbarIcon.Resource -> {
-                    val file = com.klyx.data.fs.Paths.pluginsDir
+                    val file = Paths.pluginsDir
                         .resolve(info.id)
                         .resolve(icon.path)
 

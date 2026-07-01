@@ -14,7 +14,7 @@ import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.repository.RecentProjectRepository
 import com.klyx.presentation.components.filetree.FileNode
 import com.klyx.presentation.components.filetree.FlatNode
-import com.klyx.system.firstAvailable
+import com.klyx.api.system.firstAvailable
 import com.klyx.api.util.stateInWhileSubscribed
 import com.klyx.api.util.tryOrNull
 import kotlinx.collections.immutable.ImmutableList

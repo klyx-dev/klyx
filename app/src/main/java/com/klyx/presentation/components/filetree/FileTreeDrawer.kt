@@ -98,9 +98,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.resolveName
-import com.klyx.data.fs.Paths
+import com.klyx.api.data.fs.Paths
 import com.klyx.presentation.viewmodel.FileTreeViewModel
-import com.klyx.terminal.home
+import com.klyx.api.terminal.home
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
 import com.klyx.api.ui.theme.GoogleSansRounded

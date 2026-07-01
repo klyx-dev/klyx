@@ -1,72 +1,65 @@
 package com.klyx.api.data.fs
 
-import com.klyx.api.plugin.PluginService
+import android.content.Context
+import com.klyx.core.koin
 import java.io.File
 
 /**
- * A service that provides access to important file system paths used by the application.
+ * Utility for accessing standard Android application paths and Klyx-specific directories.
  *
- * This includes standard Android directories (like filesDir and cacheDir) as well as
- * specific paths for the terminal runtime (like rootfs and home).
+ * Provides a type-safe way to retrieve various [File] paths used for data storage,
+ * caching, and plugin management.
  *
  * ### Example
  * ```kotlin
- * val paths: Paths by plugin()
- *
- * // Get the terminal home directory
- * val home = paths.homeDir
- *
- * // Get the projects directory
- * val projects = paths.projectsDir
+ * val cache = Paths.tempDir
+ * val plugins = Paths.pluginsDir
  * ```
  */
-interface Paths : PluginService {
+object Paths {
+
+    private val context by koin<Context>()
 
     /** The absolute path to the internal directory where the application can place persistent files it owns. */
-    val filesDir: File
+    val filesDir: File get() = context.filesDir
 
     /** The absolute path to the application-specific cache directory on the filesystem. */
-    val tempDir: File
+    val tempDir: File get() = context.cacheDir
 
     /** The absolute path to the directory on the primary shared/external storage where the application can place persistent files it owns. */
     val externalFilesDir: File
+        get() = context.getExternalFilesDir(null)
+            ?: error("shared storage is not currently available.")
 
-    /** The absolute path to the directory on the filesystem where all libraries are stored. */
+    /** The absolute path to the directory on the filesystem where all native libraries are stored. */
     val nativeLibraryDir: File
+        get() = File(context.applicationInfo.nativeLibraryDir)
 
     /** The absolute path to the directory on the filesystem where all private data is stored. */
-    val dataDir: File
+    val dataDir: File get() = context.dataDir
 
     /** The absolute path to the directory on the primary shared/external storage where the application can place cache files it owns. */
-    val externalCacheDir: File?
+    val externalCacheDir: File? get() = context.externalCacheDir
 
     /** The absolute path to the directory on the filesystem where all private data that should not be backed up is stored. */
-    val noBackupFilesDir: File
+    val noBackupFilesDir: File get() = context.noBackupFilesDir
 
     /** The absolute path to the directory on the filesystem where all private data that should be backed up is stored. */
-    val codeCacheDir: File
+    val codeCacheDir: File get() = context.codeCacheDir
 
     /** Returns absolute paths to application-specific directories on all shared/external storage devices where the application can place cache files it owns. */
-    val externalCacheDirs: Array<File>
+    val externalCacheDirs: Array<File> get() = context.externalCacheDirs
 
     /** Returns absolute paths to application-specific directories on all shared/external storage devices where the application can place persistent files it owns. */
-    val externalFilesDirs: Array<File>
-
-    /** The root filesystem (rootfs) directory for the terminal environment. */
-    val rootFs: File
-
-    /** The home directory for the terminal user. */
-    val homeDir: File
-
-    /** The directory where user projects are stored. */
-    val projectsDir: File
-
-    /** The file that stores the current version of the terminal bootstrap. */
-    val versionFile: File
-
-    /** The absolute path to the PRoot executable. */
-    val proot: File
-
-    /** The absolute path to the PRoot loader library. */
-    val prootLoader: File
+    val externalFilesDirs: Array<File> get() = context.getExternalFilesDirs(null)
 }
+
+/**
+ * The directory where installed Klyx plugins are stored.
+ */
+val Paths.pluginsDir get() = dataDir.resolve("klyx/plugins").also { it.createDirIfMissing() }
+
+/**
+ * The JSON file containing ids of currently installed plugins.
+ */
+val Paths.installedPluginsJson get() = pluginsDir.resolve("installed.json")

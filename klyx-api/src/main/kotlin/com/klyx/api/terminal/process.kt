@@ -1,9 +1,12 @@
-package com.klyx.terminal
+package com.klyx.api.terminal
 
 import android.annotation.SuppressLint
-import com.klyx.BuildConfig
-import com.klyx.data.fs.Paths
+import com.klyx.api.BuildConfig
+import com.klyx.api.data.fs.Paths
 
+/**
+ * Generates the base environment variables for a terminal session.
+ */
 fun terminalEnv() = mapOf(
     "TERM" to "xterm-256color",
     "TERM_PROGRAM" to "klyx",
@@ -15,6 +18,12 @@ fun terminalEnv() = mapOf(
     "LC_ALL" to "C.UTF-8",
 ) + processEnv()
 
+/**
+ * Generates PRoot-specific environment variables for the terminal process.
+ *
+ * This configures the paths for the PRoot loader, temporary directory, and
+ * standard system paths within the terminal environment.
+ */
 fun processEnv(): Map<String, String> {
 
     val tmpDir = Paths.tempDir.resolve("term-process").also { if (!it.exists()) it.mkdirs() }
@@ -50,6 +59,14 @@ fun processEnv(): Map<String, String> {
     return env
 }
 
+/**
+ * Generates the command-line arguments for launching a PRoot-based terminal session.
+ *
+ * This configures the PRoot execution environment, including filesystem bindings
+ * and the initial shell command.
+ *
+ * @param showMotd Whether to display the Message of the Day (MOTD) on startup.
+ */
 @SuppressLint("SdCardPath")
 fun terminalArgs(showMotd: Boolean = true) = listOf(
     prootFile().absolutePath,

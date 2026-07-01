@@ -83,7 +83,7 @@ import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.theme.GoogleSansRounded
 import com.klyx.api.util.humanBytes
 import com.klyx.api.util.sliderSteps
-import com.klyx.data.fs.Paths
+import com.klyx.api.data.fs.Paths
 import com.klyx.data.preferences.updateTerminalSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
@@ -97,7 +97,7 @@ import com.klyx.terminal.SafExposureState
 import com.klyx.terminal.TerminalDocumentsProvider
 import com.klyx.terminal.TerminalInstaller
 import com.klyx.terminal.emulator.CursorStyle
-import com.klyx.terminal.rootFs
+import com.klyx.api.terminal.rootFs
 import com.klyx.terminal.ui.extrakeys.ExtraKeyStyle
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch

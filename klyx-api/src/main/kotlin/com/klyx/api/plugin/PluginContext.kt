@@ -30,7 +30,6 @@ interface PluginContext : PluginRuntimeService {
  *
  * @see Settings
  * @see FileSystem
- * @see Paths
  * @see Fonts
  * @see Tabs
  * @see TerminalManager

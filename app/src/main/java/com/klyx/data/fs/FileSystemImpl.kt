@@ -17,11 +17,11 @@ import com.klyx.api.data.file.wrap
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
-import com.klyx.system.StdioDest
-import com.klyx.system.command
-import com.klyx.system.firstAvailable
-import com.klyx.system.streamLines
-import com.klyx.system.which
+import com.klyx.api.system.StdioDest
+import com.klyx.api.system.command
+import com.klyx.api.system.firstAvailable
+import com.klyx.api.system.streamLines
+import com.klyx.api.system.which
 import com.klyx.api.util.isTextFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope

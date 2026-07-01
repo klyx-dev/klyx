@@ -31,6 +31,10 @@ android {
         compose = true
         buildConfig = true
     }
+
+    defaultConfig {
+        buildConfigField("String", "VERSION_NAME", "\"$${project.property("project.version")}\"")
+    }
 }
 
 mavenPublishing {

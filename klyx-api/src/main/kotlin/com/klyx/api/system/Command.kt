@@ -1,17 +1,16 @@
-package com.klyx.system
+package com.klyx.api.system
 
 import android.annotation.SuppressLint
-import android.os.Environment
-import com.klyx.data.fs.Paths
-import com.klyx.terminal.home
-import com.klyx.terminal.processEnv
-import com.klyx.terminal.prootFile
-import com.klyx.terminal.rootFs
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.terminal.home
+import com.klyx.api.terminal.processEnv
+import com.klyx.api.terminal.prootFile
+import com.klyx.api.terminal.rootFs
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -19,11 +18,28 @@ import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 
+/**
+ * Creates a [CommandBuilder] to run the specified [program].
+ *
+ * The program will be searched for in the terminal rootfs first, then in the system paths.
+ */
 fun command(program: String): CommandBuilder = CommandBuilder(program)
 
+/**
+ * Creates a [CommandBuilder] to run the specified [program] with the given [args].
+ */
 fun command(program: String, vararg args: Any): CommandBuilder =
     CommandBuilder(program).args(*args)
 
+/**
+ * A builder for configuring and executing system processes.
+ *
+ * This class provides a DSL-like API for setting up arguments, environment variables,
+ * working directories, and I/O redirection for a command.
+ *
+ * It automatically handles running binaries within the Klyx PRoot environment if they
+ * are found in the terminal rootfs.
+ */
 class CommandBuilder internal constructor(
     private val program: String,
 ) {
@@ -34,66 +50,83 @@ class CommandBuilder internal constructor(
     private var stdoutDest: StdioDest = StdioDest.Capture
     private var stderrDest: StdioDest = StdioDest.Capture
 
+    /** Adds a single argument to the command. */
     fun arg(a: Any): CommandBuilder {
         args.add(a.toString())
         return this
     }
 
+    /** Adds multiple arguments to the command. */
     fun args(vararg a: Any): CommandBuilder {
         a.forEach { args.add(it.toString()) }
         return this
     }
 
+    /** Adds a list of arguments to the command. */
     fun args(a: List<Any>): CommandBuilder {
         a.forEach { args.add(it.toString()) }
         return this
     }
 
+    /** Adds an environment variable. */
     fun env(key: String, value: String): CommandBuilder {
         env[key] = value
         return this
     }
 
+    /** Adds multiple environment variables from a map. */
     fun env(map: Map<String, String>): CommandBuilder {
         env.putAll(map)
         return this
     }
 
+    /** Sets the current working directory for the process. */
     fun cwd(dir: File): CommandBuilder {
         cwd = dir
         return this
     }
 
+    /** Sets the current working directory path for the process. */
     fun cwd(path: String): CommandBuilder {
         cwd = File(path)
         return this
     }
 
+    /** Configures where the process reads its standard input from. */
     fun stdin(source: StdinSource): CommandBuilder {
         stdinSource = source
         return this
     }
 
+    /** Provides standard input to the process as a [ByteArray]. */
     fun stdin(bytes: ByteArray): CommandBuilder {
         stdinSource = StdinSource.Bytes(bytes)
         return this
     }
 
+    /** Provides standard input to the process as a [String]. */
     fun stdin(text: String): CommandBuilder {
         stdinSource = StdinSource.Bytes(text.encodeToByteArray())
         return this
     }
 
+    /** Configures where the process writes its standard output. */
     fun stdout(dest: StdioDest): CommandBuilder {
         stdoutDest = dest
         return this
     }
 
+    /** Configures where the process writes its standard error. */
     fun stderr(dest: StdioDest): CommandBuilder {
         stderrDest = dest
         return this
     }
 
+    /**
+     * Executes the command and waits for it to finish, capturing all output.
+     *
+     * @return A [ProcessOutput] containing the exit code and captured stdout/stderr.
+     */
     suspend fun output(): ProcessOutput {
         val child = spawnRaw()
         val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
@@ -112,6 +145,9 @@ class CommandBuilder internal constructor(
         }
     }
 
+    /**
+     * Starts the process and returns a [ChildProcess] handle.
+     */
     suspend fun spawn(): ChildProcess {
         val child = spawnRaw()
         val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
@@ -123,6 +159,10 @@ class CommandBuilder internal constructor(
         return child
     }
 
+    /**
+     * Executes the command and returns a [Flow] of [ProcessOutputEvent]s.
+     * Standard output and error are automatically set to [StdioDest.Capture].
+     */
     suspend fun stream(): Flow<ProcessOutputEvent> {
         stdoutDest = StdioDest.Capture
         stderrDest = StdioDest.Capture
@@ -136,6 +176,9 @@ class CommandBuilder internal constructor(
         return child.flow()
     }
 
+    /**
+     * Executes the command and waits for it to finish, returning only the exit code.
+     */
     suspend fun status(): Int {
         val child = spawnRaw()
         return withContext(Dispatchers.IO) {
@@ -227,10 +270,18 @@ class CommandBuilder internal constructor(
     }
 }
 
+/**
+ * Defines the source of the process's standard input.
+ */
 sealed interface StdinSource {
+
+    /** The process inherits the parent process's standard input. */
     data object Inherit : StdinSource
+
+    /** Standard input is provided via a pipe that can be written to. */
     data object Pipe : StdinSource
 
+    /** Standard input is provided as a fixed [ByteArray]. */
     data class Bytes(val data: ByteArray) : StdinSource {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -247,20 +298,40 @@ sealed interface StdinSource {
     }
 }
 
+/**
+ * Defines where the process's standard output or error should be directed.
+ */
 sealed interface StdioDest {
+
+    /** Output is inherited from the parent process. */
     data object Inherit : StdioDest
+
+    /** Output is captured and can be read as bytes or text. */
     data object Capture : StdioDest
+
+    /** Output is discarded (sent to `/dev/null`). */
     data object Null : StdioDest
 
+    /** Output is appended to the specified [file]. */
     data class File(val file: java.io.File) : StdioDest
 }
 
+/**
+ * Captured results of a process execution.
+ *
+ * @property exitCode The process exit code (typically 0 for success).
+ * @property stdout Captured standard output as bytes.
+ * @property stderr Captured standard error as bytes.
+ */
 data class ProcessOutput(
     val exitCode: Int,
     val stdout: ByteArray,
     val stderr: ByteArray,
 ) {
+    /** The captured standard output decoded as a UTF-8 string. */
     val stdoutText: String get() = stdout.decodeToString()
+
+    /** The captured standard error decoded as a UTF-8 string. */
     val stderrText: String get() = stderr.decodeToString()
 
     override fun equals(other: Any?): Boolean {
@@ -284,8 +355,14 @@ data class ProcessOutput(
     }
 }
 
+/**
+ * Events emitted during a streaming process execution.
+ */
 sealed interface ProcessOutputEvent {
+
+    /** Standard output data chunk. */
     data class Stdout(val data: ByteArray) : ProcessOutputEvent {
+        /** The data chunk decoded as a UTF-8 string. */
         val text: String get() = data.decodeToString()
 
         override fun equals(other: Any?): Boolean {
@@ -298,7 +375,9 @@ sealed interface ProcessOutputEvent {
         override fun hashCode(): Int = data.contentHashCode()
     }
 
+    /** Standard error data chunk. */
     data class Stderr(val data: ByteArray) : ProcessOutputEvent {
+        /** The data chunk decoded as a UTF-8 string. */
         val text: String get() = data.decodeToString()
 
         override fun equals(other: Any?): Boolean {
@@ -311,18 +390,32 @@ sealed interface ProcessOutputEvent {
         override fun hashCode(): Int = data.contentHashCode()
     }
 
+    /** The process has finished with the given [code]. */
     data class ExitCode(val code: Int) : ProcessOutputEvent
 }
 
+/**
+ * A handle to a running process, providing methods to wait for its completion or terminate it.
+ */
 class ChildProcess internal constructor(
     internal val process: Process,
 ) {
+    /** The Process ID (PID) of the child process. */
     val pid: Int get() = process.pid()
+
+    /** Whether the process is still running. */
     val isRunning: Boolean get() = process.isAlive
+
+    /** The stream used to write to the process's standard input. */
     val stdin: OutputStream get() = process.outputStream
+
+    /** The stream used to read from the process's standard output. */
     val stdout: InputStream get() = process.inputStream
+
+    /** The stream used to read from the process's standard error. */
     val stderr: InputStream get() = process.errorStream
 
+    /** The process exit code. Throws [IllegalStateException] if the process is still running. */
     val exitCode: Int
         get() = if (process.isAlive) {
             throw IllegalStateException("Process is still running")
@@ -330,6 +423,9 @@ class ChildProcess internal constructor(
             process.exitValue()
         }
 
+    /**
+     * Suspends until the process completes and returns its full output.
+     */
     suspend fun waitFor(): ProcessOutput = withContext(Dispatchers.IO) {
         val outBytes = process.inputStream.readBytes()
         val errBytes = process.errorStream.readBytes()
@@ -337,6 +433,11 @@ class ChildProcess internal constructor(
         ProcessOutput(process.exitValue(), outBytes, errBytes)
     }
 
+    /**
+     * Suspends until the process completes or the [timeoutMillis] is reached.
+     *
+     * @return The [ProcessOutput] if the process finished, or null if it timed out.
+     */
     suspend fun waitForTimeout(timeoutMillis: Long): ProcessOutput? = withContext(Dispatchers.IO) {
         val exited = process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)
         if (!exited) return@withContext null
@@ -345,8 +446,15 @@ class ChildProcess internal constructor(
         ProcessOutput(process.exitValue(), outBytes, errBytes)
     }
 
+    /**
+     * Suspends until the process completes or the [timeout] is reached.
+     */
     suspend fun waitForTimeout(timeout: Duration) = waitForTimeout(timeout.inWholeMilliseconds)
 
+    /**
+     * Returns a [Flow] that emits stdout/stderr chunks and the final exit code as they occur.
+     * The process is automatically forcibly destroyed if the flow collection is cancelled.
+     */
     fun flow(): Flow<ProcessOutputEvent> = channelFlow {
         val bufferSize = 8192
 
@@ -359,7 +467,8 @@ class ChildProcess internal constructor(
                         send(ProcessOutputEvent.Stdout(buffer.copyOf(bytesRead)))
                     }
                 }
-            } catch (_: IOException) {}
+            } catch (_: IOException) {
+            }
         }
 
         val errJob = launch(Dispatchers.IO) {
@@ -371,7 +480,8 @@ class ChildProcess internal constructor(
                         send(ProcessOutputEvent.Stderr(buffer.copyOf(bytesRead)))
                     }
                 }
-            } catch (_: IOException) {}
+            } catch (_: IOException) {
+            }
         }
 
         try {
@@ -388,12 +498,22 @@ class ChildProcess internal constructor(
         }
     }
 
+    /** Forcibly kills the child process. */
     fun kill(): ChildProcess = ChildProcess(process.destroyForcibly())
+
+    /** Gracefully terminates the child process. */
     fun terminate() = process.destroy()
 }
 
+/**
+ * Represents a program that has been resolved to a specific execution path.
+ */
 sealed interface ResolvedProgram {
+
+    /** A binary that can be executed directly by the system. */
     data class Direct(val path: String) : ResolvedProgram
+
+    /** A binary that must be executed within the PRoot environment. */
     data class PRoot(val path: String) : ResolvedProgram
 }
 

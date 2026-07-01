@@ -18,9 +18,9 @@ import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.koin
 import com.klyx.data.file.archive.extractGzipTar
-import com.klyx.data.fs.Paths
-import com.klyx.data.fs.installedPluginsJson
-import com.klyx.data.fs.pluginsDir
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.fs.installedPluginsJson
+import com.klyx.api.data.fs.pluginsDir
 import dalvik.system.PathClassLoader
 import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.Dispatchers

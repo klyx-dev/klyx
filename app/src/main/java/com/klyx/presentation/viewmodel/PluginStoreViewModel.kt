@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
-import com.klyx.data.fs.Paths
+import com.klyx.api.data.fs.Paths
 import com.klyx.data.fs.downloadFile
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginLoadException
