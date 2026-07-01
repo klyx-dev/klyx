@@ -40,12 +40,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.klyx.BuildConfig
+import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.presentation.model.IconSource
 import com.klyx.presentation.model.SettingsCategory
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.SettingsScreen
-import com.klyx.api.ui.theme.LocalIsDarkMode
 
 object SettingScreens
 
@@ -116,13 +115,20 @@ fun SettingsScreen() {
             }
 
             //if (BuildConfig.DEBUG) {
-                item {
-                    SettingsCategoryItem(
-                        category = SettingsCategory.DeveloperOptions,
-                        onClick = { navigator.navigateTo(SettingsScreen.DeveloperOptions) }
-                    )
-                }
+            item {
+                SettingsCategoryItem(
+                    category = SettingsCategory.DeveloperOptions,
+                    onClick = { navigator.navigateTo(SettingsScreen.DeveloperOptions) }
+                )
+            }
             //}
+
+            item {
+                SettingsCategoryItem(
+                    category = SettingsCategory.Plugins,
+                    onClick = { navigator.navigateTo(SettingsScreen.Plugins) }
+                )
+            }
 
             item {
                 SettingsCategoryItem(
@@ -168,6 +174,7 @@ private fun SettingsCategory.colors(): CategoryColors {
 
             SettingsCategory.About -> CategoryColors(Color(0xFF3F474D), Color(0xFFDEE3EB))
             SettingsCategory.FileTree -> CategoryColors(Color(0xFF2D4A3E), Color(0xFFA8E6CF))
+            SettingsCategory.Plugins -> CategoryColors(Color(0xFF3A2D4D), Color(0xFFD4B8FF))
         }
     } else {
         when (this) {
@@ -188,6 +195,7 @@ private fun SettingsCategory.colors(): CategoryColors {
 
             SettingsCategory.About -> CategoryColors(Color(0xFFEFF1F7), Color(0xFF44474F))
             SettingsCategory.FileTree -> CategoryColors(Color(0xFFD4EDDA), Color(0xFF155724))
+            SettingsCategory.Plugins -> CategoryColors(Color(0xFFEDE4FF), Color(0xFF3D1D6E))
         }
     }
 }

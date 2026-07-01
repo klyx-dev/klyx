@@ -37,7 +37,7 @@ dependencyResolutionManagement {
 
 includeBuild("external/sora-editor")
 
-include(":app", ":terminal", ":editor", ":core", ":klyx-api")
+include(":app", ":terminal", ":editor", ":core", ":klyx-api", ":klyx-gradle-plugin")
 
 file("languages").listFiles()?.filter { it.isDirectory && it.name.startsWith("tree-sitter-") }?.forEach { repoDir ->
     val innerGrammars = repoDir.listFiles { f -> f.isDirectory && (f.name == "typescript" || f.name == "tsx") }

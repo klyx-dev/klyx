@@ -22,7 +22,7 @@ import com.klyx.system.command
 import com.klyx.system.firstAvailable
 import com.klyx.system.streamLines
 import com.klyx.system.which
-import com.klyx.util.isTextFile
+import com.klyx.api.util.isTextFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive

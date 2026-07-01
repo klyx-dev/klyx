@@ -2,6 +2,7 @@ package com.klyx.data.preferences
 
 import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.data.preferences.AppTheme
+import com.klyx.api.data.preferences.AppearanceSettings
 import com.klyx.api.data.preferences.EditorSettings
 import com.klyx.api.data.preferences.FileTreeSettings
 import com.klyx.api.data.preferences.TerminalSettings
@@ -18,6 +19,12 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
 
     suspend fun updateSettings(transform: suspend (AppSettings) -> AppSettings) {
         dataStore.updateData(transform)
+    }
+
+    suspend fun updateAppearanceSettings(block: suspend (AppearanceSettings) -> AppearanceSettings) {
+        dataStore.updateData {
+            it.copy(appearance = block(it.appearance))
+        }
     }
 
     suspend fun updateTerminalSettings(block: suspend (TerminalSettings) -> TerminalSettings) {

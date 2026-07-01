@@ -28,9 +28,6 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Error
-import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -45,12 +42,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -60,7 +53,6 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.AccessibilityManager
 import androidx.compose.ui.platform.LocalAccessibilityManager
@@ -70,24 +62,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
-import com.klyx.core.App
-import com.klyx.core.LocalApp
+import com.klyx.api.ui.LocalToastHostState
+import com.klyx.api.ui.ToastData
+import com.klyx.api.ui.ToastDuration
+import com.klyx.api.ui.ToastHostState
+import com.klyx.api.ui.theme.blend
+import com.klyx.api.ui.theme.harmonizeWithPrimary
 import com.klyx.presentation.components.FullscreenPopup
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.lessSpringySpec
 import com.klyx.ui.animation.orSnap
 import com.klyx.ui.provider.LocalScreenSize
-import com.klyx.api.ui.theme.blend
-import com.klyx.api.ui.theme.harmonizeWithPrimary
-import com.klyx.util.extractMessage
-import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlin.coroutines.resume
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -289,112 +277,6 @@ fun Toast(
     }
 }
 
-val App.toastHost by lazy { ToastHostState() }
-
-val LocalToastHostState = compositionLocalWithComputedDefaultOf {
-    LocalApp.currentValue.toastHost
-}
-
-@Stable
-class ToastHostState {
-
-    private val mutex = Mutex()
-
-    var currentToastData by mutableStateOf<ToastData?>(null)
-        private set
-
-    suspend fun showToast(
-        message: String,
-        icon: ImageVector? = null,
-        duration: ToastDuration = ToastDuration.Short
-    ) = showToast(ToastVisualsImpl(message, icon, duration))
-
-    suspend fun showToast(visuals: ToastVisuals) = mutex.withLock {
-        try {
-            suspendCancellableCoroutine { continuation ->
-                currentToastData = ToastDataImpl(visuals, continuation)
-            }
-        } finally {
-            currentToastData = null
-        }
-    }
-
-    private class ToastVisualsImpl(
-        override val message: String,
-        override val icon: ImageVector?,
-        override val duration: ToastDuration
-    ) : ToastVisuals {
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || this::class != other::class) return false
-
-            other as ToastVisualsImpl
-
-            if (message != other.message) return false
-            if (icon != other.icon) return false
-            return duration == other.duration
-        }
-
-        override fun hashCode(): Int {
-            var result = message.hashCode()
-            result = 31 * result + icon.hashCode()
-            result = 31 * result + duration.hashCode()
-            return result
-        }
-    }
-
-    private class ToastDataImpl(
-        override val visuals: ToastVisuals,
-        private val continuation: CancellableContinuation<Unit>
-    ) : ToastData {
-
-        override fun dismiss() {
-            if (continuation.isActive) continuation.resume(Unit)
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (other == null || this::class != other::class) return false
-
-            other as ToastDataImpl
-
-            if (visuals != other.visuals) return false
-            return continuation == other.continuation
-        }
-
-        override fun hashCode(): Int {
-            var result = visuals.hashCode()
-            result = 31 * result + continuation.hashCode()
-            return result
-        }
-    }
-}
-
-@Stable
-interface ToastData {
-    val visuals: ToastVisuals
-    fun dismiss()
-}
-
-@Stable
-interface ToastVisuals {
-    val message: String
-    val icon: ImageVector?
-    val duration: ToastDuration
-}
-
-sealed class ToastDuration(val time: kotlin.Long) {
-    @Stable
-    data object Short : ToastDuration(3500L)
-
-    @Stable
-    data object Long : ToastDuration(6500L)
-
-    @Stable
-    data class Custom(val durationMillis: kotlin.Long) : ToastDuration(durationMillis)
-}
-
 @Stable
 object ToastDefaults {
 
@@ -445,23 +327,3 @@ private fun ToastDuration.toMillis(
         containsText = true
     ) ?: original
 }
-
-suspend fun ToastHostState.showFailureToast(
-    throwable: Throwable
-) = showFailureToast(
-    message = throwable.extractMessage(),
-    icon = if (throwable is OutOfMemoryError) {
-        Icons.Outlined.Memory
-    } else {
-        null
-    }
-)
-
-suspend fun ToastHostState.showFailureToast(
-    message: String,
-    icon: ImageVector? = null
-) = showToast(
-    message = message,
-    icon = icon ?: Icons.Outlined.Error,
-    duration = ToastDuration.Long
-)

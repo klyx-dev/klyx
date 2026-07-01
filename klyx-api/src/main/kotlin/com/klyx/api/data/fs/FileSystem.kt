@@ -2,8 +2,9 @@ package com.klyx.api.data.fs
 
 import android.net.Uri
 import com.klyx.api.data.file.KxFile
-import com.klyx.core.Global
+import com.klyx.api.plugin.PluginService
 import kotlinx.coroutines.flow.Flow
+import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -11,7 +12,7 @@ enum class FileCategory {
     TEXT, IMAGE, BINARY_UNSUPPORTED, ERROR
 }
 
-interface FileSystem : Global {
+interface FileSystem : PluginService {
     suspend fun list(uri: Uri): List<KxFile>
     suspend fun inputStream(uri: Uri): InputStream
     suspend fun outputStream(uri: Uri, mode: String = "w"): OutputStream
@@ -27,4 +28,12 @@ interface FileSystem : Global {
     suspend fun wrapUri(uri: Uri): KxFile
     suspend fun determineFileCategory(uri: Uri): FileCategory
     suspend fun search(roots: List<Uri>, query: String, maxResults: Int = 500): Flow<KxFile>
+}
+
+fun KxFile.createDirIfMissing(): Boolean {
+    return if (!exists) mkdirs() else true
+}
+
+fun File.createDirIfMissing(): Boolean {
+    return if (!exists()) mkdirs() else true
 }

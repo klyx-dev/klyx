@@ -6,7 +6,7 @@ import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.EditorSettings
 import com.klyx.data.preferences.SettingsRepository
-import com.klyx.util.stateInWhileSubscribed
+import com.klyx.api.util.stateInWhileSubscribed
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel

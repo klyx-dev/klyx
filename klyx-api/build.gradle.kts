@@ -29,12 +29,13 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
 mavenPublishing {
     coordinates(
-        groupId = "com.klyx",
+        groupId = "io.github.klyx-dev",
         artifactId = "klyx-api",
         version = property("project.version") as String
     )
@@ -42,7 +43,7 @@ mavenPublishing {
 
 configure<MavenPublishBaseExtension> {
     pomFromGradleProperties()
-    publishToMavenCentral()
+    publishToMavenCentral(automaticRelease = true)
     signAllPublications()
     configure(
         AndroidSingleVariantLibrary(
@@ -67,6 +68,7 @@ dependencies {
     api(platform(libs.androidx.compose.bom))
     api(libs.bundles.androidx.compose)
     api(libs.androidx.ui.text.google.fonts)
+    api(libs.androidx.material.icons.extended)
 
     api(platform(libs.koin.bom))
     api(libs.koin.core)

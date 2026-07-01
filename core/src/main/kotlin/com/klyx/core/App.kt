@@ -18,7 +18,21 @@ import org.koin.dsl.koinApplication
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
+import kotlin.properties.ReadOnlyProperty
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty
+import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.typeOf
+
+inline fun <reified T : Any> koin() = KoinDelegate(T::class)
+
+class KoinDelegate<T : Any>(
+    private val clazz: KClass<T>
+) : ReadOnlyProperty<Any?, T> {
+    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return GlobalContext.get().get(clazz)
+    }
+}
 
 class App internal constructor(
     val application: Application,
@@ -46,16 +60,42 @@ class App internal constructor(
      *
      * @throws NoGlobalException if a global for that type has not been assigned.
      */
-    inline fun <reified G : Global> global(): G = try {
-        koin.get()
-    } catch (err: Throwable) {
-        throw NoGlobalException("no state of type ${G::class.simpleName} exists", typeOf<G>(), err)
-    }
+    inline fun <reified G : Global> global(): G = globalOrNull<G>()
+        ?: throw NoGlobalException("no state of type ${G::class.simpleName} exists", typeOf<G>(), null)
+
+    /**
+     * Access the global of the given type.
+     *
+     * @throws NoGlobalException if a global for that type has not been assigned.
+     */
+    fun <G : Global> global(clazz: KClass<G>): G = globalOrNull(clazz)
+        ?: throw NoGlobalException("no state of type ${clazz.simpleName} exists")
 
     /**
      * Access the global of the given type if a value has been assigned.
      */
-    inline fun <reified G : Global> globalOrNull(): G? = koin.getOrNull()
+    inline fun <reified G : Global> globalOrNull(): G? = globalOrNull(G::class)
+
+    /**
+     * Access the global of the given type if a value has been assigned.
+     */
+    @Suppress("UNCHECKED_CAST")
+    fun <G : Global> globalOrNull(clazz: KClass<G>): G? {
+        val directInstance = koin.getOrNull<G>(clazz)
+        if (directInstance != null) return directInstance
+
+        val parentClasses = clazz.allSupertypes
+            .mapNotNull { it.classifier as? KClass<*> }
+            .filter { it != Any::class }
+
+        for (superClazz in parentClasses) {
+            val instance = koin.getOrNull<Any>(superClazz as KClass<Any>)
+            if (instance != null) {
+                return instance as G
+            }
+        }
+        return null
+    }
 
     /**
      * Access the global of the given type mutably. A default value is assigned if a global of this type has not
@@ -66,9 +106,21 @@ class App internal constructor(
 
     /**
      * Sets the value of the global of the given type.
+     * Automatically binds the instance to all of its implemented interfaces and parent types.
      */
-    inline fun <reified G : Global> setGlobal(global: G) =
-        koin.declare(global, allowOverride = true)
+    inline fun <reified G : Global> setGlobal(global: G) {
+        val clazz = G::class
+
+        val secondaryInterfaces = clazz.allSupertypes
+            .mapNotNull { it.classifier as? KClass<*> }
+            .filter { it != clazz && it != Any::class }
+
+        koin.declare(
+            instance = global,
+            secondaryTypes = secondaryInterfaces,
+            allowOverride = true
+        )
+    }
 
     /**
      * Executes a block of code within the context of a specific [Global] instance.

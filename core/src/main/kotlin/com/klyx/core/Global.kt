@@ -44,7 +44,7 @@ inline fun <reified T : Global> global(app: App): T = app.global()
  */
 class NoGlobalException(
     message: String,
-    val type: KType,
+    val type: KType? = null,
     override val cause: Throwable? = null
 ) : Exception(message)
 

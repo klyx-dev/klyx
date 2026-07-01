@@ -78,19 +78,21 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
-import com.klyx.core.event.subscribe
-import com.klyx.core.globalOf
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.data.preferences.TerminalSettings
+import com.klyx.api.data.terminal.TerminalManager
+import com.klyx.api.data.terminal.TerminalSessionEntry
+import com.klyx.api.event.terminal.TerminateAllSessionEvent
+import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.core.event.subscribe
+import com.klyx.core.globalOf
 import com.klyx.data.terminal.ExtraTerminalKeys
 import com.klyx.data.terminal.KlyxExtraKeysClient
 import com.klyx.data.terminal.KlyxTerminalClient
 import com.klyx.data.terminal.KlyxTerminalTheme
-import com.klyx.api.data.terminal.TerminalSessionBinder
-import com.klyx.api.data.terminal.TerminalSessionEntry
-import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.event.GlobalEventBus
-import com.klyx.api.event.terminal.TerminateAllSessionEvent
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.navigation.LocalNavigator
@@ -107,9 +109,6 @@ import com.klyx.terminal.ui.extrakeys.ExtraKeysInfo
 import com.klyx.terminal.ui.extrakeys.rememberExtraKeysState
 import com.klyx.terminal.ui.rememberTerminalSessionClient
 import com.klyx.ui.animation.orSnap
-import com.klyx.api.ui.theme.GoogleSansRounded
-import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
-import com.klyx.api.ui.theme.LocalIsDarkMode
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -236,7 +235,7 @@ private fun TerminalContent(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val terminalSettings = LocalAppSettings.current.terminal
 
-    val binder = globalOf<TerminalSessionBinder>()
+    val binder = globalOf<TerminalManager>().sessionBinder
     val isServiceBound by binder.isServiceBound.collectAsStateWithLifecycle()
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -281,7 +280,11 @@ private fun TerminalSetup(
 
     val headerTitle = when {
         uiState.error != null -> "Installation Failed"
-        uiState.isChecking || uiState.currentStep.contains("checking for updates", ignoreCase = true)-> "Preparing Bootstrap"
+        uiState.isChecking || uiState.currentStep.contains(
+            "checking for updates",
+            ignoreCase = true
+        ) -> "Preparing Bootstrap"
+
         uiState.isInstalling && uiState.currentStep.contains("Download", ignoreCase = true) -> "Downloading Terminal"
         uiState.isInstalling -> "Extracting Environment"
         !isOnline -> "Network Required"
@@ -485,7 +488,7 @@ private fun TerminalEmulator(
         return
     }
 
-    val sessionManager = globalOf<TerminalSessionManager>()
+    val sessionManager = globalOf<TerminalManager>().sessionManager
     val sessions by sessionManager.sessions.collectAsStateWithLifecycle()
     val currentEntry by sessionManager.currentSession.collectAsStateWithLifecycle()
 
@@ -591,7 +594,7 @@ private fun TerminalEmulator(
 private fun applyTerminalTheme() {
     val isDark = LocalIsDarkMode.current
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val sessionManager = globalOf<TerminalSessionManager>()
+    val sessionManager = globalOf<TerminalManager>().sessionManager
 
     LaunchedEffect(isDark, surfaceColor) {
         KlyxTerminalTheme.apply(isDark, surfaceColor)

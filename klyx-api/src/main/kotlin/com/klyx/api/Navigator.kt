@@ -1,8 +1,8 @@
 package com.klyx.api
 
-import com.klyx.core.Global
+import com.klyx.api.plugin.PluginService
 
-interface Navigator : Global {
+interface Navigator : PluginService {
     fun navigateTo(destination: NavDestination)
     fun navigateBack()
 }

@@ -18,6 +18,8 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
+import com.klyx.api.ui.ToolbarIcon
 import com.klyx.api.ui.theme.GoogleSansRounded
 
 @Composable
@@ -29,8 +31,7 @@ fun ExpressiveMenuItem(
 ) {
     ExpressiveMenuItem(
         text = text,
-        icon = icon,
-        painter = null,
+        icon = ToolbarIcon(icon),
         onClick = onClick,
         isDestructive = isDestructive
     )
@@ -45,18 +46,16 @@ fun ExpressiveMenuItem(
 ) {
     ExpressiveMenuItem(
         text = text,
-        icon = null,
-        painter = icon,
+        icon = ToolbarIcon(icon),
         onClick = onClick,
         isDestructive = isDestructive
     )
 }
 
 @Composable
-private fun ExpressiveMenuItem(
+fun ExpressiveMenuItem(
     text: String,
-    icon: ImageVector?,
-    painter: Painter?,
+    icon: ToolbarIcon?,
     onClick: () -> Unit,
     isDestructive: Boolean = false
 ) {
@@ -77,18 +76,32 @@ private fun ExpressiveMenuItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-            } else if (painter != null) {
-                Icon(
-                    painter = painter,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
+            when (icon) {
+                is ToolbarIcon.ImageVector -> {
+                    Icon(
+                        imageVector = icon.imageVector,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                is ToolbarIcon.Painter -> {
+                    Icon(
+                        painter = icon.painter,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                is ToolbarIcon.File -> {
+                    AsyncImage(
+                        model = icon.file,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                else -> {}
             }
 
             Text(

@@ -11,6 +11,4 @@
     <string name="search_files">Search files</string>
     <string name="search_no_results">No results found</string>
     <string name="close">Close</string>
-    <string name="oom_description">Not enough memory to complete this action. Please try closing other apps, or restarting the app.</string>
-    <string name="smth_went_wrong">Something went wrong: %1$s</string>
 </resources>

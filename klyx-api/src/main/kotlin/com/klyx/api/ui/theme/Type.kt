@@ -1,5 +1,6 @@
 package com.klyx.api.ui.theme
 
+import android.content.Context
 import android.graphics.Typeface
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -10,7 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.unit.sp
-import com.klyx.api.KlyxContext
+import com.klyx.core.koin
 import androidx.compose.ui.text.font.Font as ComposeFont
 
 private val provider = GoogleFont.Provider(
@@ -208,5 +209,6 @@ val GoogleSansTypography = Typography(
 )
 
 val JetBrainsMonoFontFamily by lazy {
-    FontFamily(Typeface.createFromAsset(KlyxContext.application.assets, "fonts/JetBrainsMono-Regular.ttf"))
+    val context by koin<Context>()
+    FontFamily(Typeface.createFromAsset(context.assets, "fonts/JetBrainsMono-Regular.ttf"))
 }

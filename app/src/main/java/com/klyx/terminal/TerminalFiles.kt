@@ -1,7 +1,7 @@
 package com.klyx.terminal
 
 import com.klyx.data.fs.Paths
-import com.klyx.util.applicationContext
+import com.klyx.api.util.applicationContext
 import java.io.File
 
 val Paths.rootFs by lazy { Paths.dataDir.canonicalFile.resolve("rootfs") }

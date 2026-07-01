@@ -1,94 +1,48 @@
 package com.klyx.api.plugin
 
-import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlin.coroutines.CoroutineContext
 
-interface KlyxPlugin : LifecycleOwner {
+@JvmDefaultWithoutCompatibility
+interface KlyxPlugin {
 
-    val id: String
-    val version: String
-    val minHostVersion: String
+    suspend fun onLoad()
 
-    /**
-     * The [PluginContext] provided by the framework. Set before [onLoad] is called and cleared
-     * after [onUnload]. Plugin authors must not assign to this property.
-     *
-     * Use [currentPluginContext] to access context without storing it in a field.
-     */
-    var context: PluginContext
+    suspend fun onStart()
 
-    fun onLoad(context: PluginContext)
+    suspend fun onStop()
 
-    fun onUnload()
-
-    fun onStart() {}
-
-    fun onDestroy() {}
+    suspend fun onUnload()
 }
 
-/**
- * Returns the [PluginContext] for the currently executing plugin code, or throws
- * [IllegalStateException] if [KlyxPlugin.onLoad] has not been called yet.
- */
-fun currentPluginContext(): PluginContext =
-    PluginContextHolder.get()
-        ?: throw IllegalStateException(
-            "PluginContext not available. onLoad() has not been called yet."
-        )
+val KlyxPlugin.context: PluginContext by runtime()
+val KlyxPlugin.lifecycleOwner: PluginLifecycleOwner by runtime()
 
-fun currentPluginContextOrNull(): PluginContext? = PluginContextHolder.get()
-
-object PluginContextHolder {
-    private val threadLocal = ThreadLocal<PluginContext>()
-
-    fun set(context: PluginContext) {
-        threadLocal.set(context)
-    }
-
-    fun clear() {
-        threadLocal.remove()
-    }
-
-    fun get(): PluginContext? = threadLocal.get()
+suspend fun currentLifecycleOwner(): LifecycleOwner {
+    return currentCoroutineContext()[PluginContextElement]?.owner
+        ?: error("Not executing inside a plugin.")
 }
 
-/**
- * Convenience base class that wires up lifecycle and context automatically.
- */
-abstract class BaseKlyxPlugin(
-    override val id: String,
-    override val version: String,
-    override val minHostVersion: String
-) : KlyxPlugin {
+suspend fun currentPluginContext(): PluginContext {
+    return currentCoroutineContext()[PluginContextElement]?.context
+        ?: error("Not executing inside a plugin.")
+}
 
-    final override val lifecycle: Lifecycle = LifecycleRegistry(this)
+suspend fun currentPluginContextOrNull(): PluginContext? =
+    currentCoroutineContext()[PluginContextElement]?.context
 
-    @Volatile
-    private var _context: PluginContext? = null
+val CoroutineScope.pluginContext: PluginContext
+    get() = coroutineContext[PluginContextElement]?.context
+        ?: error("'pluginContext' is only available in plugin scope")
 
-    final override var context: PluginContext
-        get() = _context
-            ?: throw IllegalStateException(
-                "PluginContext not available. onLoad() has not been called yet."
-            )
-        set(value) {
-            _context = value
-        }
+class PluginContextElement(
+    val context: PluginContext,
+    val owner: PluginLifecycleOwner
+) : CoroutineContext.Element {
 
-    final override fun onLoad(context: PluginContext) {
-        PluginContextHolder.set(context)
-        _context = context
-        onPluginLoad(context)
-    }
+    companion object Key : CoroutineContext.Key<PluginContextElement>
 
-    final override fun onUnload() {
-        onPluginUnload()
-        _context = null
-        PluginContextHolder.clear()
-    }
-
-    protected open fun onPluginLoad(context: PluginContext) {}
-
-    protected open fun onPluginUnload() {}
+    override val key = Key
 }

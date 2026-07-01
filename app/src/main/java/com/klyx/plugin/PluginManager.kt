@@ -1,98 +1,356 @@
 package com.klyx.plugin
 
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.system.ErrnoException
+import android.system.Os
+import android.util.Log
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import com.klyx.BuildConfig
+import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.plugin.KlyxPlugin
-import com.klyx.api.plugin.PluginContextHolder
+import com.klyx.api.plugin.PluginDescriptor
+import com.klyx.api.plugin.PluginInfo
+import com.klyx.api.plugin.PluginRuntimeRegistry
+import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.core.App
-import com.klyx.core.Version
-import dalvik.system.DexClassLoader
-import org.json.JSONObject
+import com.klyx.core.Global
+import com.klyx.core.koin
+import com.klyx.data.file.archive.extractGzipTar
+import com.klyx.data.fs.Paths
+import com.klyx.data.fs.installedPluginsJson
+import com.klyx.data.fs.pluginsDir
+import dalvik.system.PathClassLoader
+import io.github.z4kn4fein.semver.toVersion
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.io.File
-import java.util.zip.ZipFile
+import java.io.IOException
+import java.util.IdentityHashMap
+import kotlin.reflect.KClass
 
-class PluginManager(private val app: App) {
+class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
 
-    private val plugins = mutableMapOf<String, KlyxPlugin>()
-    private val appVersion: Version = Version.parse(com.klyx.BuildConfig.VERSION_NAME)
+    private val fs: FileSystem by koin()
+    private val appVersion = BuildConfig.VERSION_NAME.removeSuffix("-debug").toVersion(strict = false)
 
-    fun loadPlugin(apkPath: String) {
-        val context = app.application
-        val optimizedDir = File(context.cacheDir, "klyx-dex-opt")
-        optimizedDir.mkdirs()
+    private val installedList = mutableListOf<String>()
+    private val runtimes = IdentityHashMap<KlyxPlugin, PluginRuntime>()
+    private val runtimesById = HashMap<String, PluginRuntime>()
 
-        val loader = DexClassLoader(
-            apkPath,
-            optimizedDir.absolutePath,
-            null,
-            this::class.java.classLoader
-        )
+    val loadedPlugins get() = runtimes.values.map(PluginRuntime::info)
 
-        val desc = readPluginDescriptor(apkPath)
-        val cls = loader.loadClass(desc.entryClass)
-        val plugin = cls.getConstructor().newInstance() as KlyxPlugin
+    init {
+        app.backgroundScope.launch {
+            loadInstalledList()
+            try {
+                loadInstalledPlugins()
+            } catch (t: Throwable) {
+                Log.e("PluginManager", "Failed to load installed plugins", t)
+            }
+        }
+    }
 
-        require(plugins[desc.id] == null) {
-            "Plugin '${desc.id}' is already loaded. Unload it first."
+    fun interface PluginLoadProgressListener {
+        data class Step(val message: String, val desc: PluginDescriptor? = null)
+
+        fun step(step: Step)
+
+        fun step(step: String) {
+            step(Step(step))
+        }
+    }
+
+    suspend fun loadPluginBundle(
+        bundleUri: Uri,
+        progress: PluginLoadProgressListener? = null
+    ) = withContext(Dispatchers.IO) {
+        //println("loading plugin from $bundleUri")
+        val tmpDir = Paths.tempDir.resolve("klyx-plugin-bundles/tmp-${System.nanoTime()}")
+        tmpDir.mkdirs()
+
+        try {
+            progress?.step("extracting...")
+            extractBundle(bundleUri, tmpDir)
+            val jsonFile = tmpDir["plugin.json"] ?: error("Missing plugin.json in bundle")
+            val desc = json.decodeFromString<PluginDescriptor>(jsonFile.readText())
+            val pluginId = desc.id
+            progress?.step(PluginLoadProgressListener.Step("found plugin.json with id $pluginId", desc))
+
+            if (pluginId in runtimesById) {
+                throw PluginLoadException("Plugin with id '$pluginId' is already loaded. Unload it first.")
+            }
+
+            validate(desc)
+            val pluginDir = Paths.pluginsDir.resolve(pluginId)
+            pluginDir.mkdirs()
+
+            if (!pluginDir.exists()) {
+                Os.rename(tmpDir.absolutePath, pluginDir.absolutePath)
+            } else {
+                pluginDir.deleteRecursively()
+                Os.rename(tmpDir.absolutePath, pluginDir.absolutePath)
+            }
+
+            val bundleCopy = File(pluginDir, "bundle.klyx")
+            if (bundleCopy.exists()) bundleCopy.delete()
+
+            fs.inputStream(bundleUri).buffered().use { inputStream ->
+                bundleCopy.outputStream().buffered().use { outputStream ->
+                    val _ = inputStream.copyTo(outputStream)
+                }
+            }
+
+            val apkFile = File(pluginDir, "plugin.apk")
+            if (!apkFile.exists()) {
+                throw PluginLoadException(
+                    "APK file not found at $apkFile the bundle is missing plugin.apk. " +
+                            "Rebuild the bundle and reinstall."
+                )
+            }
+            apkFile.setReadOnly()
+
+            progress?.step("instantiating plugin")
+            val plugin = instantiatePlugin(apkFile.absolutePath, desc)
+            val info = createPluginInfo(pluginDir, desc)
+            progress?.step("creating runtime")
+            val runtime = PluginRuntime(app, plugin, info)
+            progress?.step("loading plugin")
+            register(runtime, progress)
+            progress?.step("loading successfully")
+            installPlugin(pluginId)
+        } catch (e: ErrnoException) {
+            throw PluginLoadException("Failed to load plugin bundle", e)
+        } finally {
+            if (tmpDir.exists()) {
+                tmpDir.deleteRecursively()
+            }
+        }
+    }
+
+    private suspend fun register(runtime: PluginRuntime, progress: PluginLoadProgressListener?) {
+        runtimes[runtime.plugin] = runtime
+        runtimesById[runtime.info.id] = runtime
+
+        try {
+            runtime.load(progress)
+        } catch (t: Throwable) {
+            unregister(runtime)
+            Paths.pluginsDir.resolve(runtime.info.id).deleteRecursively()
+            throw t
+        }
+    }
+
+    private fun unregister(runtime: PluginRuntime) {
+        runtimes.remove(runtime.plugin)
+        runtimesById.remove(runtime.info.id)
+    }
+
+    private fun instantiatePlugin(apkPath: String, desc: PluginDescriptor): KlyxPlugin {
+        val apkFile = File(apkPath)
+        if (!apkFile.exists()) {
+            throw PluginLoadException("APK file not found: $apkPath")
         }
 
-        val pluginMinVersion = Version.parse(plugin.minHostVersion)
-        if (pluginMinVersion > appVersion) {
+        val loader = PathClassLoader(
+            apkPath,
+            app.application.classLoader
+        )
+
+        val cls = loader.loadClass(desc.entryClass)
+        val instance = cls.getConstructor().newInstance()
+        return instance as? KlyxPlugin
+            ?: throw PluginLoadException("Class ${desc.entryClass} does not implement KlyxPlugin")
+    }
+
+    private operator fun File.get(relative: String): File? = resolve(relative).takeIf { it.exists() }
+
+    private suspend fun extractBundle(bundleUri: Uri, destination: File) = withContext(Dispatchers.IO) {
+        val tmp = Paths.tempDir.resolve("klyx-plugin-bundles/bundles/${System.nanoTime()}.klyx")
+        tmp.parentFile?.mkdirs()
+        fs.inputStream(bundleUri).buffered().use { input ->
+            tmp.outputStream().buffered().use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        try {
+            extractGzipTar(tmp, destination)
+        } catch (e: IOException) {
+            if (e.message == "Input is not in the .gz format.") {
+                throw PluginLoadException("File is not in the .klyx format.")
+            } else {
+                throw e
+            }
+        } finally {
+            tmp.delete()
+        }
+    }
+
+    private fun validate(desc: PluginDescriptor) {
+        val pluginId = desc.id
+
+        val minVersion = desc.minAppVersion.toVersion(strict = true)
+        if (minVersion > appVersion) {
             throw PluginLoadException(
-                "Plugin '${desc.id}' requires app version >= ${plugin.minHostVersion}, but app version is ${appVersion}"
+                "Plugin '$pluginId' requires app version >= ${desc.minAppVersion}, but current app version is $appVersion."
             )
         }
 
-        require(plugin.id == desc.id) {
-            "Plugin id mismatch: plugin.json declares '${desc.id}' but KlyxPlugin.id is '${plugin.id}'"
+        desc.maxAppVersion?.let { max ->
+            val maxVersion = max.toVersion(strict = true)
+            if (appVersion > maxVersion) {
+                throw PluginLoadException(
+                    "Plugin '$pluginId' requires app version <= $max, but current app version is $appVersion."
+                )
+            }
         }
-        require(plugin.version == desc.version) {
-            "Plugin version mismatch: plugin.json declares '${desc.version}' but KlyxPlugin.version is '${plugin.version}'"
-        }
-        require(plugin.minHostVersion == desc.minHostVersion) {
-            "Plugin minHostVersion mismatch: plugin.json declares '${desc.minHostVersion}' but KlyxPlugin.minHostVersion is '${plugin.minHostVersion}'"
-        }
-
-        val ctx = AppPluginContext(app)
-        PluginContextHolder.set(ctx)
-        plugin.context = ctx
-        plugin.onLoad(ctx)
-        (plugin.lifecycle as? androidx.lifecycle.LifecycleRegistry)?.currentState = androidx.lifecycle.Lifecycle.State.STARTED
-        PluginContextHolder.clear()
-        plugins[desc.id] = plugin
     }
 
-    fun unloadPlugin(id: String) {
-        val plugin = plugins.remove(id) ?: return
-        try {
-            (plugin.lifecycle as? androidx.lifecycle.LifecycleRegistry)?.currentState = androidx.lifecycle.Lifecycle.State.DESTROYED
-            plugin.onUnload()
-        } catch (e: Exception) {
-            android.util.Log.e("PluginManager", "Error unloading plugin '$id'", e)
+    private fun createPluginInfo(
+        pluginDir: File,
+        desc: PluginDescriptor
+    ): PluginInfo {
+
+        val apkFile = File(pluginDir, "plugin.apk")
+        val bundleFile = pluginDir["bundle.klyx"]
+
+        val icon = desc.icon?.let { path ->
+            val iconFile = File(pluginDir, path)
+
+            if (!iconFile.exists()) {
+                return@let null
+            }
+
+            BitmapPainter(
+                BitmapFactory.decodeFile(iconFile.absolutePath)
+                    .asImageBitmap()
+            )
         }
-        PluginContextHolder.clear()
-    }
 
-    fun getPlugin(id: String): KlyxPlugin? = plugins[id]
-
-    private fun readPluginDescriptor(apkPath: String): PluginDescriptor {
-        val zipFile = ZipFile(apkPath)
-        val entry = zipFile.getEntry("assets/plugin.json")
-            ?: error("Missing assets/plugin.json")
-        val json = JSONObject(zipFile.getInputStream(entry).bufferedReader().readText())
-        zipFile.close()
-        return PluginDescriptor(
-            id = json.getString("id"),
-            version = json.getString("version"),
-            minHostVersion = json.getString("minHostVersion"),
-            entryClass = json.getString("entryClass")
+        return PluginInfo(
+            descriptor = desc,
+            apkPath = apkFile.absolutePath,
+            bundlePath = bundleFile?.absolutePath,
+            icon = icon
         )
     }
 
-    private data class PluginDescriptor(
-        val id: String,
-        val version: String,
-        val minHostVersion: String,
-        val entryClass: String
-    )
+    suspend fun loadPlugin(id: String, progress: PluginLoadProgressListener? = null) {
+        val runtime = runtimesById[id] ?: return
+        runtime.load(progress)
+    }
+
+    suspend fun startPlugin(id: String) {
+        val runtime = runtimesById[id] ?: return
+        runtime.start()
+    }
+
+    suspend fun stopPlugin(id: String) {
+        val runtime = runtimesById[id] ?: return
+        runtime.stop()
+    }
+
+    suspend fun unloadPlugin(id: String) {
+        val runtime = runtimesById.remove(id) ?: return
+        runtime.unload()
+        runtimes.remove(runtime.plugin)
+        uninstallPlugin(id)
+    }
+
+    private suspend fun installPlugin(id: String) {
+        if (!installedList.contains(id)) {
+            installedList.add(id)
+            saveInstalled()
+        }
+    }
+
+    private suspend fun uninstallPlugin(id: String) = withContext(Dispatchers.IO) {
+        installedList.remove(id)
+        saveInstalled()
+        val pluginDir = File(Paths.pluginsDir, id)
+        if (pluginDir.exists()) {
+            pluginDir.deleteRecursively()
+        }
+    }
+
+    private suspend fun loadInstalledList() = withContext(Dispatchers.Default) {
+        val installedJson = Paths.installedPluginsJson
+        if (!installedJson.exists()) return@withContext
+        try {
+            val list = json.decodeFromString<InstalledList>(installedJson.readText())
+            installedList.clear()
+            installedList.addAll(list.ids)
+        } catch (e: Exception) {
+            Log.e("PluginManager", "Failed to load installed plugins list", e)
+        }
+    }
+
+    private suspend fun saveInstalled() = withContext(Dispatchers.IO) {
+        try {
+            Paths.installedPluginsJson
+                .writeText(json.encodeToString(InstalledList(installedList.toList())))
+        } catch (e: Exception) {
+            Log.e("PluginManager", "Failed to save installed plugins list", e)
+        }
+    }
+
+    private suspend fun loadInstalledPlugins(progress: PluginLoadProgressListener? = null) =
+        withContext(Dispatchers.IO) {
+            for (pluginId in installedList.toList()) {
+                try {
+                    val pluginDir = File(Paths.pluginsDir, pluginId)
+                    val apkFile = File(pluginDir, "plugin.apk")
+                    if (!apkFile.exists()) {
+                        installedList.remove(pluginId)
+                        continue
+                    }
+
+                    val runtime = loadRuntime(pluginDir, progress)
+                    register(runtime, progress)
+                    progress?.step("loaded plugin '$pluginId'")
+                } catch (e: Exception) {
+                    Log.e("PluginManager", "Failed to reload plugin '$pluginId'", e)
+                    progress?.step("failed to load plugin '$pluginId': ${e.localizedMessage}")
+                    installedList.remove(pluginId)
+                    Paths.pluginsDir.resolve(pluginId)
+                        .deleteRecursively()
+                }
+            }
+            saveInstalled()
+        }
+
+    private fun loadRuntime(pluginDir: File, progress: PluginLoadProgressListener? = null): PluginRuntime {
+        val apkFile = File(pluginDir, "plugin.apk")
+        val jsonFile = File(pluginDir, "plugin.json")
+        val desc = json.decodeFromString<PluginDescriptor>(jsonFile.readText())
+        validate(desc)
+        progress?.step("instantiating plugin (${desc.id})")
+        val plugin = instantiatePlugin(apkFile.absolutePath, desc)
+        val info = createPluginInfo(pluginDir, desc)
+        progress?.step("creating runtime (${desc.id})")
+        return PluginRuntime(app, plugin, info)
+    }
+
+    override fun <T : PluginRuntimeService> service(plugin: KlyxPlugin, type: KClass<T>): T {
+        return runtimes[plugin]?.service(type) ?: error("Plugin isn't loaded.")
+    }
+
+    @Serializable
+    data class InstalledList(val ids: List<String>)
+
+    companion object {
+        private val json = Json {
+            ignoreUnknownKeys = true
+        }
+
+        const val CDN = "https://plugins.klyx.workers.dev/api"
+        const val API = "https://plugins.klyx.workers.dev"
+    }
 }
 
 class PluginLoadException(message: String, cause: Throwable? = null) : Exception(message, cause)

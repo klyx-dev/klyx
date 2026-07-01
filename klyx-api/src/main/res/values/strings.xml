@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="oom_description">Not enough memory to complete this action. Please try closing other apps, or restarting the app.</string>
+    <string name="smth_went_wrong">Something went wrong: %1$s</string>
+</resources>

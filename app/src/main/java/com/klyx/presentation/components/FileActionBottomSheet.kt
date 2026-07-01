@@ -97,9 +97,9 @@ import com.klyx.data.file.symlinkTarget
 import com.klyx.presentation.components.filetree.iconForFile
 import com.klyx.presentation.components.subcomponents.AutoSizeText
 import com.klyx.api.ui.theme.GoogleSansRounded
-import com.klyx.util.asLocalDateTime
-import com.klyx.util.formatDateTime
-import com.klyx.util.humanBytes
+import com.klyx.api.util.asLocalDateTime
+import com.klyx.api.util.formatDateTime
+import com.klyx.api.util.humanBytes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

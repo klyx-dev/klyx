@@ -13,7 +13,7 @@ import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.file.KxFile
 import com.klyx.data.repository.RecentFileRepository
-import com.klyx.util.stateInWhileSubscribed
+import com.klyx.api.util.stateInWhileSubscribed
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.writeTextTo
 import kotlinx.collections.immutable.PersistentList

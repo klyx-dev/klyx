@@ -1,6 +1,7 @@
 package com.klyx.api.data.file
 
 import android.content.ContentResolver
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
@@ -10,7 +11,7 @@ import androidx.core.net.toFile
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
-import com.klyx.api.KlyxContext
+import com.klyx.core.koin
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.io.File
@@ -39,7 +40,7 @@ class KxFile : java.io.Serializable {
             if (_raw == null) {
                 _raw = originalFile?.let { DocumentFile.fromFile(it) }
                     ?: uriString.toUri().let { uri ->
-                        val context = KlyxContext.application
+                        val context: Context by koin()
                         if (DocumentsContract.isTreeUri(uri)) DocumentFile.fromTreeUri(context, uri)
                         else DocumentFile.fromSingleUri(context, uri)
                     }
@@ -66,7 +67,7 @@ class KxFile : java.io.Serializable {
         this.prefetched = prefetched
     }
 
-    val mimeType get() = KlyxContext.application.contentResolver.getType(uri)
+    val mimeType get() = context().contentResolver.getType(uri)
 
     val isSafDocument by lazy { file == null }
 
@@ -147,14 +148,14 @@ class KxFile : java.io.Serializable {
 
     override fun hashCode() = uri.hashCode()
 
-    fun inputStream() = KlyxContext.application.contentResolver.run {
+    fun inputStream() = context().contentResolver.run {
         file?.inputStream()
             ?: checkNotNull(openInputStream(this@KxFile.uri)) {
                 "InputStream is null. Probably the provider recently crashed."
             }
     }
 
-    fun outputStream() = KlyxContext.application.contentResolver.run {
+    fun outputStream() = context().contentResolver.run {
         file?.outputStream()
             ?: checkNotNull(openOutputStream(this@KxFile.uri)) {
                 "OutputStream is null. Probably the provider recently crashed."
@@ -180,6 +181,11 @@ class KxFile : java.io.Serializable {
             false
         }
     }
+}
+
+private fun context(): Context {
+    val context: Context by koin()
+    return context
 }
 
 data class PrefetchedFileMetadata(
@@ -214,7 +220,7 @@ inline fun DocumentFile.wrap() = KxFile(this)
 fun KxFile(path: String) = KxFile(File(path))
 
 fun KxFile(uri: Uri): KxFile {
-    val context = KlyxContext.application
+    val context by koin<Context>()
 
     val localFile = resolveFromOwnProvider(uri)
     if (localFile != null) return KxFile(localFile)
@@ -264,7 +270,7 @@ private fun unsupported(message: String? = null): Nothing =
     throw UnsupportedOperationException(message)
 
 private fun resolveFromOwnProvider(uri: Uri): File? {
-    val context = KlyxContext.application
+    val context by koin<Context>()
     val providerAuthority = "${context.packageName}.terminal.documents"
     if (uri.authority != providerAuthority) return null
     return when {
@@ -275,11 +281,12 @@ private fun resolveFromOwnProvider(uri: Uri): File? {
 }
 
 fun KxFile.resolveName(): String {
+    val context by koin<Context>()
     return when (absolutePath) {
         Environment.getExternalStorageDirectory().absolutePath -> "Internal Storage"
-        KlyxContext.application.dataDir.absolutePath -> "App Data"
-        KlyxContext.application.filesDir.resolve("home").absolutePath,
-        KlyxContext.application.filesDir.resolve("home").canonicalPath,
+        context.dataDir.absolutePath -> "App Data"
+        context.filesDir.resolve("home").absolutePath,
+        context.filesDir.resolve("home").canonicalPath,
             -> "Terminal Home"
 
         else -> name

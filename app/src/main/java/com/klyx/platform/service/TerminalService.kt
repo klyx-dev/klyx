@@ -13,13 +13,14 @@ import android.os.PowerManager
 import androidx.core.app.NotificationCompat
 import com.klyx.MainActivity
 import com.klyx.R
+import com.klyx.api.data.terminal.TerminalManager
+import com.klyx.api.data.terminal.TerminalSessionManager
+import com.klyx.api.event.terminal.NewSessionEvent
+import com.klyx.api.event.terminal.SessionTerminateEvent
 import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
-import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.event.GlobalEventBus
-import com.klyx.api.event.terminal.NewSessionEvent
-import com.klyx.api.event.terminal.SessionTerminateEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,7 +33,9 @@ class TerminalService : Service() {
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
     @OptIn(UnsafeGlobalAccess::class)
-    private val sessionManager: TerminalSessionManager by lazy { GlobalApp.global() }
+    private val sessionManager: TerminalSessionManager by lazy {
+        GlobalApp.global<TerminalManager>().sessionManager
+    }
 
     private var daemonRunning = false
     private var wakeLock: PowerManager.WakeLock? = null

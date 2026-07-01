@@ -102,9 +102,6 @@ class PluginLifecycleTest : FunSpec({
 })
 
 private class TestPlugin : KlyxPlugin {
-    override val id = "test"
-    override val version = "1.0"
-    override val minHostVersion = "4.2.0"
     override val lifecycle = LifecycleRegistry(this)
     override var context: PluginContext = UninitializedContext()
     var loaded = false
@@ -120,9 +117,6 @@ private class TestPlugin : KlyxPlugin {
 }
 
 private class ScreenRegPlugin : KlyxPlugin {
-    override val id = "screen-reg"
-    override val version = "1.0"
-    override val minHostVersion = "4.2.0"
     override val lifecycle = LifecycleRegistry(this)
     override var context: PluginContext = UninitializedContext()
 
@@ -134,9 +128,6 @@ private class ScreenRegPlugin : KlyxPlugin {
 }
 
 private class ToolbarRegPlugin : KlyxPlugin {
-    override val id = "toolbar-reg"
-    override val version = "1.0"
-    override val minHostVersion = "4.2.0"
     override val lifecycle = LifecycleRegistry(this)
     override var context: PluginContext = UninitializedContext()
 
@@ -147,11 +138,7 @@ private class ToolbarRegPlugin : KlyxPlugin {
     override fun onUnload() {}
 }
 
-private class FullPlugin : BaseKlyxPlugin(
-    id = "full",
-    version = "1.0",
-    minHostVersion = "4.2.0"
-) {
+private class FullPlugin : BaseKlyxPlugin() {
 
     override fun onPluginLoad(context: PluginContext) {
         context.screens.register(ScreenEntry(id = ScreenId("full.settings")) { })

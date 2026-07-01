@@ -1,6 +1,7 @@
 package com.klyx.data.fs
 
 import android.content.Context
+import com.klyx.api.data.fs.createDirIfMissing
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import java.io.File
@@ -32,3 +33,6 @@ object Paths : KoinComponent {
 
     val externalFilesDirs: Array<File> get() = context.getExternalFilesDirs(null)
 }
+
+val Paths.pluginsDir get() = dataDir.resolve("klyx/plugins").also { it.createDirIfMissing() }
+val Paths.installedPluginsJson get() = pluginsDir.resolve("installed.json")

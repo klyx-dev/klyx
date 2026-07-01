@@ -15,9 +15,9 @@ import androidx.core.content.FileProvider
 import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.native.Os as NativeOs
-import com.klyx.util.applicationContext
-import com.klyx.util.tryOrNull
-import com.klyx.util.withApplicationContext
+import com.klyx.api.util.applicationContext
+import com.klyx.api.util.tryOrNull
+import com.klyx.api.util.withApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.flow

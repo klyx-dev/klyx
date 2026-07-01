@@ -1,6 +1,7 @@
 package com.klyx.core.unsafe
 
 import com.klyx.core.App
+import org.koin.core.context.GlobalContext
 import org.koin.mp.KoinPlatformTools
 
 @RequiresOptIn(
@@ -27,8 +28,7 @@ annotation class UnsafeGlobalAccess
 @Suppress("UndeclaredKoinUsage")
 @UnsafeGlobalAccess
 val GlobalApp: App by lazy(mode = KoinPlatformTools.defaultLazyMode()) {
-    (KoinPlatformTools
-        .defaultContext()
+    (GlobalContext
         .getOrNull() ?: error("Koin is not started"))
         .getOrNull() ?: error("GlobalApp was accessed before the application was initialized.")
 }

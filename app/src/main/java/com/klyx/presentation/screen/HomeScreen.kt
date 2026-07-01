@@ -117,19 +117,30 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil3.compose.AsyncImage
 import com.klyx.R
 import com.klyx.api.data.editor.EditorAction
-import com.klyx.data.editor.EditorStateRegistry
-import com.klyx.data.editor.KlyxEditorColorScheme
 import com.klyx.api.data.editor.Save
 import com.klyx.api.data.editor.SaveAs
 import com.klyx.api.data.editor.WorkspaceTab
-import com.klyx.data.editor.applyEditorSettings
 import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.wrap
+import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.api.ui.LocalToastHostState
+import com.klyx.api.ui.ToolbarAction
+import com.klyx.api.ui.ToolbarCategory
+import com.klyx.api.ui.ToolbarRegistry
+import com.klyx.api.ui.showFailureToast
+import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
+import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.api.util.share
+import com.klyx.api.util.shareText
+import com.klyx.core.globalOf
+import com.klyx.data.editor.EditorStateRegistry
+import com.klyx.data.editor.KlyxEditorColorScheme
+import com.klyx.data.editor.applyEditorSettings
 import com.klyx.data.file.openWith
 import com.klyx.data.file.share
 import com.klyx.data.file.shareableUri
-import com.klyx.api.data.file.wrap
 import com.klyx.data.preferences.FontManager
-import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.components.AnimatedTab
@@ -163,13 +174,6 @@ import com.klyx.presentation.viewmodel.EditorViewModel
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.presentation.viewmodel.HomeViewModel
 import com.klyx.ui.provider.LocalTreeSitter
-import com.klyx.api.ui.theme.GoogleSansRounded
-import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
-import com.klyx.api.ui.theme.LocalIsDarkMode
-import com.klyx.ui.widgets.LocalToastHostState
-import com.klyx.ui.widgets.showFailureToast
-import com.klyx.util.share
-import com.klyx.util.shareText
 import io.github.rosemoe.sora.compose.CodeEditor
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.ExperimentalEditorApi
@@ -294,12 +298,15 @@ fun HomeScreen(
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
                 containerColor = Color.Transparent,
                 topBar = {
+                    val toolbarActions = globalOf<ToolbarRegistry>().actions()
+
                     HomeTopBar(
                         scrollBehavior = scrollBehavior,
                         drawerState = drawerState,
                         scope = scope,
                         openTabs = openTabs,
                         activeTab = activeTab,
+                        toolbarActions = toolbarActions,
                         onTabClick = editorViewModel::selectTab,
                         onTabClose = editorViewModel::closeTab,
                         onTabCloseOthers = editorViewModel::closeOtherTabs,
@@ -649,6 +656,7 @@ private fun HomeTopBar(
     scope: CoroutineScope,
     openTabs: ImmutableList<WorkspaceTab>,
     activeTab: WorkspaceTab?,
+    toolbarActions: List<ToolbarAction>,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
     onTabCloseOthers: (String) -> Unit,
@@ -719,6 +727,7 @@ private fun HomeTopBar(
 
                     MainMenu(
                         activeTab = activeTab,
+                        toolbarActions = toolbarActions,
                         onAction = onMenuAction,
                         onEditorAction = onAction,
                         onSaveAsClick = onSaveAsClick
@@ -747,12 +756,22 @@ private sealed interface MenuAction {
 @Composable
 private fun MainMenu(
     activeTab: WorkspaceTab?,
+    toolbarActions: List<ToolbarAction>,
     onAction: (MenuAction) -> Unit,
     onEditorAction: (EditorAction) -> Unit,
     onSaveAsClick: () -> Unit
 ) {
     val navigator = LocalNavigator.current
     var showMenu by remember { mutableStateOf(false) }
+
+    val byCategory = toolbarActions.groupBy { it.category }
+    val currentFileActions = byCategory[ToolbarCategory.CurrentFile].orEmpty().sortedBy { it.priority }
+    val workspaceActions = byCategory[ToolbarCategory.Workspace].orEmpty().sortedBy { it.priority }
+    val customCategories = byCategory.keys
+        .minus(setOf(ToolbarCategory.CurrentFile, ToolbarCategory.Workspace, ToolbarCategory.Plugins))
+        .sorted()
+    val pluginsActions = byCategory[ToolbarCategory.Plugins].orEmpty().sortedBy { it.priority }
+    val hasCustomOrPlugins = customCategories.isNotEmpty() || pluginsActions.isNotEmpty()
 
     Box {
         FilledIconButton(
@@ -809,6 +828,17 @@ private fun MainMenu(
                         }
                     )
 
+                    currentFileActions.forEach { action ->
+                        ExpressiveMenuItem(
+                            text = action.label,
+                            icon = action.icon,
+                            onClick = {
+                                showMenu = false
+                                action.onClick()
+                            }
+                        )
+                    }
+
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp),
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
@@ -841,6 +871,75 @@ private fun MainMenu(
                         navigator.navigateTo(Screen.Settings)
                     }
                 )
+
+                workspaceActions.forEach { action ->
+                    ExpressiveMenuItem(
+                        text = action.label,
+                        icon = action.icon,
+                        onClick = {
+                            showMenu = false
+                            action.onClick()
+                        }
+                    )
+                }
+
+                if (hasCustomOrPlugins) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    )
+                }
+
+                customCategories.forEach { category ->
+                    Text(
+                        text = category.name,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    byCategory[category]!!.sortedBy { it.priority }.forEach { action ->
+                        ExpressiveMenuItem(
+                            text = action.label,
+                            icon = action.icon,
+                            onClick = {
+                                showMenu = false
+                                action.onClick()
+                            }
+                        )
+                    }
+                }
+
+                if (pluginsActions.isNotEmpty()) {
+                    if (customCategories.isNotEmpty()) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        )
+                    }
+
+                    Text(
+                        text = "Plugins",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+
+                    pluginsActions.forEach { action ->
+                        ExpressiveMenuItem(
+                            text = action.label,
+                            icon = action.icon,
+                            onClick = {
+                                showMenu = false
+                                action.onClick()
+                            }
+                        )
+                    }
+                }
             }
         }
     }

@@ -202,6 +202,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.zoomable)
+    implementation(libs.semver)
 
     implementation(projects.klyxApi)
     implementation(projects.core)

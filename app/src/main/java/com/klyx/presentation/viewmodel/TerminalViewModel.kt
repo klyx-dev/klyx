@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.terminal.InstallProgressListener
 import com.klyx.terminal.TerminalInstaller
-import com.klyx.util.humanBytes
+import com.klyx.api.util.humanBytes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -12,6 +12,7 @@ kotest = "6.2.1"
 kotlin = "2.4.0"
 compose-bom = "2026.06.00"
 kotlinx-io = "0.9.0"
+semver = "3.1.0"
 smooth-corner-rect-android-compose = "1.0.0"
 ktor = "3.5.0"
 
@@ -51,7 +52,6 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
-
 
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "core-ktx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
@@ -97,6 +97,7 @@ ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 
+semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
 smooth-corner-rect-android-compose = { module = "com.github.racra:smooth-corner-rect-android-compose", version.ref = "smooth-corner-rect-android-compose" }
 
 # Koin
@@ -118,6 +119,11 @@ sora-editor-compose = { module = "io.github.rosemoe:editor-compose" }
 sora-language-treesitter = { module = "io.github.rosemoe:language-treesitter" }
 sora-oniguruma-native = { module = "io.github.rosemoe:oniguruma-native" }
 
+android-tools = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+kgp = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-compose-plugin = { module = "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin", version.ref = "kotlin" }
+kotlin-serialization-plugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 android-library = { id = "com.android.library", version.ref = "agp" }
@@ -127,7 +133,7 @@ koin-compiler = { id = "io.insert-koin.compiler.plugin", version.ref = "koin-plu
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
 ktreesitter = { id = "io.github.tree-sitter.ktreesitter-plugin", version.ref = "ktreesitter" }
-vanniktech-publish = { id = "com.vanniktech.maven.publish.base", version = "0.36.0" }
+vanniktech-publish = { id = "com.vanniktech.maven.publish.base", version = "0.37.0" }
 
 [bundles]
 androidx-compose = [

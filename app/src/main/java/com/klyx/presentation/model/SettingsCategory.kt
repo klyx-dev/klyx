@@ -3,6 +3,7 @@ package com.klyx.presentation.model
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.DeveloperMode
+import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Memory
@@ -51,6 +52,12 @@ sealed class SettingsCategory(
         title = "System Diagnostics",
         subtitle = "Hardware info, memory, and system specs",
         icon = Icons.Rounded.Memory.asIconSource
+    )
+
+    data object Plugins : SettingsCategory(
+        title = "Plugins",
+        subtitle = "Manage installed plugins and browse the store",
+        icon = Icons.Rounded.Extension.asIconSource
     )
 
     data object About : SettingsCategory(

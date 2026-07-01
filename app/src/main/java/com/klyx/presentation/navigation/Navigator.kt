@@ -30,7 +30,7 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.runtime.serialization.NavBackStackSerializer
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.savedstate.serialization.SavedStateConfiguration
-import com.klyx.util.thenIf
+import com.klyx.api.util.thenIf
 import kotlinx.serialization.PolymorphicSerializer
 
 val LocalNavigator = staticCompositionLocalOf<Navigator> {

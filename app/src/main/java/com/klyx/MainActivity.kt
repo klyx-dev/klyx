@@ -44,7 +44,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation3.runtime.EntryDsl
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.entryProvider
@@ -52,10 +51,12 @@ import androidx.navigation3.ui.NavDisplay
 import com.klyx.api.NavDestination
 import com.klyx.api.Navigator
 import com.klyx.api.data.file.wrap
-import com.klyx.api.data.terminal.TerminalSessionBinder
+import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.event.terminal.TerminalNotificationTapEvent
 import com.klyx.api.event.terminal.TerminateAllSessionEvent
 import com.klyx.api.ui.ScreenRegistry
+import com.klyx.api.ui.showFailureToast
+import com.klyx.api.ui.toastHostState
 import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
@@ -69,15 +70,16 @@ import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.navigation.rememberNavigator
 import com.klyx.presentation.navigation.toEntries
 import com.klyx.presentation.screen.HomeScreen
-import com.klyx.presentation.screen.SettingScreens
 import com.klyx.presentation.screen.SettingsScreen
 import com.klyx.presentation.screen.TerminalScreen
-import com.klyx.presentation.screen.settings.About
-import com.klyx.presentation.screen.settings.Appearance
-import com.klyx.presentation.screen.settings.DeveloperOptions
-import com.klyx.presentation.screen.settings.Editor
-import com.klyx.presentation.screen.settings.FileTree
-import com.klyx.presentation.screen.settings.SystemDiagnostics
+import com.klyx.presentation.screen.settings.AboutScreen
+import com.klyx.presentation.screen.settings.AppearanceSettings
+import com.klyx.presentation.screen.settings.DeveloperOptionsScreen
+import com.klyx.presentation.screen.settings.EditorSettings
+import com.klyx.presentation.screen.settings.FileTreeSettingsScreen
+import com.klyx.presentation.screen.settings.PluginDetailsScreen
+import com.klyx.presentation.screen.settings.PluginsScreen
+import com.klyx.presentation.screen.settings.SystemDetailsScreen
 import com.klyx.presentation.screen.settings.TerminalSettings
 import com.klyx.presentation.viewmodel.EditorViewModel
 import com.klyx.presentation.viewmodel.FileTreeViewModel
@@ -85,8 +87,6 @@ import com.klyx.ui.ComposeActivity
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
 import com.klyx.ui.theme.ProvideGoogleSansTypography
-import com.klyx.ui.widgets.showFailureToast
-import com.klyx.ui.widgets.toastHost
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -101,17 +101,19 @@ class MainActivity : ComposeActivity() {
 
     private val pendingTerminalNav = MutableStateFlow(false)
 
+    private val terminalManager: TerminalManager by lazy { app.global() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         GlobalEventBus.subscribeIn<TerminateAllSessionEvent>(lifecycleScope) {
-            app.global<TerminalSessionBinder>().unbind(this)
+            terminalManager.sessionBinder.unbind(this)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        app.global<TerminalSessionBinder>().unbind(this)
+        terminalManager.sessionBinder.unbind(this)
     }
 
     @Composable
@@ -281,40 +283,20 @@ class MainActivity : ComposeActivity() {
     ) {
         entry<Screen.Home> { HomeScreen() }
         entry<Screen.Terminal> { TerminalScreen() }
-        entry<Screen.Settings> {
-            ProvideGoogleSansTypography { SettingsScreen() }
-        }
+        entry<Screen.Settings> { ProvideGoogleSansTypography { SettingsScreen() } }
 
-        settingsEntry<SettingsScreen.Editor> {
-            ProvideGoogleSansTypography { SettingScreens.Editor() }
-        }
-        settingsEntry<SettingsScreen.Appearance> {
-            ProvideGoogleSansTypography { SettingScreens.Appearance() }
-        }
-        settingsEntry<SettingsScreen.Terminal> {
-            ProvideGoogleSansTypography { TerminalSettings() }
-        }
-        settingsEntry<SettingsScreen.DeveloperOptions> {
-            ProvideGoogleSansTypography { SettingScreens.DeveloperOptions() }
-        }
-        settingsEntry<SettingsScreen.SystemDiagnostics> {
-            ProvideGoogleSansTypography { SettingScreens.SystemDiagnostics() }
-        }
-        settingsEntry<SettingsScreen.About> {
-            ProvideGoogleSansTypography { SettingScreens.About() }
-        }
-        settingsEntry<SettingsScreen.FileTree> {
-            ProvideGoogleSansTypography { SettingScreens.FileTree() }
-        }
+        settingsEntry<SettingsScreen.Editor> { EditorSettings() }
+        settingsEntry<SettingsScreen.Appearance> { AppearanceSettings() }
+        settingsEntry<SettingsScreen.Terminal> { TerminalSettings() }
+        settingsEntry<SettingsScreen.DeveloperOptions> { DeveloperOptionsScreen() }
+        settingsEntry<SettingsScreen.SystemDiagnostics> { SystemDetailsScreen() }
+        settingsEntry<SettingsScreen.About> { AboutScreen() }
+        settingsEntry<SettingsScreen.FileTree> { FileTreeSettingsScreen() }
+        settingsEntry<SettingsScreen.Plugins> { PluginsScreen() }
+        settingsEntry<SettingsScreen.PluginDetail> { PluginDetailsScreen(it.pluginId) }
 
         entry<Screen.Custom> { screen ->
-            val registry = app.global<ScreenRegistry>()
-            val entry = registry.registeredScreens.find { it.id == screen.id }
-            if (entry != null) {
-                entry.content()
-            } else {
-                UnknownScreen(screen)
-            }
+            app.global<ScreenRegistry>()[screen.id]?.invoke() ?: UnknownScreen(screen)
         }
     }
 
@@ -330,9 +312,9 @@ class MainActivity : ComposeActivity() {
                 if (screen is Screen.Custom) {
                     Text(
                         text = "Screen \"${screen.id}\" is not registered.\n\n" +
-                            "If you're a plugin developer, make sure to\n" +
-                            "register the screen via ctx.screens.register()\n" +
-                            "before navigating to it.",
+                                "If you're a plugin developer, make sure to\n" +
+                                "register the screen via ctx.screens.register()\n" +
+                                "before navigating to it.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -347,16 +329,16 @@ class MainActivity : ComposeActivity() {
         }
     }
 
-    @EntryDsl
     private inline fun <reified K : SettingsScreen> EntryProviderScope<Screen>.settingsEntry(
         metadata: Map<String, Any> = emptyMap(),
         noinline content: @Composable (K) -> Unit,
     ) {
-        entry(
+        entry<K>(
             //clazzContentKey = ::identity,
-            metadata = metadata,
-            content = content
-        )
+            metadata = metadata
+        ) {
+            ProvideGoogleSansTypography { content(it) }
+        }
     }
 
     override fun onResume() {
@@ -379,14 +361,14 @@ class MainActivity : ComposeActivity() {
                             if (file.isDirectory) {
                                 fileTreeViewModel.addRootNode(path)
                                 lifecycleScope.launch {
-                                    app.toastHost.showToast("Project opened: ${file.name}")
+                                    app.toastHostState.showToast("Project opened: ${file.name}")
                                 }
                             } else if (file.isFile) {
                                 editorViewModel.openFile(path)
                             }
                         } else {
                             lifecycleScope.launch {
-                                app.toastHost.showFailureToast("Invalid path: ${file.absolutePath} does not exist")
+                                app.toastHostState.showFailureToast("Invalid path: ${file.absolutePath} does not exist")
                             }
                         }
                     }

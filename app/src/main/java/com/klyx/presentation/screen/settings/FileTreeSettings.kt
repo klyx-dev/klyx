@@ -25,14 +25,13 @@ import androidx.compose.ui.unit.dp
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateFileTreeSettings
 import com.klyx.presentation.navigation.LocalNavigator
-import com.klyx.presentation.screen.SettingScreens
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingScreens.FileTree() {
+fun FileTreeSettingsScreen() {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()

@@ -1,7 +1,7 @@
 package com.klyx.api.data.terminal
 
 import androidx.compose.runtime.Immutable
-import com.klyx.core.Global
+import com.klyx.api.plugin.PluginService
 import com.klyx.terminal.emulator.TerminalEmulator
 import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.emulator.TerminalSessionClient
@@ -15,7 +15,7 @@ data class TerminalSessionEntry(
     val session: TerminalSession
 )
 
-interface TerminalSessionManager : Global {
+interface TerminalSessionManager {
     val sessions: StateFlow<ImmutableList<TerminalSessionEntry>>
     val currentSessionId: StateFlow<Uuid?>
     val currentSession: StateFlow<TerminalSessionEntry?>
