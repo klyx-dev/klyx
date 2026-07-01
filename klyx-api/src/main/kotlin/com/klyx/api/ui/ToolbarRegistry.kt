@@ -17,14 +17,20 @@ sealed interface ToolbarIcon {
      */
     data class Resource(val path: String) : ToolbarIcon
 
+    /** Icon loaded from a file on disk. */
     data class File(val file: java.io.File) : ToolbarIcon
 
+    /** Icon provided as a Compose [androidx.compose.ui.graphics.painter.Painter]. */
     data class Painter(val painter: androidx.compose.ui.graphics.painter.Painter) : ToolbarIcon
 
+    /** Icon provided as a Compose [androidx.compose.ui.graphics.vector.ImageVector]. */
     data class ImageVector(val imageVector: androidx.compose.ui.graphics.vector.ImageVector) : ToolbarIcon
 }
 
+/** Creates a [ToolbarIcon] from an [ImageVector]. */
 fun ToolbarIcon(imageVector: ImageVector): ToolbarIcon = ToolbarIcon.ImageVector(imageVector)
+
+/** Creates a [ToolbarIcon] from a [Painter]. */
 fun ToolbarIcon(painter: Painter): ToolbarIcon = ToolbarIcon.Painter(painter)
 
 /**
@@ -56,13 +62,15 @@ interface ToolbarRegistration {
     fun unregister()
 }
 
+/**
+ * Defines a clickable action that can be added to the application's toolbar.
+ */
 data class ToolbarAction(
 
     /**
-     * Unique identifier.
+     * Unique identifier for this action.
      *
-     * Recommended format:
-     * "com.example.git.commit"
+     * Recommended format: "com.example.plugin.action"
      */
     val id: String,
 
@@ -92,6 +100,25 @@ data class ToolbarAction(
     val onClick: () -> Unit
 )
 
+/**
+ * A registry for contributing actions to the application's toolbar.
+ *
+ * Plugins use this registry to add buttons or menu items to various categories in the UI.
+ *
+ * ### Example
+ * ```kotlin
+ * val toolbar: ToolbarRegistry by plugin()
+ *
+ * fun addCommitAction() {
+ *     toolbar.register(ToolbarAction(
+ *         id = "my.plugin.commit",
+ *         label = "Commit",
+ *         category = ToolbarCategory.Tools,
+ *         onClick = { /* perform commit */ }
+ *     ))
+ * }
+ * ```
+ */
 interface ToolbarRegistry : PluginService {
 
     /**

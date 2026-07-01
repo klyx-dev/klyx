@@ -70,6 +70,9 @@ suspend fun isTextFile(
     }
 }
 
+/**
+ * Formats a byte size into a human-readable string (e.g., "1.5 KB", "10.2 MB").
+ */
 fun Long.humanBytes(): String {
     val units = arrayOf("B", "KB", "MB", "GB", "TB")
     var v = this.toDouble()
@@ -86,4 +89,7 @@ fun Long.humanBytes(): String {
     return rounded.format(v) + " " + units[u]
 }
 
+/**
+ * Formats an integer byte size into a human-readable string.
+ */
 fun Int.humanBytes(): String = toLong().humanBytes()

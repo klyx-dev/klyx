@@ -15,9 +15,20 @@ import com.klyx.core.koin
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
+/**
+ * A unified file representation that wraps both standard [File] and Android's [DocumentFile].
+ *
+ * `KxFile` provides a consistent API for file operations, regardless of whether the underlying
+ * storage is a local file system or a provider accessible via the Storage Access Framework (SAF).
+ *
+ * It is [Serializable], allowing it to be passed between components or saved in state,
+ * although the internal [DocumentFile] reference is transient and reconstructed from the URI.
+ */
 @Serializable
 class KxFile : java.io.Serializable {
 
@@ -35,6 +46,9 @@ class KxFile : java.io.Serializable {
     @kotlin.jvm.Transient
     private var prefetched: PrefetchedFileMetadata? = null
 
+    /**
+     * The underlying [DocumentFile] for SAF operations.
+     */
     val raw: DocumentFile
         get() {
             if (_raw == null) {
@@ -48,8 +62,14 @@ class KxFile : java.io.Serializable {
             return _raw!!
         }
 
+    /**
+     * The underlying [File], or null if this is a pure SAF/content URI.
+     */
     val file: File? get() = originalFile ?: if (uri.isFileUri) uri.toFile() else null
 
+    /**
+     * The [Uri] representing this file.
+     */
     val uri get() = raw.uri
 
     constructor(raw: DocumentFile) {
@@ -67,25 +87,46 @@ class KxFile : java.io.Serializable {
         this.prefetched = prefetched
     }
 
+    /** The MIME type of the file. */
     val mimeType get() = context().contentResolver.getType(uri)
 
+    /** Whether this file is managed via Storage Access Framework. */
     val isSafDocument by lazy { file == null }
 
+    /** The display name of the file. */
     val name get() = prefetched?.name ?: file?.name ?: raw.name ?: error("Invalid file: $uri")
+
+    /** The path string of the file. */
     val path get() = file?.path ?: raw.uri.path ?: error("Invalid uri: $uri")
+
+    /** The absolute path string of the file. */
     val absolutePath get() = file?.absolutePath ?: path
 
+    /** The path string of the parent directory. */
     val parent get() = file?.parent ?: raw.parentFile?.uri?.toString()
+
+    /** The parent directory as a [KxFile]. */
     val parentFile get() = file?.parentFile?.let(::KxFile) ?: raw.parentFile?.let(::KxFile)
 
+    /** Whether the file or directory exists. */
     val exists get() = file?.exists() ?: raw.exists()
+
+    /** Whether the file is readable. */
     val canRead get() = file?.canRead() ?: raw.canRead()
+
+    /** Whether the file is writable. */
     val canWrite get() = file?.canWrite() ?: raw.canWrite()
+
+    /** Whether the file is executable (only applicable for local files). */
     val canExecute get() = file?.canExecute() ?: false
 
+    /** The size of the file in bytes. */
     val length get() = prefetched?.size ?: file?.length() ?: raw.length()
+
+    /** The time that the file was last modified, in milliseconds since the epoch. */
     val lastModified get() = prefetched?.lastModified ?: file?.lastModified() ?: raw.lastModified()
 
+    /** The file extension (e.g., "kt" or "txt"). */
     val extension
         get() = prefetched?.extension ?: file?.extension ?: run {
             if (name.startsWith(".") && name.count { it == '.' } == 1) {
@@ -97,8 +138,13 @@ class KxFile : java.io.Serializable {
             }
         }
 
+    /** Whether the file is considered hidden. */
     val isHidden get() = prefetched?.isHidden ?: file?.isHidden ?: name.startsWith(".")
+
+    /** Whether this is a regular file. */
     val isFile get() = prefetched?.isFile ?: file?.isFile ?: raw.isFile
+
+    /** Whether this is a directory. */
     val isDirectory get() = prefetched?.isDirectory ?: file?.isDirectory ?: raw.isDirectory
 
     fun mkdirs() =
@@ -127,14 +173,21 @@ class KxFile : java.io.Serializable {
         return (file?.listFiles()?.map(::KxFile) ?: raw.listFiles().map(::KxFile)).filter(filter)
     }
 
+    /** Reads the entire content of the file as a [ByteArray]. */
     fun readBytes() = inputStream().use { it.readBytes() }
+
+    /** Reads the entire content of the file as a [String] using the specified [charset]. */
     fun readText(charset: Charset = StandardCharsets.UTF_8) =
         inputStream().bufferedReader(charset).use { it.readText() }
 
+    /** Writes [bytes] to the file. */
     fun writeBytes(bytes: ByteArray) = outputStream().use { it.write(bytes) }
+
+    /** Writes [text] to the file using the specified [charset]. */
     fun writeText(text: String, charset: Charset = StandardCharsets.UTF_8) =
         outputStream().bufferedWriter(charset).use { it.write(text) }
 
+    /** Reads the entire content of the file as a list of lines. */
     fun readLines(charset: Charset = StandardCharsets.UTF_8) =
         inputStream().bufferedReader(charset).use { it.readLines() }
 
@@ -148,6 +201,7 @@ class KxFile : java.io.Serializable {
 
     override fun hashCode() = uri.hashCode()
 
+    /** Opens an [InputStream] for this file. */
     fun inputStream() = context().contentResolver.run {
         file?.inputStream()
             ?: checkNotNull(openInputStream(this@KxFile.uri)) {
@@ -155,6 +209,7 @@ class KxFile : java.io.Serializable {
             }
     }
 
+    /** Opens an [OutputStream] for this file. */
     fun outputStream() = context().contentResolver.run {
         file?.outputStream()
             ?: checkNotNull(openOutputStream(this@KxFile.uri)) {
@@ -188,6 +243,10 @@ private fun context(): Context {
     return context
 }
 
+/**
+ * Immutable metadata for a file, typically prefetched during directory listing
+ * to avoid expensive individual queries to content providers.
+ */
 data class PrefetchedFileMetadata(
     val name: String,
     val mimeType: String?,
@@ -195,9 +254,14 @@ data class PrefetchedFileMetadata(
     val lastModified: Long,
     val flags: Int
 ) {
+
+    /** Whether this metadata describes a directory. */
     val isDirectory: Boolean get() = DocumentsContract.Document.MIME_TYPE_DIR == mimeType
+
+    /** Whether this metadata describes a regular file. */
     val isFile: Boolean get() = !isDirectory
 
+    /** The file extension derived from the name. */
     val extension: String
         get() = when {
             name.startsWith(".") && name.count { it == '.' } == 1 -> ""
@@ -205,20 +269,29 @@ data class PrefetchedFileMetadata(
             else -> ""
         }
 
+    /** Whether the file name starts with a dot. */
     val isHidden: Boolean get() = name.startsWith(".")
 }
 
+/** Wraps this [File] into a [KxFile]. */
 @Suppress("NOTHING_TO_INLINE")
 inline fun File.wrap() = KxFile(this)
 
+/** Wraps this [Uri] into a [KxFile]. */
 @Suppress("NOTHING_TO_INLINE")
 inline fun Uri.wrap() = KxFile(this)
 
+/** Wraps this [DocumentFile] into a [KxFile]. */
 @Suppress("NOTHING_TO_INLINE")
 inline fun DocumentFile.wrap() = KxFile(this)
 
+/** Creates a [KxFile] from a local path string. */
 fun KxFile(path: String) = KxFile(File(path))
 
+/**
+ * Resolves a [Uri] into a [KxFile], attempting to determine if it is a local file
+ * or a content provider URI.
+ */
 fun KxFile(uri: Uri): KxFile {
     val context by koin<Context>()
 
@@ -280,6 +353,9 @@ private fun resolveFromOwnProvider(uri: Uri): File? {
     }
 }
 
+/**
+ * Resolves a human-readable name for common directories (e.g., "Terminal Home").
+ */
 fun KxFile.resolveName(): String {
     val context by koin<Context>()
     return when (absolutePath) {
@@ -293,4 +369,5 @@ fun KxFile.resolveName(): String {
     }
 }
 
+/** Whether this [Uri] is a `file://` URI. */
 val Uri.isFileUri get() = scheme == ContentResolver.SCHEME_FILE

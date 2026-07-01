@@ -1,7 +1,9 @@
 package com.klyx.plugin
 
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.lifecycleScope
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginContext
 import com.klyx.api.plugin.PluginContextElement
@@ -11,6 +13,7 @@ import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.api.plugin.PluginScope
 import com.klyx.core.App
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -18,6 +21,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
@@ -128,7 +132,7 @@ internal class PluginRuntime(
 
 internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): PluginRuntime {
     val context = PluginContextImpl(app)
-    val owner = PluginLifecycleOwnerImpl()
+    val owner = PluginLifecycleOwnerImpl(context)
     val scope = PluginScopeImpl(
         SupervisorJob() +
                 Dispatchers.Default +
@@ -137,8 +141,15 @@ internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): Plug
     return PluginRuntime(plugin, context, owner, scope, info)
 }
 
-internal class PluginLifecycleOwnerImpl : PluginLifecycleOwner {
+internal class PluginLifecycleOwnerImpl(
+    private val context: PluginContext
+) : PluginLifecycleOwner {
+
     override val lifecycle = LifecycleRegistry(this)
+
+    override val lifecycleScope: CoroutineScope by lazy {
+        (this as LifecycleOwner).lifecycleScope + PluginContextElement(context, this)
+    }
 }
 
 internal class PluginContextImpl(override val app: App) : PluginContext

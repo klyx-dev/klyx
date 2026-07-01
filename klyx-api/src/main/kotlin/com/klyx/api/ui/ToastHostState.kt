@@ -19,26 +19,47 @@ import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.resume
 
 
+/**
+ * Extension property to access the global [ToastHostState] for the application.
+ */
 val App.toastHostState by lazy { ToastHostState() }
 
+/**
+ * CompositionLocal providing the [ToastHostState] to the Compose hierarchy.
+ */
 val LocalToastHostState = compositionLocalWithComputedDefaultOf {
     LocalApp.currentValue.toastHostState
 }
 
+/**
+ * State manager for displaying non-blocking toast notifications in the application.
+ */
 @Stable
 class ToastHostState {
 
     private val mutex = Mutex()
 
+    /**
+     * The data for the toast currently being displayed, or null if no toast is visible.
+     */
     var currentToastData by mutableStateOf<ToastData?>(null)
         private set
 
+    /**
+     * Displays a toast with the given [message], [icon], and [duration].
+     *
+     * This is a suspend function that waits until the toast is dismissed (either by
+     * timeout or manual user action) before returning.
+     */
     suspend fun showToast(
         message: String,
         icon: ImageVector? = null,
         duration: ToastDuration = ToastDuration.Short
     ) = showToast(ToastVisualsImpl(message, icon, duration))
 
+    /**
+     * Displays a toast with the provided custom [visuals].
+     */
     suspend fun showToast(visuals: ToastVisuals) = mutex.withLock {
         try {
             suspendCancellableCoroutine { continuation ->
@@ -101,31 +122,61 @@ class ToastHostState {
     }
 }
 
+/**
+ * Represents the data for a toast that is currently being displayed.
+ */
 @Stable
 interface ToastData {
+
+    /** The visual configuration of the toast. */
     val visuals: ToastVisuals
+
+    /** Dismisses the toast immediately. */
     fun dismiss()
 }
 
+/**
+ * Defines the visual appearance and behavior of a toast.
+ */
 @Stable
 interface ToastVisuals {
+
+    /** The message text to display. */
     val message: String
+
+    /** An optional icon to display alongside the message. */
     val icon: ImageVector?
+
+    /** How long the toast should remain visible. */
     val duration: ToastDuration
 }
 
+/**
+ * Defines standard and custom durations for toast visibility.
+ *
+ * @property time The duration in milliseconds.
+ */
 sealed class ToastDuration(val time: kotlin.Long) {
+
+    /** Standard short duration (~3.5 seconds). */
     @Stable
     data object Short : ToastDuration(3500L)
 
+    /** Standard long duration (~6.5 seconds). */
     @Stable
     data object Long : ToastDuration(6500L)
 
+    /** A custom duration specified in [durationMillis]. */
     @Stable
     data class Custom(val durationMillis: kotlin.Long) : ToastDuration(durationMillis)
 }
 
-
+/**
+ * Convenience extension to display a failure toast based on a [Throwable].
+ *
+ * It automatically extracts a user-friendly message and adds an appropriate icon
+ * (e.g., a memory icon for [OutOfMemoryError]).
+ */
 suspend fun ToastHostState.showFailureToast(
     throwable: Throwable
 ) = showFailureToast(
@@ -137,6 +188,11 @@ suspend fun ToastHostState.showFailureToast(
     }
 )
 
+/**
+ * Convenience extension to display a failure toast with a custom [message] and [icon].
+ *
+ * This version defaults to [ToastDuration.Long] and an error icon.
+ */
 suspend fun ToastHostState.showFailureToast(
     message: String,
     icon: ImageVector? = null

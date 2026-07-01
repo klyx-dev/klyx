@@ -9,6 +9,12 @@ import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.math.roundToInt
 
+/**
+ * Extracts a user-friendly error message from a [Throwable].
+ *
+ * If the error is an [OutOfMemoryError], it returns a specific OOM description.
+ * Otherwise, it attempts to return the localized message or a generic error string.
+ */
 fun Throwable.extractMessage() = withApplicationContext {
     if (this@extractMessage is OutOfMemoryError) {
         getString(R.string.oom_description)
@@ -23,12 +29,18 @@ fun Throwable.extractMessage() = withApplicationContext {
     }
 }
 
+/**
+ * Recursively searches for an [Activity] context starting from the current [Context].
+ */
 tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
 
+/**
+ * Executes the given [block] and returns its result, or null if an exception (other than [CancellationException]) occurs.
+ */
 inline fun <T> tryOrNull(block: () -> T): T? {
     contract { callsInPlace(block, InvocationKind.AT_MOST_ONCE) }
 
@@ -41,6 +53,9 @@ inline fun <T> tryOrNull(block: () -> T): T? {
     }
 }
 
+/**
+ * Calculates the number of steps required for a slider given a specific [increment].
+ */
 fun ClosedFloatingPointRange<Float>.sliderSteps(
     increment: Float
 ): Int {

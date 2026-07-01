@@ -9,6 +9,11 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 
+/**
+ * Detects whether the device is using gesture navigation.
+ *
+ * @return `true` if gesture navigation is active, `false` otherwise.
+ */
 fun Context.isGestureNavigation(): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
         // Gesture navigation was introduced in Android 10 (API 29)
@@ -24,6 +29,9 @@ fun Context.isGestureNavigation(): Boolean {
     }
 }
 
+/**
+ * Opens a [url] in the system's default web browser.
+ */
 @SuppressLint("UseKtx")
 fun openUrl(url: String) = withApplicationContext {
     val uri = try {
@@ -43,6 +51,9 @@ fun openUrl(url: String) = withApplicationContext {
     }
 }
 
+/**
+ * Shares the given [text] using the Android share sheet.
+ */
 fun shareText(text: String) = withApplicationContext {
     try {
         val intent = Intent(Intent.ACTION_SEND).apply {
