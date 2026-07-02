@@ -246,6 +246,7 @@ class EditorViewModel(
                                     )
                                 )
                             }
+                            recentFileRepository.removeFile(file)
                             null
                         }
                     }
