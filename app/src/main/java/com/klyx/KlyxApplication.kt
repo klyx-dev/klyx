@@ -4,12 +4,19 @@ import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
-import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.InternalKlyxApi
+import com.klyx.api.data.editor.FileOpenRequest
+import com.klyx.api.data.editor.FileOpener
+import com.klyx.api.data.editor.FileOpenerRegistration
+import com.klyx.api.data.editor.FileOpenerRegistry
+import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.fs.pluginsDir
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.data.terminal.TerminalSessionBinder
 import com.klyx.api.data.terminal.TerminalSessionManager
+import com.klyx.api.event.EventBusHolder
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.plugin.runtime
@@ -26,6 +33,7 @@ import com.klyx.core.App
 import com.klyx.core.initApp
 import com.klyx.data.terminal.DefaultTerminalSessionManager
 import com.klyx.data.terminal.TerminalSessionBinderImpl
+import com.klyx.event.eventBus
 import com.klyx.event.initializeGlobalEventBus
 import com.klyx.plugin.PluginManager
 import com.klyx.service.FontsWrapper
@@ -61,8 +69,10 @@ class KlyxApplication : Application() {
         initializeGlobals()
     }
 
+    @OptIn(InternalKlyxApi::class)
     private fun initializeGlobals() {
         initializeGlobalEventBus(app)
+        app.setGlobal(EventBusHolder(app.eventBus()))
 
         val terminalManager = TerminalManagerImpl(
             sessionBinder = TerminalSessionBinderImpl(),
@@ -72,6 +82,7 @@ class KlyxApplication : Application() {
         app.setGlobal(auto<FileSystem>())
         app.setGlobal(MutableScreenRegistry())
         app.setGlobal(MutableToolbarRegistry())
+        app.setGlobal(MutableFileOpenerRegistry())
         app.setGlobal(SettingsWrapper(auto()))
         app.setGlobal(FontsWrapper(auto()))
         app.setGlobal(TabsWrapper { auto() })
@@ -156,6 +167,37 @@ class KlyxApplication : Application() {
 
         override fun actions(): List<ToolbarAction> {
             return _actions
+        }
+    }
+
+    private class MutableFileOpenerRegistry : FileOpenerRegistry {
+
+        private val _openers = mutableStateListOf<FileOpener>()
+
+        context(plugin: KlyxPlugin)
+        override fun register(opener: FileOpener): FileOpenerRegistration {
+            _openers.removeAll { it.id == opener.id }
+            _openers += opener
+            return object : FileOpenerRegistration {
+                override fun unregister() {
+                    _openers.removeAll { it.id == opener.id }
+                }
+            }
+        }
+
+        override fun unregister(id: String) {
+            _openers.removeAll { it.id == id }
+        }
+
+        override fun openers(): List<FileOpener> =
+            _openers.sortedByDescending { it.priority }
+
+        override suspend fun open(request: FileOpenRequest): WorkspaceTab? {
+            for (opener in openers()) {
+                val tab = opener.open(request)
+                if (tab != null) return tab
+            }
+            return null
         }
     }
 }

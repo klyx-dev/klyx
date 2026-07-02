@@ -13,7 +13,9 @@ import com.klyx.data.preferences.FontManager
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.presentation.viewmodel.EditorViewModel
 import kotlinx.coroutines.flow.Flow
+import org.koin.core.annotation.Single
 
+@Single
 class SettingsWrapper(private val repo: SettingsRepository) : Settings {
 
     override val settings: Flow<AppSettings> = repo.settings
@@ -39,8 +41,10 @@ class SettingsWrapper(private val repo: SettingsRepository) : Settings {
     }
 }
 
+@Single
 class FontsWrapper(private val manager: FontManager) : Fonts {
     override suspend fun getFontFamily(uri: String?) = manager.getFontFamily(uri)
+
     override fun clearCache() {
         manager.clearCache()
     }

@@ -9,6 +9,9 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import com.klyx.BuildConfig
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.fs.installedPluginsJson
+import com.klyx.api.data.fs.pluginsDir
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginDescriptor
 import com.klyx.api.plugin.PluginInfo
@@ -18,9 +21,6 @@ import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.koin
 import com.klyx.data.file.archive.extractGzipTar
-import com.klyx.api.data.fs.Paths
-import com.klyx.api.data.fs.installedPluginsJson
-import com.klyx.api.data.fs.pluginsDir
 import dalvik.system.PathClassLoader
 import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.Dispatchers
@@ -28,12 +28,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.koin.core.annotation.Provided
+import org.koin.core.annotation.Single
 import java.io.File
 import java.io.IOException
 import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
-class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
+class PluginManager(
+    private val app: App
+) : PluginRuntimeRegistry, Global {
 
     private val fs: FileSystem by koin()
     private val appVersion = BuildConfig.VERSION_NAME.removeSuffix("-debug").toVersion(strict = false)
@@ -42,7 +46,7 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
     private val runtimes = IdentityHashMap<KlyxPlugin, PluginRuntime>()
     private val runtimesById = HashMap<String, PluginRuntime>()
 
-    val loadedPlugins get() = runtimes.values.map(PluginRuntime::info)
+    val loadedPlugins get() = synchronized(runtimes) { runtimes.values.map(PluginRuntime::info) }
 
     init {
         app.backgroundScope.launch {
@@ -134,8 +138,10 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
     }
 
     private suspend fun register(runtime: PluginRuntime, progress: PluginLoadProgressListener?) {
-        runtimes[runtime.plugin] = runtime
-        runtimesById[runtime.info.id] = runtime
+        synchronized(runtimes) {
+            runtimes[runtime.plugin] = runtime
+            runtimesById[runtime.info.id] = runtime
+        }
 
         try {
             runtime.load(progress)
@@ -160,8 +166,10 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
     }
 
     private fun unregister(runtime: PluginRuntime) {
-        runtimes.remove(runtime.plugin)
-        runtimesById.remove(runtime.info.id)
+        synchronized(runtimes) {
+            runtimes.remove(runtime.plugin)
+            runtimesById.remove(runtime.info.id)
+        }
     }
 
     private fun instantiatePlugin(apkPath: String, desc: PluginDescriptor): KlyxPlugin {
@@ -263,24 +271,27 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
     }
 
     suspend fun loadPlugin(id: String, progress: PluginLoadProgressListener? = null) {
-        val runtime = runtimesById[id] ?: return
+        val runtime = synchronized(runtimes) { runtimesById[id] } ?: return
         runtime.load(progress)
     }
 
     suspend fun startPlugin(id: String) {
-        val runtime = runtimesById[id] ?: return
+        val runtime = synchronized(runtimes) { runtimesById[id] } ?: return
         runtime.start()
     }
 
     suspend fun stopPlugin(id: String) {
-        val runtime = runtimesById[id] ?: return
+        val runtime = synchronized(runtimes) { runtimesById[id] } ?: return
         runtime.stop()
     }
 
     suspend fun unloadPlugin(id: String) {
-        val runtime = runtimesById.remove(id) ?: return
+        val runtime = synchronized(runtimes) {
+            val r = runtimesById.remove(id) ?: return
+            runtimes.remove(r.plugin)
+            r
+        }
         runtime.unload()
-        runtimes.remove(runtime.plugin)
         uninstallPlugin(id)
     }
 
@@ -377,7 +388,24 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
     }
 
     override fun <T : PluginRuntimeService> service(plugin: KlyxPlugin, type: KClass<T>): T {
-        return runtimes[plugin]?.service(type) ?: error("Plugin isn't loaded.")
+        synchronized(runtimes) {
+            val runtime = runtimes[plugin]
+            if (runtime != null) return runtime.service(type)
+
+            // Fallback: iterate and check identity strictly.
+            // This can happen if IdentityHashMap lookup fails due to some weirdness with PathClassLoader
+            // or if the instance was wrapped but still holds the original reference in its 'plugin' field.
+            for (r in runtimes.values) {
+                if (r.plugin === plugin) return r.service(type)
+            }
+        }
+
+        error(
+            "Plugin runtime not found for $plugin. " +
+                    "Identity hash: ${System.identityHashCode(plugin)}. " +
+                    "Registered plugins: ${synchronized(runtimes) { runtimes.keys.joinToString { "${it::class.simpleName}@${System.identityHashCode(it)}" } }}. " +
+                    "This usually means the plugin isn't loaded or was discarded due to an error."
+        )
     }
 
     @Serializable

@@ -51,14 +51,16 @@ class App internal constructor(
     val backgroundScope = BackgroundScope.default()
 
     /**
-     * Check whether a global of the given type has been assigned.
+     * Check whether a global of the given type exists.
      */
     inline fun <reified G : Global> hasGlobal() = globalOrNull<G>() != null
 
     /**
      * Access the global of the given type.
      *
-     * @throws NoGlobalException if a global for that type has not been assigned.
+     * If not found in the internal registry, it falls back to the application's Koin modules.
+     *
+     * @throws NoGlobalException if the global does not exist.
      */
     inline fun <reified G : Global> global(): G = globalOrNull<G>()
         ?: throw NoGlobalException("no state of type ${G::class.simpleName} exists", typeOf<G>(), null)
@@ -66,18 +68,24 @@ class App internal constructor(
     /**
      * Access the global of the given type.
      *
-     * @throws NoGlobalException if a global for that type has not been assigned.
+     * If not found in the internal registry, it falls back to the application's Koin modules.
+     *
+     * @throws NoGlobalException if the global does not exist.
      */
     fun <G : Global> global(clazz: KClass<G>): G = globalOrNull(clazz)
         ?: throw NoGlobalException("no state of type ${clazz.simpleName} exists")
 
     /**
-     * Access the global of the given type if a value has been assigned.
+     * Access the global of the given type, or null if it does not exist.
+     *
+     * If not found in the internal registry, it falls back to the application's Koin modules.
      */
     inline fun <reified G : Global> globalOrNull(): G? = globalOrNull(G::class)
 
     /**
-     * Access the global of the given type if a value has been assigned.
+     * Access the global of the given type, or null if it does not exist.
+     *
+     * If not found in the internal registry, it falls back to the application's Koin modules.
      */
     @Suppress("UNCHECKED_CAST")
     fun <G : Global> globalOrNull(clazz: KClass<G>): G? {
@@ -98,8 +106,7 @@ class App internal constructor(
     }
 
     /**
-     * Access the global of the given type mutably. A default value is assigned if a global of this type has not
-     * yet been assigned.
+     * Access the global of the given type, or assign a [default] value if it doesn't exist.
      */
     inline fun <reified G : Global> globalOrDefault(default: (App) -> G): G =
         globalOrNull() ?: default(this).also { setGlobal(it) }
@@ -145,14 +152,18 @@ class App internal constructor(
 /**
  * Access the global of the given type.
  *
- * @throws NoGlobalException if a global for that type has not been assigned.
+ * If not found in the internal registry, it falls back to the application's Koin modules.
+ *
+ * @throws NoGlobalException if the global does not exist.
  */
 @Composable
 @ReadOnlyComposable
 inline fun <reified T : Global> globalOf(): T = LocalApp.current.global()
 
 /**
- * Access the global of the given type if a value has been assigned.
+ * Access the global of the given type, or null if it does not exist.
+ *
+ * If not found in the internal registry, it falls back to the application's Koin modules.
  */
 @Composable
 @ReadOnlyComposable

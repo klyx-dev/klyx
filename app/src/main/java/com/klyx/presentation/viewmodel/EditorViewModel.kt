@@ -5,15 +5,22 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.api.data.editor.EditorAction
-import com.klyx.data.editor.EditorStateRegistry
+import com.klyx.api.data.editor.FileOpenRequest
+import com.klyx.api.data.editor.FileOpenerRegistry
 import com.klyx.api.data.editor.Save
 import com.klyx.api.data.editor.SaveAs
 import com.klyx.api.data.editor.WorkspaceTab
+import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
-import com.klyx.api.data.file.KxFile
-import com.klyx.data.repository.RecentFileRepository
+import com.klyx.api.event.editor.FileOpenedEvent
 import com.klyx.api.util.stateInWhileSubscribed
+import com.klyx.core.event.EventBus
+import com.klyx.core.unsafe.GlobalApp
+import com.klyx.core.unsafe.UnsafeGlobalAccess
+import com.klyx.data.editor.EditorStateRegistry
+import com.klyx.data.repository.RecentFileRepository
+import com.klyx.event.eventBus
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.writeTextTo
 import kotlinx.collections.immutable.PersistentList
@@ -48,12 +55,19 @@ sealed interface EditorEvent {
     data class ShowMessage(val message: String) : EditorEvent
 }
 
+@OptIn(UnsafeGlobalAccess::class)
 @KoinViewModel
 class EditorViewModel(
     private val fileSystem: FileSystem,
     private val recentFileRepository: RecentFileRepository,
     private val editorStateRegistry: EditorStateRegistry
 ) : ViewModel() {
+
+    private val fileOpenerRegistry: FileOpenerRegistry by lazy {
+        GlobalApp.global<FileOpenerRegistry>()
+    }
+    private val eventBus: EventBus by lazy { GlobalApp.eventBus() }
+
     private val _uiState = MutableStateFlow(EditorUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -196,45 +210,64 @@ class EditorViewModel(
                 val file = fileSystem.wrapUri(uri)
                 val category = fileSystem.determineFileCategory(uri)
 
-                when (category) {
+                val tab: WorkspaceTab? = when (category) {
                     FileCategory.TEXT -> {
                         val txt = withContext(Dispatchers.IO) { file.readText() }
-                        openTab(
-                            WorkspaceTab.TextFile(
-                                file = file,
-                                text = txt,
-                                projectUri = projectUri
-                            )
+                        WorkspaceTab.TextFile(
+                            file = file,
+                            text = txt,
+                            projectUri = projectUri
                         )
-                        recentFileRepository.addRecentFile(file, projectUri)
                     }
 
                     FileCategory.IMAGE -> {
-                        openTab(
-                            WorkspaceTab.ImageFile(
-                                uri = file.uri,
-                                title = file.name,
-                                projectUri = projectUri
-                            )
+                        WorkspaceTab.ImageFile(
+                            uri = file.uri,
+                            title = file.name,
+                            projectUri = projectUri
                         )
-                        recentFileRepository.addRecentFile(file, projectUri)
                     }
 
                     FileCategory.BINARY_UNSUPPORTED -> {
-                        _uiState.update {
-                            it.copy(
-                                unsupportedFileAlert = UnsupportedFileAlert(
-                                    file = file,
-                                    projectUri = projectUri
+                        // Ask registered plugin openers before falling back to the alert.
+                        val request = FileOpenRequest(
+                            uri = uri,
+                            fileName = file.name,
+                            extension = file.extension.lowercase(),
+                            mimeType = fileSystem.mimeType(uri),
+                            projectUri = projectUri
+                        )
+                        fileOpenerRegistry.open(request) ?: run {
+                            _uiState.update {
+                                it.copy(
+                                    unsupportedFileAlert = UnsupportedFileAlert(
+                                        file = file,
+                                        projectUri = projectUri
+                                    )
                                 )
-                            )
+                            }
+                            null
                         }
                     }
 
                     FileCategory.ERROR -> {
                         recentFileRepository.removeFile(file)
                         sendEvent(EditorEvent.ShowError("Failed to read file: ${file.name}"))
+                        null
                     }
+                }
+
+                if (tab != null) {
+                    openTab(tab)
+                    recentFileRepository.addRecentFile(file, projectUri)
+                    eventBus.publish(
+                        FileOpenedEvent(
+                            uri = uri,
+                            fileName = file.name,
+                            tabId = tab.id,
+                            projectUri = projectUri
+                        )
+                    )
                 }
             } catch (e: Exception) {
                 sendEvent(EditorEvent.ShowError("An unexpected error occurred: ${e.localizedMessage}"))

@@ -543,6 +543,15 @@ class FileSystemImpl(
         }
     }
 
+    override suspend fun mimeType(uri: Uri): String? = withContext(Dispatchers.IO) {
+        val cr = context.contentResolver
+        cr.getType(uri)
+            ?: MimeTypeMap.getSingleton()
+                .getMimeTypeFromExtension(
+                    MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
+                )
+    }
+
     private suspend fun getDocumentFlags(uri: Uri): Int = withContext(Dispatchers.IO) {
         val projection = arrayOf(Document.COLUMN_FLAGS)
 

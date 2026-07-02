@@ -136,6 +136,11 @@ interface FileSystem : PluginService {
     suspend fun determineFileCategory(uri: Uri): FileCategory
 
     /**
+     * Returns the MIME type of the file at [uri], or null if it cannot be determined.
+     */
+    suspend fun mimeType(uri: Uri): String?
+
+    /**
      * Performs a recursive search for files matching the [query] string within the specified [roots].
      *
      * @param roots The list of directory URIs to search within.

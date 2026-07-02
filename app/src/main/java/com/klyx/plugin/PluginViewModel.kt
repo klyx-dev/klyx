@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.api.plugin.PluginDescriptor
 import com.klyx.api.plugin.PluginInfo
+import com.klyx.core.koin
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import kotlinx.collections.immutable.ImmutableList
