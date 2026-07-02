@@ -548,6 +548,7 @@ private fun TerminalEmulator(
             val terminalClient = remember {
                 KlyxTerminalClient(
                     extraKeysState = extraKeysState,
+                    scope = scope,
                     onFinishRequest = { navigator.navigateBack() }
                 )
             }

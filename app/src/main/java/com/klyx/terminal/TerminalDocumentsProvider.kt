@@ -17,8 +17,11 @@ import com.klyx.R
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.terminal.home
 import com.klyx.data.preferences.dataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -70,16 +73,18 @@ class TerminalDocumentsProvider : DocumentsProvider() {
         }
     }
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     override fun onCreate(): Boolean {
-        try {
-            context?.let { ctx ->
-                runBlocking {
-                    ctx.dataStore.data.first()
-                }.let {
-                    SafExposureState.enabled = it.terminal.exposeTerminalHomeViaSaf
-                }
+        val ctx = context ?: return true
+        scope.launch {
+            try {
+                val prefs = ctx.dataStore.data.first()
+                SafExposureState.enabled = prefs.terminal.exposeTerminalHomeViaSaf
+                notifyRootsChanged(ctx)
+            } catch (e: Exception) {
+                Log.e(LOG_TAG, "Failed to read terminal SAF preference", e)
             }
-        } catch (_: Exception) {
         }
         return true
     }

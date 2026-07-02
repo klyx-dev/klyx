@@ -121,6 +121,7 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
             val runtime = PluginRuntime(app, plugin, info)
             progress?.step("loading plugin")
             register(runtime, progress)
+            startRuntime(runtime, progress)
             progress?.step("loading successfully")
             installPlugin(pluginId)
         } catch (e: ErrnoException) {
@@ -139,10 +140,23 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
         try {
             runtime.load(progress)
         } catch (t: Throwable) {
-            unregister(runtime)
-            Paths.pluginsDir.resolve(runtime.info.id).deleteRecursively()
+            discard(runtime)
             throw t
         }
+    }
+
+    private suspend fun startRuntime(runtime: PluginRuntime, progress: PluginLoadProgressListener?) {
+        try {
+            runtime.start(progress)
+        } catch (t: Throwable) {
+            discard(runtime)
+            throw t
+        }
+    }
+
+    private fun discard(runtime: PluginRuntime) {
+        unregister(runtime)
+        Paths.pluginsDir.resolve(runtime.info.id).deleteRecursively()
     }
 
     private fun unregister(runtime: PluginRuntime) {
@@ -222,14 +236,22 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
         val icon = desc.icon?.let { path ->
             val iconFile = File(pluginDir, path)
 
-            if (!iconFile.exists()) {
+            // Guard against path traversal: icon path comes from untrusted plugin.json and
+            // must resolve to a file inside the plugin's own directory.
+            val pluginRoot = pluginDir.canonicalFile
+            val canonicalIcon = iconFile.canonicalFile
+            if (!canonicalIcon.path.startsWith(pluginRoot.path + File.separator)) {
+                Log.w("PluginManager", "Plugin '${desc.id}' icon path escapes plugin dir: $path")
                 return@let null
             }
 
-            BitmapPainter(
-                BitmapFactory.decodeFile(iconFile.absolutePath)
-                    .asImageBitmap()
-            )
+            if (!canonicalIcon.exists()) {
+                return@let null
+            }
+
+            BitmapFactory.decodeFile(canonicalIcon.absolutePath)
+                ?.asImageBitmap()
+                ?.let { BitmapPainter(it) }
         }
 
         return PluginInfo(
@@ -301,6 +323,9 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
 
     private suspend fun loadInstalledPlugins(progress: PluginLoadProgressListener? = null) =
         withContext(Dispatchers.IO) {
+            // onLoad() every plugin. onStart() must not run until all plugins are
+            // loaded (see KlyxPlugin.onStart docs: "all dependencies should be loaded and ready").
+            val loaded = mutableListOf<PluginRuntime>()
             for (pluginId in installedList.toList()) {
                 try {
                     val pluginDir = File(Paths.pluginsDir, pluginId)
@@ -312,6 +337,7 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
 
                     val runtime = loadRuntime(pluginDir, progress)
                     register(runtime, progress)
+                    loaded += runtime
                     progress?.step("loaded plugin '$pluginId'")
                 } catch (e: Exception) {
                     Log.e("PluginManager", "Failed to reload plugin '$pluginId'", e)
@@ -321,6 +347,20 @@ class PluginManager(private val app: App) : PluginRuntimeRegistry, Global {
                         .deleteRecursively()
                 }
             }
+
+            // onStart() every loaded plugin.
+            for (runtime in loaded) {
+                val pluginId = runtime.info.id
+                try {
+                    startRuntime(runtime, progress)
+                    progress?.step("started plugin '$pluginId'")
+                } catch (e: Exception) {
+                    Log.e("PluginManager", "Failed to start plugin '$pluginId'", e)
+                    progress?.step("failed to start plugin '$pluginId': ${e.localizedMessage}")
+                    installedList.remove(pluginId)
+                }
+            }
+
             saveInstalled()
         }
 

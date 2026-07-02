@@ -94,7 +94,7 @@ class App internal constructor(
                 return instance as G
             }
         }
-        return null
+        return GlobalContext.get().getOrNull(clazz)
     }
 
     /**
@@ -188,7 +188,7 @@ inline fun debug(crossinline block: suspend App.() -> Unit) {
 }
 
 @Composable
-inline fun Debug(crossinline block: @DisallowComposableCalls suspend App.() -> Unit) {
+fun Debug(block: @DisallowComposableCalls suspend App.() -> Unit) {
     if (BuildConfig.IS_DEBUG_MODE) {
         val app = LocalApp.current
 

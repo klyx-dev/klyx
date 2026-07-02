@@ -1,6 +1,7 @@
 package com.klyx.data.file.archive
 
 import android.system.Os
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
@@ -253,7 +254,10 @@ private fun extractHardLink(destination: File, linkFile: File, target: String) {
 private fun applyMode(file: File, mode: Int) {
     try {
         Os.chmod(file.absolutePath, mode)
-    } catch (_: Throwable) {
+    } catch (t: Throwable) {
+        // chmod can fail on some filesystems
+        Log.w("extract", "chmod(${file.absolutePath}, ${Integer.toOctalString(mode)}) failed, using File.setX fallback", t)
+
         file.setReadable(
             mode and 0b100_000_000 != 0,
             true

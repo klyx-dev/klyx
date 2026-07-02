@@ -20,7 +20,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -42,25 +41,23 @@ internal class PluginRuntime(
         runInPluginScope {
             lifecycle(Lifecycle.Event.ON_CREATE)
 
-            try {
+            tryOrDestroy {
                 progress?.step("plugin.onLoad()")
                 plugin.onLoad()
-
-                scope.launch {
-                    lifecycle(Lifecycle.Event.ON_START)
-                    plugin.onStart()
-                }
-            } catch (t: Throwable) {
-                lifecycle(Lifecycle.Event.ON_DESTROY)
-                throw t
             }
         }
     }
 
-    suspend fun start() = runInPluginScope {
-        tryOrDestroy {
-            lifecycle(Lifecycle.Event.ON_START)
-            plugin.onStart()
+    suspend fun start(progress: PluginManager.PluginLoadProgressListener? = null) {
+        // onStart() is only valid once the plugin is loaded (CREATED) and not yet started.
+        if (lifecycle.currentState != Lifecycle.State.CREATED) return
+
+        runInPluginScope {
+            tryOrDestroy {
+                progress?.step("plugin.onStart()")
+                lifecycle(Lifecycle.Event.ON_START)
+                plugin.onStart()
+            }
         }
     }
 

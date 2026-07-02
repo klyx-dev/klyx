@@ -10,11 +10,13 @@ import com.klyx.terminal.emulator.TerminalSession
 import com.klyx.terminal.ui.BaseTerminalClient
 import com.klyx.terminal.ui.extrakeys.ExtraKeysState
 import com.klyx.terminal.ui.extrakeys.SpecialButton
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
 @OptIn(UnsafeGlobalAccess::class)
 class KlyxTerminalClient(
     private val extraKeysState: ExtraKeysState,
+    private val scope: CoroutineScope,
     private val onFinishRequest: () -> Unit = {},
     private val sessionManager: TerminalSessionManager = GlobalApp.global<TerminalManager>().sessionManager,
 ) : BaseTerminalClient() {
@@ -37,7 +39,7 @@ class KlyxTerminalClient(
 
     override fun onKeyDown(key: Key, event: KeyEvent, session: TerminalSession): Boolean {
         if (key == Key.Enter && !session.isRunning.value) {
-            runBlocking {
+            scope.launch {
                 sessionManager.terminateCurrentSession()
 
                 if (sessionManager.sessions.value.isEmpty()) {
