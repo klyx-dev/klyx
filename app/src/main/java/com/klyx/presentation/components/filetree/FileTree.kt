@@ -149,7 +149,8 @@ fun FileTree(
                             onLongClick = { node ->
                                 viewModel.selectNode(node)
                                 onNodeLongClick(node, item.rootNode)
-                            }
+                            },
+                            modifier = Modifier.animateItem()
                         )
                     }
                 }
@@ -185,27 +186,6 @@ private fun FileTreeItem(
         label = "selection_shift"
     )
 
-    val pulseScale = remember { Animatable(1f) }
-    LaunchedEffect(isSelected) {
-        if (isSelected) {
-            pulseScale.snapTo(1f)
-            pulseScale.animateTo(
-                targetValue = 1.05f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessHigh
-                )
-            )
-            pulseScale.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessHigh
-                )
-            )
-        }
-    }
-
     Column(
         modifier = modifier
             .width(IntrinsicSize.Max)
@@ -220,10 +200,6 @@ private fun FileTreeItem(
                 .fillMaxSize()
                 .padding(horizontal = 8.dp)
                 .clip(shape)
-                .graphicsLayer {
-                    scaleX = pulseScale.value
-                    scaleY = pulseScale.value
-                }
                 .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = ripple(),
