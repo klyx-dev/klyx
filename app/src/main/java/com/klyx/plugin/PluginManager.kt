@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import com.klyx.BuildConfig
+import com.klyx.api.InternalKlyxApi
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.installedPluginsJson
@@ -28,13 +29,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.koin.core.annotation.Provided
-import org.koin.core.annotation.Single
 import java.io.File
 import java.io.IOException
 import java.util.IdentityHashMap
 import kotlin.reflect.KClass
 
+@OptIn(InternalKlyxApi::class)
 class PluginManager(
     private val app: App
 ) : PluginRuntimeRegistry, Global {
@@ -403,7 +403,17 @@ class PluginManager(
         error(
             "Plugin runtime not found for $plugin. " +
                     "Identity hash: ${System.identityHashCode(plugin)}. " +
-                    "Registered plugins: ${synchronized(runtimes) { runtimes.keys.joinToString { "${it::class.simpleName}@${System.identityHashCode(it)}" } }}. " +
+                    "Registered plugins: ${
+                        synchronized(runtimes) {
+                            runtimes.keys.joinToString {
+                                "${it::class.simpleName}@${
+                                    System.identityHashCode(
+                                        it
+                                    )
+                                }"
+                            }
+                        }
+                    }. " +
                     "This usually means the plugin isn't loaded or was discarded due to an error."
         )
     }

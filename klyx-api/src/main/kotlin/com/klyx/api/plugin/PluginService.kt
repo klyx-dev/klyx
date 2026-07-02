@@ -1,10 +1,14 @@
+@file:OptIn(UnsafeGlobalAccess::class)
+
 package com.klyx.api.plugin
 
 import androidx.annotation.RestrictTo
+import com.klyx.api.InternalKlyxApi
 import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
+import java.util.WeakHashMap
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -69,6 +73,7 @@ interface PluginRuntimeService
  * This registry is responsible for mapping a [KlyxPlugin] instance to its respective
  * runtime services. It is used primarily by the [runtime] delegate.
  */
+@InternalKlyxApi
 @RestrictTo(RestrictTo.Scope.LIBRARY_GROUP)
 interface PluginRuntimeRegistry : Global {
 
@@ -89,17 +94,12 @@ inline fun <reified T : PluginService> App.pluginService(type: KClass<T>): T = g
 /**
  * A delegate for accessing a [PluginService] from any class.
  *
- * This delegate resolves the service via the global application context.
- *
  * @param T The type of [PluginService] to retrieve.
  */
 inline fun <reified T : PluginService> plugin() = PluginServiceDelegate(T::class)
 
 /**
  * A delegate for accessing a [PluginRuntimeService] associated with a [KlyxPlugin].
- *
- * This delegate can only be used in properties where the receiver is a [KlyxPlugin].
- * It resolves the service through the [PluginRuntimeRegistry].
  *
  * @param T The type of [PluginRuntimeService] to retrieve.
  */
@@ -109,10 +109,14 @@ class PluginRuntimeDelegate<T : PluginRuntimeService>(
     private val clazz: KClass<T>
 ) : ReadOnlyProperty<KlyxPlugin, T> {
 
-    @OptIn(UnsafeGlobalAccess::class)
+    private val cache = WeakHashMap<KlyxPlugin, T>()
+
+    @OptIn(InternalKlyxApi::class)
     override fun getValue(thisRef: KlyxPlugin, property: KProperty<*>): T {
-        val registry = GlobalApp.global<PluginRuntimeRegistry>()
-        return registry.service(thisRef, clazz)
+        return cache.getOrPut(thisRef) {
+            val registry = GlobalApp.global<PluginRuntimeRegistry>()
+            registry.service(thisRef, clazz)
+        }
     }
 }
 
@@ -120,8 +124,9 @@ class PluginServiceDelegate<T : PluginService>(
     private val clazz: KClass<T>
 ) : ReadOnlyProperty<Any?, T> {
 
-    @OptIn(UnsafeGlobalAccess::class)
-    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-        return GlobalApp.global(clazz)
+    private val service by lazy {
+        GlobalApp.global(clazz)
     }
+
+    override fun getValue(thisRef: Any?, property: KProperty<*>) = service
 }
