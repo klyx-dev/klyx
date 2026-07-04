@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.api.data.fs.Paths
+import com.klyx.event.UiEvent
 import com.klyx.data.fs.downloadFile
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginLoadException
@@ -43,10 +44,6 @@ private data class StoreIndexEntry(
     val downloadCount: Int = 0,
 )
 
-sealed interface PluginStoreEvent {
-    data class ShowError(val error: String) : PluginStoreEvent
-    data class ShowMessage(val message: String) : PluginStoreEvent
-}
 
 data class PluginInstallState(
     val plugin: StorePlugin,
@@ -70,7 +67,7 @@ class PluginStoreViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(PluginStoreUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _events = Channel<PluginStoreEvent>()
+    private val _events = Channel<UiEvent>()
     val events = _events.receiveAsFlow()
 
     init {
@@ -92,7 +89,7 @@ class PluginStoreViewModel : ViewModel() {
                 _uiState.update { it.copy(storePlugins = result) }
             } catch (e: Exception) {
                 Log.e("PluginStoreViewModel", "Failed to fetch plugins", e)
-                _events.send(PluginStoreEvent.ShowError("Failed to fetch plugins: ${e.localizedMessage}"))
+                _events.send(UiEvent.ShowError("Failed to fetch plugins: ${e.localizedMessage}"))
             } finally {
                 _uiState.update { it.copy(storeLoading = false) }
             }
@@ -131,13 +128,13 @@ class PluginStoreViewModel : ViewModel() {
                     }
                 }
                 refresh()
-                _events.send(PluginStoreEvent.ShowMessage("${plugin.name} installed successfully"))
+                _events.send(UiEvent.ShowMessage("${plugin.name} installed successfully"))
             } catch (e: PluginLoadException) {
                 Log.e("PluginStoreViewModel", "Failed to install ${plugin.name}", e)
-                _events.send(PluginStoreEvent.ShowError(e.message ?: "Failed to install ${plugin.name}"))
+                _events.send(UiEvent.ShowError(e.message ?: "Failed to install ${plugin.name}"))
             } catch (e: Exception) {
                 Log.e("PluginStoreViewModel", "Failed to install ${plugin.name}", e)
-                _events.send(PluginStoreEvent.ShowError("Failed to install ${plugin.name}: ${e.localizedMessage}"))
+                _events.send(UiEvent.ShowError("Failed to install ${plugin.name}: ${e.localizedMessage}"))
             } finally {
                 _uiState.update { it.copy(installState = null) }
             }

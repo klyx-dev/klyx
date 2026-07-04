@@ -81,12 +81,11 @@ import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.theme.GoogleSansRounded
 import com.klyx.api.util.openUrl
-import com.klyx.plugin.PluginUiEvent
+import com.klyx.event.UiEvent
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.ExpressiveMenuItem
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.SettingsScreen
-import com.klyx.presentation.viewmodel.PluginStoreEvent
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
 import com.klyx.presentation.viewmodel.StorePlugin
 import kotlinx.coroutines.launch
@@ -118,8 +117,8 @@ fun PluginsScreen() {
         launch {
             viewModel.events.collect { event ->
                 when (event) {
-                    is PluginUiEvent.ShowError -> toastHostState.showFailureToast(event.error)
-                    is PluginUiEvent.ShowMessage -> toastHostState.showToast(event.message)
+                    is UiEvent.ShowError -> toastHostState.showFailureToast(event.error)
+                    is UiEvent.ShowMessage -> toastHostState.showToast(event.message)
                 }
             }
         }
@@ -127,8 +126,8 @@ fun PluginsScreen() {
         launch {
             storeViewModel.events.collect { event ->
                 when (event) {
-                    is PluginStoreEvent.ShowError -> toastHostState.showFailureToast(event.error)
-                    is PluginStoreEvent.ShowMessage -> toastHostState.showToast(event.message)
+                    is UiEvent.ShowError -> toastHostState.showFailureToast(event.error)
+                    is UiEvent.ShowMessage -> toastHostState.showToast(event.message)
                 }
             }
         }

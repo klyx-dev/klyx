@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.api.plugin.PluginDescriptor
+import com.klyx.event.UiEvent
 import com.klyx.api.plugin.PluginInfo
 import com.klyx.core.koin
 import com.klyx.core.unsafe.GlobalApp
@@ -30,10 +31,6 @@ data class PluginUiState(
     val loadingState: PluginLoadingState? = null,
 )
 
-sealed interface PluginUiEvent {
-    data class ShowError(val error: String) : PluginUiEvent
-    data class ShowMessage(val message: String) : PluginUiEvent
-}
 
 @KoinViewModel
 class PluginViewModel : ViewModel() {
@@ -45,7 +42,7 @@ class PluginViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(PluginUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _events = Channel<PluginUiEvent>()
+    private val _events = Channel<UiEvent>()
     val events = _events.receiveAsFlow()
 
     fun loadPluginBundle(uri: Uri) {
@@ -62,13 +59,13 @@ class PluginViewModel : ViewModel() {
                     }
                 }
                 _uiState.update { it.copy(plugins = pluginManager.loadedPlugins.toImmutableList()) }
-                //_events.send(PluginUiEvent.ShowMessage("Plugin loaded successfully"))
+                //_events.send(UiEvent.ShowMessage("Plugin loaded successfully"))
             } catch (e: PluginLoadException) {
                 Log.e("PluginViewModel", "Failed to load plugin bundle", e)
-                _events.send(PluginUiEvent.ShowError(e.message ?: "Failed to load plugin bundle"))
+                _events.send(UiEvent.ShowError(e.message ?: "Failed to load plugin bundle"))
             } catch (e: Exception) {
                 Log.e("PluginViewModel", "Unknown error loading plugin bundle", e)
-                _events.send(PluginUiEvent.ShowError("Unknown error loading plugin bundle: ${e.localizedMessage}"))
+                _events.send(UiEvent.ShowError("Unknown error loading plugin bundle: ${e.localizedMessage}"))
             } finally {
                 _uiState.update { it.copy(loadingState = null) }
             }
@@ -82,7 +79,7 @@ class PluginViewModel : ViewModel() {
                 pluginManager.unloadPlugin(id)
                 _uiState.update { it.copy(plugins = pluginManager.loadedPlugins.toImmutableList()) }
             } catch (e: Exception) {
-                _events.send(PluginUiEvent.ShowError(e.message ?: "Error unloading plugin"))
+                _events.send(UiEvent.ShowError(e.message ?: "Error unloading plugin"))
             } finally {
                 _uiState.update { it.copy(loadingState = null) }
             }
