@@ -1,8 +1,3 @@
-import com.vanniktech.maven.publish.GradlePlugin
-import com.vanniktech.maven.publish.JavadocJar
-import com.vanniktech.maven.publish.MavenPublishBaseExtension
-import com.vanniktech.maven.publish.SourcesJar
-
 plugins {
     `java-gradle-plugin`
     kotlin("jvm")
@@ -19,26 +14,6 @@ gradlePlugin {
             implementationClass = "com.klyx.gradle.KlyxPluginPublishingPlugin"
         }
     }
-}
-
-mavenPublishing {
-    coordinates(
-        groupId = "io.github.klyx-dev",
-        artifactId = "klyx-gradle-plugin",
-        version = property("project.version") as String
-    )
-}
-
-configure<MavenPublishBaseExtension> {
-    pomFromGradleProperties()
-    publishToMavenCentral(automaticRelease = true)
-    signAllPublications()
-    configure(
-        GradlePlugin(
-            sourcesJar = SourcesJar.Sources(),
-            javadocJar = JavadocJar.Empty()
-        )
-    )
 }
 
 dependencies {

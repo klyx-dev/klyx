@@ -1,4 +1,9 @@
 import com.android.build.api.dsl.LibraryExtension
+import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
+import com.vanniktech.maven.publish.GradlePlugin
+import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.MavenPublishBaseExtension
+import com.vanniktech.maven.publish.SourcesJar
 import io.github.treesitter.ktreesitter.plugin.GrammarExtension
 import io.github.treesitter.ktreesitter.plugin.GrammarFilesTask
 import java.util.Locale
@@ -12,6 +17,7 @@ plugins {
     alias(libs.plugins.kotest) apply false
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.ktreesitter) apply false
+    alias(libs.plugins.vanniktech.publish) apply false
 }
 
 tasks.register("prepareTreeSitter") {
@@ -25,6 +31,39 @@ tasks.register("prepareTreeSitter") {
 }
 
 subprojects {
+    pluginManager.withPlugin("com.vanniktech.maven.publish.base") {
+        configure<MavenPublishBaseExtension> {
+            coordinates(
+                groupId = "io.github.klyx-dev",
+                artifactId = project.path.removePrefix(":").replace(":", "-"),
+                version = property("project.version") as String
+            )
+
+            pomFromGradleProperties()
+            publishToMavenCentral(automaticRelease = true)
+            signAllPublications()
+
+            pluginManager.withPlugin("com.android.library") {
+                configure(
+                    AndroidSingleVariantLibrary(
+                        variant = "release",
+                        sourcesJar = SourcesJar.Sources(),
+                        javadocJar = JavadocJar.None()
+                    )
+                )
+            }
+
+            pluginManager.withPlugin("java-gradle-plugin") {
+                configure(
+                    GradlePlugin(
+                        sourcesJar = SourcesJar.Sources(),
+                        javadocJar = JavadocJar.Empty()
+                    )
+                )
+            }
+        }
+    }
+
     if (path.startsWith(":languages:tree-sitter-")) {
         pluginManager.apply(rootProject.libs.plugins.ktreesitter.get().pluginId)
         pluginManager.apply(rootProject.libs.plugins.android.library.get().pluginId)

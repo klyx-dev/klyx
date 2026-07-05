@@ -365,6 +365,14 @@ fun EditorSettings() {
                         leadingIcon = { Icon(Icons.Rounded.FormatBold, null) }
                     )
 
+                    SwitchSettingItem(
+                        title = "Inlay Hints",
+                        subtitle = "Display parameter names and type hints directly in the code",
+                        checked = settings.inlayHints,
+                        onCheckedChange = { update { copy(inlayHints = it) } },
+                        leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
+                    )
+
                     SliderSettingsItem(
                         label = "Error Wave Length",
                         value = localWaveLength,

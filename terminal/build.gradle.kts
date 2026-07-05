@@ -1,8 +1,3 @@
-import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
-import com.vanniktech.maven.publish.JavadocJar
-import com.vanniktech.maven.publish.MavenPublishBaseExtension
-import com.vanniktech.maven.publish.SourcesJar
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
@@ -53,27 +48,6 @@ android {
             version = property("cmake.version") as String
         }
     }
-}
-
-mavenPublishing {
-    coordinates(
-        groupId = "io.github.klyx-dev",
-        artifactId = "klyx-terminal",
-        version = property("project.version") as String
-    )
-}
-
-configure<MavenPublishBaseExtension> {
-    pomFromGradleProperties()
-    publishToMavenCentral(automaticRelease = true)
-    signAllPublications()
-    configure(
-        AndroidSingleVariantLibrary(
-            variant = "release",
-            sourcesJar = SourcesJar.Sources(),
-            javadocJar = JavadocJar.None()
-        )
-    )
 }
 
 tasks.withType<Test>().configureEach {

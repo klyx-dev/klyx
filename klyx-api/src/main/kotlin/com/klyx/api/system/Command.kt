@@ -46,7 +46,7 @@ class CommandBuilder internal constructor(
     private val args = mutableListOf<String>()
     private val env = mutableMapOf<String, String>()
     private var cwd: File? = null
-    private var stdinSource: StdinSource = StdinSource.Inherit
+    private var stdinSource: StdinSource = StdinSource.Pipe
     private var stdoutDest: StdioDest = StdioDest.Capture
     private var stderrDest: StdioDest = StdioDest.Capture
 
@@ -153,7 +153,7 @@ class CommandBuilder internal constructor(
         val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
         if (stdinBytes != null) {
             withContext(Dispatchers.IO) {
-                child.process.outputStream.use { it.write(stdinBytes) }
+                child.process.outputStream.write(stdinBytes)
             }
         }
         return child
@@ -187,10 +187,10 @@ class CommandBuilder internal constructor(
         }
     }
 
-    private fun spawnRaw(): ChildProcess {
+    private suspend fun spawnRaw(): ChildProcess {
         val resolved = resolveProgram(program)
         val pb = buildProcess(resolved)
-        val process = pb.start()
+        val process = withContext(Dispatchers.IO) { pb.start() }
         return ChildProcess(process)
     }
 
@@ -224,11 +224,12 @@ class CommandBuilder internal constructor(
                     "-b", Paths.dataDir.canonicalPath, // /data/data/com.klyx
                     "-b", Paths.dataDir.absolutePath, // /data/user/0/com.klyx
                     "-b", "${homePath}:/root",
-                    resolved.path,
+                    "/bin/bash",
+                    "-lc",
+                    "\"${resolved.guestPath}\"",
                 )
                 prootArgs.addAll(args)
-                val linker = "/system/bin/linker64"
-                ProcessBuilder(listOf(linker) + prootArgs)
+                ProcessBuilder(prootArgs)
             }
         }
 
@@ -247,21 +248,19 @@ class CommandBuilder internal constructor(
 
         when (stdinSource) {
             StdinSource.Inherit -> pb.redirectInput(ProcessBuilder.Redirect.INHERIT)
-            // Bytes and Pipe use the default PIPE mode. bytes are written
-            // after process start in output() / spawn()
-            is StdinSource.Bytes, StdinSource.Pipe -> {}
+            is StdinSource.Bytes, StdinSource.Pipe -> pb.redirectInput(ProcessBuilder.Redirect.PIPE)
         }
 
         when (outDest) {
             StdioDest.Inherit -> pb.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-            StdioDest.Capture -> {}
+            StdioDest.Capture -> pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
             StdioDest.Null -> pb.redirectOutput(ProcessBuilder.Redirect.to(File("/dev/null")))
             is StdioDest.File -> pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outDest.file))
         }
 
         when (errDest) {
             StdioDest.Inherit -> pb.redirectError(ProcessBuilder.Redirect.INHERIT)
-            StdioDest.Capture -> {}
+            StdioDest.Capture -> pb.redirectError(ProcessBuilder.Redirect.PIPE)
             StdioDest.Null -> pb.redirectError(ProcessBuilder.Redirect.to(File("/dev/null")))
             is StdioDest.File -> pb.redirectError(ProcessBuilder.Redirect.appendTo(errDest.file))
         }
@@ -514,33 +513,72 @@ sealed interface ResolvedProgram {
     data class Direct(val path: String) : ResolvedProgram
 
     /** A binary that must be executed within the PRoot environment. */
-    data class PRoot(val path: String) : ResolvedProgram
+    data class PRoot(val path: String, val guestPath: String = path) : ResolvedProgram
 }
 
 internal val ROOTFS_BIN_PATHS = listOf(
     "/usr/local/bin", "/usr/bin", "/bin",
-    "/usr/local/sbin", "/usr/sbin", "/sbin",
+    "/usr/local/sbin", "/usr/sbin", "/sbin"
+)
+
+internal val HOME_BIN_PATHS = listOf(
+    ".local/bin", ".bin", "bin"
 )
 
 internal val SYSTEM_BIN_PATHS = listOf(
     "/system/bin", "/system/xbin", "/vendor/bin",
 )
 
-internal fun resolveProgram(program: String): ResolvedProgram {
+internal suspend fun resolveProgram(program: String): ResolvedProgram {
     val rootFs = try {
         Paths.rootFs.takeIf { it.exists() }
     } catch (_: Exception) {
         null
     }
+    val home = try {
+        Paths.home.takeIf { it.exists() }
+    } catch (_: Exception) {
+        null
+    }
 
     if (program.contains(File.separatorChar)) {
-        if (rootFs != null) {
+        val f = File(program)
+        val absPath = f.absolutePath
+
+        if (rootFs != null && absPath.startsWith(rootFs.absolutePath)) {
+            val guestPath = "/" + absPath.substring(rootFs.absolutePath.length).trimStart('/')
+            return ResolvedProgram.PRoot(absPath, guestPath)
+        }
+        if (home != null && absPath.startsWith(home.absolutePath)) {
+            return ResolvedProgram.PRoot(absPath)
+        }
+
+        if (home != null && program.startsWith("/root/")) {
+            val inHome = home.resolve(program.substringAfter("/root/"))
+            if (inHome.exists()) {
+                return ResolvedProgram.PRoot(inHome.absolutePath)
+            }
+        }
+
+        if (rootFs != null && program.startsWith("/")) {
             val inRootfs = rootFs.resolve(program.trimStart('/'))
             if (inRootfs.exists()) {
                 return ResolvedProgram.PRoot(inRootfs.absolutePath)
             }
         }
+
         return ResolvedProgram.Direct(program)
+    }
+
+    // Simple name - priority to system paths for things like 'sh', 'ls' if we want host versions?
+    // Actually, usually in Klyx we want the terminal versions if they exist.
+
+    // Search in system paths first for Direct execution
+    for (dir in SYSTEM_BIN_PATHS) {
+        val f = File(dir, program)
+        if (f.exists()) {
+            return ResolvedProgram.Direct(f.absolutePath)
+        }
     }
 
     if (rootFs != null) {
@@ -552,12 +590,14 @@ internal fun resolveProgram(program: String): ResolvedProgram {
         }
     }
 
-    for (dir in SYSTEM_BIN_PATHS) {
-        val f = File(dir, program)
-        if (f.exists()) {
-            return ResolvedProgram.Direct(f.absolutePath)
+    if (home != null) {
+        for (dir in HOME_BIN_PATHS) {
+            val f = home.resolve(dir).resolve(program)
+            if (f.exists()) {
+                return ResolvedProgram.PRoot(f.absolutePath)
+            }
         }
     }
 
-    return ResolvedProgram.Direct(program)
+    return ResolvedProgram.PRoot(program)
 }

@@ -119,6 +119,7 @@ import com.klyx.R
 import com.klyx.api.data.editor.EditorAction
 import com.klyx.api.data.editor.Save
 import com.klyx.api.data.editor.SaveAs
+import com.klyx.lsp.LspManager
 import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
@@ -1294,6 +1295,7 @@ private fun TextFileEditor(
 ) {
     val settings = LocalAppSettings.current.editor
     val state = tab.createEditorState()
+    val lspManager: LspManager = koinInject()
     val scheme = remember(isDarkMode, colorScheme, selectionColors) {
         KlyxEditorColorScheme(isDarkMode, colorScheme, selectionColors)
     }
@@ -1304,12 +1306,19 @@ private fun TextFileEditor(
 
     var isAccessoryBarVisible by remember { mutableStateOf(true) }
 
-    DisposableEffect(tab.id) {
-        registry.register(tab.id, state)
-        onDispose { registry.unregister(tab.id) }
+    LaunchedEffect(tab.id, state) {
+        lspManager.onEditorCreated(tab.id, tab.file.uri, tab.projectUri, state)
     }
 
-    LaunchedEffect(scheme, state) {
+    DisposableEffect(tab.id) {
+        registry.register(tab.id, state)
+        onDispose { 
+            registry.unregister(tab.id)
+            lspManager.onEditorClosed(tab.id)
+        }
+    }
+
+    LaunchedEffect(scheme, state.editorLanguage, state) {
         state.colorScheme = scheme
     }
 

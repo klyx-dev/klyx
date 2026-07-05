@@ -1,4 +1,6 @@
 @file:OptIn(DiscouragedInSuspend::class)
+@file:JvmMultifileClass
+@file:JvmName("KlyxPluginKt")
 
 package com.klyx.api.plugin
 

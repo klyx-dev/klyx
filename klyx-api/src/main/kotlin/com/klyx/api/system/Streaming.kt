@@ -1,6 +1,7 @@
 package com.klyx.api.system
 
 import com.klyx.api.data.fs.Paths
+import com.klyx.api.terminal.home
 import com.klyx.api.terminal.rootFs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,17 @@ suspend fun which(program: String): String? = withContext(Dispatchers.IO) {
         if (rf != null) {
             for (dir in ROOTFS_BIN_PATHS) {
                 val f = rf.resolve(dir.trimStart('/')).resolve(program)
+                if (f.exists() && f.canExecute()) return@withContext f.absolutePath
+            }
+        }
+        val home = try {
+            Paths.home.takeIf { it.exists() }
+        } catch (_: Exception) {
+            null
+        }
+        if (home != null) {
+            for (dir in HOME_BIN_PATHS) {
+                val f = home.resolve(dir).resolve(program)
                 if (f.exists() && f.canExecute()) return@withContext f.absolutePath
             }
         }

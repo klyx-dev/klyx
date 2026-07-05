@@ -1,0 +1,13 @@
+package com.klyx.lsp.server
+
+import com.klyx.lsp.server.internal.LanguageServerImpl
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.io.RawSink
+import kotlinx.io.RawSource
+
+fun createLanguageServer(client: LanguageClient, out: RawSource, `in`: RawSink): LanguageServer {
+    val scope = CoroutineScope(Dispatchers.Default)
+    val impl = LanguageServerImpl(scope, client, out, `in`)
+    return impl
+}

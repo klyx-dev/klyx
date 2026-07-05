@@ -1,3 +1,6 @@
+@file:JvmName("KlyxPluginKt")
+@file:JvmMultifileClass
+
 package com.klyx.api.plugin
 
 import androidx.lifecycle.LifecycleOwner

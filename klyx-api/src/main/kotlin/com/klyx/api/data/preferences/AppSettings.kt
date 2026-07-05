@@ -165,6 +165,7 @@ data class EditorSettings(
     val stickyScrollPreferInnerScope: Boolean = false,
     val stickyScrollAutoCollapse: Boolean = true,
     val selectCompletionItemOnEnterForSoftKbd: Boolean = true,
+    val inlayHints: Boolean = true,
 )
 
 /**
