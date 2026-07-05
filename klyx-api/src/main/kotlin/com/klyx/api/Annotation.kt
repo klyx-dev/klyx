@@ -14,3 +14,19 @@ package com.klyx.api
 @MustBeDocumented
 @Retention(AnnotationRetention.BINARY)
 annotation class InternalKlyxApi
+
+/**
+ * Marks a property or function that is discouraged for use within suspending functions.
+ *
+ * In suspending contexts, there is often a more appropriate way to access the required
+ * information (e.g., using `currentPluginContext()`). These marked declarations are
+ * typically intended for use in non-suspending functions where the suspending alternatives
+ * are unavailable.
+ */
+@RequiresOptIn(
+    level = RequiresOptIn.Level.WARNING,
+    message = "This declaration is discouraged in suspending functions. Use the corresponding current*() function instead if available."
+)
+@MustBeDocumented
+@Retention(AnnotationRetention.BINARY)
+annotation class DiscouragedInSuspend

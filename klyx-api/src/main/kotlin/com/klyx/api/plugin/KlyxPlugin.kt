@@ -1,6 +1,7 @@
 package com.klyx.api.plugin
 
 import androidx.lifecycle.LifecycleOwner
+import com.klyx.api.DiscouragedInSuspend
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlin.coroutines.CoroutineContext
@@ -37,39 +38,6 @@ interface KlyxPlugin {
      */
     suspend fun onUnload()
 }
-
-/**
- * Access the [PluginContext] for this plugin.
- *
- * @deprecated Use [currentPluginContext] instead.
- */
-@Deprecated(
-    message = "Use currentPluginContext() instead",
-    replaceWith = ReplaceWith("currentPluginContext()", "com.klyx.api.plugin.currentPluginContext")
-)
-val KlyxPlugin.context: PluginContext by runtime()
-
-/**
- * Access the [PluginLifecycleOwner] for this plugin.
- *
- * @deprecated Use [currentLifecycleOwner] instead.
- */
-@Deprecated(
-    message = "Use currentLifecycleOwner() instead",
-    replaceWith = ReplaceWith("currentLifecycleOwner()", "com.klyx.api.plugin.currentLifecycleOwner")
-)
-val KlyxPlugin.lifecycleOwner: PluginLifecycleOwner by runtime()
-
-/**
- * Access the [PluginScope] for this plugin.
- *
- * This scope is tied to the plugin's load/unload cycle. It is created when the plugin
- * is loaded and remains active until the plugin is unloaded. For coroutines that
- * should be tied to the start/stop lifecycle, use [currentLifecycleOwner] and its `lifecycleScope`.
- *
- * @see PluginScope
- */
-val KlyxPlugin.pluginScope: PluginScope by runtime()
 
 /**
  * Returns the [LifecycleOwner] for the current plugin context.

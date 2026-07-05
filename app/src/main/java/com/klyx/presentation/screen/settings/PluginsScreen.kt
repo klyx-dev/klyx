@@ -316,7 +316,6 @@ private sealed interface CombinedItem {
     }
 }
 
-// --- EXPRESSIVE COMPACT INSTALLED CARD ---
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun InstalledPluginCard(

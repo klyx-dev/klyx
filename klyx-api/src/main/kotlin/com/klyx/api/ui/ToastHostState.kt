@@ -50,6 +50,11 @@ class ToastHostState {
      *
      * This is a suspend function that waits until the toast is dismissed (either by
      * timeout or manual user action) before returning.
+     *
+     * **Recommendation for Plugins:** Use `KlyxPlugin.showToast` instead. This method
+     * will suspend the current execution context until the toast is finished. If you want
+     * non-blocking behavior, wrap this call in a `scope.launch`, use `KlyxPlugin.showToast`,
+     * or proceed if suspending the current context is intended.
      */
     suspend fun showToast(
         message: String,
@@ -59,6 +64,11 @@ class ToastHostState {
 
     /**
      * Displays a toast with the provided custom [visuals].
+     *
+     * **Recommendation for Plugins:** Use `KlyxPlugin.showToast` instead. This method
+     * will suspend the current execution context until the toast is finished. If you want
+     * non-blocking behavior, wrap this call in a `scope.launch`, use `KlyxPlugin.showToast`,
+     * or proceed if suspending the current context is intended.
      */
     suspend fun showToast(visuals: ToastVisuals) = mutex.withLock {
         try {
@@ -176,6 +186,11 @@ sealed class ToastDuration(val time: kotlin.Long) {
  *
  * It automatically extracts a user-friendly message and adds an appropriate icon
  * (e.g., a memory icon for [OutOfMemoryError]).
+ *
+ * **Recommendation for Plugins:** Use `KlyxPlugin.showFailureToast` instead. This method
+ * will suspend the current execution context until the toast is finished. If you want
+ * non-blocking behavior, wrap this call in a `scope.launch`, use `KlyxPlugin.showFailureToast`,
+ * or proceed if suspending the current context is intended.
  */
 suspend fun ToastHostState.showFailureToast(
     throwable: Throwable
@@ -192,6 +207,11 @@ suspend fun ToastHostState.showFailureToast(
  * Convenience extension to display a failure toast with a custom [message] and [icon].
  *
  * This version defaults to [ToastDuration.Long] and an error icon.
+ *
+ * **Recommendation for Plugins:** Use `KlyxPlugin.showFailureToast` instead. This method
+ * will suspend the current execution context until the toast is finished. If you want
+ * non-blocking behavior, wrap this call in a `scope.launch`, use `KlyxPlugin.showFailureToast`,
+ * or proceed if suspending the current context is intended.
  */
 suspend fun ToastHostState.showFailureToast(
     message: String,
