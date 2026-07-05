@@ -759,7 +759,6 @@ private fun FileInfoSegmentedListItem(
     ) {
         ListItem(
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            headlineContent = { Text(headline) },
             supportingContent = { Text(supporting) },
             leadingContent = {
                 Icon(
@@ -767,6 +766,8 @@ private fun FileInfoSegmentedListItem(
                     contentDescription = iconDescription,
                 )
             }
-        )
+        ) {
+            Text(headline)
+        }
     }
 }

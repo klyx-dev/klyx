@@ -5,18 +5,17 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.api.plugin.PluginDescriptor
-import com.klyx.event.UiEvent
 import com.klyx.api.plugin.PluginInfo
-import com.klyx.core.koin
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
+import com.klyx.event.UiEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
@@ -29,8 +28,11 @@ data class PluginLoadingState(
 data class PluginUiState(
     val plugins: ImmutableList<PluginInfo> = persistentListOf(),
     val loadingState: PluginLoadingState? = null,
-)
-
+    val isUnloading: Boolean = false,
+) {
+    val isLoading: Boolean
+        get() = loadingState != null
+}
 
 @KoinViewModel
 class PluginViewModel : ViewModel() {
@@ -42,8 +44,18 @@ class PluginViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(PluginUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _events = Channel<UiEvent>()
-    val events = _events.receiveAsFlow()
+    private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 1)
+    val events = _events.asSharedFlow()
+
+    init {
+        loadInstalledPlugins()
+    }
+
+    private fun loadInstalledPlugins() {
+        viewModelScope.launch {
+            refresh()
+        }
+    }
 
     fun loadPluginBundle(uri: Uri) {
         viewModelScope.launch {
@@ -62,10 +74,10 @@ class PluginViewModel : ViewModel() {
                 //_events.send(UiEvent.ShowMessage("Plugin loaded successfully"))
             } catch (e: PluginLoadException) {
                 Log.e("PluginViewModel", "Failed to load plugin bundle", e)
-                _events.send(UiEvent.ShowError(e.message ?: "Failed to load plugin bundle"))
+                _events.emit(UiEvent.ShowError(e.message ?: "Failed to load plugin bundle"))
             } catch (e: Exception) {
                 Log.e("PluginViewModel", "Unknown error loading plugin bundle", e)
-                _events.send(UiEvent.ShowError("Unknown error loading plugin bundle: ${e.localizedMessage}"))
+                _events.emit(UiEvent.ShowError("Unknown error loading plugin bundle: ${e.localizedMessage}"))
             } finally {
                 _uiState.update { it.copy(loadingState = null) }
             }
@@ -74,14 +86,14 @@ class PluginViewModel : ViewModel() {
 
     fun unloadPlugin(id: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(loadingState = PluginLoadingState()) }
+            _uiState.update { it.copy(isUnloading = true) }
             try {
                 pluginManager.unloadPlugin(id)
                 _uiState.update { it.copy(plugins = pluginManager.loadedPlugins.toImmutableList()) }
             } catch (e: Exception) {
-                _events.send(UiEvent.ShowError(e.message ?: "Error unloading plugin"))
+                _events.emit(UiEvent.ShowError(e.message ?: "Error unloading plugin"))
             } finally {
-                _uiState.update { it.copy(loadingState = null) }
+                _uiState.update { it.copy(isUnloading = false) }
             }
         }
     }

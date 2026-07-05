@@ -4,11 +4,12 @@ import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.util.humanBytes
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
-import com.klyx.api.data.fs.Paths
-import com.klyx.event.UiEvent
 import com.klyx.data.fs.downloadFile
+import com.klyx.event.UiEvent
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginLoadException
 import com.klyx.plugin.PluginManager
@@ -17,16 +18,17 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.KoinViewModel
 import java.io.File
+import java.util.Locale
 import java.util.UUID
 
 private const val CDN = PluginManager.CDN
@@ -67,8 +69,8 @@ class PluginStoreViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(PluginStoreUiState())
     val uiState = _uiState.asStateFlow()
 
-    private val _events = Channel<UiEvent>()
-    val events = _events.receiveAsFlow()
+    private val _events = MutableSharedFlow<UiEvent>(extraBufferCapacity = 1)
+    val events = _events.asSharedFlow()
 
     init {
         fetchPlugins()
@@ -89,7 +91,7 @@ class PluginStoreViewModel : ViewModel() {
                 _uiState.update { it.copy(storePlugins = result) }
             } catch (e: Exception) {
                 Log.e("PluginStoreViewModel", "Failed to fetch plugins", e)
-                _events.send(UiEvent.ShowError("Failed to fetch plugins: ${e.localizedMessage}"))
+                _events.emit(UiEvent.ShowError("Failed to fetch plugins: ${e.localizedMessage}"))
             } finally {
                 _uiState.update { it.copy(storeLoading = false) }
             }
@@ -98,19 +100,28 @@ class PluginStoreViewModel : ViewModel() {
 
     fun installPlugin(plugin: StorePlugin, onCompletion: () -> Unit) {
         if (_uiState.value.installState != null) return
-        _uiState.update { it.copy(installState = PluginInstallState(plugin)) }
         viewModelScope.launch {
+            _uiState.update { it.copy(installState = PluginInstallState(plugin)) }
             try {
                 val bundleFile = withContext(Dispatchers.IO) {
                     downloadBundle(
                         url = plugin.downloadUrl,
                         onDownload = { bytesSentTotal, contentLength ->
-                            val progress = bytesSentTotal.toFloat() / (contentLength?.toFloat() ?: 1f)
+                            val progress = contentLength?.let {
+                                bytesSentTotal.toFloat() / it.toFloat()
+                            }
+
+                            val message = if (progress != null) {
+                                "Downloading (${String.format(Locale.ROOT, "%.1f", progress * 100)}%)"
+                            } else {
+                                "Downloading (${bytesSentTotal.humanBytes()})"
+                            }
+
                             _uiState.update { state ->
                                 state.copy(
                                     installState = state.installState?.copy(
-                                        progress = progress,
-                                        message = "Downloading ${plugin.name} (${progress * 100}%)"
+                                        progress = progress ?: 0f,
+                                        message = message
                                     )
                                 )
                             }
@@ -127,18 +138,19 @@ class PluginStoreViewModel : ViewModel() {
                         )
                     }
                 }
-                refresh()
-                _events.send(UiEvent.ShowMessage("${plugin.name} installed successfully"))
+                //refresh()
+                _events.emit(UiEvent.ShowMessage("${plugin.name} installed successfully"))
             } catch (e: PluginLoadException) {
                 Log.e("PluginStoreViewModel", "Failed to install ${plugin.name}", e)
-                _events.send(UiEvent.ShowError(e.message ?: "Failed to install ${plugin.name}"))
+                _events.emit(UiEvent.ShowError(e.message ?: "Failed to install ${plugin.name}"))
             } catch (e: Exception) {
                 Log.e("PluginStoreViewModel", "Failed to install ${plugin.name}", e)
-                _events.send(UiEvent.ShowError("Failed to install ${plugin.name}: ${e.localizedMessage}"))
+                _events.emit(UiEvent.ShowError("Failed to install ${plugin.name}: ${e.localizedMessage}"))
             } finally {
                 _uiState.update { it.copy(installState = null) }
             }
-        }.invokeOnCompletion { onCompletion() }
+            onCompletion()
+        }
     }
 
     private suspend fun downloadBundle(url: String, onDownload: ProgressListener): File {

@@ -2,7 +2,6 @@ package com.klyx.api.plugin
 
 import com.klyx.api.Navigator
 import com.klyx.api.data.fs.FileSystem
-import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.service.Fonts
 import com.klyx.api.service.Settings

@@ -205,6 +205,8 @@ dependencies {
     implementation(libs.zoomable)
     implementation(libs.semver)
 
+    implementation(libs.bundles.markdown.renderer)
+
     implementation(projects.klyxApi)
     implementation(projects.core)
     implementation(projects.terminal)

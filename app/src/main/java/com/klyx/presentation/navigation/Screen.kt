@@ -73,5 +73,17 @@ sealed interface SettingsScreen : Screen {
     data object Plugins : SettingsScreen
 
     @Serializable
-    data class PluginDetail(val pluginId: String) : SettingsScreen
+    data class PluginDetail(val payload: PluginDetailPayload) : SettingsScreen
 }
+
+@Serializable
+data class PluginDetailPayload(
+    val id: String,
+    val name: String,
+    val version: String,
+    val description: String,
+    val author: String,
+    val isInstalled: Boolean,
+    val iconUrl: String? = null,
+    val downloadCount: Int = 0
+)

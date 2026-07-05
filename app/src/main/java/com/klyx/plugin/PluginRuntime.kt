@@ -42,7 +42,7 @@ internal class PluginRuntime(
             lifecycle(Lifecycle.Event.ON_CREATE)
 
             tryOrDestroy {
-                progress?.step("plugin.onLoad()")
+                progress?.step("Calling onLoad()")
                 plugin.onLoad()
             }
         }
@@ -54,7 +54,7 @@ internal class PluginRuntime(
 
         runInPluginScope {
             tryOrDestroy {
-                progress?.step("plugin.onStart()")
+                progress?.step("Calling onStart()")
                 lifecycle(Lifecycle.Event.ON_START)
                 plugin.onStart()
             }

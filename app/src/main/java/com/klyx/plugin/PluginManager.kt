@@ -1,12 +1,9 @@
 package com.klyx.plugin
 
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.painter.BitmapPainter
 import com.klyx.BuildConfig
 import com.klyx.api.InternalKlyxApi
 import com.klyx.api.data.fs.FileSystem
@@ -240,33 +237,21 @@ class PluginManager(
 
         val apkFile = File(pluginDir, "plugin.apk")
         val bundleFile = pluginDir["bundle.klyx"]
+        val iconFile = desc.icon?.let { File(pluginDir, it) }
 
-        val icon = desc.icon?.let { path ->
-            val iconFile = File(pluginDir, path)
-
-            // Guard against path traversal: icon path comes from untrusted plugin.json and
-            // must resolve to a file inside the plugin's own directory.
-            val pluginRoot = pluginDir.canonicalFile
-            val canonicalIcon = iconFile.canonicalFile
-            if (!canonicalIcon.path.startsWith(pluginRoot.path + File.separator)) {
-                Log.w("PluginManager", "Plugin '${desc.id}' icon path escapes plugin dir: $path")
-                return@let null
-            }
-
-            if (!canonicalIcon.exists()) {
-                return@let null
-            }
-
-            BitmapFactory.decodeFile(canonicalIcon.absolutePath)
-                ?.asImageBitmap()
-                ?.let { BitmapPainter(it) }
+        // Guard against path traversal: icon path comes from untrusted plugin.json and
+        // must resolve to a file inside the plugin's own directory.
+        val pluginRoot = pluginDir.canonicalFile
+        val canonicalIcon = iconFile?.canonicalFile
+        if (canonicalIcon?.path?.startsWith(pluginRoot.path + File.separator) == false) {
+            Log.w("PluginManager", "Plugin '${desc.id}' icon path escapes plugin dir: ${canonicalIcon.absolutePath}")
         }
 
         return PluginInfo(
             descriptor = desc,
             apkPath = apkFile.absolutePath,
             bundlePath = bundleFile?.absolutePath,
-            icon = icon
+            iconPath = canonicalIcon?.absolutePath
         )
     }
 
@@ -406,11 +391,7 @@ class PluginManager(
                     "Registered plugins: ${
                         synchronized(runtimes) {
                             runtimes.keys.joinToString {
-                                "${it::class.simpleName}@${
-                                    System.identityHashCode(
-                                        it
-                                    )
-                                }"
+                                "${it::class.simpleName}@${System.identityHashCode(it)}"
                             }
                         }
                     }. " +

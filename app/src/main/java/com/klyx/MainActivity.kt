@@ -293,7 +293,7 @@ class MainActivity : ComposeActivity() {
         settingsEntry<SettingsScreen.About> { AboutScreen() }
         settingsEntry<SettingsScreen.FileTree> { FileTreeSettingsScreen() }
         settingsEntry<SettingsScreen.Plugins> { PluginsScreen() }
-        settingsEntry<SettingsScreen.PluginDetail> { PluginDetailsScreen(it.pluginId) }
+        settingsEntry<SettingsScreen.PluginDetail> { PluginDetailsScreen(it.payload) }
 
         entry<Screen.Custom> { screen ->
             app.global<ScreenRegistry>()[screen.id]?.invoke() ?: UnknownScreen(screen)

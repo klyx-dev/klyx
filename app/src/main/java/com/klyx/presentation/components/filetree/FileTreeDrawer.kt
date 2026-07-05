@@ -764,13 +764,6 @@ fun ProjectLocationBottomSheet(
             ) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            "Internal Storage",
-                            fontFamily = GoogleSansRounded,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    },
                     supportingContent = {
                         Text("Browse and access all folders available on your device.")
                     },
@@ -791,7 +784,13 @@ fun ProjectLocationBottomSheet(
                             )
                         }
                     }
-                )
+                ) {
+                    Text(
+                        "Internal Storage",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -803,13 +802,6 @@ fun ProjectLocationBottomSheet(
             ) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            "App Data Directory",
-                            fontFamily = GoogleSansRounded,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    },
                     supportingContent = {
                         Text("Direct access to the internal data directory where all app files are stored.")
                     },
@@ -830,7 +822,13 @@ fun ProjectLocationBottomSheet(
                             )
                         }
                     }
-                )
+                ) {
+                    Text(
+                        "App Data Directory",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -842,13 +840,6 @@ fun ProjectLocationBottomSheet(
             ) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            "Terminal Home",
-                            fontFamily = GoogleSansRounded,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    },
                     supportingContent = {
                         Text($$"Open the terminal's home directory ($HOME). This is the default working directory where your files, projects, and personal data are stored inside the terminal environment.")
                     },
@@ -869,7 +860,13 @@ fun ProjectLocationBottomSheet(
                             )
                         }
                     }
-                )
+                ) {
+                    Text(
+                        "Terminal Home",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -881,13 +878,6 @@ fun ProjectLocationBottomSheet(
             ) {
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                    headlineContent = {
-                        Text(
-                            "System Picker",
-                            fontFamily = GoogleSansRounded,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    },
                     supportingContent = {
                         Text("Select a specific folder using the built-in file manager.")
                     },
@@ -908,7 +898,13 @@ fun ProjectLocationBottomSheet(
                             )
                         }
                     }
-                )
+                ) {
+                    Text(
+                        "System Picker",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

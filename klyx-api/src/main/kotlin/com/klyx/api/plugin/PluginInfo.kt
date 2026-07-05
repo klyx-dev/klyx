@@ -9,14 +9,14 @@ import androidx.compose.ui.graphics.painter.Painter
  * @property descriptor The [PluginDescriptor] containing metadata about the plugin.
  * @property apkPath The file path to the plugin's APK.
  * @property bundlePath The optional file path to the plugin's bundle.
- * @property icon The optional [Painter] representing the plugin's icon.
+ * @property iconPath The optional plugin's icon path.
  */
 @Immutable
 data class PluginInfo(
     val descriptor: PluginDescriptor,
     val apkPath: String,
     val bundlePath: String? = null,
-    val icon: Painter? = null
+    val iconPath: String? = null
 ) : PluginRuntimeService {
 
     /** The unique identifier of the plugin. */
