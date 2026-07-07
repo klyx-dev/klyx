@@ -124,28 +124,57 @@ jobs:
         run: |
           ./gradlew assembleRelease
 
-      - name: Collect APKs
+      - name: Cleanup sensitive files
+        if: always()
+        run: rm -f /tmp/klyx.keystore /tmp/sign.properties
+
+      - name: Prepare ARM64 APK
+        id: apk
         run: |
           mkdir -p artifacts
 
-          find app/build/outputs/apk -type f -name "*.apk" -exec cp {} artifacts/ \;
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          APK=$(find app/build/outputs/apk -type f -name "*arm64-v8a*.apk" | head -n1)
 
-          echo "Found APKs:"
-          ls -lah artifacts
+          if [ -z "$APK" ]; then
+            echo "ARM64 APK not found"
+            exit 1
+          fi
+
+          cp "$APK" "artifacts/klyx-${SHORT_SHA}-arm64.apk"
+
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "apk=artifacts/klyx-${SHORT_SHA}-arm64.apk" >> "$GITHUB_OUTPUT"
+
+      - name: Send to Telegram
+        if: github.ref == 'refs/heads/main'
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+        run: |
+          COMMIT_MSG="$(git log -1 --pretty=%B)"
+
+          curl -s --fail --silent --show-error -X POST \
+            "https://api.telegram.org/bot${TOKEN}/sendDocument" \
+            -F chat_id="${CHAT_ID}" \
+            -F message_thread_id="${TOPIC_ID}" \
+            -F document=@"${{ steps.apk.outputs.apk }}" \
+            -F caption="${COMMIT_MSG}"
 
       - name: Upload ARM64 APK
         uses: actions/upload-artifact@v7
         with:
-          name: apk-arm64-v8a
-          path: artifacts/*arm64-v8a*.apk
+          name: apk-arm64
+          path: ${{ steps.apk.outputs.apk }}
           retention-days: 15
-          if-no-files-found: ignore
+          if-no-files-found: error
 
       - name: Upload x86_64 APK
         uses: actions/upload-artifact@v7
         with:
           name: apk-x86_64
-          path: artifacts/*x86_64*.apk
+          path: app/build/outputs/apk/**/*x86_64*.apk
           retention-days: 15
           if-no-files-found: ignore
 
@@ -153,13 +182,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: apk-universal
-          path: artifacts/*universal*.apk
+          path: app/build/outputs/apk/**/*universal*.apk
           retention-days: 15
           if-no-files-found: ignore
-
-      - name: Cleanup sensitive files
-        if: always()
-        run: rm -f /tmp/klyx.keystore /tmp/sign.properties
 
   publish-snapshot:
     name: Publish SNAPSHOT
