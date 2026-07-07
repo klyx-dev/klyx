@@ -3,6 +3,7 @@
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/klyx-dev/klyx/ci.yml?branch=main&style=for-the-badge&logo=android&link=https%3A%2F%2Fgithub.com%2Fklyx-dev%2Fklyx%2Factions%2Fworkflows%2Fci.yml)](https://github.com/klyx-dev/klyx/actions/workflows/ci.yml)
 [![License](https://img.shields.io/github/license/klyx-dev/klyx?style=for-the-badge&link=LICENSE)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white&link=https%3A%2F%2Fdiscord.gg%2FgTHQTPHNaT)](https://discord.gg/gTHQTPHNaT)
+[![Telegram](https://img.shields.io/badge/Telegram-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/klyx_editor)
 
 Klyx is a modern code editor for Android built with Jetpack Compose and Material 3 Expressive.
 
