@@ -106,6 +106,7 @@ import com.klyx.ui.animation.orSnap
 import com.klyx.api.ui.theme.GoogleSansRounded
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -434,7 +435,7 @@ private fun SearchBottomSheet(
                         .fillMaxWidth()
                         .weight(1f)
                 ) {
-                    items(resultList, key = { it.uri.toString() }) { file ->
+                    items(resultList) { file ->
                         val (relPath, rootName) = file.uri.path?.let { path ->
                             searchRoots.firstNotNullOfOrNull { root ->
                                 root.uri.path?.let { rootPath ->

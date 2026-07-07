@@ -282,7 +282,7 @@ class TerminalInstaller(private val context: Context) {
             }
 
             fun symlink(target: File?, name: String) {
-                if (target == null) return
+                if (target == null || !target.exists()) return
                 Os.symlink(target.absolutePath, storageDir.resolve(name).absolutePath)
             }
 
