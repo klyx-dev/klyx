@@ -6,7 +6,6 @@ import io.ktor.client.engine.cio.CIO
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsBytes
 import io.ktor.client.statement.bodyAsText
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.Dispatchers
@@ -38,11 +37,6 @@ val httpClient by lazy {
 
 suspend fun fetchText(url: String) = withContext(Dispatchers.IO) {
     httpClient.get(url).bodyAsText()
-}
-
-@JvmName("fetchBodyAsBytes")
-suspend fun fetchBody(url: String) = withContext(Dispatchers.IO) {
-    httpClient.get(url).bodyAsBytes()
 }
 
 suspend inline fun <reified T> fetchBody(url: String): T = withContext(Dispatchers.IO) {

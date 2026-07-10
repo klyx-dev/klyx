@@ -179,12 +179,13 @@ import io.github.rosemoe.sora.compose.CodeEditor
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.ExperimentalEditorApi
 import io.github.rosemoe.sora.compose.content
-import io.github.rosemoe.sora.compose.rememberCodeEditorState
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -192,6 +193,7 @@ import net.engawapg.lib.zoomable.rememberZoomState
 import net.engawapg.lib.zoomable.zoomable
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalEditorApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -1220,7 +1222,7 @@ private fun EditorPager(
     HorizontalPager(
         state = pagerState,
         userScrollEnabled = false,
-        beyondViewportPageCount = openTabs.size,
+        beyondViewportPageCount = 1,
         key = { openTabs[it].id },
         modifier = Modifier
             .fillMaxSize()
@@ -1283,6 +1285,7 @@ private fun EditorPager(
     }
 }
 
+@OptIn(FlowPreview::class)
 @Composable
 private fun TextFileEditor(
     tab: WorkspaceTab.TextFile,
@@ -1294,7 +1297,21 @@ private fun TextFileEditor(
     registry: EditorStateRegistry
 ) {
     val settings = LocalAppSettings.current.editor
-    val state = tab.createEditorState()
+    val density = LocalDensity.current
+    val treeSitter = LocalTreeSitter.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    val state = remember(tab.id) {
+        registry[tab.id] ?: run {
+            val baseline = registry.getBaselineText(tab.id) ?: ""
+            CodeEditorState(context, scope).also {
+                it.setText(baseline)
+                registry.register(tab.id, it)
+            }
+        }
+    }
+
     val lspManager: LspManager = koinInject()
     val scheme = remember(isDarkMode, colorScheme, selectionColors) {
         KlyxEditorColorScheme(isDarkMode, colorScheme, selectionColors)
@@ -1310,12 +1327,9 @@ private fun TextFileEditor(
         lspManager.onEditorCreated(tab.id, tab.file.uri, tab.projectUri, state)
     }
 
-    DisposableEffect(tab.id) {
-        registry.register(tab.id, state)
-        onDispose { 
-            registry.unregister(tab.id)
-            lspManager.onEditorClosed(tab.id)
-        }
+    LaunchedEffect(tab.id, state) {
+        state.lineNumberMarginLeft = with(density) { 5.dp.toPx() }
+        state.editorLanguage = treeSitter.getLanguageForExtension(tab.file.extension)
     }
 
     LaunchedEffect(scheme, state.editorLanguage, state) {
@@ -1325,8 +1339,10 @@ private fun TextFileEditor(
     LaunchedEffect(tab.id, state) {
         state.content
             .drop(1)
+            .debounce(500.milliseconds)
             .collect { content ->
-                editorViewModel.markTabModified(tab.id, content.toString() != tab.text)
+                val baseline = registry.getBaselineText(tab.id) ?: ""
+                editorViewModel.markTabModified(tab.id, content.toString() != baseline)
             }
     }
 
@@ -1552,18 +1568,3 @@ private fun AccessoryKeyButton(
     }
 }
 
-@OptIn(ExperimentalEditorApi::class)
-@Composable
-private fun WorkspaceTab.TextFile.createEditorState(): CodeEditorState {
-    val state = rememberCodeEditorState(initialText = text)
-
-    val density = LocalDensity.current
-    val treeSitter = LocalTreeSitter.current
-
-    LaunchedEffect(Unit) {
-        state.lineNumberMarginLeft = with(density) { 5.dp.toPx() }
-        state.editorLanguage = treeSitter.getLanguageForExtension(file.extension)
-    }
-
-    return state
-}

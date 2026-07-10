@@ -29,14 +29,12 @@ sealed class WorkspaceTab {
      * A tab representing a text file being edited.
      *
      * @property file The file associated with this tab.
-     * @property text The current text content of the file.
      * @property projectUri The URI of the project this file belongs to, if any.
      * @property hasUnsavedChanges Whether the file has modifications that haven't been saved to disk yet.
      */
     @Immutable
     data class TextFile(
         val file: KxFile,
-        val text: String,
         val projectUri: Uri? = null,
         val hasUnsavedChanges: Boolean = false,
         override val title: String = file.name,

@@ -21,6 +21,7 @@ import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.data.editor.EditorStateRegistry
 import com.klyx.data.repository.RecentFileRepository
 import com.klyx.event.eventBus
+import com.klyx.lsp.LspManager
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.writeTextTo
 import kotlinx.collections.immutable.PersistentList
@@ -60,7 +61,8 @@ sealed interface EditorEvent {
 class EditorViewModel(
     private val fileSystem: FileSystem,
     private val recentFileRepository: RecentFileRepository,
-    private val editorStateRegistry: EditorStateRegistry
+    private val editorStateRegistry: EditorStateRegistry,
+    private val lspManager: LspManager
 ) : ViewModel() {
 
     private val fileOpenerRegistry: FileOpenerRegistry by lazy {
@@ -129,6 +131,7 @@ class EditorViewModel(
 
     fun closeTab(tabId: String) {
         editorStateRegistry.unregister(tabId)
+        lspManager.onEditorClosed(tabId)
         _uiState.update { state ->
             val tabIndex = state.openTabs.indexOfFirst { it.id == tabId }
             if (tabIndex == -1) return@update state
@@ -164,7 +167,10 @@ class EditorViewModel(
         val state = _uiState.value
         val closedTabs = state.openTabs.filter { it.id != currentTabId }
 
-        closedTabs.forEach { tab -> editorStateRegistry.unregister(tab.id) }
+        closedTabs.forEach { tab ->
+            editorStateRegistry.unregister(tab.id)
+            lspManager.onEditorClosed(tab.id)
+        }
 
         _uiState.update {
             it.copy(
@@ -187,7 +193,10 @@ class EditorViewModel(
     }
 
     fun closeAllTabs() {
-        _uiState.value.openTabs.forEach { tab -> editorStateRegistry.unregister(tab.id) }
+        _uiState.value.openTabs.forEach { tab ->
+            editorStateRegistry.unregister(tab.id)
+            lspManager.onEditorClosed(tab.id)
+        }
         _uiState.update {
             it.copy(
                 openTabs = persistentListOf(),
@@ -213,11 +222,12 @@ class EditorViewModel(
                 val tab: WorkspaceTab? = when (category) {
                     FileCategory.TEXT -> {
                         val txt = withContext(Dispatchers.IO) { file.readText() }
-                        WorkspaceTab.TextFile(
+                        val newTab = WorkspaceTab.TextFile(
                             file = file,
-                            text = txt,
                             projectUri = projectUri
                         )
+                        editorStateRegistry.setBaselineText(newTab.id, txt)
+                        newTab
                     }
 
                     FileCategory.IMAGE -> {
@@ -321,6 +331,11 @@ class EditorViewModel(
                                         if (state.activeTabId == tab.id) {
                                             newActiveTabId = updatedTab.id
                                         }
+
+                                        editorStateRegistry.getBaselineText(tab.id)?.let { baseline ->
+                                            editorStateRegistry.setBaselineText(updatedTab.id, baseline)
+                                        }
+
                                         mutableTabs[i] = updatedTab
                                     }
                                 }
@@ -385,14 +400,17 @@ class EditorViewModel(
 
     fun markTabModified(tabId: String, modified: Boolean) {
         _uiState.update { state ->
-            val updatedTabs = state.openTabs.mutate { tabs ->
-                val index = tabs.indexOfFirst { it.id == tabId }
-                if (index != -1) {
-                    val tab = tabs[index] as? WorkspaceTab.TextFile ?: return@mutate
+            val index = state.openTabs.indexOfFirst { it.id == tabId }
+            if (index == -1) return@update state
+
+            val tab = state.openTabs[index] as? WorkspaceTab.TextFile ?: return@update state
+            if (tab.hasUnsavedChanges == modified) return@update state
+
+            state.copy(
+                openTabs = state.openTabs.mutate { tabs ->
                     tabs[index] = tab.copy(hasUnsavedChanges = modified)
                 }
-            }
-            state.copy(openTabs = updatedTabs)
+            )
         }
     }
 
@@ -406,7 +424,21 @@ class EditorViewModel(
 
             try {
                 editorState.writeTextTo(action.file.outputStream())
-                markTabModified(activeTabId, false)
+                val savedText = editorState.text.toString()
+
+                editorStateRegistry.setBaselineText(activeTabId, savedText)
+
+                _uiState.update { state ->
+                    state.copy(
+                        openTabs = state.openTabs.mutate { tabs ->
+                            val index = tabs.indexOfFirst { it.id == activeTabId }
+                            if (index != -1) {
+                                val tab = tabs[index] as? WorkspaceTab.TextFile ?: return@mutate
+                                tabs[index] = tab.copy(hasUnsavedChanges = false)
+                            }
+                        }
+                    )
+                }
                 sendEvent(EditorEvent.ShowMessage("Saved ${action.file.name}"))
             } catch (e: Exception) {
                 sendEvent(EditorEvent.ShowError("Failed to save: ${e.localizedMessage}"))
@@ -427,9 +459,13 @@ class EditorViewModel(
                 editorState.writeTextTo(action.newFile.outputStream())
 
                 val newTabId = action.newFile.uri.toString()
+                val savedText = editorState.text.toString()
 
                 editorStateRegistry[newTabId] = editorState
                 editorStateRegistry.unregister(action.oldTabId)
+                lspManager.onEditorClosed(action.oldTabId)
+
+                editorStateRegistry.setBaselineText(newTabId, savedText)
 
                 recentFileRepository.addRecentFile(action.newFile, oldTab?.projectUri)
 
