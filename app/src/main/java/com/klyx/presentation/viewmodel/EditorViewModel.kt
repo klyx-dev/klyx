@@ -427,6 +427,7 @@ class EditorViewModel(
                 val savedText = editorState.text.toString()
 
                 editorStateRegistry.setBaselineText(activeTabId, savedText)
+                lspManager.onFileSaved(activeTabId)
 
                 _uiState.update { state ->
                     state.copy(

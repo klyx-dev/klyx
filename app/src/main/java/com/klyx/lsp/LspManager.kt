@@ -43,6 +43,12 @@ import com.klyx.lsp.python.PythonLspProvider
 import com.klyx.lsp.server.LanguageServer
 import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.fold
+import com.klyx.lsp.DidOpenTextDocumentParams
+import com.klyx.lsp.TextDocumentItem
+import com.klyx.lsp.DidChangeTextDocumentParams
+import com.klyx.lsp.VersionedTextDocumentIdentifier
+import com.klyx.lsp.TextDocumentContentChangeEvent
+import com.klyx.lsp.DidSaveTextDocumentParams
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.content
 import io.github.rosemoe.sora.lang.styling.inlayHint.InlayHintsContainer
@@ -54,6 +60,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -68,7 +75,8 @@ class LspManager(private val settingsRepository: SettingsRepository) {
 
     private class ServerInstance(
         val server: LanguageServer,
-        val client: KlyxLspClient
+        val client: KlyxLspClient,
+        @Volatile var isDead: Boolean = false
     )
 
     private val registry: LanguageServerRegistry by koin()
@@ -77,40 +85,77 @@ class LspManager(private val settingsRepository: SettingsRepository) {
     private val activeServers = ConcurrentHashMap<ServerKey, ServerInstance>()
     private val serverMutex = Mutex()
     private val editorToServer = ConcurrentHashMap<String, Pair<ServerKey, String>>()
+    private val editorStates = ConcurrentHashMap<String, CodeEditorState>()
 
     init {
         registry.registerInternal("py", PythonLspProvider())
     }
 
-    suspend fun onEditorCreated(tabId: String, uri: Uri, projectUri: Uri?, editorState: CodeEditorState) {
-        val extension = uri.path?.substringAfterLast('.', "") ?: return
-        val provider = registry.getProvider(extension) ?: return
+    suspend fun onEditorCreated(tabId: String, uri: Uri, projectUri: Uri?, editorState: CodeEditorState, baseLanguage: io.github.rosemoe.sora.lang.Language) {
+        val extension = uri.path?.substringAfterLast('.', "") ?: run {
+            withContext(Dispatchers.Main) {
+                editorState.editorLanguage = baseLanguage
+            }
+            return
+        }
+        val provider = registry.getProvider(extension) ?: run {
+            withContext(Dispatchers.Main) {
+                editorState.editorLanguage = baseLanguage
+            }
+            return
+        }
         val key = ServerKey(projectUri?.toString(), extension)
 
         withContext(Dispatchers.IO) {
             try {
-                val instance = activeServers[key] ?: serverMutex.withLock {
-                    activeServers[key] ?: run {
-                        val client = KlyxLspClient(scope)
-                        val server = provider.startServer(client)
-
-                        val initParams = createInitializeParams(projectUri?.toFile())
-
-                        server.initialize(initParams)
-                        server.initialized(InitializedParams)
-
-                        val newInstance = ServerInstance(server, client)
-                        activeServers[key] = newInstance
-                        newInstance
-                    }
-                }
-
+                editorStates[tabId] = editorState
+                val instance = ensureServerInstance(key, provider, projectUri)
+                
                 instance.client.registerEditor(uri.toString(), editorState)
                 editorToServer[tabId] = key to uri.toString()
 
+                try {
+                    instance.server.textDocument.didOpen(
+                        DidOpenTextDocumentParams(
+                            textDocument = TextDocumentItem(
+                                uri = uri.toString(),
+                                languageId = getLanguageId(extension),
+                                version = 0,
+                                text = editorState.text.toString()
+                            )
+                        )
+                    )
+                } catch (e: Exception) {
+                    handleServerError(key, instance, e)
+                }
+
                 withContext(Dispatchers.Main) {
-                    val baseLanguage = editorState.editorLanguage
-                    editorState.editorLanguage = LspLanguage(baseLanguage, instance.server, uri.toString())
+                    editorState.editorLanguage = LspLanguage(this@LspManager, baseLanguage, tabId, uri.toString())
+
+                    scope.launch {
+                        var version = 0
+                        editorState.content.collectLatest { content ->
+                            val currentInstance = activeServers[key] ?: return@collectLatest
+                            if (currentInstance.isDead) return@collectLatest
+                            try {
+                                currentInstance.server.textDocument.didChange(
+                                    DidChangeTextDocumentParams(
+                                        textDocument = VersionedTextDocumentIdentifier(
+                                            uri = uri.toString(),
+                                            version = ++version
+                                        ),
+                                        contentChanges = listOf(
+                                            TextDocumentContentChangeEvent(
+                                                text = content.toString()
+                                            )
+                                        )
+                                    )
+                                )
+                            } catch (e: Exception) {
+                                handleServerError(key, currentInstance, e)
+                            }
+                        }
+                    }
 
                     scope.launch {
                         settingsRepository.settings
@@ -118,7 +163,9 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                             .collectLatest { enabled ->
                                 if (enabled) {
                                     editorState.content.collectLatest {
-                                        requestInlayHints(uri, editorState, instance.server)
+                                        val currentInstance = activeServers[key] ?: return@collectLatest
+                                        if (currentInstance.isDead) return@collectLatest
+                                        requestInlayHints(uri, editorState, currentInstance)
                                     }
                                 } else {
                                     withContext(Dispatchers.Main) {
@@ -130,17 +177,93 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    editorState.editorLanguage = baseLanguage
+                }
             }
         }
     }
 
-    private suspend fun requestInlayHints(uri: Uri, editorState: CodeEditorState, server: LanguageServer) {
+    private suspend fun ensureServerInstance(key: ServerKey, provider: com.klyx.api.lsp.LanguageServerProvider, projectUri: Uri?): ServerInstance {
+        return activeServers[key]?.takeIf { !it.isDead } ?: serverMutex.withLock {
+            activeServers[key]?.takeIf { !it.isDead } ?: run {
+                val client = KlyxLspClient(scope)
+                val server = provider.startServer(client)
+
+                val initParams = createInitializeParams(projectUri?.toFile())
+
+                server.initialize(initParams)
+                server.initialized(InitializedParams)
+
+                val newInstance = ServerInstance(server, client)
+                activeServers[key] = newInstance
+                
+                // Re-open all existing editors for this server
+                editorToServer.filterValues { it.first == key }.forEach { (tabId, pair) ->
+                    val uri = pair.second
+                    val state = editorStates[tabId]
+                    if (state != null) {
+                        client.registerEditor(uri, state)
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                server.textDocument.didOpen(
+                                    DidOpenTextDocumentParams(
+                                        textDocument = TextDocumentItem(
+                                            uri = uri,
+                                            languageId = getLanguageId(key.extension),
+                                            version = 0,
+                                            text = state.text.toString()
+                                        )
+                                    )
+                                )
+                            } catch (_: Exception) {}
+                        }
+                    }
+                }
+                
+                newInstance
+            }
+        }
+    }
+
+    fun getLanguageServer(tabId: String): LanguageServer? {
+        val (key, _) = editorToServer[tabId] ?: return null
+        val provider = registry.getProvider(key.extension) ?: return null
+        
+        return runBlocking {
+            ensureServerInstance(key, provider, null).server
+        }
+    }
+
+    private fun handleServerError(key: ServerKey, instance: ServerInstance, e: Exception) {
+        e.printStackTrace()
+        instance.isDead = true
+        activeServers.remove(key, instance)
+    }
+
+    private fun getLanguageId(extension: String): String {
+        return when (extension.lowercase()) {
+            "py" -> "python"
+            "kt" -> "kotlin"
+            "java" -> "java"
+            "js" -> "javascript"
+            "ts" -> "typescript"
+            "html" -> "html"
+            "css" -> "css"
+            "json" -> "json"
+            "md" -> "markdown"
+            else -> extension
+        }
+    }
+
+    private suspend fun requestInlayHints(uri: Uri, editorState: CodeEditorState, instance: ServerInstance) {
+        if (instance.isDead) return
         try {
             val params = InlayHintParams(
                 textDocument = TextDocumentIdentifier(uri.toString()),
                 range = Range(Position(0, 0), Position(editorState.lineCount, 0))
             )
-            val hints = server.textDocument.inlayHint(params) ?: emptyList()
+            val hints = instance.server.textDocument.inlayHint(params) ?: emptyList()
 
             val container = InlayHintsContainer()
             hints.forEach { hint ->
@@ -155,20 +278,47 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                 editorState.inlayHints = container
             }
         } catch (e: Exception) {
-            // Ignore
+            val key = editorToServer.filterValues { it.second == uri.toString() }.keys.firstOrNull()?.let { tabId -> editorToServer[tabId]?.first }
+            if (key != null) {
+                handleServerError(key, instance, e)
+            }
         }
     }
 
     fun onEditorClosed(tabId: String) {
+        editorStates.remove(tabId)
         val (key, uri) = editorToServer.remove(tabId) ?: return
         val instance = activeServers[key] ?: return
-        instance.client.unregisterEditor(uri)
+        if (!instance.isDead) {
+            instance.client.unregisterEditor(uri)
+        }
+    }
+
+    fun onFileSaved(tabId: String) {
+        val (key, uri) = editorToServer[tabId] ?: return
+        val instance = activeServers[key] ?: return
+        if (instance.isDead) return
+        scope.launch {
+            try {
+                instance.server.textDocument.didSave(
+                    DidSaveTextDocumentParams(
+                        textDocument = TextDocumentIdentifier(uri)
+                    )
+                )
+            } catch (e: Exception) {
+                handleServerError(key, instance, e)
+            }
+        }
     }
 
     fun destroy() {
         scope.cancel()
         activeServers.values.forEach {
-            scope.launch { it.server.shutdown() }
+            if (!it.isDead) {
+                scope.launch { 
+                    try { it.server.shutdown() } catch (_: Exception) {} 
+                }
+            }
         }
     }
 }

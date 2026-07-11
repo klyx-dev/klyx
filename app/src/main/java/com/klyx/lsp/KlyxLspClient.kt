@@ -2,6 +2,7 @@ package com.klyx.lsp
 
 import android.util.Log
 import com.klyx.lsp.server.LanguageClient
+import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
 import com.klyx.lsp.types.OneOf
@@ -13,6 +14,7 @@ import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.JsonNull
 import java.util.concurrent.ConcurrentHashMap
 
 class KlyxLspClient(
@@ -27,6 +29,14 @@ class KlyxLspClient(
 
     fun unregisterEditor(uri: String) {
         editors.remove(uri)
+    }
+
+    override suspend fun notifyProgress(params: ProgressParams) {
+        Log.d("LspClient", "Progress: ${params.token} - ${params.value}")
+    }
+
+    override suspend fun logTrace(params: LogTraceParams) {
+        Log.d("LspClient", "Trace: ${params.message}")
     }
 
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
@@ -50,13 +60,7 @@ class KlyxLspClient(
             
             val message = diagnostic.message.fold({ it }, { it.value })
 
-            DiagnosticRegion(
-                startIndex,
-                endIndex,
-                severity,
-                0L,
-                DiagnosticDetail(message)
-            )
+            DiagnosticRegion(startIndex, endIndex, severity, 0L, DiagnosticDetail(message))
         }
 
         scope.launch(Dispatchers.Main) {
@@ -82,5 +86,57 @@ class KlyxLspClient(
 
     override suspend fun telemetryEvent(params: OneOf<LSPObject, LSPArray>) {
         Log.i("LspClient", "Telemetry Event: $params")
+    }
+
+    override suspend fun registerCapability(params: RegistrationParams) {
+        Log.d("LspClient", "Register Capability: $params")
+    }
+
+    override suspend fun unregisterCapability(params: UnregistrationParams) {
+        Log.d("LspClient", "Unregister Capability: $params")
+    }
+
+    override suspend fun workspaceFolders(): List<WorkspaceFolder>? {
+        return null
+    }
+
+    override suspend fun configuration(params: ConfigurationParams): List<LSPAny> {
+        return params.items.map { JsonNull }
+    }
+
+    override suspend fun applyEdit(params: ApplyWorkspaceEditParams): ApplyWorkspaceEditResult {
+        return ApplyWorkspaceEditResult(applied = false, failureReason = "Not implemented")
+    }
+
+    override suspend fun createProgress(params: WorkDoneProgressCreateParams) {
+        // No-op
+    }
+
+    override suspend fun showDocument(params: ShowDocumentParams): ShowDocumentResult {
+        return ShowDocumentResult(success = false)
+    }
+
+    override suspend fun refreshCodeLenses() {
+        // No-op
+    }
+
+    override suspend fun refreshDiagnostics() {
+        // No-op
+    }
+
+    override suspend fun refreshFoldingRanges() {
+        // No-op
+    }
+
+    override suspend fun refreshInlayHints() {
+        // No-op
+    }
+
+    override suspend fun refreshInlineValues() {
+        // No-op
+    }
+
+    override suspend fun refreshSemanticTokens() {
+        // No-op
     }
 }
