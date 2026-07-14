@@ -42,8 +42,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          submodules: recursive
-          fetch-depth: 1
+          submodules: false
+          fetch-depth: 0
+
+      - name: Checkout submodules
+        run: git submodule update --init --recursive --depth 1
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -153,14 +156,21 @@ jobs:
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
-          COMMIT_MSG="$(git log -1 --pretty=%B)"
+          if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+            COMMIT_MSG="$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:"• %s" --reverse)"
+          else
+            COMMIT_MSG="$(git log -1 --pretty=%B)"
+          fi
+
+          # truncate to avoid Telegram caption limits (1024 chars)
+          CAPTION=$(echo "$COMMIT_MSG" | head -c 1000)
 
           curl -s --fail --silent --show-error -X POST \
             "https://api.telegram.org/bot${TOKEN}/sendDocument" \
             -F chat_id="${CHAT_ID}" \
             -F message_thread_id="${TOPIC_ID}" \
             -F document=@"${{ steps.apk.outputs.apk }}" \
-            -F caption="${COMMIT_MSG}"
+            -F caption="${CAPTION}"
 
       - name: Upload ARM64 APK
         uses: actions/upload-artifact@v7
@@ -248,8 +258,7 @@ jobs:
         run: |
           SHORT_SHA=$(git rev-parse --short HEAD)
           BASE_VERSION=$(grep 'project.version=' gradle.properties | cut -d= -f2)
-          ./gradlew :klyx-api:publishToMavenCentral :klyx-gradle-plugin:publishToMavenCentral :core:publishToMavenCentral :terminal:publishToMavenCentral \
-            -Pproject.version=${BASE_VERSION}-${SHORT_SHA}-SNAPSHOT
+          ./gradlew publishToMavenCentral -Pproject.version=${BASE_VERSION}-${SHORT_SHA}-SNAPSHOT
 
       - name: Publish latest SNAPSHOT (overwrites previous)
         env:
@@ -260,5 +269,4 @@ jobs:
           ORG_GRADLE_PROJECT_signingSecretKeyRingFile: /tmp/secring.gpg
         run: |
           BASE_VERSION=$(grep 'project.version=' gradle.properties | cut -d= -f2)
-          ./gradlew :klyx-api:publishToMavenCentral :klyx-gradle-plugin:publishToMavenCentral :core:publishToMavenCentral :terminal:publishToMavenCentral \
-            -Pproject.version=${BASE_VERSION}-SNAPSHOT
+          ./gradlew publishToMavenCentral -Pproject.version=${BASE_VERSION}-SNAPSHOT

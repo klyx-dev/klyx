@@ -20,10 +20,10 @@ sealed interface ToolbarIcon {
     /** Icon loaded from a file on disk. */
     data class File(val file: java.io.File) : ToolbarIcon
 
-    /** Icon provided as a Compose [androidx.compose.ui.graphics.painter.Painter]. */
+    /** Icon provided as a Compose [Painter][androidx.compose.ui.graphics.painter.Painter]. */
     data class Painter(val painter: androidx.compose.ui.graphics.painter.Painter) : ToolbarIcon
 
-    /** Icon provided as a Compose [androidx.compose.ui.graphics.vector.ImageVector]. */
+    /** Icon provided as a Compose [ImageVector][androidx.compose.ui.graphics.vector.ImageVector]. */
     data class ImageVector(val imageVector: androidx.compose.ui.graphics.vector.ImageVector) : ToolbarIcon
 }
 
