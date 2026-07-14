@@ -1,3 +1,5 @@
+@file:Suppress("NOTHING_TO_INLINE")
+
 package com.klyx.api.util
 
 import android.content.ActivityNotFoundException
@@ -8,13 +10,12 @@ import android.os.Build
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import androidx.core.net.toFile
+import java.io.File
 import java.net.URLDecoder
 import java.net.URLEncoder
 
-/**
- * Returns true if this [Uri] uses the `file` scheme.
- */
+
+/** Whether this [Uri] is a `file://` URI. */
 val Uri.isFileUri get() = scheme == ContentResolver.SCHEME_FILE
 
 /**
@@ -90,3 +91,25 @@ fun Uri.share() = withApplicationContext {
     }
 }
 
+/**
+ * Creates a Uri from the given encoded URI string.
+ *
+ * @see Uri.parse
+ */
+public inline fun String.toUri(): Uri = Uri.parse(this)
+
+/**
+ * Creates a Uri from the given file.
+ *
+ * @see Uri.fromFile
+ */
+public inline fun File.toUri(): Uri = Uri.fromFile(this)
+
+/**
+ * Creates a [File] from the given [Uri]. Note that this will throw an [IllegalArgumentException]
+ * when invoked on a [Uri] that lacks `file` scheme.
+ */
+public fun Uri.toFile(): File {
+    require(scheme == "file") { "Uri lacks 'file' scheme: $this" }
+    return File(requireNotNull(path) { "Uri path is null: $this" })
+}

@@ -44,20 +44,25 @@ kotlin {
 
 dependencies {
     api(platform(libs.androidx.compose.bom))
-    api(libs.bundles.androidx.compose)
-    api(libs.androidx.ui.text.google.fonts)
-    api(libs.androidx.material.icons.extended)
+    api(libs.androidx.compose.runtime)
+    api(libs.androidx.compose.ui)
+    api(libs.androidx.compose.material3)
 
-    api(platform(libs.koin.bom))
-    api(libs.koin.core)
-    api(libs.koin.android)
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.ui.text.google.fonts)
+
+    implementation(platform(libs.koin.bom))
+    implementation(libs.koin.core)
 
     api(libs.kotlinx.serialization.json)
     api(libs.kotlinx.coroutines.core)
     api(libs.kotlinx.collections.immutable)
     api(libs.androidx.documentfile)
     api(libs.androidx.lifecycle.runtime.ktx)
-    api(libs.utilcodex)
+
+    implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.utilcodex)
 
     api(projects.core)
     api(projects.terminal)

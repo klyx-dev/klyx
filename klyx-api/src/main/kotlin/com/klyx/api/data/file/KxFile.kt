@@ -7,10 +7,11 @@ import android.net.Uri
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.util.Log
-import androidx.core.net.toFile
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.blankj.utilcode.util.UriUtils
+import com.klyx.api.util.isFileUri
+import com.klyx.api.util.toFile
+import com.klyx.api.util.toUri
 import com.klyx.core.koin
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
@@ -368,6 +369,3 @@ fun KxFile.resolveName(): String {
         else -> name
     }
 }
-
-/** Whether this [Uri] is a `file://` URI. */
-val Uri.isFileUri get() = scheme == ContentResolver.SCHEME_FILE

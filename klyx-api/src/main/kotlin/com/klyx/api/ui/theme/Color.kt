@@ -9,7 +9,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
-import androidx.core.graphics.ColorUtils
+import android.graphics.Color as AndroidColor
 
 val LocalIsDarkMode = staticCompositionLocalOf { false }
 
@@ -94,7 +94,7 @@ inline fun Color.takeUnless(predicate: Boolean) = takeIf(!predicate)
 fun Color.blend(
     color: Color,
     @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
-): Color = Color(ColorUtils.blendARGB(this.toArgb(), color.toArgb(), fraction))
+): Color = Color(this.toArgb().blend(color.toArgb(), fraction))
 
 @Composable
 fun Color.inverse(
@@ -121,10 +121,18 @@ fun Color.inverse(
     darkMode: Boolean = LocalIsDarkMode.current,
 ): Color = if (darkMode) blend(color(true), fraction(true)) else blend(color(true), fraction(false))
 
-fun Int.blend(
-    color: Color,
+@ColorInt
+fun @receiver:ColorInt Int.blend(
+    @ColorInt other: Int,
     @FloatRange(from = 0.0, to = 1.0) fraction: Float = 0.2f
-): Int = ColorUtils.blendARGB(this, color.toArgb(), fraction)
+): Int {
+    val inverseFraction = 1f - fraction
+    val a = AndroidColor.alpha(this) * inverseFraction + AndroidColor.alpha(other) * fraction
+    val r = AndroidColor.red(this) * inverseFraction + AndroidColor.red(other) * fraction
+    val g = AndroidColor.green(this) * inverseFraction + AndroidColor.green(other) * fraction
+    val b = AndroidColor.blue(this) * inverseFraction + AndroidColor.blue(other) * fraction
+    return AndroidColor.argb(a.toInt(), r.toInt(), g.toInt(), b.toInt())
+}
 
 @Composable
 @ReadOnlyComposable
