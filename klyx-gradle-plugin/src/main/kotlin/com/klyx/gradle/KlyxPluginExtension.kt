@@ -30,6 +30,9 @@ abstract class KlyxPluginExtension @Inject constructor(private val project: Proj
     /** Target folder for built bundles. Defaults to 'build/klyx/' */
     abstract val outputDirectory: DirectoryProperty
 
+    /** Whether to automatically push the bundle to device's klyx/plugins directory using adb */
+    abstract val autoPushToDevice: Property<Boolean>
+
     fun enableCompose() {
         project.pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
 

@@ -7,6 +7,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
+import java.io.File
 
 class KlyxPluginPublishingPlugin : Plugin<Project> {
     override fun apply(target: Project) {
@@ -17,6 +18,7 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
         extension.pluginJsonFile.convention(target.rootProject.layout.projectDirectory.file("plugin.json"))
         extension.outputFileName.convention(target.provider { target.rootProject.name })
         extension.outputDirectory.convention(target.layout.buildDirectory.dir("klyx"))
+        extension.autoPushToDevice.convention(false)
 
         val bundleDebug = target.tasks.register("klyxBundleDebug", Tar::class.java) { task ->
             task.group = "klyx"
@@ -49,6 +51,22 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
                     copy.rename { "plugin.apk" }
                 }
             }
+        }
+
+        listOf(
+            "Debug" to bundleDebug,
+            "Release" to bundleRelease,
+        ).forEach { (variant, bundleTaskProvider) ->
+            val pushTask = target.tasks.register("klyxPush$variant") { task ->
+                task.group = "klyx"
+                task.description = "Pushes the $variant bundle to a connected device."
+                task.doLast {
+                    if (extension.autoPushToDevice.get()) {
+                        pushBundleToDevice(target, bundleTaskProvider.get().archiveFile.get().asFile)
+                    }
+                }
+            }
+            bundleTaskProvider.configure { it.finalizedBy(pushTask) }
         }
 
         target.plugins.withId("com.android.application") { configureAndroid(target) }
@@ -132,5 +150,44 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
         task.compression = Compression.GZIP
         task.archiveBaseName.set(extension.outputFileName)
         task.destinationDirectory.set(extension.outputDirectory)
+    }
+
+    private fun pushBundleToDevice(project: Project, bundleFile: File) {
+        val adbExecutable = try {
+            val android = project.extensions.findByName("android")
+            val getAdbExecutable = android?.javaClass?.getMethod("getAdbExecutable")
+            (getAdbExecutable?.invoke(android) as? File) ?: File("adb")
+        } catch (_: Exception) {
+            File("adb")
+        }
+
+        try {
+            val devicesOutput = project.providers.exec { spec ->
+                spec.commandLine(adbExecutable, "devices")
+            }.standardOutput.asText.get()
+
+            val devices = devicesOutput.lines()
+                .map { it.trim() }
+                .filter { it.endsWith("\tdevice") }
+
+            if (devices.size == 1) {
+                val deviceId = devices[0].split("\t")[0]
+                project.logger.lifecycle("Klyx: Pushing ${bundleFile.name} to device $deviceId...")
+                try {
+                    project.providers.exec { spec ->
+                        spec.commandLine(adbExecutable, "-s", deviceId, "shell", "mkdir", "-p", "/sdcard/klyx/plugins/")
+                    }.result.get()
+                    project.providers.exec { spec ->
+                        spec.commandLine(adbExecutable, "-s", deviceId, "push", bundleFile.absolutePath, "/sdcard/klyx/plugins/")
+                    }.result.get()
+                } catch (e: Exception) {
+                    project.logger.error("Klyx: Failed to push bundle to device: ${e.message}")
+                }
+            } else if (devices.size > 1) {
+                project.logger.warn("Klyx: Multiple devices connected, skipping auto-push.")
+            }
+        } catch (_: Exception) {
+            project.logger.warn("Klyx: Failed to run adb. Is it in your PATH?")
+        }
     }
 }
