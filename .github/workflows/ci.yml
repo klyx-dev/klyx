@@ -157,13 +157,16 @@ jobs:
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
           if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            COMMIT_MSG="$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:"%s" --reverse)"
+            COMMIT_MSG="$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:"%B" --reverse)"
           else
             COMMIT_MSG="$(git log -1 --pretty=%B)"
           fi
 
           # truncate to avoid Telegram caption limits (1024 chars)
           CAPTION=$(echo "$COMMIT_MSG" | head -c 1000)
+          if [ ${#COMMIT_MSG} -gt 1000 ]; then
+            CAPTION="${CAPTION}..."
+          fi
 
           curl -s --fail --silent --show-error -X POST \
             "https://api.telegram.org/bot${TOKEN}/sendDocument" \
