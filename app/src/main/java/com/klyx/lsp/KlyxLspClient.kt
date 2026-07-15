@@ -81,6 +81,7 @@ internal class KlyxLspClient(
     }
 
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
+        println(params)
         val uri = params.uri
         val editorState = aggregator.editorFor(uri) ?: return
         val text = editorState.text

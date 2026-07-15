@@ -309,7 +309,7 @@ internal class JsonRpcConnection(
         } catch (err: Throwable) {
             //println("Error handling notification ${notification.method}: ${err.message}")
             //err.printStackTrace()
-            throw err as? JsonRpcException ?: JsonRpcException("Error handling notification", err)
+            //throw err as? JsonRpcException ?: JsonRpcException("Error handling notification", err)
         }
     }
 

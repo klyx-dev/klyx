@@ -1,6 +1,7 @@
 package com.klyx.lsp
 
 import android.net.Uri
+import android.util.Log
 import androidx.collection.LruCache
 import androidx.core.net.toFile
 import com.klyx.api.InternalKlyxApi
@@ -12,6 +13,7 @@ import com.klyx.core.koin
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.lsp.python.PythonLspProvider
 import com.klyx.lsp.server.LanguageServer
+import com.klyx.lsp.server.ResponseErrorException
 import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.fold
 import io.github.rosemoe.sora.compose.CodeEditorState
@@ -19,6 +21,7 @@ import io.github.rosemoe.sora.compose.content
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.lang.styling.inlayHint.InlayHintsContainer
 import io.github.rosemoe.sora.lang.styling.inlayHint.TextInlayHint
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -29,6 +32,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -153,39 +157,42 @@ class LspManager(private val settingsRepository: SettingsRepository) {
 
                     scope.launch {
                         var version = 0
-                        editorState.content.collectLatest { content ->
-                            val keysNow = editorServerKeys[tabId] ?: return@collectLatest
-                            val text = content.toString()
-                            val nextVersion = ++version
+                        editorState.content
+                            .conflate()
+                            .collect { content ->
+                                val keysNow = editorServerKeys[tabId] ?: return@collect
+                                val text = content.toString()
+                                val nextVersion = ++version
 
-                            supervisorScope {
-                                keysNow.map { key ->
-                                    async {
-                                        val instance = activeServers[key]?.takeIf { !it.isDead } ?: return@async
-                                        try {
-                                            withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
-                                                instance.server.textDocument.didChange(
-                                                    DidChangeTextDocumentParams(
-                                                        textDocument = VersionedTextDocumentIdentifier(
-                                                            uri = documentUri,
-                                                            version = nextVersion
-                                                        ),
-                                                        contentChanges = listOf(
-                                                            TextDocumentContentChangeEvent(text = text)
+                                supervisorScope {
+                                    keysNow.map { key ->
+                                        async {
+                                            val instance = activeServers[key]?.takeIf { !it.isDead } ?: return@async
+                                            try {
+                                                withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
+                                                    println("didChange")
+                                                    instance.server.textDocument.didChange(
+                                                        DidChangeTextDocumentParams(
+                                                            textDocument = VersionedTextDocumentIdentifier(
+                                                                uri = documentUri,
+                                                                version = nextVersion
+                                                            ),
+                                                            contentChanges = listOf(
+                                                                TextDocumentContentChangeEvent(text = text)
+                                                            )
                                                         )
                                                     )
-                                                )
+                                                }
+                                            } catch (e: Exception) {
+                                                handleServerError(key, instance, e)
                                             }
-                                        } catch (e: Exception) {
-                                            handleServerError(key, instance, e)
                                         }
-                                    }
-                                }.awaitAll()
-                            }
+                                    }.awaitAll()
+                                }
 
-                            val line = editorState.cursor.leftLine
-                            requestInlayHint(tabId, editorState, line)
-                        }
+                                val line = editorState.cursor.leftLine
+                                requestInlayHint(tabId, editorState, line)
+                            }
                     }
 
                     scope.launch {
@@ -274,6 +281,20 @@ class LspManager(private val settingsRepository: SettingsRepository) {
     }
 
     private fun handleServerError(key: ServerKey, instance: ServerInstance, e: Exception) {
+        when (e) {
+            is ResponseErrorException -> {
+                when (e.code) {
+                    ErrorCodes.MethodNotFound, ErrorCodes.RequestCancelled, ErrorCodes.ContentModified -> {}
+                    else -> {
+                        Log.w("LspManager", "LSP ${e.message}")
+                    }
+                }
+                return
+            }
+
+            is CancellationException -> throw e
+        }
+
         e.printStackTrace()
         instance.isDead = true
         instance.client.clearContributedDiagnostics()
