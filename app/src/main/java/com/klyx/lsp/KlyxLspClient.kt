@@ -11,64 +11,110 @@ import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticDetail
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticRegion
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer
+import io.github.rosemoe.sora.text.Content
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonNull
 import java.util.concurrent.ConcurrentHashMap
 
-class KlyxLspClient(
-    private val scope: CoroutineScope
-) : LanguageClient {
-
+internal class DiagnosticsAggregator {
     private val editors = ConcurrentHashMap<String, CodeEditorState>()
+    private val bySource = ConcurrentHashMap<String, ConcurrentHashMap<String, List<DiagnosticRegion>>>()
+
+    fun editorFor(uri: String): CodeEditorState? = editors[uri]
 
     fun registerEditor(uri: String, state: CodeEditorState) {
         editors[uri] = state
     }
 
-    fun unregisterEditor(uri: String) {
+    /** Full cleanup when a tab closes entirely. */
+    fun removeEditor(uri: String) {
         editors.remove(uri)
+        bySource.remove(uri)
     }
 
-    override suspend fun notifyProgress(params: ProgressParams) {
-        Log.d("LspClient", "Progress: ${params.token} - ${params.value}")
+    /** Partial cleanup: one server stops contributing (died or unregistered),
+     * but the editor may still be served by other providers. */
+    fun removeSource(uri: String, serverId: String) {
+        bySource[uri]?.remove(serverId)
     }
 
-    override suspend fun logTrace(params: LogTraceParams) {
-        Log.d("LspClient", "Trace: ${params.message}")
+    suspend fun publish(uri: String, serverId: String, regions: List<DiagnosticRegion>) {
+        val editorState = editors[uri] ?: return
+        val sourceMap = bySource.getOrPut(uri) { ConcurrentHashMap() }
+        sourceMap[serverId] = regions
+        val merged = sourceMap.values
+            .flatten()
+            .distinctBy { Triple(it.startIndex, it.endIndex, it.detail?.briefMessage) }
+
+        withContext(Dispatchers.Main) {
+            val container = DiagnosticsContainer()
+            container.addDiagnostics(merged)
+            editorState.diagnostics = container
+        }
+    }
+}
+
+internal class KlyxLspClient(
+    private val scope: CoroutineScope,
+    private val serverId: String,
+    private val aggregator: DiagnosticsAggregator
+) : LanguageClient {
+
+    private val registeredUris = ConcurrentHashMap.newKeySet<String>()
+
+    fun registerEditor(uri: String, state: CodeEditorState) {
+        registeredUris.add(uri)
+        aggregator.registerEditor(uri, state)
+    }
+
+    fun unregisterEditor(uri: String) {
+        registeredUris.remove(uri)
+        aggregator.removeSource(uri, serverId)
+    }
+
+    /** Called when this server is marked dead so its stale diagnostics don't linger
+     * on editors that are still open and served by other providers. */
+    fun clearContributedDiagnostics() {
+        registeredUris.forEach { uri -> aggregator.removeSource(uri, serverId) }
     }
 
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
         val uri = params.uri
-        val editorState = editors[uri] ?: return
-        
-        val diagnostics = params.diagnostics
+        val editorState = aggregator.editorFor(uri) ?: return
         val text = editorState.text
-        
-        val regions = diagnostics.map { diagnostic ->
-            val severity = when (diagnostic.severity) {
-                DiagnosticSeverity.Error -> DiagnosticRegion.SEVERITY_ERROR
-                DiagnosticSeverity.Warning -> DiagnosticRegion.SEVERITY_WARNING
-                DiagnosticSeverity.Information -> DiagnosticRegion.SEVERITY_NONE
-                DiagnosticSeverity.Hint -> DiagnosticRegion.SEVERITY_TYPO
-                else -> DiagnosticRegion.SEVERITY_ERROR
+
+        val regions = params.diagnostics.mapNotNull { diagnostic ->
+            runCatching {
+                val severity = when (diagnostic.severity) {
+                    DiagnosticSeverity.Error -> DiagnosticRegion.SEVERITY_ERROR
+                    DiagnosticSeverity.Warning -> DiagnosticRegion.SEVERITY_WARNING
+                    DiagnosticSeverity.Information -> DiagnosticRegion.SEVERITY_NONE
+                    DiagnosticSeverity.Hint -> DiagnosticRegion.SEVERITY_TYPO
+                    else -> DiagnosticRegion.SEVERITY_ERROR
+                }
+
+                val startIndex = text.clampedCharIndex(diagnostic.range.start)
+                val endIndex = text.clampedCharIndex(diagnostic.range.end).coerceAtLeast(startIndex)
+                val message = diagnostic.message.fold({ it }, { it.value })
+
+                DiagnosticRegion(startIndex, endIndex, severity, 0L, DiagnosticDetail(message))
+            }.getOrElse {
+                Log.w("LspClient", "Skipping malformed diagnostic from $serverId: $it")
+                null
             }
-            
-            val startIndex = text.getCharIndex(diagnostic.range.start.line.toInt(), diagnostic.range.start.character.toInt())
-            val endIndex = text.getCharIndex(diagnostic.range.end.line.toInt(), diagnostic.range.end.character.toInt())
-            
-            val message = diagnostic.message.fold({ it }, { it.value })
-
-            DiagnosticRegion(startIndex, endIndex, severity, 0L, DiagnosticDetail(message))
         }
 
-        scope.launch(Dispatchers.Main) {
-            val container = editorState.diagnostics ?: DiagnosticsContainer()
-            container.reset()
-            container.addDiagnostics(regions)
-            editorState.diagnostics = container
-        }
+        aggregator.publish(uri, serverId, regions)
+    }
+
+    private fun Content.clampedCharIndex(position: Position): Int {
+        return runCatching {
+            val line = position.line.toInt().coerceIn(0, (lineCount - 1).coerceAtLeast(0))
+            val column = position.character.toInt().coerceAtMost(getColumnCount(line))
+            getCharIndex(line, column)
+        }.getOrElse { 0 }
     }
 
     override suspend fun showMessage(params: ShowMessageParams) {

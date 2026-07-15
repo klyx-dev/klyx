@@ -1326,7 +1326,7 @@ private fun TextFileEditor(
     LaunchedEffect(tab.id, state) {
         state.lineNumberMarginLeft = with(density) { 5.dp.toPx() }
         val baseLanguage = treeSitter.getLanguageForExtension(tab.file.extension)
-        lspManager.onEditorCreated(tab.id, tab.file.uri, tab.projectUri, state, baseLanguage)
+        lspManager.onEditorCreated(tab.id, tab.file, tab.projectUri, state, baseLanguage)
     }
 
     LaunchedEffect(scheme, state.editorLanguage, state) {

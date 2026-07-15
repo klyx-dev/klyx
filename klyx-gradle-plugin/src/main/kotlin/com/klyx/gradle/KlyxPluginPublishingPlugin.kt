@@ -178,7 +178,14 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
                         spec.commandLine(adbExecutable, "-s", deviceId, "shell", "mkdir", "-p", "/sdcard/klyx/plugins/")
                     }.result.get()
                     project.providers.exec { spec ->
-                        spec.commandLine(adbExecutable, "-s", deviceId, "push", bundleFile.absolutePath, "/sdcard/klyx/plugins/")
+                        spec.commandLine(
+                            adbExecutable,
+                            "-s",
+                            deviceId,
+                            "push",
+                            bundleFile.absolutePath,
+                            "/sdcard/klyx/plugins/"
+                        )
                     }.result.get()
                 } catch (e: Exception) {
                     project.logger.error("Klyx: Failed to push bundle to device: ${e.message}")
@@ -186,8 +193,8 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
             } else if (devices.size > 1) {
                 project.logger.warn("Klyx: Multiple devices connected, skipping auto-push.")
             }
-        } catch (_: Exception) {
-            project.logger.warn("Klyx: Failed to run adb. Is it in your PATH?")
+        } catch (e: Exception) {
+            project.logger.warn("Klyx: Failed to run adb. Is it in your PATH?", e)
         }
     }
 }

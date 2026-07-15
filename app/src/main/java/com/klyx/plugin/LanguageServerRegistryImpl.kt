@@ -1,12 +1,13 @@
 package com.klyx.plugin
 
 import com.klyx.api.InternalKlyxApi
+import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.providerKey
 import com.klyx.api.lsp.LanguageServerProvider
 import com.klyx.api.lsp.LanguageServerRegistration
 import com.klyx.api.lsp.LanguageServerRegistry
 import com.klyx.api.plugin.KlyxPlugin
 import org.koin.core.annotation.Single
-import org.koin.core.annotation.Singleton
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -15,7 +16,7 @@ class LanguageServerRegistryImpl : LanguageServerRegistry {
 
     private data class RegistrationInfo(
         val id: String,
-        val extension: String,
+        val pattern: String,
         val provider: LanguageServerProvider,
         val plugin: KlyxPlugin?
     )
@@ -24,24 +25,23 @@ class LanguageServerRegistryImpl : LanguageServerRegistry {
     private val nextId = AtomicInteger(0)
 
     context(plugin: KlyxPlugin)
-    override fun register(extension: String, provider: LanguageServerProvider): LanguageServerRegistration {
-        return doRegister(extension, provider, plugin)
+    override fun register(pattern: String, provider: LanguageServerProvider): LanguageServerRegistration {
+        return doRegister(pattern, provider, plugin)
     }
 
     @InternalKlyxApi
-    override fun registerInternal(extension: String, provider: LanguageServerProvider): LanguageServerRegistration {
-        return doRegister(extension, provider, null)
+    override fun registerInternal(pattern: String, provider: LanguageServerProvider): LanguageServerRegistration {
+        return doRegister(pattern, provider, null)
     }
 
     private fun doRegister(
-        extension: String,
+        pattern: String,
         provider: LanguageServerProvider,
         plugin: KlyxPlugin?
     ): LanguageServerRegistration {
         val id = nextId.getAndIncrement().toString()
-        val info = RegistrationInfo(id, extension, provider, plugin)
+        val info = RegistrationInfo(id, pattern, provider, plugin)
         registrations[id] = info
-
         return object : LanguageServerRegistration {
             override fun unregister() {
                 this@LanguageServerRegistryImpl.unregister(id)
@@ -53,10 +53,11 @@ class LanguageServerRegistryImpl : LanguageServerRegistry {
         registrations.remove(id)
     }
 
-    override fun getProvider(extension: String): LanguageServerProvider? {
+    override fun getProviders(file: KxFile): List<LanguageServerRegistry.RegisteredProvider> {
+        val key = file.providerKey
         return registrations.values
-            .filter { it.extension == extension }
-            .maxByOrNull { it.id.toInt() }
-            ?.provider
+            .filter { it.pattern == key }
+            .sortedBy { it.id.toInt() }
+            .map { LanguageServerRegistry.RegisteredProvider(it.id, it.provider) }
     }
 }

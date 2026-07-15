@@ -369,3 +369,10 @@ fun KxFile.resolveName(): String {
         else -> name
     }
 }
+
+/**
+ * The key used to look up a [LanguageServerProvider][com.klyx.api.lsp.LanguageServerProvider] in the registry.
+ * Falls back to the lowercased file name for extensionless files
+ * (e.g. "dockerfile", "makefile").
+ */
+val KxFile.providerKey: String get() = extension.ifBlank { name.lowercase() }

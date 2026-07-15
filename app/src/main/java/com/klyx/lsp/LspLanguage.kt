@@ -13,9 +13,14 @@ import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.ContentReference
 import io.github.rosemoe.sora.util.MyCharacter
 import io.github.rosemoe.sora.widget.SymbolPairMatch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.time.Duration.Companion.milliseconds
 import io.github.rosemoe.sora.lang.completion.CompletionItemKind as EditorItemKind
 
 class LspLanguage(
@@ -77,9 +82,7 @@ class LspLanguage(
 
         try {
             runBlocking {
-                val server = lspManager.getLanguageServer(tabId) ?: return@runBlocking
-
-                // Fetch LSP completions
+                val servers = lspManager.getLanguageServers(tabId)
                 val params = CompletionParams(
                     textDocument = TextDocumentIdentifier(uri),
                     position = Position(position.line, position.column)
@@ -87,27 +90,32 @@ class LspLanguage(
 
                 checkCancelled()
 
-                val response = try {
-                    server.textDocument.completion(params)
-                } catch (_: Exception) {
-                    null
+                val lspItems = if (servers.isEmpty()) {
+                    emptyList()
+                } else {
+                    supervisorScope {
+                        servers.map { server ->
+                            async {
+                                withTimeoutOrNull(1500.milliseconds) {
+                                    try {
+                                        server.textDocument.completion(params)
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                }
+                            }
+                        }.awaitAll()
+                    }.filterNotNull()
+                        .flatMap { response -> response.fold({ it }, { it.items }) }
+                        .distinctBy { it.label to it.insertText }
                 }
 
                 checkCancelled()
 
-                val lspItems = response?.fold(
-                    { it },
-                    { it.items }
-                ) ?: emptyList()
-
                 val prefixLower = prefix.lowercase()
                 val completionItems = lspItems.filter { item ->
                     val filterText = (item.filterText ?: item.label).lowercase()
-                    if (prefixLower.isNotEmpty()) {
-                        filterText.contains(prefixLower)
-                    } else {
-                        true
-                    }
+                    prefixLower.isEmpty() || filterText.contains(prefixLower)
                 }.map { item ->
                     LspCompletionItem(
                         item.label,
@@ -122,14 +130,11 @@ class LspLanguage(
                 }
 
                 checkCancelled()
-
                 publisher.addItems(completionItems)
 
-                // Also call base language for local completions
                 try {
                     base.requireAutoComplete(content, position, publisher, extraArguments)
                 } catch (_: Exception) {
-                    // Ignore base completion errors
                 }
 
                 checkCancelled()
@@ -138,7 +143,6 @@ class LspLanguage(
         } catch (e: CompletionCancelledException) {
             throw e
         } catch (_: Exception) {
-            // ignore other errors
         }
     }
 
