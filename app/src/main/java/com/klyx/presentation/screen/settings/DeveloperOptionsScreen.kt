@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.Button
@@ -54,6 +55,7 @@ import com.klyx.BuildConfig
 import com.klyx.api.platform.currentArchitecture
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.components.dialogs.TerminalWipeConfirmationDialog
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SettingsItem
@@ -173,6 +175,23 @@ fun DeveloperOptionsScreen() {
                                 imageVector = Icons.Rounded.DeleteSweep,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    )
+                }
+            }
+
+            item {
+                SettingsSubsection("Logging") {
+                    SettingsItem(
+                        title = "View App Logs",
+                        subtitle = "Browse in-app logs from plugins and system services",
+                        onClick = { navigator.navigateTo(SettingsScreen.Logs) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.BugReport,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
                     )

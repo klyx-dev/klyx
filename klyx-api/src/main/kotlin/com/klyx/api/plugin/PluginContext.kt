@@ -4,6 +4,8 @@ import com.klyx.api.Navigator
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.service.Fonts
+import com.klyx.api.service.Logger
+import com.klyx.api.service.PluginLogger
 import com.klyx.api.service.Settings
 import com.klyx.api.service.Tabs
 import com.klyx.api.ui.ScreenRegistry
@@ -19,6 +21,11 @@ interface PluginContext : PluginRuntimeService {
      * The core application instance.
      */
     val app: App
+
+    /**
+     * The unique identifier of the plugin.
+     */
+    val pluginId: String
 }
 
 /**
@@ -36,4 +43,11 @@ interface PluginContext : PluginRuntimeService {
  * @see ToolbarRegistry
  * @see Navigator
  */
-inline fun <reified T : PluginService> PluginContext.service(): T = app.pluginService(T::class)
+inline fun <reified T : PluginService> PluginContext.service(): T {
+    val service = app.pluginService(T::class)
+    return if (service is Logger && T::class == Logger::class) {
+        PluginLogger(service, pluginId) as T
+    } else {
+        service
+    }
+}

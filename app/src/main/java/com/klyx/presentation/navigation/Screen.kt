@@ -39,6 +39,7 @@ sealed interface Screen : NavKey {
                     subclass(SettingsScreen.About::class)
                     subclass(SettingsScreen.FileTree::class)
                     subclass(SettingsScreen.Plugins::class)
+                    subclass(SettingsScreen.Logs::class)
                     subclass(SettingsScreen.PluginDetail::class)
                 }
             }
@@ -71,6 +72,9 @@ sealed interface SettingsScreen : Screen {
 
     @Serializable
     data object Plugins : SettingsScreen
+
+    @Serializable
+    data object Logs : SettingsScreen
 
     @Serializable
     data class PluginDetail(val payload: PluginDetailPayload) : SettingsScreen

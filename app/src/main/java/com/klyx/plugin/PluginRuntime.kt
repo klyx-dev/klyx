@@ -128,7 +128,7 @@ internal class PluginRuntime(
 }
 
 internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): PluginRuntime {
-    val context = PluginContextImpl(app)
+    val context = PluginContextImpl(app, info.id)
     val owner = PluginLifecycleOwnerImpl(context)
     val scope = PluginScopeImpl(
         SupervisorJob() +
@@ -149,6 +149,9 @@ internal class PluginLifecycleOwnerImpl(
     }
 }
 
-internal class PluginContextImpl(override val app: App) : PluginContext
+internal class PluginContextImpl(
+    override val app: App,
+    override val pluginId: String
+) : PluginContext
 
 internal class PluginScopeImpl(override val coroutineContext: CoroutineContext) : PluginScope

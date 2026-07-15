@@ -13,6 +13,11 @@ import com.klyx.api.ui.toastHostState
 import kotlinx.coroutines.launch
 
 /**
+ * Access the [PluginInfo] for this plugin.
+ */
+val KlyxPlugin.info: PluginInfo by runtime()
+
+/**
  * Access the [PluginContext] for this plugin.
  *
  * **Recommendation:** Use [currentPluginContext] instead whenever in a suspend function.

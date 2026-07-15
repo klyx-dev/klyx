@@ -4,6 +4,8 @@ package com.klyx.api.plugin
 
 import androidx.annotation.RestrictTo
 import com.klyx.api.InternalKlyxApi
+import com.klyx.api.service.Logger
+import com.klyx.api.service.PluginLogger
 import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.unsafe.GlobalApp
@@ -128,5 +130,11 @@ class PluginServiceDelegate<T : PluginService>(
         GlobalApp.global(clazz)
     }
 
-    override fun getValue(thisRef: Any?, property: KProperty<*>) = service
+    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        if (thisRef is KlyxPlugin && service is Logger && clazz == Logger::class) {
+            @Suppress("UNCHECKED_CAST")
+            return PluginLogger(service as Logger, thisRef.info.id) as T
+        }
+        return service
+    }
 }

@@ -77,6 +77,7 @@ import com.klyx.presentation.screen.settings.AppearanceSettings
 import com.klyx.presentation.screen.settings.DeveloperOptionsScreen
 import com.klyx.presentation.screen.settings.EditorSettings
 import com.klyx.presentation.screen.settings.FileTreeSettingsScreen
+import com.klyx.presentation.screen.settings.LogScreen
 import com.klyx.presentation.screen.settings.PluginDetailsScreen
 import com.klyx.presentation.screen.settings.PluginsScreen
 import com.klyx.presentation.screen.settings.SystemDetailsScreen
@@ -289,6 +290,7 @@ class MainActivity : ComposeActivity() {
         settingsEntry<SettingsScreen.Appearance> { AppearanceSettings() }
         settingsEntry<SettingsScreen.Terminal> { TerminalSettings() }
         settingsEntry<SettingsScreen.DeveloperOptions> { DeveloperOptionsScreen() }
+        settingsEntry<SettingsScreen.Logs> { LogScreen() }
         settingsEntry<SettingsScreen.SystemDiagnostics> { SystemDetailsScreen() }
         settingsEntry<SettingsScreen.About> { AboutScreen() }
         settingsEntry<SettingsScreen.FileTree> { FileTreeSettingsScreen() }

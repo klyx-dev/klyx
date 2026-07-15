@@ -19,7 +19,8 @@ import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.api.event.EventBusHolder
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginInfo
-import com.klyx.api.plugin.runtime
+import com.klyx.api.plugin.info
+import com.klyx.api.service.Logger
 import com.klyx.api.ui.Content
 import com.klyx.api.ui.Screen
 import com.klyx.api.ui.ScreenId
@@ -87,6 +88,7 @@ class KlyxApplication : Application() {
         app.setGlobal(FontsWrapper(auto()))
         app.setGlobal(TabsWrapper { auto() })
         app.setGlobal(PluginManager(app))
+        app.setGlobal(auto<Logger>())
     }
 
     private class TerminalManagerImpl(
@@ -125,8 +127,6 @@ class KlyxApplication : Application() {
 
     private class MutableToolbarRegistry : ToolbarRegistry {
         private val _actions = mutableStateListOf<ToolbarAction>()
-
-        private val KlyxPlugin.info: PluginInfo by runtime()
 
         context(plugin: KlyxPlugin)
         override fun register(action: ToolbarAction): ToolbarRegistration {
