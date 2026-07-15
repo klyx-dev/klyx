@@ -4,7 +4,9 @@ import android.util.Log
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.klyx.api.data.log.LogEntry
 import com.klyx.api.data.fs.Paths
+import com.klyx.api.service.Logger
 import com.klyx.api.util.humanBytes
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
@@ -51,6 +53,7 @@ data class PluginInstallState(
     val plugin: StorePlugin,
     val progress: Float = 0f,
     val message: String? = null,
+    val logs: List<LogEntry> = emptyList()
 )
 
 data class PluginStoreUiState(
@@ -60,7 +63,9 @@ data class PluginStoreUiState(
 )
 
 @KoinViewModel
-class PluginStoreViewModel : ViewModel() {
+class PluginStoreViewModel(
+    private val logger: Logger
+) : ViewModel() {
 
     @OptIn(UnsafeGlobalAccess::class)
     private val pluginManager: PluginManager
@@ -102,6 +107,21 @@ class PluginStoreViewModel : ViewModel() {
         if (_uiState.value.installState != null) return
         viewModelScope.launch {
             _uiState.update { it.copy(installState = PluginInstallState(plugin)) }
+
+            // Collect logs for this plugin while installing
+            val logJob = launch {
+                logger.entries.collect { entries ->
+                    val pluginLogs = entries.filter { it.sourcePluginId == plugin.id }
+                    _uiState.update { state ->
+                        state.copy(
+                            installState = state.installState?.copy(
+                                logs = pluginLogs
+                            )
+                        )
+                    }
+                }
+            }
+
             try {
                 val bundleFile = withContext(Dispatchers.IO) {
                     downloadBundle(
@@ -147,6 +167,7 @@ class PluginStoreViewModel : ViewModel() {
                 Log.e("PluginStoreViewModel", "Failed to install ${plugin.name}", e)
                 _events.emit(UiEvent.ShowError("Failed to install ${plugin.name}: ${e.localizedMessage}"))
             } finally {
+                logJob.cancel()
                 _uiState.update { it.copy(installState = null) }
             }
             onCompletion()

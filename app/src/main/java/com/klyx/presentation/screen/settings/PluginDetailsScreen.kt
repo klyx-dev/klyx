@@ -1,5 +1,10 @@
 package com.klyx.presentation.screen.settings
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -41,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -56,6 +63,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,6 +72,7 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.service.Logger
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.theme.LocalIsDarkMode
@@ -71,6 +80,8 @@ import com.klyx.event.UiEvent
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginManager
 import com.klyx.plugin.PluginViewModel
+import com.klyx.presentation.components.InstallationLogCard
+import com.klyx.presentation.components.LogEntryItem
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginDetailPayload
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
@@ -92,7 +103,10 @@ import dev.snipme.highlights.model.SyntaxThemes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 private const val CDN = PluginManager.CDN
 private const val API = PluginManager.API
@@ -113,6 +127,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
     val navigator = LocalNavigator.current
     val storeViewModel: PluginStoreViewModel = koinViewModel()
     val pluginViewModel: PluginViewModel = koinViewModel()
+    val logger: Logger = koinInject()
 
     val pluginUiState by pluginViewModel.uiState.collectAsStateWithLifecycle()
     val storeUiState by storeViewModel.uiState.collectAsStateWithLifecycle()
@@ -147,6 +162,15 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
             pluginUiState.plugins.any { it.descriptor.id == payload.id }
         }
     }
+
+    val allLogs by logger.entries.collectAsState()
+    val pluginLogs by remember(allLogs, payload.id) {
+        derivedStateOf {
+            allLogs.filter { it.sourcePluginId == payload.id }
+        }
+    }
+
+    val logTimeFormat = remember { SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault()) }
 
     Scaffold(
         modifier = Modifier
@@ -294,47 +318,65 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                         }
                     }
                 } else {
+                    val installState = storeUiState.installState
+                    val isThisInstalling = installState?.plugin?.id == payload.id
                     val installing by remember { derivedStateOf { storeUiState.installState != null } }
-                    Button(
-                        onClick = {
-                            storeViewModel.installPlugin(
-                                plugin = StorePlugin(
-                                    id = payload.id,
-                                    name = payload.name,
-                                    description = payload.description,
-                                    author = payload.author,
-                                    version = payload.version,
-                                    minAppVersion = "",
-                                    maxAppVersion = null,
-                                    downloadCount = payload.downloadCount,
-                                    iconUrl = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
-                                    downloadUrl = "$API/dl/${payload.id}/${payload.version}"
+                    
+                    Column {
+                        Button(
+                            onClick = {
+                                storeViewModel.installPlugin(
+                                    plugin = StorePlugin(
+                                        id = payload.id,
+                                        name = payload.name,
+                                        description = payload.description,
+                                        author = payload.author,
+                                        version = payload.version,
+                                        minAppVersion = "",
+                                        maxAppVersion = null,
+                                        downloadCount = payload.downloadCount,
+                                        iconUrl = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
+                                        downloadUrl = "$API/dl/${payload.id}/${payload.version}"
+                                    )
+                                ) {
+                                    pluginViewModel.refresh()
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 40.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = !installing
+                        ) {
+                            if (isThisInstalling) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
-                            ) {
-                                pluginViewModel.refresh()
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = installState?.message ?: "Installing...",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            } else {
+                                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(if (installing) "Another task running" else "Install", style = MaterialTheme.typography.labelLarge)
                             }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 40.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        enabled = !installing
-                    ) {
-                        if (installing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = storeUiState.installState?.message ?: "Installing...",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        } else {
-                            Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Install", style = MaterialTheme.typography.labelLarge)
+                        }
+                        
+                        AnimatedVisibility(
+                            visible = isThisInstalling && installState != null,
+                            enter = fadeIn() + expandVertically(),
+                            exit = fadeOut() + shrinkVertically()
+                        ) {
+                            if (installState != null) {
+                                InstallationLogCard(
+                                    title = "Installation Logs",
+                                    logs = installState.logs
+                                )
+                            }
                         }
                     }
                 }
@@ -355,12 +397,13 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                 val availableTabs = buildList {
                     if (readme != null) add("Readme")
                     if (changelog != null) add("Changelog")
+                    if (pluginLogs.isNotEmpty()) add("Logs")
                 }
 
                 if (availableTabs.isNotEmpty()) {
                     item {
                         PrimaryTabRow(
-                            selectedTabIndex = selectedTab,
+                            selectedTabIndex = selectedTab.coerceIn(0, availableTabs.size - 1),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp)),
@@ -377,51 +420,68 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                         }
                     }
 
-                    item {
-                        val currentTabTitle = availableTabs.getOrNull(selectedTab)
-                        val tabContent = if (currentTabTitle == "Readme") readme else changelog
-                        val isDarkMode = LocalIsDarkMode.current
-                        val highlightBuilder = remember(isDarkMode) {
-                            Highlights.Builder().theme(SyntaxThemes.atom(darkMode = isDarkMode))
-                        }
+                    val currentTabTitle = availableTabs.getOrNull(selectedTab)
 
-                        val state by produceState<State>(State.Loading(), tabContent) {
-                            withContext(Dispatchers.Default) {
-                                value = parseMarkdown(tabContent ?: "No content available")
+                    if (currentTabTitle == "Logs") {
+                        items(pluginLogs.reversed(), key = { "${it.timestamp}_${it.hashCode()}" }) { entry ->
+                            LogEntryItem(entry = entry, timeFormat = logTimeFormat)
+                        }
+                    } else if (currentTabTitle != null) {
+                        item {
+                            val tabContent = if (currentTabTitle == "Readme") readme else changelog
+                            val isDarkMode = LocalIsDarkMode.current
+                            val highlightBuilder = remember(isDarkMode) {
+                                Highlights.Builder().theme(SyntaxThemes.atom(darkMode = isDarkMode))
                             }
-                        }
 
-                        Markdown(
-                            state = state,
-                            extendedSpans = markdownExtendedSpans {
-                                val animator = rememberSquigglyUnderlineAnimator()
-                                remember {
-                                    ExtendedSpans(
-                                        RoundedCornerSpanPainter(),
-                                        SquigglyUnderlineSpanPainter(animator = animator)
-                                    )
+                            val state by produceState<State>(State.Loading(), tabContent) {
+                                withContext(Dispatchers.Default) {
+                                    value = parseMarkdown(tabContent ?: "No content available")
                                 }
-                            },
-                            imageTransformer = Coil3ImageTransformerImpl,
-                            components = markdownComponents(
-                                codeBlock = {
-                                    MarkdownHighlightedCodeBlock(
-                                        content = it.content,
-                                        node = it.node,
-                                        highlightsBuilder = highlightBuilder,
-                                        showHeader = true
-                                    )
+                            }
+
+                            Markdown(
+                                state = state,
+                                extendedSpans = markdownExtendedSpans {
+                                    val animator = rememberSquigglyUnderlineAnimator()
+                                    remember {
+                                        ExtendedSpans(
+                                            RoundedCornerSpanPainter(),
+                                            SquigglyUnderlineSpanPainter(animator = animator)
+                                        )
+                                    }
                                 },
-                                codeFence = {
-                                    MarkdownHighlightedCodeFence(
-                                        content = it.content,
-                                        node = it.node,
-                                        highlightsBuilder = highlightBuilder,
-                                        showHeader = true
-                                    )
-                                }
+                                imageTransformer = Coil3ImageTransformerImpl,
+                                components = markdownComponents(
+                                    codeBlock = {
+                                        MarkdownHighlightedCodeBlock(
+                                            content = it.content,
+                                            node = it.node,
+                                            highlightsBuilder = highlightBuilder,
+                                            showHeader = true
+                                        )
+                                    },
+                                    codeFence = {
+                                        MarkdownHighlightedCodeFence(
+                                            content = it.content,
+                                            node = it.node,
+                                            highlightsBuilder = highlightBuilder,
+                                            showHeader = true
+                                        )
+                                    }
+                                )
                             )
-                        )
+                        }
+                    }
+                } else if (isPluginActuallyInstalled) {
+                    item {
+                         Text(
+                             text = "No additional info available for this plugin.",
+                             modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+                             textAlign = TextAlign.Center,
+                             style = MaterialTheme.typography.bodyMedium,
+                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                         )
                     }
                 }
             }

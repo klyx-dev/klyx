@@ -2,6 +2,11 @@ package com.klyx.presentation.screen.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +77,7 @@ import com.klyx.api.ui.showFailureToast
 import com.klyx.event.UiEvent
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.ExpressiveMenuItem
+import com.klyx.presentation.components.InstallationLogCard
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginDetailPayload
 import com.klyx.presentation.navigation.SettingsScreen
@@ -205,6 +211,15 @@ fun PluginsScreen() {
 
             val all = installed + store
 
+            if (pluginUiState.loadingState != null) {
+                 item(key = "loading-bundle") {
+                     InstallationLogCard(
+                         title = "Installing Local Bundle",
+                         logs = pluginUiState.loadingState?.logs ?: emptyList()
+                     )
+                 }
+            }
+
             if (all.isEmpty() && !storeUiState.storeLoading) {
                 item(key = "empty") {
                     Spacer(modifier = Modifier.height(64.dp))
@@ -257,16 +272,15 @@ fun PluginsScreen() {
                         }
 
                         is CombinedItem.Store -> {
-                            var installing by remember { mutableStateOf(false) }
+                            val installState = storeUiState.installState
+                            val isInstalling = installState?.plugin?.id == item.plugin.id
 
                             StorePluginCard(
                                 plugin = item.plugin,
-                                installing = installing,
+                                installing = isInstalling,
                                 onInstall = {
-                                    installing = true
                                     storeViewModel.installPlugin(item.plugin) {
                                         viewModel.refresh()
-                                        installing = false
                                     }
                                 },
                                 onDetail = {
@@ -283,6 +297,19 @@ fun PluginsScreen() {
                                     navigator.navigateTo(SettingsScreen.PluginDetail(payload))
                                 }
                             )
+
+                            AnimatedVisibility(
+                                visible = isInstalling && installState != null,
+                                enter = fadeIn() + expandVertically(),
+                                exit = fadeOut() + shrinkVertically()
+                            ) {
+                                if (installState != null) {
+                                    InstallationLogCard(
+                                        title = "Installing ${item.plugin.name}",
+                                        logs = installState.logs
+                                    )
+                                }
+                            }
                         }
                     }
                 }

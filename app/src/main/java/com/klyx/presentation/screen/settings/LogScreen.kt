@@ -1,7 +1,6 @@
 package com.klyx.presentation.screen.settings
 
 import android.content.Intent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +27,6 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
@@ -51,28 +49,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.blankj.utilcode.util.ClipboardUtils
-import com.klyx.api.data.log.LogEntry
 import com.klyx.api.data.log.LogLevel
 import com.klyx.api.ui.LocalToastHostState
+import com.klyx.presentation.components.LogEntryItem
+import com.klyx.presentation.components.toColor
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.viewmodel.LogViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -308,105 +301,4 @@ private fun FilterBar(
             }
         }
     }
-}
-
-@Composable
-private fun LogEntryItem(
-    entry: LogEntry,
-    timeFormat: SimpleDateFormat
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(if (entry.throwable != null) 60.dp else 36.dp)
-                    .background(entry.level.toColor(colorScheme), RoundedCornerShape(2.dp))
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    LevelBadge(level = entry.level)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = entry.tag,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = timeFormat.format(Date(entry.timestamp)),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = entry.message,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 10,
-                    overflow = TextOverflow.Ellipsis
-                )
-                val throwable = entry.throwable
-                if (throwable != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = throwable.stackTraceToString(),
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 11.sp
-                        ),
-                        color = MaterialTheme.colorScheme.error,
-                        maxLines = 5,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun LevelBadge(level: LogLevel) {
-    val colorScheme = MaterialTheme.colorScheme
-    val textColor = level.toColor(colorScheme)
-    val bgColor = textColor.copy(alpha = 0.15f)
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = bgColor
-    ) {
-        Text(
-            text = level.name,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = textColor,
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-        )
-    }
-}
-
-private fun LogLevel.toColor(colorScheme: ColorScheme): Color = when (this) {
-    LogLevel.TRACE -> colorScheme.outline
-    LogLevel.DEBUG -> colorScheme.primary
-    LogLevel.INFO -> colorScheme.secondary
-    LogLevel.WARN -> colorScheme.tertiary
-    LogLevel.ERROR -> colorScheme.error
 }
