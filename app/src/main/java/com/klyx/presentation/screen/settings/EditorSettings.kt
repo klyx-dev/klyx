@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.FilterCenterFocus
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.FontDownload
 import androidx.compose.material.icons.rounded.FormatBold
+import androidx.compose.material.icons.rounded.FormatLineSpacing
 import androidx.compose.material.icons.rounded.FormatListNumbered
 import androidx.compose.material.icons.rounded.Mouse
 import androidx.compose.material.icons.rounded.PushPin
@@ -235,6 +236,14 @@ fun EditorSettings() {
                         currentValue = settings.tabSize,
                         onValueChange = { update { copy(tabSize = it) } },
                         valueText = { "$it Spaces" }
+                    )
+
+                    SwitchSettingItem(
+                        title = "Word Wrap",
+                        subtitle = "Wrap long lines to the next visual row",
+                        checked = settings.wordWrap,
+                        onCheckedChange = { update { copy(wordWrap = it) } },
+                        leadingIcon = { Icon(Icons.Rounded.FormatLineSpacing, null) }
                     )
                 }
             }

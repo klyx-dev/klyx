@@ -132,12 +132,14 @@ data class AppearanceSettings(
  * @property stickyScrollMaxLines Maximum number of lines pinned in sticky scroll.
  * @property stickyScrollPreferInnerScope Show nested inner scopes when max lines exceeded.
  * @property stickyScrollAutoCollapse Hide sticky lines when selecting text behind them.
+ * @property wordWrap Whether to wrap long lines to the next visual row.
  * @property selectCompletionItemOnEnterForSoftKbd Accept autocomplete on enter for soft keyboards.
  */
 @Serializable
 data class EditorSettings(
     val fontSize: Float = 14f,
     val pinLineNumbers: Boolean = false,
+    val wordWrap: Boolean = false,
     val tabSize: Int = 4,
     val customFontUri: String? = null,
     val deleteEmptyLineFast: Boolean = true,

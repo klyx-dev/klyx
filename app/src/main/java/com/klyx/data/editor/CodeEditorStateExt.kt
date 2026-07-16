@@ -6,6 +6,7 @@ import io.github.rosemoe.sora.compose.CodeEditorState
 fun CodeEditorState.applyEditorSettings(settings: EditorSettings) {
     tabWidth = settings.tabSize
     isLineNumberPinned = settings.pinLineNumbers
+    isWordwrap = settings.wordWrap
 
     props.apply {
         deleteEmptyLineFast = settings.deleteEmptyLineFast
