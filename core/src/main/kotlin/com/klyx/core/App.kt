@@ -87,7 +87,6 @@ class App internal constructor(
      *
      * If not found in the internal registry, it falls back to the application's Koin modules.
      */
-    @Suppress("UNCHECKED_CAST")
     fun <G : Global> globalOrNull(clazz: KClass<G>): G? {
         val directInstance = koin.getOrNull<G>(clazz)
         if (directInstance != null) return directInstance
@@ -97,8 +96,9 @@ class App internal constructor(
             .filter { it != Any::class }
 
         for (superClazz in parentClasses) {
-            val instance = koin.getOrNull<Any>(superClazz as KClass<Any>)
-            if (instance != null) {
+            val instance = koin.getOrNull<Any>(superClazz)
+            if (instance != null && clazz.isInstance(instance)) {
+                @Suppress("UNCHECKED_CAST")
                 return instance as G
             }
         }

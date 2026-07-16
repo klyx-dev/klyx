@@ -17,6 +17,7 @@ import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.data.terminal.TerminalSessionBinder
 import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.api.event.EventBusHolder
+import com.klyx.api.lsp.LanguageServerRegistry
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.plugin.info
@@ -88,6 +89,7 @@ class KlyxApplication : Application() {
         app.setGlobal(FontsWrapper(auto()))
         app.setGlobal(TabsWrapper { auto() })
         app.setGlobal(PluginManager(app))
+        app.setGlobal(auto<LanguageServerRegistry>())
         app.setGlobal(auto<Logger>())
     }
 
