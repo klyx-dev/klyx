@@ -207,6 +207,13 @@ class CommandBuilder internal constructor(
             is ResolvedProgram.PRoot -> {
                 val rootFsPath = Paths.rootFs.absolutePath
                 val homePath = Paths.home.absolutePath
+                val guestCmd = buildString {
+                    append(resolved.guestPath)
+                    for (arg in args) {
+                        append(' ')
+                        append(shellEscape(arg))
+                    }
+                }
                 val prootArgs = mutableListOf(
                     prootFile().absolutePath,
                     "-0",
@@ -221,14 +228,13 @@ class CommandBuilder internal constructor(
                     "-b", "/sys",
                     "-b", "/sdcard",
                     "-b", "/storage",
-                    "-b", Paths.dataDir.canonicalPath, // /data/data/com.klyx
-                    "-b", Paths.dataDir.absolutePath, // /data/user/0/com.klyx
+                    "-b", Paths.dataDir.canonicalPath,
+                    "-b", Paths.dataDir.absolutePath,
                     "-b", "${homePath}:/root",
                     "/bin/bash",
                     "-lc",
-                    "\"${resolved.guestPath}\"",
+                    guestCmd,
                 )
-                prootArgs.addAll(args)
                 ProcessBuilder(prootArgs)
             }
         }
@@ -502,6 +508,22 @@ class ChildProcess internal constructor(
 
     /** Gracefully terminates the child process. */
     fun terminate() = process.destroy()
+}
+
+/**
+ * Shell-escapes a single argument for inclusion in a `bash -c` command string.
+ * Wraps in single quotes and handles embedded single quotes via the `'\''` idiom.
+ */
+private fun shellEscape(arg: String): String = buildString {
+    append('\'')
+    for (ch in arg) {
+        if (ch == '\'') {
+            append("'\\''")
+        } else {
+            append(ch)
+        }
+    }
+    append('\'')
 }
 
 /**
