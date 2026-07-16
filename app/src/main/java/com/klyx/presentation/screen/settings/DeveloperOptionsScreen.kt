@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.FileDownload
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -46,15 +48,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.klyx.BuildConfig
+import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.platform.currentArchitecture
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.data.preferences.SettingsRepository
+import com.klyx.data.preferences.settingsJson
 import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.components.dialogs.TerminalWipeConfirmationDialog
 import com.klyx.presentation.navigation.LocalNavigator
@@ -62,7 +70,13 @@ import com.klyx.presentation.screen.settings.components.SettingsItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.terminal.InstallProgressListener
 import com.klyx.terminal.TerminalInstaller
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.json.encodeToStream
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -73,11 +87,61 @@ fun DeveloperOptionsScreen() {
     val scope = rememberCoroutineScope()
     val toastHostState = LocalToastHostState.current
     val terminalInstaller: TerminalInstaller = koinInject()
+    val settingsRepository: SettingsRepository = koinInject()
+    val context = LocalContext.current
 
     var showWipeDialog by remember { mutableStateOf(false) }
     var showAssetDialog by remember { mutableStateOf(false) }
     var isInstallingAsset by remember { mutableStateOf(false) }
     var assetInstallLabel by remember { mutableStateOf("") }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val settings = settingsRepository.settings.first()
+                withContext(Dispatchers.IO) {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        @OptIn(ExperimentalSerializationApi::class)
+                        settingsJson.encodeToStream(settings, output)
+                    }
+                }
+                toastHostState.showToast("Settings exported")
+            } catch (e: Exception) {
+                toastHostState.showToast("Export failed: ${e.message}")
+            }
+        }
+    }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            try {
+                val imported = withContext(Dispatchers.IO) {
+                    val stream = context.contentResolver.openInputStream(uri)
+                        ?: return@withContext null
+                    stream.use { input ->
+                        @OptIn(ExperimentalSerializationApi::class)
+                        settingsJson.decodeFromStream<AppSettings>(input)
+                    }
+                }
+                if (imported != null) {
+                    settingsRepository.updateSettings { imported }
+                    toastHostState.showToast("Settings imported and applied")
+                } else {
+                    toastHostState.showToast("Import failed: Could not read the selected file")
+                }
+            } catch (e: kotlinx.serialization.SerializationException) {
+                toastHostState.showToast("Import failed: The selected file does not contain valid settings")
+            } catch (e: Exception) {
+                toastHostState.showToast("Import failed: ${e.message}")
+            }
+        }
+    }
 
     if (showWipeDialog) {
         TerminalWipeConfirmationDialog(
@@ -190,6 +254,36 @@ fun DeveloperOptionsScreen() {
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.BugReport,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+                }
+            }
+
+            item {
+                SettingsSubsection("Backup & Restore") {
+                    SettingsItem(
+                        title = "Export Settings",
+                        subtitle = "Save all settings (appearance, editor, terminal, file tree) to a JSON file",
+                        onClick = { exportLauncher.launch("klyx-settings.json") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.FileUpload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    )
+
+                    SettingsItem(
+                        title = "Import Settings",
+                        subtitle = "Restore settings from a previously exported JSON file",
+                        onClick = { importLauncher.launch(arrayOf("application/json")) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Rounded.FileDownload,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )

@@ -24,6 +24,51 @@ import java.io.OutputStream
 
 typealias SettingsDataStore = DataStore<AppSettings>
 
+@OptIn(ExperimentalSerializationApi::class)
+val settingsJson = Json {
+    encodeDefaults = true
+    prettyPrint = true
+    prettyPrintIndent = "  "
+    ignoreUnknownKeys = true
+    namingStrategy = JsonNamingStrategy.SnakeCase
+    allowComments = true
+    explicitNulls = false
+    isLenient = true
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+private object SettingsSerializer : Serializer<AppSettings> {
+
+    private val json = settingsJson
+
+    override val defaultValue = AppSettings()
+
+    override suspend fun readFrom(input: InputStream): AppSettings {
+        return try {
+            json.decodeFromStream(input)
+        } catch (serialization: SerializationException) {
+            throw CorruptionException("Unable to read App Settings", serialization)
+        }
+    }
+
+    override suspend fun writeTo(t: AppSettings, output: OutputStream) {
+        json.encodeToStream(t, output)
+    }
+}
+
+val Context.dataStore by dataStore(
+    fileName = "settings.json",
+    serializer = SettingsSerializer,
+    corruptionHandler = ReplaceFileCorruptionHandler {
+        Log.e(
+            "Klyx",
+            "DataStore corruption detected in settings.json. Resetting to default values.",
+            it
+        )
+        AppSettings()
+    }
+)
+
 suspend inline fun updateSettings(
     noinline transform: suspend AppSettings.() -> AppSettings
 ) = applicationContext().dataStore.updateData(transform)
@@ -43,45 +88,3 @@ suspend inline fun updateAppearanceSettings(
 suspend inline fun updateFileTreeSettings(
     noinline transform: suspend FileTreeSettings.() -> FileTreeSettings
 ) = updateSettings { copy(fileTree = transform(fileTree)) }.fileTree
-
-val Context.dataStore by dataStore(
-    fileName = "settings.json",
-    serializer = SettingsSerializer,
-    corruptionHandler = ReplaceFileCorruptionHandler {
-        Log.e(
-            "Klyx",
-            "DataStore corruption detected in settings.json. Resetting to default values.",
-            it
-        )
-        AppSettings()
-    }
-)
-
-@OptIn(ExperimentalSerializationApi::class)
-private object SettingsSerializer : Serializer<AppSettings> {
-
-    private val json = Json {
-        encodeDefaults = true
-        prettyPrint = true
-        prettyPrintIndent = "  "
-        ignoreUnknownKeys = true
-        namingStrategy = JsonNamingStrategy.SnakeCase
-        allowComments = true
-        explicitNulls = false
-        isLenient = true
-    }
-
-    override val defaultValue = AppSettings()
-
-    override suspend fun readFrom(input: InputStream): AppSettings {
-        return try {
-            json.decodeFromStream(input)
-        } catch (serialization: SerializationException) {
-            throw CorruptionException("Unable to read App Settings", serialization)
-        }
-    }
-
-    override suspend fun writeTo(t: AppSettings, output: OutputStream) {
-        json.encodeToStream(t, output)
-    }
-}
