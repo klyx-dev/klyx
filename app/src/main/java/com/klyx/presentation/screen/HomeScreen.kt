@@ -119,7 +119,6 @@ import com.klyx.R
 import com.klyx.api.data.editor.EditorAction
 import com.klyx.api.data.editor.Save
 import com.klyx.api.data.editor.SaveAs
-import com.klyx.lsp.LspManager
 import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
@@ -144,6 +143,7 @@ import com.klyx.data.file.shareableUri
 import com.klyx.data.preferences.FontManager
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
+import com.klyx.lsp.LspManager
 import com.klyx.presentation.components.AnimatedTab
 import com.klyx.presentation.components.CloseProject
 import com.klyx.presentation.components.Copy
@@ -1379,7 +1379,8 @@ private fun TextFileEditor(
                     state = state,
                     fontFamily = currentFont,
                     fontSize = settings.fontSize.sp,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    wordWrap = settings.wordWrap
                 )
 
                 this@Column.AnimatedVisibility(
