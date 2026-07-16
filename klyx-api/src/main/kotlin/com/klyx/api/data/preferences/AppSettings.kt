@@ -92,13 +92,15 @@ enum class AppTheme(val displayName: String) {
  * @property amoledDarkMode Whether to use pure black backgrounds in dark mode for OLED screens.
  * @property immersiveMode Whether to hide system bars to maximize application space.
  * @property reduceMotion Whether to disable UI animations for faster transitions.
+ * @property showTerminalInTopbar Whether to show the terminal button in the topbar.
  */
 @Serializable
 data class AppearanceSettings(
     val theme: AppTheme = AppTheme.System,
     val amoledDarkMode: Boolean = false,
     val immersiveMode: Boolean = false,
-    val reduceMotion: Boolean = false
+    val reduceMotion: Boolean = false,
+    val showTerminalInTopbar: Boolean = true
 )
 
 /**

@@ -712,6 +712,8 @@ private fun HomeTopBar(
                     modifier = Modifier.padding(end = 14.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val appearanceSettings = LocalAppSettings.current.appearance
+
                     if (activeTab is WorkspaceTab.TextFile) {
                         FilledIconButton(
                             shapes = IconButtonDefaults.shapes(),
@@ -724,6 +726,23 @@ private fun HomeTopBar(
                             Icon(
                                 Icons.Outlined.Save,
                                 contentDescription = "Save File"
+                            )
+                        }
+                    }
+
+                    if (appearanceSettings.showTerminalInTopbar) {
+                        val navigator = LocalNavigator.current
+                        FilledIconButton(
+                            shapes = IconButtonDefaults.shapes(),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            onClick = { navigator.navigateTo(Screen.Terminal) }
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.terminal_2_24px),
+                                contentDescription = "Terminal"
                             )
                         }
                     }

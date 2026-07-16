@@ -24,7 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import com.klyx.R
 import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.data.preferences.updateAppearanceSettings
@@ -139,6 +141,18 @@ fun AppearanceSettings() {
                             }
                         },
                         leadingIcon = { Icon(Icons.Rounded.Fullscreen, null) }
+                    )
+
+                    SwitchSettingItem(
+                        title = "Terminal in Topbar",
+                        subtitle = "Show the terminal button beside the save button in the topbar. When off, Terminal is only available in the overflow menu.",
+                        checked = settings.showTerminalInTopbar,
+                        onCheckedChange = { isChecked ->
+                            scope.launch {
+                                updateAppearanceSettings { copy(showTerminalInTopbar = isChecked) }
+                            }
+                        },
+                        leadingIcon = { Icon(painterResource(R.drawable.terminal_2_24px), null) }
                     )
 
                     SwitchSettingItem(
