@@ -1,6 +1,7 @@
 package com.klyx.plugin
 
 import android.net.Uri
+import android.os.Build
 import android.system.ErrnoException
 import android.system.Os
 import android.util.Log
@@ -29,6 +30,7 @@ import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
 import java.util.IdentityHashMap
+import java.util.zip.ZipFile
 import kotlin.reflect.KClass
 
 @OptIn(InternalKlyxApi::class)
@@ -175,8 +177,11 @@ class PluginManager(
             throw PluginLoadException("APK file not found: $apkPath")
         }
 
+        val nativeLibDir = extractNativeLibs(apkFile)
+
         val loader = PathClassLoader(
             apkPath,
+            nativeLibDir?.absolutePath,
             app.application.classLoader
         )
 
@@ -184,6 +189,36 @@ class PluginManager(
         val instance = cls.getConstructor().newInstance()
         return instance as? KlyxPlugin
             ?: throw PluginLoadException("Class ${desc.entryClass} does not implement KlyxPlugin")
+    }
+
+    private fun extractNativeLibs(apkFile: File): File? {
+        val pluginDir = apkFile.parentFile ?: return null
+        val nativeDir = File(pluginDir, "lib").apply { mkdirs() }
+        ZipFile(apkFile).use { zip ->
+            val abi = Build.SUPPORTED_ABIS.firstOrNull { abi ->
+                zip.getEntry("lib/$abi/") != null || zip.entries().asSequence().any { it.name.startsWith("lib/$abi/") }
+            } ?: return null
+
+            val prefix = "lib/$abi/"
+            var extractedAny = false
+
+            zip.entries().asSequence()
+                .filter { !it.isDirectory && it.name.startsWith(prefix) && it.name.endsWith(".so") }
+                .forEach { entry ->
+                    val outFile = File(nativeDir, entry.name.substringAfterLast("/"))
+                    if (!outFile.exists() || outFile.length() != entry.size) {
+                        zip.getInputStream(entry).use { input ->
+                            outFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        outFile.setReadOnly()
+                    }
+                    extractedAny = true
+                }
+
+            return if (extractedAny) nativeDir else null
+        }
     }
 
     private operator fun File.get(relative: String): File? = resolve(relative).takeIf { it.exists() }
