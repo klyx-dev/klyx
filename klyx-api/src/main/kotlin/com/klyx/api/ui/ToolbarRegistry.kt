@@ -1,9 +1,13 @@
 package com.klyx.api.ui
 
+import androidx.compose.runtime.CompositionLocal
+import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginService
+import com.klyx.api.plugin.pluginService
+import com.klyx.core.LocalApp
 
 /**
  * Represents an icon that can be displayed in the toolbar.
@@ -136,4 +140,13 @@ interface ToolbarRegistry : PluginService {
      * Returns all registered actions.
      */
     fun actions(): List<ToolbarAction>
+}
+
+/**
+ * A [CompositionLocal] that provides the [ToolbarRegistry].
+ *
+ * Defaults to retrieving the [ToolbarRegistry] from the current [LocalApp]'s plugin service.
+ */
+val LocalToolbarRegistry = compositionLocalWithComputedDefaultOf {
+    LocalApp.currentValue.pluginService(ToolbarRegistry::class)
 }

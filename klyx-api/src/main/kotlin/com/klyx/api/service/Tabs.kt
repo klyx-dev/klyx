@@ -1,7 +1,10 @@
 package com.klyx.api.service
 
+import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.plugin.PluginService
+import com.klyx.api.plugin.pluginService
+import com.klyx.core.LocalApp
 
 /**
  * Service for managing workspace tabs in the editor.
@@ -39,4 +42,11 @@ interface Tabs : PluginService {
      * Retrieves the [WorkspaceTab] with the specified [id], or null if not found.
      */
     operator fun get(id: String): WorkspaceTab?
+}
+
+/**
+ * [CompositionLocal][androidx.compose.runtime.CompositionLocal] providing access to the [Tabs] service.
+ */
+val LocalTabs = compositionLocalWithComputedDefaultOf {
+    LocalApp.currentValue.pluginService(Tabs::class)
 }

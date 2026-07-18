@@ -1,6 +1,9 @@
 package com.klyx.api
 
+import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import com.klyx.api.plugin.PluginService
+import com.klyx.api.plugin.pluginService
+import com.klyx.core.LocalApp
 
 /**
  * Handles navigation within the Klyx application.
@@ -28,4 +31,13 @@ interface Navigator : PluginService {
      * Navigates back to the previous screen in the stack.
      */
     fun navigateBack()
+}
+
+/**
+ * CompositionLocal that provides the current [Navigator] instance.
+ *
+ * By default, it retrieves the [Navigator] from the current [LocalApp].
+ */
+val LocalNavigator = compositionLocalWithComputedDefaultOf {
+    LocalApp.currentValue.pluginService(Navigator::class)
 }

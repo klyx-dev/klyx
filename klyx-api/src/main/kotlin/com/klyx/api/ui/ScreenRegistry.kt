@@ -1,9 +1,13 @@
 package com.klyx.api.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocal
+import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import com.klyx.api.Navigator
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginService
+import com.klyx.api.plugin.pluginService
+import com.klyx.core.LocalApp
 import kotlinx.serialization.Serializable
 
 /**
@@ -93,4 +97,13 @@ interface ScreenRegistry : PluginService {
      * Retrieves the UI content for a given [id], or null if not registered.
      */
     operator fun get(id: ScreenId): Content?
+}
+
+/**
+ * A [CompositionLocal] that provides the [ScreenRegistry].
+ *
+ * Defaults to retrieving the [ScreenRegistry] from the current [LocalApp]'s plugin service.
+ */
+val LocalScreenRegistry = compositionLocalWithComputedDefaultOf {
+    LocalApp.currentValue.pluginService(ScreenRegistry::class)
 }

@@ -1,10 +1,14 @@
 package com.klyx.api.service
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.klyx.api.data.log.LogEntry
 import com.klyx.api.data.log.LogLevel
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginService
 import com.klyx.api.plugin.info
+import com.klyx.api.plugin.pluginService
+import com.klyx.core.LocalApp
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -216,3 +220,14 @@ fun Logger.warn(tag: String, message: String) = log(LogLevel.WARN, tag, message)
  */
 fun Logger.error(tag: String, message: String, throwable: Throwable? = null) =
     log(LogLevel.ERROR, tag, message, throwable)
+
+/**
+ * Remembers and returns the [Logger] service from the current [LocalApp].
+ *
+ * @return The [Logger] service.
+ */
+@Composable
+fun rememberLogger(): Logger {
+    val app = LocalApp.current
+    return remember(app) { app.pluginService(Logger::class) }
+}
