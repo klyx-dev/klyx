@@ -4,7 +4,7 @@
 package com.klyx.api.plugin
 
 import androidx.lifecycle.LifecycleOwner
-import com.klyx.api.DiscouragedInSuspend
+import com.klyx.api.service.LogContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlin.coroutines.CoroutineContext
@@ -15,7 +15,7 @@ import kotlin.coroutines.CoroutineContext
  * Plugins are the core components of the Klyx system, allowing for modular functionality.
  */
 @JvmDefaultWithoutCompatibility
-interface KlyxPlugin {
+interface KlyxPlugin : LogContext {
 
     /**
      * Called when the plugin is loaded into the system.
