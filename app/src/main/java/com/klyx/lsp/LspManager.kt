@@ -11,7 +11,6 @@ import com.klyx.api.lsp.LanguageServerRegistry
 import com.klyx.api.lsp.languageId
 import com.klyx.core.koin
 import com.klyx.data.preferences.SettingsRepository
-import com.klyx.lsp.python.PythonLspProvider
 import com.klyx.lsp.server.LanguageServer
 import com.klyx.lsp.server.ResponseErrorException
 import com.klyx.lsp.types.OneOf
@@ -81,10 +80,6 @@ class LspManager(private val settingsRepository: SettingsRepository) {
     private companion object {
         const val SERVER_CALL_TIMEOUT_MS = 3_000L
         const val INLAY_HINT_TIMEOUT_MS = 1_500L
-    }
-
-    init {
-        registry.registerInternal("py", PythonLspProvider())
     }
 
     suspend fun onEditorCreated(
