@@ -92,6 +92,38 @@ data class LanguageQueries(
             )
         }
 
+        fun fromSource(
+            language: Language,
+            languageName: String,
+            highlights: String,
+            indents: String? = null,
+            folds: String? = null,
+            locals: String? = null,
+            injections: String? = null,
+            tags: String? = null,
+            localsCaptureSpec: LocalsCaptureSpec = LocalsCaptureSpec.DEFAULT,
+        ): LanguageQueries {
+            fun parseQuery(queryName: String, source: String?): Query? {
+                return try {
+                    source?.let { Query(language, it) }
+                } catch (e: QueryError) {
+                    Log.w("Klyx", "Failed to parse $queryName query for language '$languageName'", e)
+                    null
+                }
+            }
+
+            return LanguageQueries(
+                languageName = languageName,
+                highlights = Query(language, highlights),
+                indents = parseQuery("indents", indents),
+                folds = parseQuery("folds", folds),
+                locals = parseQuery("locals", locals),
+                injections = parseQuery("injections", injections),
+                tags = parseQuery("tags", tags),
+                localsCaptureSpec = localsCaptureSpec,
+            )
+        }
+
         private fun loadQuery(context: Context, languageName: String, queryName: String): String? {
             val visited = mutableSetOf<String>()
             val compiledSource = resolveQueryRecursively(context, languageName, queryName, visited)

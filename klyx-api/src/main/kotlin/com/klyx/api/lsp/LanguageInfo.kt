@@ -1,6 +1,7 @@
 package com.klyx.api.lsp
 
 import com.klyx.api.data.file.KxFile
+import com.klyx.api.language.LanguageRegistry
 
 data class LanguageInfo(val id: String, val displayName: String)
 
@@ -248,9 +249,30 @@ fun languageInfoForFile(file: KxFile): LanguageInfo {
     return extensionLanguageMap[ext] ?: LanguageInfo("plaintext", "Plaintext")
 }
 
+fun languageInfoForFile(file: KxFile, registry: LanguageRegistry): LanguageInfo {
+    val lowerName = file.name.lowercase()
+    fileNameLanguageMap[lowerName]?.let { return it }
+    registry.getFileNames()[lowerName]?.let { name ->
+        registry.getDescriptor(name)?.let { desc ->
+            return LanguageInfo(desc.languageId, desc.displayName)
+        }
+    }
+
+    val ext = file.extension.lowercase()
+    extensionLanguageMap[ext]?.let { return it }
+    registry.getExtensions()[ext]?.let { name ->
+        registry.getDescriptor(name)?.let { desc ->
+            return LanguageInfo(desc.languageId, desc.displayName)
+        }
+    }
+    return LanguageInfo("plaintext", "Plaintext")
+}
+
 fun languageIdForFile(file: KxFile): String = languageInfoForFile(file).id
+fun languageIdForFile(file: KxFile, registry: LanguageRegistry): String = languageInfoForFile(file, registry).id
 
 fun languageNameForFile(file: KxFile): String = languageInfoForFile(file).displayName
+fun languageNameForFile(file: KxFile, registry: LanguageRegistry): String = languageInfoForFile(file, registry).displayName
 
 val KxFile.languageId: String get() = languageInfoForFile(this).id
 val KxFile.languageName: String get() = languageInfoForFile(this).displayName

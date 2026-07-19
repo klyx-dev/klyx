@@ -192,6 +192,7 @@ dependencies {
     implementation(libs.utilcodex)
 
     implementation(libs.bundles.sora.editor)
+    implementation(libs.ktreesitter)
     implementation(libs.bundles.ktor)
 
     implementation(libs.bundles.arrow)

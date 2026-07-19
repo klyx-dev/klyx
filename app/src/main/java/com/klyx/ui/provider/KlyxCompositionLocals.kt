@@ -21,8 +21,10 @@ import com.klyx.data.editor.rememberEditorColorScheme
 import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.api.language.LanguageRegistry
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.event.eventBus
+import com.klyx.language.LanguageRegistryImpl
 import com.klyx.ui.ImmersiveModeHandler
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.api.ui.theme.LocalIsDarkMode
@@ -72,6 +74,8 @@ fun KlyxCompositionLocals(content: @Composable BoxScope.() -> Unit) {
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
+    val languageRegistry = app.globalOrNull<LanguageRegistry>() as? LanguageRegistryImpl
+
     DisposableEffect(lifecycleOwner, treeSitter) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_DESTROY) {
@@ -80,7 +84,9 @@ fun KlyxCompositionLocals(content: @Composable BoxScope.() -> Unit) {
         }
 
         lifecycleOwner.lifecycle.addObserver(observer)
+        languageRegistry?.bind(treeSitter)
         onDispose {
+            languageRegistry?.unbind()
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }

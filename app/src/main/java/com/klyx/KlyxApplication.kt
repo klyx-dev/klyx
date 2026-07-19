@@ -17,6 +17,7 @@ import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.data.terminal.TerminalSessionBinder
 import com.klyx.api.data.terminal.TerminalSessionManager
 import com.klyx.api.event.EventBusHolder
+import com.klyx.api.language.LanguageRegistry
 import com.klyx.api.lsp.LanguageServerRegistry
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginInfo
@@ -31,6 +32,7 @@ import com.klyx.api.ui.ToolbarAction
 import com.klyx.api.ui.ToolbarIcon
 import com.klyx.api.ui.ToolbarRegistration
 import com.klyx.api.ui.ToolbarRegistry
+import com.klyx.language.LanguageRegistryImpl
 import com.klyx.core.App
 import com.klyx.core.initApp
 import com.klyx.data.terminal.DefaultTerminalSessionManager
@@ -90,6 +92,7 @@ class KlyxApplication : Application() {
         app.setGlobal(TabsWrapper { auto() })
         app.setGlobal(PluginManager(app))
         app.setGlobal(auto<LanguageServerRegistry>())
+        app.setGlobal(LanguageRegistryImpl(this))
         app.setGlobal(auto<Logger>())
     }
 

@@ -9,7 +9,8 @@ fun createEditorLanguage(
     context: Context,
     languageName: String,
     language: Any,
-    languageProvider: LanguageProvider
+    languageProvider: LanguageProvider,
+    themeOverrides: TsThemeBuilder.() -> Unit = {},
 ): EditorLanguage {
     val tsLanguage = Language(language)
 
@@ -19,11 +20,49 @@ fun createEditorLanguage(
             LanguageQueries(context, language, languageName)
         },
         languageProvider = languageProvider,
-        themeDescription = editorTheme()
+        themeDescription = {
+            editorTheme()
+            themeOverrides()
+        }
     )
 }
 
-private fun editorTheme(): TsThemeBuilder.() -> Unit = {
+fun createEditorLanguage(
+    languageName: String,
+    languagePointer: Long,
+    querySource: String,
+    indentsSource: String? = null,
+    foldsSource: String? = null,
+    localsSource: String? = null,
+    injectionsSource: String? = null,
+    tagsSource: String? = null,
+    languageProvider: LanguageProvider,
+    themeOverrides: TsThemeBuilder.() -> Unit = {},
+): EditorLanguage {
+    val tsLanguage = Language(languagePointer)
+    val queries = LanguageQueries.fromSource(
+        language = tsLanguage,
+        languageName = languageName,
+        highlights = querySource,
+        indents = indentsSource,
+        folds = foldsSource,
+        locals = localsSource,
+        injections = injectionsSource,
+        tags = tagsSource,
+    )
+
+    return EditorLanguage(
+        tsLanguage = tsLanguage,
+        queries = { queries },
+        languageProvider = languageProvider,
+        themeDescription = {
+            editorTheme()
+            themeOverrides()
+        }
+    )
+}
+
+fun TsThemeBuilder.editorTheme() {
     // Keywords & Modifiers
     textStyle(
         EditorColorScheme.KEYWORD,

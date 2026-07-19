@@ -153,25 +153,68 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             |
             |import android.content.Context
             |import com.klyx.editor.treesitter.createEditorLanguage
+            |import com.klyx.editor.treesitter.DynamicLanguageProvider
+            |import com.klyx.editor.treesitter.EditorLanguage
+            |import com.klyx.editor.treesitter.LanguageQueries
             |import io.github.rosemoe.sora.lang.Language
             |import io.github.rosemoe.sora.lang.EmptyLanguage
+            |import java.util.concurrent.ConcurrentHashMap
             |
             |$tsImports
             |/** AUTO-GENERATED CLASS: Do not edit manually! */
             |class TreeSitter(private val context: Context) : AutoCloseable {
-            |    val languageProvider = TSLanguageRegistry(context)
+            |    val languageProvider = DynamicLanguageProvider(TSLanguageRegistry(context))
+            |    private val dynamicExtensions = ConcurrentHashMap<String, String>()
+            |    private val dynamicFileNames = ConcurrentHashMap<String, String>()
+            |    private val dynamicLanguages = ConcurrentHashMap<String, EditorLanguage>()
             |    
             |$tsFunctions
             |    private fun createEditorLanguage(name: String, language: Any): Language =
             |        createEditorLanguage(context, name, language, languageProvider)
             |
             |    fun getLanguageForExtension(extension: String): Language {
-            |        return when(extension.lowercase()) {
-            |$tsWhenBranches            else -> EmptyLanguage()
+            |        val ext = extension.lowercase()
+            |        val builtIn = when(ext) {
+            |$tsWhenBranches            else -> null
             |        }
+            |        if (builtIn != null) return builtIn
+            |        val dynamicName = dynamicExtensions[ext]
+            |            ?: return dynamicFileNames[ext]?.let { dynamicLanguages[it] } ?: EmptyLanguage()
+            |        return dynamicLanguages[dynamicName] ?: EmptyLanguage()
+            |    }
+            |
+            |    fun getLanguageForFileName(fileName: String): Language {
+            |        val name = fileName.lowercase()
+            |        return dynamicFileNames[name]?.let { langName ->
+            |            dynamicLanguages[langName]
+            |        } ?: getLanguageForExtension(name.substringAfterLast('.', ""))
+            |    }
+            |
+            |    fun registerDynamicLanguage(
+            |        name: String,
+            |        extensions: List<String>,
+            |        fileNames: List<String>,
+            |        editorLanguage: EditorLanguage,
+            |        queries: LanguageQueries,
+            |    ) {
+            |        val normalized = name.lowercase()
+            |        dynamicLanguages[normalized] = editorLanguage
+            |        languageProvider.registerLanguage(normalized, editorLanguage.tsLanguage, queries)
+            |        extensions.forEach { ext -> dynamicExtensions[ext.lowercase()] = normalized }
+            |        fileNames.forEach { fn -> dynamicFileNames[fn.lowercase()] = normalized }
+            |    }
+            |
+            |    fun unregisterDynamicLanguage(name: String) {
+            |        val normalized = name.lowercase()
+            |        dynamicLanguages.remove(normalized)
+            |        languageProvider.unregisterLanguage(normalized)
+            |        dynamicExtensions.values.removeAll { it == normalized }
+            |        dynamicFileNames.values.removeAll { it == normalized }
             |    }
             |
             |    override fun close() {
+            |        dynamicLanguages.values.forEach { it.destroy() }
+            |        dynamicLanguages.clear()
             |        languageProvider.clear()
             |    }
             |}

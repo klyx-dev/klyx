@@ -10,22 +10,30 @@ import io.github.treesitter.ktreesitter.Language
 import io.github.treesitter.ktreesitter.Node
 
 class EditorLanguage(
-    private val tsLanguage: Language,
+    val tsLanguage: Language,
     queries: (Language) -> LanguageQueries,
     private val languageProvider: LanguageProvider,
     themeDescription: TsThemeBuilder.() -> Unit
 ) : io.github.rosemoe.sora.lang.Language {
 
-    private val queries by lazy { queries(tsLanguage) }
-    private val theme by lazy {
+    val queries by lazy { queries(tsLanguage) }
+    val theme: TsTheme by lazy {
         TsThemeBuilder(this.queries.highlights).apply { themeDescription() }.theme
     }
 
-    private val analyzer by lazy {
+    val analyzer by lazy {
         TsAnalyzeManager(tsLanguage, this.queries, this.theme, languageProvider)
     }
 
     override fun getAnalyzeManager() = analyzer
+
+    fun applyThemeOverrides(overrides: Map<String, Long>) {
+        for ((name, style) in overrides) {
+            theme.putStyleRule(name, style)
+        }
+        analyzer.updateTheme(theme)
+    }
+
     override fun getInterruptionLevel() = 0
 
     override fun requireAutoComplete(
