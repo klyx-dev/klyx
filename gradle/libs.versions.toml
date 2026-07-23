@@ -39,6 +39,7 @@ room-runtime = "2.8.4"
 utilcodex = "1.31.1"
 xz = "1.12"
 zoomable = "2.13.0"
+sshd = "2.19.0"
 
 [libraries]
 # Test
@@ -128,6 +129,7 @@ sora-language-treesitter = { module = "io.github.rosemoe:language-treesitter" }
 sora-oniguruma-native = { module = "io.github.rosemoe:oniguruma-native" }
 
 android-tools = { module = "com.android.tools.build:gradle", version.ref = "agp" }
+sshd-sftp = { module = "org.apache.sshd:sshd-sftp", version.ref = "sshd" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

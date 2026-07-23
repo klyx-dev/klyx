@@ -123,6 +123,7 @@ android {
         resources {
             excludes += "META-INF/AL2.0"
             excludes += "META-INF/LGPL2.1"
+            excludes += "META-INF/DEPENDENCIES"
         }
 
         jniLibs {
@@ -207,6 +208,7 @@ dependencies {
     implementation(libs.semver)
 
     implementation(libs.bundles.markdown.renderer)
+    implementation(libs.sshd.sftp)
 
     implementation(projects.klyxApi)
     implementation(projects.core)

@@ -39,11 +39,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.FolderShared
 import androidx.compose.material.icons.rounded.FolderSpecial
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerState
@@ -87,9 +89,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
@@ -142,6 +148,7 @@ fun FileTreeDrawer(
     )
 
     var showSearchSheet by remember { mutableStateOf(false) }
+    var showSftpDialog by remember { mutableStateOf(false) }
     val searchSheetState = rememberBottomSheetState(
         initialValue = Hidden,
         enabledValues = setOf(Hidden, PartiallyExpanded, Expanded)
@@ -298,6 +305,22 @@ fun FileTreeDrawer(
             onSelectTerminalHome = {
                 dismiss()
                 viewModel.addRootNode(Uri.fromFile(Paths.home))
+            },
+            onSelectSftp = {
+                dismiss()
+                showSftpDialog = true
+            }
+        )
+    }
+
+    if (showSftpDialog) {
+        SftpConnectionDialog(
+            onDismiss = { showSftpDialog = false },
+            onConnect = { host, port, username, password, path ->
+                showSftpDialog = false
+                val userPart = if (password != null) "$username:$password" else username
+                val uri = Uri.parse("sftp://$userPart@$host:$port$path")
+                viewModel.addRootNode(uri)
             }
         )
     }
@@ -736,6 +759,7 @@ fun ProjectLocationBottomSheet(
     onSelectInternalStorage: () -> Unit,
     onSelectAppDirectory: () -> Unit,
     onSelectTerminalHome: () -> Unit,
+    onSelectSftp: () -> Unit,
     onSelectSystemPicker: () -> Unit
 ) {
     ModalBottomSheet(
@@ -873,6 +897,44 @@ fun ProjectLocationBottomSheet(
             Spacer(modifier = Modifier.height(4.dp))
 
             Surface(
+                onClick = onSelectSftp,
+                shape = RoundedCornerShape(16.dp),
+                color = Color.Transparent
+            ) {
+                ListItem(
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    supportingContent = {
+                        Text("Connect to a remote server via SFTP to browse and edit files.")
+                    },
+                    leadingContent = {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainerHighest,
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Rounded.Cloud,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                ) {
+                    Text(
+                        "SFTP Connection",
+                        fontFamily = GoogleSansRounded,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Surface(
                 onClick = onSelectSystemPicker,
                 shape = RoundedCornerShape(16.dp),
                 color = Color.Transparent
@@ -909,6 +971,167 @@ fun ProjectLocationBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun SftpConnectionDialog(
+    onDismiss: () -> Unit,
+    onConnect: (host: String, port: Int, username: String, password: String?, path: String) -> Unit
+) {
+    var host by remember { mutableStateOf("") }
+    var portText by remember { mutableStateOf("22") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var path by remember { mutableStateOf("/") }
+
+    val isValid = host.isNotBlank() && username.isNotBlank()
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Cloud,
+                        contentDescription = null,
+                        modifier = Modifier.size(36.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "SFTP Connection",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = host,
+                        onValueChange = { host = it },
+                        label = { Text("Host") },
+                        placeholder = { Text("e.g. 192.168.1.100") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        )
+                    )
+                    OutlinedTextField(
+                        value = portText,
+                        onValueChange = { portText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Port") },
+                        placeholder = { Text("22") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        ),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                    OutlinedTextField(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = { Text("Username") },
+                        placeholder = { Text("e.g. root") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        )
+                    )
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        placeholder = { Text("Optional") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        ),
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                    )
+                    OutlinedTextField(
+                        value = path,
+                        onValueChange = { path = it },
+                        label = { Text("Path") },
+                        placeholder = { Text("/") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FilledTonalButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                    }
+
+                    Button(
+                        onClick = {
+                            val port = portText.toIntOrNull() ?: 22
+                            val safePath = path.ifBlank { "/" }.let { if (it.startsWith("/")) it else "/$it" }
+                            onConnect(host, port, username, password.ifBlank { null }, safePath)
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                        enabled = isValid
+                    ) {
+                        Text("Connect", style = MaterialTheme.typography.titleMedium)
+                    }
+                }
+            }
         }
     }
 }

@@ -8,51 +8,37 @@ import android.provider.DocumentsContract.Document
 import android.provider.DocumentsContract.Document.MIME_TYPE_DIR
 import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import androidx.core.net.toFile
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
-import com.klyx.api.system.StdioDest
-import com.klyx.api.system.command
-import com.klyx.api.system.firstAvailable
-import com.klyx.api.system.streamLines
-import com.klyx.api.system.which
 import com.klyx.api.util.isTextFile
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.koin.core.annotation.Single
 import java.io.File
-import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.nio.file.FileVisitResult
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.SimpleFileVisitor
-import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.atomic.AtomicInteger
 
-@Single
-class FileSystemImpl(
-    private val context: Context
+class SafFileSystem(
+    private val context: Context,
 ) : FileSystem {
 
     private val content = context.contentResolver
 
+    private val providerAuthority = "${context.packageName}.terminal.documents"
+
     override suspend fun list(uri: Uri): List<KxFile> = withContext(Dispatchers.IO) {
-        val localFile = uri.resolveToLocalFile()
+        val localFile = resolveToLocalFile(uri)
         if (localFile != null) {
-            localFile.listFiles()?.map { it.wrap() }.orEmpty()
-        } else if (DocumentsContract.isTreeUri(uri)) {
+            return@withContext localFile.listFiles()?.map { it.wrap() }.orEmpty()
+        }
+
+        if (DocumentsContract.isTreeUri(uri)) {
             if (DocumentsContract.isDocumentUri(context, uri)) {
                 val docId = DocumentsContract.getDocumentId(uri)
                 val parts = uri.encodedPath?.split("/") ?: emptyList()
@@ -65,18 +51,16 @@ class FileSystemImpl(
             } else {
                 listSafBatched(uri)
             }
-    } else {
-        DocumentFile.fromSingleUri(context, uri)?.listFiles()?.map { it.toKxFile() }.orEmpty()
-    }
+        } else {
+            DocumentFile.fromSingleUri(context, uri)?.listFiles()?.map { it.toKxFile() }.orEmpty()
+        }
     }
 
-    private fun Uri.resolveToLocalFile(): File? {
-        if (scheme == "file") return toFile()
-        val providerAuthority = "${context.packageName}.terminal.documents"
-        if (authority != providerAuthority) return null
+    private fun resolveToLocalFile(uri: Uri): File? {
+        if (uri.authority != providerAuthority) return null
         return when {
-            DocumentsContract.isTreeUri(this) -> File(DocumentsContract.getTreeDocumentId(this))
-            DocumentsContract.isDocumentUri(context, this) -> File(DocumentsContract.getDocumentId(this))
+            DocumentsContract.isTreeUri(uri) -> File(DocumentsContract.getTreeDocumentId(uri))
+            DocumentsContract.isDocumentUri(context, uri) -> File(DocumentsContract.getDocumentId(uri))
             else -> null
         }
     }
@@ -138,113 +122,18 @@ class FileSystemImpl(
             }
         }
 
-        coroutineScope {
-            roots.forEach { root ->
-                launch {
-                    if (globalCount.get() >= maxResults) return@launch
-                    ensureActive()
-
-                    val localFile = root.resolveToLocalFile()
-                    if (localFile != null) {
-                        searchLocal(localFile, queryLower, perRootMax, onResult)
-                    } else if (DocumentsContract.isTreeUri(root)) {
-                        searchSaf(root, queryLower, perRootMax, onResult)
-                    }
-                }
+        for (root in roots) {
+            if (globalCount.get() >= maxResults) break
+            val localFile = resolveToLocalFile(root)
+            if (localFile != null) {
+                searchLocalSaf(localFile, queryLower, perRootMax, onResult)
+            } else if (DocumentsContract.isTreeUri(root)) {
+                searchSaf(root, queryLower, perRootMax, onResult)
             }
         }
     }
 
-    private suspend fun searchLocal(
-        root: File,
-        query: String,
-        maxResults: Int,
-        onResult: (KxFile) -> Unit
-    ) {
-        searchLocalFind(root, query, maxResults, onResult)
-    }
-
-    private suspend fun searchLocalFind(
-        root: File,
-        query: String,
-        maxResults: Int,
-        onResult: (KxFile) -> Unit
-    ) {
-        val escapedQuery = query
-            .replace("\\", "\\\\")
-            .replace("*", "\\*")
-            .replace("?", "\\?")
-            .replace("[", "\\[")
-            .replace("]", "\\]")
-
-        if (searchLocalFd(root, escapedQuery, maxResults, onResult)) return
-        if (searchLocalFindCommand(root, escapedQuery, maxResults, onResult)) return
-        searchLocalWalk(root, query, maxResults, onResult)
-    }
-
-    private suspend fun searchLocalFd(
-        root: File,
-        query: String,
-        maxResults: Int,
-        onResult: (KxFile) -> Unit
-    ): Boolean {
-        val cmd = firstAvailable("fdfind", "fd") ?: return false
-        val count = AtomicInteger(0)
-        return try {
-            command(
-                cmd.substringAfterLast(File.separatorChar),
-                "--type", "f", "--type", "d",
-                "-i", "-g",
-                "--no-ignore",
-                "--hidden",
-                "*${query}*",
-                root.absolutePath
-            )
-                .stdout(StdioDest.Capture)
-                .stderr(StdioDest.Null)
-                .streamLines()
-                .collect { line ->
-                    if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
-                        onResult(File(line).wrap())
-                    }
-                }
-            true
-        } catch (e: IOException) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    private suspend fun searchLocalFindCommand(
-        root: File,
-        query: String,
-        maxResults: Int,
-        onResult: (KxFile) -> Unit
-    ): Boolean {
-        val cmd = which("find") ?: return false
-        val count = AtomicInteger(0)
-        return try {
-            command(
-                cmd.substringAfterLast(File.separatorChar),
-                root.absolutePath,
-                "-iname",
-                "*${query}*"
-            )
-                .stdout(StdioDest.Capture)
-                .stderr(StdioDest.Null)
-                .streamLines()
-                .collect { line ->
-                    if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
-                        onResult(File(line).wrap())
-                    }
-                }
-            true
-        } catch (_: Exception) {
-            false
-        }
-    }
-
-    private suspend fun searchLocalWalk(
+    private suspend fun searchLocalSaf(
         root: File,
         query: String,
         maxResults: Int,
@@ -252,38 +141,16 @@ class FileSystemImpl(
     ) {
         try {
             val topLevel = root.listFiles() ?: return
-            val walkCount = AtomicInteger(0)
-            coroutineScope {
-                topLevel.forEach { entry ->
-                    launch {
-                        if (walkCount.get() >= maxResults) return@launch
-                        if (entry.isFile) {
-                            if (entry.name.lowercase().contains(query)) {
-                                if (walkCount.getAndIncrement() < maxResults) {
-                                    onResult(entry.wrap())
-                                }
-                            }
-                        } else if (entry.isDirectory) {
-                            try {
-                                Files.walkFileTree(entry.toPath(), object : SimpleFileVisitor<Path>() {
-                                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                                        if (walkCount.get() >= maxResults) return FileVisitResult.TERMINATE
-                                        if (file.fileName.toString().lowercase().contains(query)) {
-                                            if (walkCount.getAndIncrement() < maxResults) {
-                                                onResult(file.toFile().wrap())
-                                            }
-                                        }
-                                        return FileVisitResult.CONTINUE
-                                    }
-
-                                    override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
-                                        return FileVisitResult.SKIP_SUBTREE
-                                    }
-                                })
-                            } catch (_: Exception) {
-                            }
-                        }
+            val count = AtomicInteger(0)
+            for (entry in topLevel) {
+                if (count.get() >= maxResults) break
+                if (entry.name.lowercase().contains(query)) {
+                    if (count.getAndIncrement() < maxResults) {
+                        onResult(entry.wrap())
                     }
+                }
+                if (entry.isDirectory) {
+                    searchLocalSaf(entry, query, maxResults, onResult)
                 }
             }
         } catch (_: Exception) {
@@ -354,39 +221,22 @@ class FileSystemImpl(
     }
 
     override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
-        checkNotNull(context.contentResolver.openInputStream(uri)) {
-            "the provider recently crashed."
-        }
+        checkNotNull(content.openInputStream(uri)) { "the provider recently crashed." }
     }
 
     override suspend fun outputStream(uri: Uri, mode: String): OutputStream = withContext(Dispatchers.IO) {
-        checkNotNull(context.contentResolver.openOutputStream(uri, mode)) {
-            "the provider recently crashed."
-        }
+        checkNotNull(content.openOutputStream(uri, mode)) { "the provider recently crashed." }
     }
 
     override suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
-        uri.file?.delete() ?: DocumentsContract.deleteDocument(content, uri)
+        DocumentsContract.deleteDocument(content, uri)
     }
 
     override suspend fun rename(uri: Uri, newName: String): Uri? = withContext(Dispatchers.IO) {
-        val file = uri.file
-        if (file != null) {
-            val newFile = file.resolveSibling(newName)
-            val success = file.renameTo(newFile)
-            return@withContext if (success) newFile.toUri() else null
-        }
-
         DocumentsContract.renameDocument(content, uri, newName)
     }
 
     override suspend fun createFile(parent: Uri, name: String, mimeType: String): Uri? = withContext(Dispatchers.IO) {
-        val parentFile = parent.file
-        if (parentFile != null) {
-            val file = parentFile.resolve(name)
-            val success = if (mimeType == MIME_TYPE_DIR) file.mkdirs() else file.createNewFile()
-            return@withContext if (success) file.toUri() else null
-        }
         DocumentsContract.createDocument(content, parent, mimeType, name)
     }
 
@@ -395,18 +245,7 @@ class FileSystemImpl(
     }
 
     override suspend fun capabilities(uri: Uri): FileCapabilities = withContext(Dispatchers.IO) {
-        if (uri.scheme == "file") {
-            val file = uri.toFile()
-            return@withContext FileCapabilities(
-                canWrite = file.canWrite(),
-                canCreate = file.canWrite(),
-                canDelete = file.canWrite(),
-                canRename = file.canWrite()
-            )
-        }
-
         val flags = getDocumentFlags(uri)
-
         FileCapabilities(
             canWrite = flags and Document.FLAG_SUPPORTS_WRITE != 0,
             canDelete = flags and Document.FLAG_SUPPORTS_DELETE != 0,
@@ -416,7 +255,7 @@ class FileSystemImpl(
     }
 
     override suspend fun fileName(uri: Uri): String? = withContext(Dispatchers.IO) {
-        uri.file?.name ?: uri.query(OpenableColumns.DISPLAY_NAME) { cursor ->
+        uri.query(OpenableColumns.DISPLAY_NAME) { cursor ->
             val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
             if (index != -1 && cursor.moveToFirst()) {
                 cursor.getString(index)
@@ -425,7 +264,7 @@ class FileSystemImpl(
     }
 
     override suspend fun exists(uri: Uri): Boolean = withContext(Dispatchers.IO) {
-        uri.file?.exists() ?: content.query(
+        content.query(
             uri,
             arrayOf(Document.COLUMN_DOCUMENT_ID),
             null,
@@ -437,31 +276,8 @@ class FileSystemImpl(
     }
 
     override suspend fun copy(source: Uri, targetParent: Uri): Uri? = withContext(Dispatchers.IO) {
-        val sourceFile = source.file
-        val targetParentFile = targetParent.file
-
-        if (sourceFile != null && targetParentFile != null) {
-            return@withContext try {
-                val target = targetParentFile.resolve(sourceFile.name)
-
-                sourceFile.inputStream().buffered().use { input ->
-                    target.outputStream().buffered().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                target.toUri()
-            } catch (_: Exception) {
-                null
-            }
-        }
-
         try {
-            DocumentsContract.copyDocument(
-                content,
-                source,
-                targetParent
-            )
+            DocumentsContract.copyDocument(content, source, targetParent)
         } catch (_: Exception) {
             null
         }
@@ -472,52 +288,30 @@ class FileSystemImpl(
         sourceParent: Uri,
         targetParent: Uri
     ): Uri? = withContext(Dispatchers.IO) {
-        val sourceFile = source.file
-        val targetParentFile = targetParent.file
-
-        if (sourceFile != null && targetParentFile != null) {
-            return@withContext try {
-                val target = targetParentFile.resolve(sourceFile.name)
-
-                if (target.exists()) {
-                    return@withContext null
-                }
-
-                if (sourceFile.renameTo(target)) {
-                    return@withContext target.toUri()
-                }
-
-                sourceFile.inputStream().buffered().use { input ->
-                    target.outputStream().buffered().use { output ->
-                        input.copyTo(output)
-                    }
-                }
-
-                if (sourceFile.delete()) {
-                    target.toUri()
-                } else {
-                    target.delete()
-                    null
-                }
-            } catch (_: Exception) {
-                null
-            }
-        }
-
         try {
-            DocumentsContract.moveDocument(
-                content,
-                source,
-                sourceParent,
-                targetParent
-            )
+            DocumentsContract.moveDocument(content, source, sourceParent, targetParent)
         } catch (_: Exception) {
             null
         }
     }
 
     override suspend fun wrapUri(uri: Uri): KxFile = withContext(Dispatchers.IO) {
-        uri.wrap()
+        val isDirectory = DocumentsContract.isTreeUri(uri) ||
+            (DocumentsContract.isDocumentUri(context, uri) &&
+                MIME_TYPE_DIR == context.contentResolver.getType(uri))
+
+        val name = if (DocumentsContract.isTreeUri(uri)) {
+            DocumentsContract.getTreeDocumentId(uri).substringAfterLast('/')
+                .substringAfterLast('%')
+        } else {
+            uri.lastPathSegment
+        } ?: uri.toString()
+
+        KxFile(
+            uriString = uri.toString(),
+            name = name,
+            isDirectory = isDirectory
+        )
     }
 
     override suspend fun determineFileCategory(uri: Uri): FileCategory {
@@ -551,8 +345,7 @@ class FileSystemImpl(
 
     private suspend fun getDocumentFlags(uri: Uri): Int = withContext(Dispatchers.IO) {
         val projection = arrayOf(Document.COLUMN_FLAGS)
-
-        context.contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+        content.query(uri, projection, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) return@withContext cursor.getInt(0)
         }
         0
@@ -572,6 +365,4 @@ class FileSystemImpl(
         }
         return cursor.use(block)
     }
-
-    private val Uri.file get() = if (scheme == "file") this.toFile() else null
 }
