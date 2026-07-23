@@ -99,10 +99,31 @@ class SftpFileSystem : FileSystem {
         val c = parseConn(uri)
         val session = getSession(c)
         return withContext(Dispatchers.IO) {
-            SftpClientFactory.instance().createSftpClient(session).use { client ->
-                block(client)
-            }
+            val client = createClientWithRetry(session, c)
+            client.use { block(it) }
         }
+    }
+
+    private fun createClientWithRetry(session: ClientSession, c: Conn): SftpClient {
+        if (session.isOpen) {
+            try {
+                return SftpClientFactory.instance().createSftpClient(session)
+            } catch (_: IllegalStateException) {
+                sessionCache.remove(conn(c))
+                session.close()
+            }
+        } else {
+            sessionCache.remove(conn(c))
+            session.close()
+        }
+        val newSession = sshClient
+            .connect(c.username, c.host, c.port)
+            .verify(15_000)
+            .session
+        c.password?.let { newSession.addPasswordIdentity(it) }
+        newSession.auth().verify(15_000)
+        sessionCache[conn(c)] = newSession
+        return SftpClientFactory.instance().createSftpClient(newSession)
     }
 
     private fun listDirEntries(client: SftpClient, path: String): List<DirEntry> {
@@ -246,12 +267,38 @@ class SftpFileSystem : FileSystem {
     }
 
     override suspend fun delete(uri: Uri): Boolean = withSftp(uri) { client ->
-        try {
-            client.remove(sftpPath(uri))
-        } catch (_: Exception) {
-            client.rmdir(sftpPath(uri))
+        deleteRecursive(client, sftpPath(uri))
+    }
+
+    private fun deleteRecursive(client: SftpClient, path: String): Boolean {
+        if (isDirectory(client, path)) {
+            val entries = listDirEntries(client, path)
+            for (entry in entries) {
+                if (entry.filename in listOf(".", "..")) continue
+                val childPath = "$path/${entry.filename}"
+                if (!deleteRecursive(client, childPath)) return false
+            }
+            try {
+                client.rmdir(path)
+                return true
+            } catch (_: Exception) {
+                return false
+            }
+        } else {
+            return try {
+                client.remove(path); true
+            } catch (_: Exception) {
+                false
+            }
         }
-        true
+    }
+
+    private fun isDirectory(client: SftpClient, path: String): Boolean {
+        return try {
+            client.stat(path).isDirectory
+        } catch (_: Exception) {
+            false
+        }
     }
 
     override suspend fun rename(uri: Uri, newName: String): Uri? = withSftp(uri) { client ->

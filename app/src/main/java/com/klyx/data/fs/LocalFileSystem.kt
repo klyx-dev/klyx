@@ -213,7 +213,7 @@ class LocalFileSystem : FileSystem {
     }
 
     override suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
-        uri.toFile().delete()
+        uri.toFile().deleteRecursively()
     }
 
     override suspend fun rename(uri: Uri, newName: String): Uri? = withContext(Dispatchers.IO) {
