@@ -91,7 +91,7 @@ import com.klyx.R
 import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.data.file.calculateTotalSize
-import com.klyx.api.data.file.resolveName
+import com.klyx.data.file.resolveName
 import com.klyx.data.file.statInfo
 import com.klyx.data.file.symlinkTarget
 import com.klyx.presentation.components.filetree.iconForFile
@@ -361,15 +361,15 @@ private fun InfoItems(
 
         FileInfoSegmentedListItem(
             headline = "Path",
-            supporting = file.path,
+            supporting = file.uri.path ?: "",
             icon = painterResource(R.drawable.account_tree_24px),
             iconDescription = "File icon",
             shape = infoSegmentItemShape,
-            onClick = { copyText(file.path) },
+            onClick = { copyText(file.uri.path ?: "") },
         )
 
         var sizeText by remember(file) {
-            mutableStateOf(if (file.isDirectory) "Calculating..." else file.length.humanBytes())
+            mutableStateOf(if (file.isDirectory) "Calculating..." else file.size.humanBytes())
         }
 
         LaunchedEffect(file) {
@@ -662,7 +662,7 @@ fun LazyListScope.fileActions(
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 contentPadding = PaddingValues(0.dp),
-                onClick = { onAction(Paste(file.parentFile ?: file)) }
+                onClick = { onAction(Paste(file.parent ?: file)) }
             ) {
                 Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
                 Spacer(Modifier.width(4.dp))

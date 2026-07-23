@@ -154,13 +154,6 @@ interface FileSystem : PluginService {
 /**
  * Convenience extension to create a directory and its parents if it doesn't exist.
  */
-fun KxFile.createDirIfMissing(): Boolean {
-    return if (!exists) mkdirs() else true
-}
-
-/**
- * Convenience extension to create a directory and its parents if it doesn't exist.
- */
 fun File.createDirIfMissing(): Boolean {
     return if (!exists()) mkdirs() else true
 }

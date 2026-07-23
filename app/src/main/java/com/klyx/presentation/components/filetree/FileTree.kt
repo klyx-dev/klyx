@@ -314,7 +314,7 @@ fun iconForFile(file: KxFile): FileIcon {
         return FileIcon(painterResource(R.drawable.folder_24px))
     }
 
-    if (file.canExecute) {
+    if (file.extension in listOf("sh", "bash", "zsh", "fish", "ps1", "bat", "cmd")) {
         return FileIcon(painterResource(R.drawable.terminal_2_24px))
     }
 

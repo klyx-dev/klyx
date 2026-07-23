@@ -97,7 +97,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
 import com.klyx.api.data.file.KxFile
-import com.klyx.api.data.file.resolveName
+import com.klyx.data.file.resolveName
 import com.klyx.api.data.fs.Paths
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.api.terminal.home

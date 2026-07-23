@@ -12,7 +12,6 @@ import androidx.core.net.toFile
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import com.klyx.api.data.file.KxFile
-import com.klyx.api.data.file.PrefetchedFileMetadata
 import com.klyx.api.data.file.wrap
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
@@ -52,7 +51,7 @@ class FileSystemImpl(
     override suspend fun list(uri: Uri): List<KxFile> = withContext(Dispatchers.IO) {
         val localFile = uri.resolveToLocalFile()
         if (localFile != null) {
-            localFile.listFiles()?.map(::KxFile).orEmpty()
+            localFile.listFiles()?.map { it.wrap() }.orEmpty()
         } else if (DocumentsContract.isTreeUri(uri)) {
             if (DocumentsContract.isDocumentUri(context, uri)) {
                 val docId = DocumentsContract.getDocumentId(uri)
@@ -66,9 +65,9 @@ class FileSystemImpl(
             } else {
                 listSafBatched(uri)
             }
-        } else {
-            uri.wrap().listFiles()
-        }
+    } else {
+        DocumentFile.fromSingleUri(context, uri)?.listFiles()?.map { it.toKxFile() }.orEmpty()
+    }
     }
 
     private fun Uri.resolveToLocalFile(): File? {
@@ -101,28 +100,26 @@ class FileSystemImpl(
             val mimeIdx = c.getColumnIndex(Document.COLUMN_MIME_TYPE)
             val sizeIdx = c.getColumnIndex(Document.COLUMN_SIZE)
             val dateIdx = c.getColumnIndex(Document.COLUMN_LAST_MODIFIED)
-            val flagsIdx = c.getColumnIndex(Document.COLUMN_FLAGS)
 
             val results = mutableListOf<KxFile>()
             while (c.moveToNext()) {
                 val docId = c.getString(idIdx)
                 val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                val raw = DocumentFile.fromSingleUri(context, childUri)!!
-
                 val name = if (nameIdx >= 0) c.getString(nameIdx) ?: docId else docId
-                val metadata = PrefetchedFileMetadata(
-                    name = name,
-                    mimeType = if (mimeIdx >= 0) c.getString(mimeIdx) else null,
-                    size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
-                    lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
-                    flags = if (flagsIdx >= 0) c.getInt(flagsIdx) else 0
+                results.add(
+                    KxFile(
+                        uriString = childUri.toString(),
+                        name = name,
+                        isDirectory = MIME_TYPE_DIR == if (mimeIdx >= 0) c.getString(mimeIdx) else null,
+                        size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
+                        lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
+                    )
                 )
-                results.add(KxFile(raw, metadata))
             }
             return results
         }
 
-        return treeUri.wrap().listFiles()
+        return DocumentFile.fromTreeUri(context, treeUri)?.listFiles()?.map { it.toKxFile() }.orEmpty()
     }
 
     override suspend fun search(
@@ -208,7 +205,7 @@ class FileSystemImpl(
                 .streamLines()
                 .collect { line ->
                     if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
-                        onResult(KxFile(File(line)))
+                        onResult(File(line).wrap())
                     }
                 }
             true
@@ -238,7 +235,7 @@ class FileSystemImpl(
                 .streamLines()
                 .collect { line ->
                     if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
-                        onResult(KxFile(File(line)))
+                        onResult(File(line).wrap())
                     }
                 }
             true
@@ -263,7 +260,7 @@ class FileSystemImpl(
                         if (entry.isFile) {
                             if (entry.name.lowercase().contains(query)) {
                                 if (walkCount.getAndIncrement() < maxResults) {
-                                    onResult(KxFile(entry))
+                                    onResult(entry.wrap())
                                 }
                             }
                         } else if (entry.isDirectory) {
@@ -273,7 +270,7 @@ class FileSystemImpl(
                                         if (walkCount.get() >= maxResults) return FileVisitResult.TERMINATE
                                         if (file.fileName.toString().lowercase().contains(query)) {
                                             if (walkCount.getAndIncrement() < maxResults) {
-                                                onResult(KxFile(file.toFile()))
+                                                onResult(file.toFile().wrap())
                                             }
                                         }
                                         return FileVisitResult.CONTINUE
@@ -338,15 +335,15 @@ class FileSystemImpl(
                         if (name.lowercase().contains(query)) {
                             if (safCount.getAndIncrement() < maxResults) {
                                 val childUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                                val raw = DocumentFile.fromSingleUri(context, childUri)!!
-                                val metadata = PrefetchedFileMetadata(
-                                    name = name,
-                                    mimeType = mimeType,
-                                    size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
-                                    lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
-                                    flags = 0
+                                onResult(
+                                    KxFile(
+                                        uriString = childUri.toString(),
+                                        name = name,
+                                        isDirectory = MIME_TYPE_DIR == mimeType,
+                                        size = if (sizeIdx >= 0) c.getLong(sizeIdx) else 0L,
+                                        lastModified = if (dateIdx >= 0) c.getLong(dateIdx) else 0L,
+                                    )
                                 )
-                                onResult(KxFile(raw, metadata))
                             }
                         }
                     }
@@ -560,6 +557,14 @@ class FileSystemImpl(
         }
         0
     }
+
+    private fun DocumentFile.toKxFile() = KxFile(
+        uriString = uri.toString(),
+        name = name ?: uri.lastPathSegment ?: "",
+        isDirectory = isDirectory,
+        size = length(),
+        lastModified = lastModified(),
+    )
 
     private inline fun <R> Uri.query(projection: String, block: (Cursor) -> R): R {
         val cursor = checkNotNull(content.query(this, arrayOf(projection), null, null, null)) {

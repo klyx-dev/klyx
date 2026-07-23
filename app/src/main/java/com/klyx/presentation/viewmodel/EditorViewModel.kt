@@ -221,7 +221,9 @@ class EditorViewModel(
 
                 val tab: WorkspaceTab? = when (category) {
                     FileCategory.TEXT -> {
-                        val txt = withContext(Dispatchers.IO) { file.readText() }
+                        val txt = withContext(Dispatchers.IO) {
+                            fileSystem.inputStream(uri).bufferedReader().use { it.readText() }
+                        }
                         val newTab = WorkspaceTab.TextFile(
                             file = file,
                             projectUri = projectUri
@@ -423,7 +425,9 @@ class EditorViewModel(
             }
 
             try {
-                editorState.writeTextTo(action.file.outputStream())
+                fileSystem.outputStream(action.file.uri).use { output ->
+                    editorState.writeTextTo(output)
+                }
                 val savedText = editorState.text.toString()
 
                 editorStateRegistry.setBaselineText(activeTabId, savedText)
@@ -457,7 +461,9 @@ class EditorViewModel(
             try {
                 val oldTab =
                     _uiState.value.openTabs.find { it.id == action.oldTabId } as? WorkspaceTab.TextFile
-                editorState.writeTextTo(action.newFile.outputStream())
+                fileSystem.outputStream(action.newFile.uri).use { output ->
+                    editorState.writeTextTo(output)
+                }
 
                 val newTabId = action.newFile.uri.toString()
                 val savedText = editorState.text.toString()

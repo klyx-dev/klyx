@@ -12,6 +12,7 @@ import android.system.StructStat
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.native.Os as NativeOs
@@ -23,6 +24,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
+import java.io.File
 
 data class SizeProgress(
     val bytes: Long,
@@ -32,9 +34,8 @@ data class SizeProgress(
 )
 
 fun KxFile.calculateTotalSize() = flow {
-    // If it's a file, emit 1 file, 0 dirs, and finish immediately
     if (!isDirectory) {
-        emit(SizeProgress(length, fileCount = 1, dirCount = 0, isFinished = true))
+        emit(SizeProgress(size, fileCount = 1, dirCount = 0, isFinished = true))
         return@flow
     }
 
@@ -42,25 +43,47 @@ fun KxFile.calculateTotalSize() = flow {
     var fileCount = 0
     var dirCount = 0
 
-    val directories = ArrayDeque<KxFile>()
-    directories.add(this@calculateTotalSize)
+    if (uri.scheme == "file") {
+        val rootFile = File(uri.path!!)
+        val dirQueue = ArrayDeque<File>()
+        dirQueue.add(rootFile)
 
-    while (directories.isNotEmpty()) {
-        if (!currentCoroutineContext().isActive) break
-
-        val currentDir = directories.removeFirst()
-        val children = currentDir.listFiles()
-
-        for (child in children) {
-            if (child.isDirectory) {
-                dirCount++
-                directories.add(child)
-            } else {
-                fileCount++
-                totalSize += child.length
+        while (dirQueue.isNotEmpty()) {
+            if (!currentCoroutineContext().isActive) break
+            val children = dirQueue.removeFirst().listFiles() ?: continue
+            for (child in children) {
+                if (child.isDirectory) {
+                    dirCount++
+                    dirQueue.add(child)
+                } else {
+                    fileCount++
+                    totalSize += child.length()
+                }
+                emit(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
             }
+        }
+    } else {
+        val context = applicationContext()
+        val rootDoc = DocumentFile.fromTreeUri(context, uri)
+            ?: DocumentFile.fromSingleUri(context, uri)
+            ?: run { emit(SizeProgress(totalSize, fileCount, dirCount, isFinished = true)); return@flow }
 
-            emit(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
+        val dirQueue = ArrayDeque<DocumentFile>()
+        dirQueue.add(rootDoc)
+
+        while (dirQueue.isNotEmpty()) {
+            if (!currentCoroutineContext().isActive) break
+            val children = dirQueue.removeFirst().listFiles()
+            for (child in children) {
+                if (child.isDirectory) {
+                    dirCount++
+                    dirQueue.add(child)
+                } else {
+                    fileCount++
+                    totalSize += child.length()
+                }
+                emit(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
+            }
         }
     }
 
@@ -69,8 +92,8 @@ fun KxFile.calculateTotalSize() = flow {
 
 val KxFile.stat: StructStat?
     get() = tryOrNull {
-        if (file != null) {
-            Os.stat(file!!.absolutePath)
+        if (uri.scheme == "file") {
+            Os.stat(File(uri.path!!).absolutePath)
         } else {
             applicationContext().contentResolver.openFileDescriptor(uri, "r")?.use {
                 Os.fstat(it.fileDescriptor)
@@ -80,9 +103,9 @@ val KxFile.stat: StructStat?
 
 val KxFile.permissionsString: String
     get() {
-        val mode = if (file != null) {
+        val mode = if (uri.scheme == "file") {
             try {
-                Os.stat(file!!.absolutePath).st_mode
+                Os.stat(File(uri.path!!).absolutePath).st_mode
             } catch (_: ErrnoException) {
                 null
             }
@@ -117,34 +140,37 @@ val KxFile.permissionsString: String
         val grant = applicationContext().contentResolver
             .persistedUriPermissions
             .find { it.uri == uri }
-        val r = if (grant?.isReadPermission ?: raw.canRead()) "r" else "-"
-        val w = if (grant?.isWritePermission ?: raw.canWrite()) "w" else "-"
+        val r = if (grant?.isReadPermission == true) "r" else "-"
+        val w = if (grant?.isWritePermission == true) "w" else "-"
         val x = if (isDirectory && r == "r") "x" else "-"
         return "${if (isDirectory) "d" else "-"}$r$w$x------"
     }
 
 val KxFile.isSymlink: Boolean
     get() = try {
-        if (file != null) {
-            val mode = Os.lstat(file!!.absolutePath).st_mode
+        if (uri.scheme == "file") {
+            val mode = Os.lstat(File(uri.path!!).absolutePath).st_mode
             OsConstants.S_ISLNK(mode)
-        } else false // SAF URIs can't be symlinks from our perspective
+        } else false
     } catch (_: Exception) {
         false
     }
 
 val KxFile.symlinkTarget
     get() = tryOrNull {
-        if (file != null) {
-            val mode = Os.lstat(file!!.absolutePath).st_mode
-            if (OsConstants.S_ISLNK(mode)) Os.readlink(file!!.absolutePath) else null
+        if (uri.scheme == "file") {
+            val pathFile = File(uri.path!!)
+            val mode = Os.lstat(pathFile.absolutePath).st_mode
+            if (OsConstants.S_ISLNK(mode)) Os.readlink(pathFile.absolutePath) else null
         } else null
     }
 
 val KxFile.isProtectedPath: Boolean
     @SuppressLint("SdCardPath")
     get() {
-        val path = file?.canonicalPath ?: absolutePath
+        val path = if (uri.scheme == "file") {
+            try { File(uri.path!!).canonicalPath } catch (_: Exception) { uri.path ?: return false }
+        } else uri.path ?: return false
         return path == Environment.getExternalStorageDirectory().canonicalPath
                 || path == "/sdcard"
                 || path == "/storage/self/primary"
@@ -156,9 +182,9 @@ val KxFile.isProtectedPath: Boolean
     }
 
 val KxFile.shareableUri: Uri
-    get() = if (!isSafDocument) {
+    get() = if (uri.scheme == "file") {
         val context = applicationContext()
-        FileProvider.getUriForFile(context, "${context.packageName}.provider", file!!)
+        FileProvider.getUriForFile(context, "${context.packageName}.provider", File(uri.path!!))
     } else uri
 
 fun KxFile.mimeType() = when (extension.lowercase()) {
@@ -233,8 +259,8 @@ fun KxFile.share() = withApplicationContext {
 val KxFile.statInfo: FileStatInfo?
     get() {
         val stat = try {
-            if (file != null) {
-                Os.stat(file!!.absolutePath)
+            if (uri.scheme == "file") {
+                Os.stat(File(uri.path!!).absolutePath)
             } else if (!isDirectory) {
                 applicationContext().contentResolver
                     .openFileDescriptor(uri, "r")
@@ -273,3 +299,16 @@ val KxFile.statInfo: FileStatInfo?
             lastChanged = stat.st_ctim.tv_sec,
         )
     }
+
+fun KxFile.resolveName(): String {
+    val path = uri.path ?: return name
+    val context = applicationContext()
+    return when (path) {
+        Environment.getExternalStorageDirectory().absolutePath -> "Internal Storage"
+        context.dataDir.absolutePath -> "App Data"
+        context.filesDir.resolve("home").absolutePath,
+        context.filesDir.resolve("home").canonicalPath,
+            -> "Terminal Home"
+        else -> name
+    }
+}

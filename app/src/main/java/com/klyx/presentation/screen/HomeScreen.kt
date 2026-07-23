@@ -376,7 +376,9 @@ fun HomeScreen(
             },
             onShareFileText = {
                 scope.launch(Dispatchers.IO) {
-                    val wholeText = (activeTab as WorkspaceTab.TextFile).file.readText()
+                    val wholeText = context.contentResolver.openInputStream(
+                        (activeTab as WorkspaceTab.TextFile).file.uri
+                    )?.bufferedReader()?.readText() ?: ""
                     withContext(Dispatchers.Main.immediate) {
                         shareText(wholeText)
                     }
@@ -648,7 +650,7 @@ fun HomeScreen(
 }
 
 private suspend fun copyPath(file: KxFile, clipboard: Clipboard) {
-    clipboard.setClipEntry(ClipData.newPlainText("klyx", file.absolutePath).toClipEntry())
+    clipboard.setClipEntry(ClipData.newPlainText("klyx", (file.uri.path ?: file.uri.toString())).toClipEntry())
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

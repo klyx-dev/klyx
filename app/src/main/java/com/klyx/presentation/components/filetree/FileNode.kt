@@ -3,7 +3,7 @@ package com.klyx.presentation.components.filetree
 import android.net.Uri
 import androidx.compose.runtime.Immutable
 import com.klyx.api.data.file.KxFile
-import com.klyx.api.data.file.resolveName
+import com.klyx.data.file.resolveName
 import kotlinx.serialization.Serializable
 
 @Immutable
@@ -16,7 +16,7 @@ data class FileNode(
 
     val uri get() = file.uri
 
-    val parent by lazy { file.parentFile?.let(::FileNode) }
+    val parent by lazy { file.parent?.let(::FileNode) }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

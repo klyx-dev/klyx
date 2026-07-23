@@ -1,6 +1,7 @@
 package com.klyx.data.fs
 
 import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.wrap
 import com.klyx.network.httpClient
 import io.ktor.client.content.ProgressListener
 import io.ktor.client.plugins.onDownload
@@ -62,7 +63,7 @@ data class DownloadableFile(val url: String, val outputPath: String) {
     }
 }
 
-private fun DownloadableFile.asKxFile() = KxFile(outputPath)
+private fun DownloadableFile.asKxFile() = java.io.File(outputPath).wrap()
 
 suspend fun Collection<DownloadableFile>.downloadAll(
     concurrency: Int = 4,

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
+import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -358,19 +359,19 @@ class MainActivity : ComposeActivity() {
                         ?: uri.getQueryParameter("file")?.let { Uri.parse(it) }
 
                     if (path != null) {
-                        val file = path.wrap()
-                        if (file.exists) {
-                            if (file.isDirectory) {
-                                fileTreeViewModel.addRootNode(path)
-                                lifecycleScope.launch {
-                                    app.toastHostState.showToast("Project opened: ${file.name}")
-                                }
-                            } else if (file.isFile) {
-                                editorViewModel.openFile(path)
+                        if (DocumentsContract.isTreeUri(path)) {
+                            fileTreeViewModel.addRootNode(path)
+                            lifecycleScope.launch {
+                                app.toastHostState.showToast("Project opened")
                             }
                         } else {
-                            lifecycleScope.launch {
-                                app.toastHostState.showFailureToast("Invalid path: ${file.absolutePath} does not exist")
+                            val fileExists = path.scheme != "file" || java.io.File(path.path!!).exists()
+                            if (fileExists) {
+                                editorViewModel.openFile(path)
+                            } else {
+                                lifecycleScope.launch {
+                                    app.toastHostState.showFailureToast("Invalid path: ${path.path} does not exist")
+                                }
                             }
                         }
                     }
