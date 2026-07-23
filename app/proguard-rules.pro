@@ -2,7 +2,14 @@
 -dontwarn org.joni.**
 -dontwarn com.github.luben.zstd.**
 -dontwarn javax.management.**
+-dontwarn java.rmi.**
+-dontwarn javax.security.auth.**
+-dontwarn org.ietf.jgss.**
+-dontwarn org.apache.tomcat.jni.**
+-dontwarn net.i2p.crypto.eddsa.**
 -dontwarn org.bouncycastle.**
+
+-keep class org.apache.sshd.** { *; }
 
 -keep class kotlin.* { *; }
 -keep class kotlin.UInt { *; }
