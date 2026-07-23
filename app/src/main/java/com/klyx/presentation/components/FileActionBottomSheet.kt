@@ -90,19 +90,18 @@ import androidx.compose.ui.unit.dp
 import com.klyx.R
 import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
-import com.klyx.data.file.calculateTotalSize
-import com.klyx.data.file.resolveName
-import com.klyx.data.file.statInfo
-import com.klyx.data.file.symlinkTarget
-import com.klyx.presentation.components.filetree.iconForFile
-import com.klyx.presentation.components.subcomponents.AutoSizeText
+import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.ui.theme.GoogleSansRounded
 import com.klyx.api.util.asLocalDateTime
 import com.klyx.api.util.formatDateTime
 import com.klyx.api.util.humanBytes
+import com.klyx.data.file.resolveName
+import com.klyx.presentation.components.filetree.iconForFile
+import com.klyx.presentation.components.subcomponents.AutoSizeText
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -336,6 +335,7 @@ private fun InfoItems(
     file: KxFile,
     infoSegmentItemShape: RoundedCornerShape = remember { RoundedCornerShape(8.dp) }
 ) {
+    val fileSystem: FileSystem = koinInject()
     val coroutineScope = rememberCoroutineScope()
     val clipboard = LocalClipboard.current
 
@@ -374,7 +374,7 @@ private fun InfoItems(
 
         LaunchedEffect(file) {
             if (file.isDirectory) {
-                file.calculateTotalSize()
+                fileSystem.calculateSize(file.uri)
                     .collect { progress ->
                         val sizeStr =
                             progress.bytes.humanBytes()
@@ -408,7 +408,7 @@ private fun InfoItems(
         )
 
         val statInfo by produceState<FileStatInfo?>(initialValue = null, file) {
-            value = withContext(Dispatchers.IO) { file.statInfo }
+            value = withContext(Dispatchers.IO) { fileSystem.stat(file.uri) }
         }
 
         statInfo?.let {
@@ -423,7 +423,7 @@ private fun InfoItems(
         }
 
         val symlinkTarget by produceState<String?>(initialValue = null, file) {
-            value = withContext(Dispatchers.IO) { file.symlinkTarget }
+            value = withContext(Dispatchers.IO) { fileSystem.symlinkTarget(file.uri) }
         }
 
         symlinkTarget?.let { target ->

@@ -1,11 +1,13 @@
 package com.klyx.api.data.file
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import java.io.File
 import java.io.Serializable as JavaSerializable
 
 @Serializable
+@Immutable
 class KxFile(
     private val uriString: String,
     val name: String,

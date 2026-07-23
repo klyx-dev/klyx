@@ -26,3 +26,4 @@
 -keepattributes *Annotation*
 
 -keepattributes SourceFile,LineNumberTable
+-dontobfuscate

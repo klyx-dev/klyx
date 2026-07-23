@@ -7,17 +7,24 @@ import android.provider.DocumentsContract
 import android.provider.DocumentsContract.Document
 import android.provider.DocumentsContract.Document.MIME_TYPE_DIR
 import android.provider.OpenableColumns
+import android.system.Os
 import android.webkit.MimeTypeMap
 import androidx.documentfile.provider.DocumentFile
+import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.fs.SizeProgress
+import com.klyx.api.util.applicationContext
 import com.klyx.api.util.isTextFile
+import com.klyx.api.util.tryOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.InputStream
@@ -341,6 +348,81 @@ class SafFileSystem(
                 .getMimeTypeFromExtension(
                     MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
                 )
+    }
+
+    override suspend fun calculateSize(uri: Uri): Flow<SizeProgress> = channelFlow {
+        val rootDoc = DocumentFile.fromTreeUri(context, uri)
+            ?: DocumentFile.fromSingleUri(context, uri)
+            ?: run { send(SizeProgress(0, 0, 0, isFinished = true)); return@channelFlow }
+
+        var totalSize = 0L
+        var fileCount = 0
+        var dirCount = 0
+
+        val dirQueue = ArrayDeque<DocumentFile>()
+        dirQueue.add(rootDoc)
+
+        while (dirQueue.isNotEmpty()) {
+            if (!isActive) break
+            val children = dirQueue.removeFirst().listFiles()
+            for (child in children) {
+                if (!isActive) break
+                if (child.isDirectory) {
+                    dirCount++
+                    dirQueue.add(child)
+                } else {
+                    fileCount++
+                    totalSize += child.length()
+                }
+                send(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
+            }
+        }
+
+        send(SizeProgress(totalSize, fileCount, dirCount, isFinished = true))
+    }.flowOn(Dispatchers.IO)
+
+    override suspend fun stat(uri: Uri): FileStatInfo? = withContext(Dispatchers.IO) {
+        val fd = tryOrNull { content.openFileDescriptor(uri, "r") } ?: return@withContext null
+        fd.use {
+            val stat = tryOrNull { Os.fstat(it.fileDescriptor) } ?: return@withContext null
+            FileStatInfo(
+                mode = stat.st_mode,
+                permissions = permissions(uri),
+                ownerUid = stat.st_uid,
+                ownerName = stat.st_uid.toString(),
+                groupGid = stat.st_gid,
+                groupName = stat.st_gid.toString(),
+                hardLinks = stat.st_nlink,
+                inode = stat.st_ino,
+                deviceId = stat.st_dev,
+                blockSize = stat.st_blksize,
+                blocksAllocated = stat.st_blocks,
+                lastAccessed = stat.st_atim.tv_sec,
+                lastModified = stat.st_mtim.tv_sec,
+                lastChanged = stat.st_ctim.tv_sec,
+            )
+        }
+    }
+
+    override suspend fun permissions(uri: Uri): String = withContext(Dispatchers.IO) {
+        val grant = applicationContext().contentResolver
+            .persistedUriPermissions
+            .find { it.uri == uri }
+        val r = if (grant?.isReadPermission == true) "r" else "-"
+        val w = if (grant?.isWritePermission == true) "w" else "-"
+        val x = if (uri.path?.let { DocumentsContract.isTreeUri(uri) || DocumentsContract.isDocumentUri(context, uri) } == true && r == "r") "x" else "-"
+        "d$r$w$x------"
+    }
+
+    override suspend fun resolveName(file: KxFile): String = withContext(Dispatchers.IO) {
+        val cursor = content.query(file.uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+        cursor?.use {
+            if (it.moveToFirst()) {
+                val name = it.getString(0)
+                if (!name.isNullOrBlank()) return@withContext name
+            }
+        }
+        file.name
     }
 
     private suspend fun getDocumentFlags(uri: Uri): Int = withContext(Dispatchers.IO) {

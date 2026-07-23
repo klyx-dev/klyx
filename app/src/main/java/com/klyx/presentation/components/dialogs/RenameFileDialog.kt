@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -42,7 +43,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.api.data.file.KxFile
-import com.klyx.data.file.isProtectedPath
+import com.klyx.api.data.fs.FileSystem
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -51,9 +53,13 @@ fun RenameFileDialog(
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit
 ) {
+    val fileSystem: FileSystem = koinInject()
     val initialName = file.name
     val isDir = file.isDirectory
-    val isProtected = remember(file) { file.isProtectedPath }
+
+    val isProtected by produceState(false) {
+        value = fileSystem.isProtectedPath(file.uri)
+    }
 
     var textFieldValue by remember {
         mutableStateOf(

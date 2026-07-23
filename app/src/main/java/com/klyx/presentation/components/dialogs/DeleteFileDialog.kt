@@ -25,7 +25,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
@@ -36,7 +40,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.api.data.file.KxFile
-import com.klyx.data.file.isProtectedPath
+import com.klyx.api.data.fs.FileSystem
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -45,9 +50,11 @@ fun DeleteFileDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val fileSystem: FileSystem = koinInject()
     val isDir = file.isDirectory
     val typeName = if (isDir) "directory" else "file"
-    val isProtected = remember(file) { file.isProtectedPath }
+    var isProtected by remember { mutableStateOf(false) }
+    LaunchedEffect(file) { isProtected = fileSystem.isProtectedPath(file.uri) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(

@@ -3,15 +3,20 @@ package com.klyx.data.fs
 import android.net.Uri
 import android.webkit.MimeTypeMap
 import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.fs.SizeProgress
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import org.apache.sshd.client.SshClient
 import org.apache.sshd.client.session.ClientSession
+import org.apache.sshd.common.util.io.PathUtils
 import org.apache.sshd.sftp.client.SftpClient
 import org.apache.sshd.sftp.client.SftpClient.DirEntry
 import org.apache.sshd.sftp.client.SftpClient.OpenMode
@@ -27,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class SftpFileSystem : FileSystem {
     companion object {
         init {
-            org.apache.sshd.common.util.io.PathUtils.setUserHomeFolderResolver {
+            PathUtils.setUserHomeFolderResolver {
                 Paths.get(System.getProperty("java.io.tmpdir"), ".ssh_home")
             }
         }
@@ -380,5 +385,112 @@ class SftpFileSystem : FileSystem {
         }
 
         return buildUri(tgtC, tgtPath)
+    }
+
+    override suspend fun calculateSize(uri: Uri): Flow<SizeProgress> = channelFlow {
+        val file = wrapUri(uri)
+        if (!file.isDirectory) {
+            send(SizeProgress(file.size, fileCount = 1, dirCount = 0, isFinished = true))
+            return@channelFlow
+        }
+
+        val c = parseConn(uri)
+        val rootPath = sftpPath(uri)
+        var totalSize = 0L
+        var fileCount = 0
+        var dirCount = 0
+
+        withContext(Dispatchers.IO) {
+            val session = getSessionBlocking(c)
+            SftpClientFactory.instance().createSftpClient(session).use { client ->
+                val dirQueue = ArrayDeque<String>()
+                dirQueue.add(rootPath)
+
+                while (dirQueue.isNotEmpty()) {
+                    if (!currentCoroutineContext().isActive) break
+                    val currentPath = dirQueue.removeFirst()
+                    val entries = listDirEntries(client, currentPath)
+                    for (entry in entries) {
+                        if (!currentCoroutineContext().isActive) break
+                        if (entry.filename in listOf(".", "..")) continue
+                        val childPath = if (currentPath.endsWith("/")) "$currentPath${entry.filename}" else "$currentPath/${entry.filename}"
+                        val attrs = entry.attributes
+                        if (attrs.isDirectory) {
+                            dirCount++
+                            dirQueue.add(childPath)
+                        } else {
+                            fileCount++
+                            totalSize += attrs.size
+                        }
+                        trySend(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
+                    }
+                }
+            }
+        }
+
+        send(SizeProgress(totalSize, fileCount, dirCount, isFinished = true))
+    }
+
+    override suspend fun stat(uri: Uri): FileStatInfo? = withContext(Dispatchers.IO) {
+        val c = parseConn(uri)
+        val session = getSessionBlocking(c)
+        SftpClientFactory.instance().createSftpClient(session).use { client ->
+            val attrs = client.stat(sftpPath(uri))
+            val mode = attrs.permissions
+            FileStatInfo(
+                mode = mode,
+                permissions = buildPermissionString(attrs),
+                ownerUid = attrs.owner?.toInt() ?: 0,
+                ownerName = attrs.owner?.toInt()?.toString() ?: "0",
+                groupGid = attrs.group?.toInt() ?: 0,
+                groupName = attrs.group?.toInt()?.toString() ?: "0",
+                hardLinks = 0,
+                inode = 0,
+                deviceId = 0,
+                blockSize = 0,
+                blocksAllocated = 0,
+                lastAccessed = attrs.accessTime?.toMillis() ?: 0,
+                lastModified = attrs.modifyTime?.toMillis() ?: 0,
+                lastChanged = 0,
+            )
+        }
+    }
+
+    override suspend fun permissions(uri: Uri): String = withContext(Dispatchers.IO) {
+        val c = parseConn(uri)
+        val session = getSessionBlocking(c)
+        SftpClientFactory.instance().createSftpClient(session).use { client ->
+            val attrs = client.stat(sftpPath(uri))
+            buildPermissionString(attrs)
+        }
+    }
+
+    private fun buildPermissionString(attrs: SftpClient.Attributes): String {
+        val mode = attrs.permissions
+        return buildString {
+            append(if (attrs.isDirectory) "d" else if (attrs.isSymbolicLink) "l" else "-")
+            append(if (mode and 0x100 != 0) "r" else "-")
+            append(if (mode and 0x80 != 0) "w" else "-")
+            append(if (mode and 0x40 != 0) "x" else "-")
+            append(if (mode and 0x20 != 0) "r" else "-")
+            append(if (mode and 0x10 != 0) "w" else "-")
+            append(if (mode and 0x8 != 0) "x" else "-")
+            append(if (mode and 0x4 != 0) "r" else "-")
+            append(if (mode and 0x2 != 0) "w" else "-")
+            append(if (mode and 0x1 != 0) "x" else "-")
+        }
+    }
+
+    override suspend fun isSymlink(uri: Uri): Boolean = withSftp(uri) { client ->
+        val attrs = client.stat(sftpPath(uri))
+        attrs.isSymbolicLink
+    }
+
+    override suspend fun symlinkTarget(uri: Uri): String? = withSftp(uri) { client ->
+        try {
+            client.readLink(sftpPath(uri))
+        } catch (_: Exception) {
+            null
+        }
     }
 }

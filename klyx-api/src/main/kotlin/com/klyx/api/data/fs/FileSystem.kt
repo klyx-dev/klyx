@@ -1,9 +1,13 @@
 package com.klyx.api.data.fs
 
 import android.net.Uri
+import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.plugin.PluginService
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.isActive
 import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
@@ -149,6 +153,75 @@ interface FileSystem : PluginService {
      * @return A [Flow] emitting [KxFile] matches as they are found.
      */
     suspend fun search(roots: List<Uri>, query: String, maxResults: Int = 500): Flow<KxFile>
+
+    /**
+     * Returns detailed file statistics for the given [uri], or null if unavailable.
+     */
+    suspend fun stat(uri: Uri): FileStatInfo? = null
+
+    /**
+     * Returns a human-readable permission string (e.g. "rw-r--r--") for the given [uri].
+     */
+    suspend fun permissions(uri: Uri): String = "---------"
+
+    /**
+     * Returns whether the path at [uri] is a symbolic link.
+     */
+    suspend fun isSymlink(uri: Uri): Boolean = false
+
+    /**
+     * Returns the target of a symbolic link at [uri], or null if not a symlink or unsupported.
+     */
+    suspend fun symlinkTarget(uri: Uri): String? = null
+
+    /**
+     * Returns whether the path at [uri] is a protected system path that should not be modified.
+     */
+    suspend fun isProtectedPath(uri: Uri): Boolean = false
+
+    /**
+     * Returns a human-readable display name for the given [file].
+     */
+    suspend fun resolveName(file: KxFile): String = file.name
+
+    /**
+     * Calculates the total size of a directory tree at [uri].
+     *
+     * The default implementation uses [list] for recursive traversal. Override in each
+     * filesystem for an optimized version using native APIs.
+     */
+    suspend fun calculateSize(uri: Uri): Flow<SizeProgress> = channelFlow {
+        val file = wrapUri(uri)
+        if (!file.isDirectory) {
+            send(SizeProgress(file.size, fileCount = 1, dirCount = 0, isFinished = true))
+            return@channelFlow
+        }
+
+        var totalSize = 0L
+        var fileCount = 0
+        var dirCount = 0
+
+        val queue = ArrayDeque<Uri>()
+        queue.add(uri)
+
+        while (queue.isNotEmpty()) {
+            if (!currentCoroutineContext().isActive) break
+            val children = list(queue.removeFirst())
+            for (child in children) {
+                if (!currentCoroutineContext().isActive) break
+                if (child.isDirectory) {
+                    dirCount++
+                    queue.add(child.uri)
+                } else {
+                    fileCount++
+                    totalSize += child.size
+                }
+                send(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
+            }
+        }
+
+        send(SizeProgress(totalSize, fileCount, dirCount, isFinished = true))
+    }
 }
 
 /**
