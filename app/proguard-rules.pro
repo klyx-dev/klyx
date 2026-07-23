@@ -1,6 +1,8 @@
 -dontwarn com.sun.nio.file.ExtendedOpenOption
 -dontwarn org.joni.**
 -dontwarn com.github.luben.zstd.**
+-dontwarn javax.management.**
+-dontwarn org.bouncycastle.**
 
 -keep class kotlin.* { *; }
 -keep class kotlin.UInt { *; }

@@ -92,6 +92,9 @@ class FileTreeViewModel(
     private val _scrollTarget = MutableSharedFlow<FileNode>(extraBufferCapacity = 1)
     val scrollTarget: SharedFlow<FileNode> = _scrollTarget.asSharedFlow()
 
+    private val _errorEvent = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val errorEvent: SharedFlow<String> = _errorEvent.asSharedFlow()
+
     val visibleNodes = combine(
         _uiState.map { it.rootNodes }.distinctUntilChanged(),
         _uiState.map { it.expandedNodes }.distinctUntilChanged(),
@@ -125,13 +128,19 @@ class FileTreeViewModel(
                 .getProjects()
                 .forEach {
                     val uri = Uri.parse(it.uri)
-                    val file = withContext(Dispatchers.IO) { fileSystem.wrapUri(uri) }
-                    val node = tryOrNull { FileNode(file) }
-                    if (node != null) {
-                        addRootNode(node)
-                        if (it.isExpanded) expandNode(node) else collapseNode(node)
-                    } else {
+                    try {
+                        val file = withContext(Dispatchers.IO) { fileSystem.wrapUri(uri) }
+                        val node = tryOrNull { FileNode(file) }
+                        if (node != null) {
+                            addRootNode(node)
+                            if (it.isExpanded) expandNode(node) else collapseNode(node)
+                        } else {
+                            recentProjectRepository.removeProject(uri)
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Failed to restore session for $uri: ${e.message}")
                         recentProjectRepository.removeProject(uri)
+                        _errorEvent.emit(e.message ?: "Failed to connect to ${uri.host ?: uri}")
                     }
                 }
         }
@@ -252,8 +261,13 @@ class FileTreeViewModel(
         if (_uiState.value.rootNodes.any { it.uri == uri }) return
 
         viewModelScope.launch {
-            val file = withContext(Dispatchers.IO) { fileSystem.wrapUri(uri) }
-            addRootNode(FileNode(file))
+            try {
+                val file = withContext(Dispatchers.IO) { fileSystem.wrapUri(uri) }
+                addRootNode(FileNode(file))
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to add root node $uri: ${e.message}")
+                _errorEvent.emit(e.message ?: "Failed to connect to ${uri.host ?: uri}")
+            }
         }
     }
 

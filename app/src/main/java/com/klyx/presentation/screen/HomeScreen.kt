@@ -230,6 +230,14 @@ fun HomeScreen(
         }
     }
 
+    LaunchedEffect(fileTreeViewModel.errorEvent, lifecycleOwner) {
+        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            fileTreeViewModel.errorEvent.collect { error ->
+                toastHostState.showFailureToast(error)
+            }
+        }
+    }
+
     editorUiState.unsupportedFileAlert?.let { alert ->
         UnsupportedFileDialog(
             fileName = alert.file.name,
