@@ -3,9 +3,11 @@ package com.klyx.data.fs
 import android.content.Context
 import android.net.Uri
 import com.klyx.api.data.file.KxFile
+import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.fs.SizeProgress
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -86,4 +88,18 @@ class RoutingFileSystem(
         providerFor(uri).determineFileCategory(uri)
 
     override suspend fun mimeType(uri: Uri): String? = providerFor(uri).mimeType(uri)
+
+    override suspend fun calculateSize(uri: Uri): Flow<SizeProgress> = providerFor(uri).calculateSize(uri)
+
+    override suspend fun stat(uri: Uri): FileStatInfo? = providerFor(uri).stat(uri)
+
+    override suspend fun permissions(uri: Uri): String = providerFor(uri).permissions(uri)
+
+    override suspend fun isSymlink(uri: Uri): Boolean = providerFor(uri).isSymlink(uri)
+
+    override suspend fun symlinkTarget(uri: Uri): String? = providerFor(uri).symlinkTarget(uri)
+
+    override suspend fun isProtectedPath(uri: Uri): Boolean = providerFor(uri).isProtectedPath(uri)
+
+    override suspend fun resolveName(file: KxFile): String = providerFor(file.uri).resolveName(file)
 }
