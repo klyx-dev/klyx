@@ -329,8 +329,8 @@ private fun ProjectSourceBadge(scheme: String, isSelected: Boolean) {
             "Local"
         )
         "content" -> Triple(
-            MaterialTheme.colorScheme.tertiaryContainer,
-            MaterialTheme.colorScheme.onTertiaryContainer,
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.onSecondaryContainer,
             "SAF"
         )
         else -> Triple(

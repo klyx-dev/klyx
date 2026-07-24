@@ -140,7 +140,7 @@ class FileTreeViewModel(
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to restore session for $uri: ${e.message}")
                         recentProjectRepository.removeProject(uri)
-                        _errorEvent.emit(e.message ?: "Failed to connect to ${uri.host ?: uri}")
+                        launch { _errorEvent.emit(e.message ?: "Failed to connect to ${uri.host ?: uri}") }
                     }
                 }
         }

@@ -10,6 +10,7 @@ import android.provider.OpenableColumns
 import android.system.Os
 import android.webkit.MimeTypeMap
 import androidx.documentfile.provider.DocumentFile
+import com.blankj.utilcode.util.UriUtils
 import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
@@ -303,9 +304,23 @@ class SafFileSystem(
     }
 
     override suspend fun wrapUri(uri: Uri): KxFile = withContext(Dispatchers.IO) {
+        val localFile = resolveFromOwnProvider(uri)
+        if (localFile != null) return@withContext localFile.wrap()
+
+        val resolvedFile = try {
+            UriUtils.uri2FileNoCacheCopy(uri)
+        } catch (_: SecurityException) {
+            null
+        } catch (e: Throwable) {
+            e.printStackTrace()
+            null
+        }
+
+        if (resolvedFile != null) return@withContext resolvedFile.wrap()
+
         val isDirectory = DocumentsContract.isTreeUri(uri) ||
-            (DocumentsContract.isDocumentUri(context, uri) &&
-                MIME_TYPE_DIR == context.contentResolver.getType(uri))
+                (DocumentsContract.isDocumentUri(context, uri) &&
+                        MIME_TYPE_DIR == context.contentResolver.getType(uri))
 
         val name = if (DocumentsContract.isTreeUri(uri)) {
             DocumentsContract.getTreeDocumentId(uri).substringAfterLast('/')
@@ -319,6 +334,18 @@ class SafFileSystem(
             name = name,
             isDirectory = isDirectory
         )
+    }
+
+
+    private fun resolveFromOwnProvider(uri: Uri): File? {
+        val context = applicationContext()
+        val providerAuthority = "${context.packageName}.terminal.documents"
+        if (uri.authority != providerAuthority) return null
+        return when {
+            DocumentsContract.isTreeUri(uri) -> File(DocumentsContract.getTreeDocumentId(uri))
+            DocumentsContract.isDocumentUri(context, uri) -> File(DocumentsContract.getDocumentId(uri))
+            else -> null
+        }
     }
 
     override suspend fun determineFileCategory(uri: Uri): FileCategory {
@@ -410,7 +437,12 @@ class SafFileSystem(
             .find { it.uri == uri }
         val r = if (grant?.isReadPermission == true) "r" else "-"
         val w = if (grant?.isWritePermission == true) "w" else "-"
-        val x = if (uri.path?.let { DocumentsContract.isTreeUri(uri) || DocumentsContract.isDocumentUri(context, uri) } == true && r == "r") "x" else "-"
+        val x = if (uri.path?.let {
+                DocumentsContract.isTreeUri(uri) || DocumentsContract.isDocumentUri(
+                    context,
+                    uri
+                )
+            } == true && r == "r") "x" else "-"
         "d$r$w$x------"
     }
 
