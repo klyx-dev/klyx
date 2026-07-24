@@ -114,7 +114,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
-import coil3.compose.AsyncImage
 import com.klyx.R
 import com.klyx.api.data.editor.EditorAction
 import com.klyx.api.data.editor.Save
@@ -158,6 +157,7 @@ import com.klyx.presentation.components.OpenWith
 import com.klyx.presentation.components.Paste
 import com.klyx.presentation.components.Rename
 import com.klyx.presentation.components.Share
+import com.klyx.presentation.components.FileSystemImage
 import com.klyx.presentation.components.UnsupportedFileDialog
 import com.klyx.presentation.components.WelcomeScreen
 import com.klyx.presentation.components.dialogs.CloseUnsavedTabDialog
@@ -1292,13 +1292,10 @@ private fun EditorPager(
                         .fillMaxSize()
                         .clipToBounds()
                 ) {
-                    AsyncImage(
-                        model = tab.uri,
+                    FileSystemImage(
+                        uri = tab.uri,
                         contentDescription = tab.title,
                         contentScale = ContentScale.Fit,
-                        onSuccess = { state ->
-                            zoomState.setContentSize(state.painter.intrinsicSize)
-                        },
                         filterQuality = FilterQuality.High,
                         modifier = Modifier
                             .fillMaxSize()
