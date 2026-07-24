@@ -15,10 +15,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,8 +35,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
@@ -45,13 +49,13 @@ import androidx.compose.material.icons.rounded.FolderShared
 import androidx.compose.material.icons.rounded.FolderSpecial
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Smartphone
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -67,6 +71,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.toShape
@@ -89,13 +94,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
@@ -103,17 +106,19 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
 import com.klyx.api.data.file.KxFile
-import com.klyx.data.file.resolveName
 import com.klyx.api.data.fs.Paths
-import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.api.terminal.home
+import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.data.file.resolveName
+import com.klyx.data.fs.SftpFileSystem
+import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
-import com.klyx.api.ui.theme.GoogleSansRounded
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -148,7 +153,7 @@ fun FileTreeDrawer(
     )
 
     var showSearchSheet by remember { mutableStateOf(false) }
-    var showSftpDialog by remember { mutableStateOf(false) }
+    var showSftpSheet by remember { mutableStateOf(false) }
     val searchSheetState = rememberBottomSheetState(
         initialValue = Hidden,
         enabledValues = setOf(Hidden, PartiallyExpanded, Expanded)
@@ -307,17 +312,21 @@ fun FileTreeDrawer(
                 viewModel.addRootNode(Uri.fromFile(Paths.home))
             },
             onSelectSftp = {
-                dismiss()
-                showSftpDialog = true
+                scope.launch { sheetState.hide() }.invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        showLocationPicker = false
+                        showSftpSheet = true
+                    }
+                }
             }
         )
     }
 
-    if (showSftpDialog) {
-        SftpConnectionDialog(
-            onDismiss = { showSftpDialog = false },
+    if (showSftpSheet) {
+        SftpConnectionSheet(
+            onDismiss = { showSftpSheet = false },
             onConnect = { host, port, username, password, path ->
-                showSftpDialog = false
+                showSftpSheet = false
                 val userPart = if (password != null) "$username:$password" else username
                 val uri = Uri.parse("sftp://$userPart@$host:$port$path")
                 viewModel.addRootNode(uri)
@@ -975,9 +984,9 @@ fun ProjectLocationBottomSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SftpConnectionDialog(
+private fun SftpConnectionSheet(
     onDismiss: () -> Unit,
     onConnect: (host: String, port: Int, username: String, password: String?, path: String) -> Unit
 ) {
@@ -986,152 +995,198 @@ private fun SftpConnectionDialog(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var path by remember { mutableStateOf("/") }
+    var detecting by remember { mutableStateOf(false) }
+    var detectError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val isValid = host.isNotBlank() && username.isNotBlank()
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            modifier = Modifier.fillMaxWidth()
+    fun detectPath() {
+        detectError = null
+        detecting = true
+        scope.launch {
+            try {
+                val home = withContext(Dispatchers.IO) {
+                    SftpFileSystem.detectDefaultPath(
+                        host,
+                        portText.toIntOrNull() ?: 22,
+                        username,
+                        password.ifBlank { null })
+                }
+                path = home
+            } catch (e: Exception) {
+                detectError = e.message ?: "Detection failed"
+            } finally {
+                detecting = false
+            }
+        }
+    }
+
+    val sheetState = rememberBottomSheetState(initialValue = Expanded, enabledValues = setOf(Expanded, Hidden))
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 8.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(72.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Cloud,
-                        contentDescription = null,
-                        modifier = Modifier.size(36.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Text(
-                    text = "SFTP Connection",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = TextAlign.Center
+                Icon(
+                    imageVector = Icons.Rounded.Cloud,
+                    contentDescription = null,
+                    modifier = Modifier.size(36.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "SFTP Connection",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = host,
+                    onValueChange = { host = it },
+                    label = { Text("Host") },
+                    placeholder = { Text("e.g. 192.168.1.100") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    )
+                )
+                OutlinedTextField(
+                    value = portText,
+                    onValueChange = { portText = it.filter { c -> c.isDigit() } },
+                    label = { Text("Port") },
+                    placeholder = { Text("22") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text("Username") },
+                    placeholder = { Text("e.g. root") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    )
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    placeholder = { Text("Optional") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ),
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
+                )
+                OutlinedTextField(
+                    value = path,
+                    onValueChange = { path = it; detectError = null },
+                    label = { Text("Path") },
+                    placeholder = { Text("/") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    ),
+                    isError = detectError != null,
+                    supportingText = if (detectError != null) {
+                        { Text(detectError!!, color = MaterialTheme.colorScheme.error) }
+                    } else null,
+                    trailingIcon = {
+                        if (detecting) {
+                            LoadingIndicator(
+                                modifier = Modifier.size(20.dp)
+                            )
+                        } else {
+                            TextButton(
+                                onClick = { detectPath() },
+                                enabled = host.isNotBlank() && username.isNotBlank() && !detecting,
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text("Detect", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                FilledTonalButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    colors = ButtonDefaults.filledTonalButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 ) {
-                    OutlinedTextField(
-                        value = host,
-                        onValueChange = { host = it },
-                        label = { Text("Host") },
-                        placeholder = { Text("e.g. 192.168.1.100") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        )
-                    )
-                    OutlinedTextField(
-                        value = portText,
-                        onValueChange = { portText = it.filter { c -> c.isDigit() } },
-                        label = { Text("Port") },
-                        placeholder = { Text("22") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        ),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                    )
-                    OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
-                        placeholder = { Text("e.g. root") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        )
-                    )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        placeholder = { Text("Optional") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        ),
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-                    )
-                    OutlinedTextField(
-                        value = path,
-                        onValueChange = { path = it },
-                        label = { Text("Path") },
-                        placeholder = { Text("/") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        )
-                    )
+                    Text("Cancel", style = MaterialTheme.typography.titleMedium)
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                Button(
+                    onClick = {
+                        val port = portText.toIntOrNull() ?: 22
+                        val safePath = path.ifBlank { "/" }.let { if (it.startsWith("/")) it else "/$it" }
+                        onConnect(host, port, username, password.ifBlank { null }, safePath)
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                    enabled = isValid
                 ) {
-                    FilledTonalButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = ButtonDefaults.MediumContainerHeight),
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
-                    }
-
-                    Button(
-                        onClick = {
-                            val port = portText.toIntOrNull() ?: 22
-                            val safePath = path.ifBlank { "/" }.let { if (it.startsWith("/")) it else "/$it" }
-                            onConnect(host, port, username, password.ifBlank { null }, safePath)
-                        },
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = ButtonDefaults.MediumContainerHeight),
-                        enabled = isValid
-                    ) {
-                        Text("Connect", style = MaterialTheme.typography.titleMedium)
-                    }
+                    Text("Connect", style = MaterialTheme.typography.titleMedium)
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

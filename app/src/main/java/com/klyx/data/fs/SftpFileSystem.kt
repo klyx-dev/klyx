@@ -2,8 +2,8 @@ package com.klyx.data.fs
 
 import android.net.Uri
 import android.webkit.MimeTypeMap
-import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.FileStatInfo
+import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
@@ -34,6 +34,25 @@ class SftpFileSystem : FileSystem {
         init {
             PathUtils.setUserHomeFolderResolver {
                 Paths.get(System.getProperty("java.io.tmpdir"), ".ssh_home")
+            }
+        }
+
+        fun detectDefaultPath(host: String, port: Int, username: String, password: String?): String {
+            val client = SshClient.setUpDefaultClient().apply { start() }
+            try {
+                val session = client
+                    .connect(username, host, port)
+                    .verify(15_000)
+                    .session
+                password?.let { session.addPasswordIdentity(it) }
+                session.use { session ->
+                    session.auth().verify(15_000)
+                    return SftpClientFactory.instance().createSftpClient(session).use { sftp ->
+                        sftp.canonicalPath(".")
+                    }
+                }
+            } finally {
+                client.stop()
             }
         }
     }
@@ -170,7 +189,8 @@ class SftpFileSystem : FileSystem {
                         }
                     }
                 }
-            } catch (_: Exception) { }
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -190,7 +210,8 @@ class SftpFileSystem : FileSystem {
                 if (entry.filename in listOf(".", "..")) continue
                 if (entry.filename.lowercase().contains(query)) {
                     if (count.getAndIncrement() < maxResults) {
-                        val childPath = if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
+                        val childPath =
+                            if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
                         val attrs = entry.attributes
                         onResult(
                             KxFile(
@@ -198,13 +219,14 @@ class SftpFileSystem : FileSystem {
                                 name = entry.filename,
                                 isDirectory = attrs.isDirectory,
                                 size = attrs.size,
-                                 lastModified = attrs.modifyTime.toMillis(),
+                                lastModified = attrs.modifyTime.toMillis(),
                             )
                         )
                     }
                 }
                 if (entry.attributes.isDirectory) {
-                    val subPath = if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
+                    val subPath =
+                        if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
                     searchRecursive(c, subPath, query, maxResults, onResult)
                 }
             }
@@ -234,9 +256,17 @@ class SftpFileSystem : FileSystem {
         private val buffer = ByteArrayOutputStream()
         private var closed = false
 
-        override fun write(b: Int) { buffer.write(b) }
-        override fun write(b: ByteArray, off: Int, len: Int) { buffer.write(b, off, len) }
-        override fun flush() { buffer.flush() }
+        override fun write(b: Int) {
+            buffer.write(b)
+        }
+
+        override fun write(b: ByteArray, off: Int, len: Int) {
+            buffer.write(b, off, len)
+        }
+
+        override fun flush() {
+            buffer.flush()
+        }
 
         override fun close() {
             if (closed) return
@@ -301,7 +331,7 @@ class SftpFileSystem : FileSystem {
         }
     }
 
-    override suspend fun rename(uri: Uri, newName: String): Uri? = withSftp(uri) { client ->
+    override suspend fun rename(uri: Uri, newName: String): Uri = withSftp(uri) { client ->
         val c = parseConn(uri)
         val path = sftpPath(uri)
         val parent = path.substringBeforeLast("/", "")
@@ -310,7 +340,7 @@ class SftpFileSystem : FileSystem {
         buildUri(c, newPath)
     }
 
-    override suspend fun createFile(parent: Uri, name: String, mimeType: String): Uri? = withSftp(parent) { client ->
+    override suspend fun createFile(parent: Uri, name: String, mimeType: String): Uri = withSftp(parent) { client ->
         val c = parseConn(parent)
         val parentPath = sftpPath(parent)
         val fullPath = if (parentPath.endsWith("/")) "$parentPath$name" else "$parentPath/$name"
@@ -318,7 +348,7 @@ class SftpFileSystem : FileSystem {
         buildUri(c, fullPath)
     }
 
-    override suspend fun createDirectory(parent: Uri, name: String): Uri? = withSftp(parent) { client ->
+    override suspend fun createDirectory(parent: Uri, name: String): Uri = withSftp(parent) { client ->
         val c = parseConn(parent)
         val parentPath = sftpPath(parent)
         val fullPath = if (parentPath.endsWith("/")) "$parentPath$name" else "$parentPath/$name"
@@ -344,7 +374,6 @@ class SftpFileSystem : FileSystem {
     }
 
     override suspend fun wrapUri(uri: Uri): KxFile = withSftp(uri) { client ->
-        val c = parseConn(uri)
         val path = sftpPath(uri)
         val attrs = client.stat(path)
         val name = path.substringAfterLast("/", "")
@@ -377,7 +406,7 @@ class SftpFileSystem : FileSystem {
             )
     }
 
-    override suspend fun copy(source: Uri, targetParent: Uri): Uri? {
+    override suspend fun copy(source: Uri, targetParent: Uri): Uri {
         val tgtC = parseConn(targetParent)
         val srcPath = sftpPath(source)
         val name = srcPath.substringAfterLast("/", "unknown")
@@ -400,7 +429,7 @@ class SftpFileSystem : FileSystem {
         return buildUri(tgtC, tgtPath)
     }
 
-    override suspend fun move(source: Uri, sourceParent: Uri, targetParent: Uri): Uri? {
+    override suspend fun move(source: Uri, sourceParent: Uri, targetParent: Uri): Uri {
         val srcC = parseConn(source)
         val tgtC = parseConn(targetParent)
         val srcPath = sftpPath(source)
@@ -427,7 +456,11 @@ class SftpFileSystem : FileSystem {
             }
 
             withSftp(source) { client ->
-                try { client.remove(srcPath) } catch (_: Exception) { client.rmdir(srcPath) }
+                try {
+                    client.remove(srcPath)
+                } catch (_: Exception) {
+                    client.rmdir(srcPath)
+                }
             }
         }
 
@@ -460,7 +493,8 @@ class SftpFileSystem : FileSystem {
                     for (entry in entries) {
                         if (!currentCoroutineContext().isActive) break
                         if (entry.filename in listOf(".", "..")) continue
-                        val childPath = if (currentPath.endsWith("/")) "$currentPath${entry.filename}" else "$currentPath/${entry.filename}"
+                        val childPath =
+                            if (currentPath.endsWith("/")) "$currentPath${entry.filename}" else "$currentPath/${entry.filename}"
                         val attrs = entry.attributes
                         if (attrs.isDirectory) {
                             dirCount++
@@ -478,7 +512,7 @@ class SftpFileSystem : FileSystem {
         send(SizeProgress(totalSize, fileCount, dirCount, isFinished = true))
     }
 
-    override suspend fun stat(uri: Uri): FileStatInfo? = withContext(Dispatchers.IO) {
+    override suspend fun stat(uri: Uri): FileStatInfo = withContext(Dispatchers.IO) {
         val c = parseConn(uri)
         val session = getSessionBlocking(c)
         SftpClientFactory.instance().createSftpClient(session).use { client ->
