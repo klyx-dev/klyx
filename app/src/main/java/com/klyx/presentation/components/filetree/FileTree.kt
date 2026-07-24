@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -135,6 +136,7 @@ fun FileTree(
                         FileTreeItem(
                             node = item.node,
                             depth = item.depth,
+                            scheme = if (item.depth == 0) item.node.uri.scheme else null,
                             isExpanded = state.isNodeExpanded(item.node),
                             isSelected = state.isNodeSelected(item.node),
                             isLoading = state.isLoading(item.node),
@@ -164,6 +166,7 @@ fun FileTree(
 private fun FileTreeItem(
     node: FileNode,
     depth: Int,
+    scheme: String? = null,
     isExpanded: Boolean,
     isSelected: Boolean,
     isLoading: Boolean,
@@ -297,12 +300,56 @@ private fun FileTreeItem(
 
                 Text(
                     text = node.name,
+                    modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelLarge,
                     color = fg,
                     fontWeight = if (node.isDirectory) FontWeight.SemiBold else FontWeight.Medium
                 )
+
+                if (scheme != null) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ProjectSourceBadge(scheme = scheme, isSelected = isSelected)
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun ProjectSourceBadge(scheme: String, isSelected: Boolean) {
+    val (bg, fg, label) = when (scheme) {
+        "sftp" -> Triple(
+            MaterialTheme.colorScheme.primaryContainer,
+            MaterialTheme.colorScheme.onPrimaryContainer,
+            "SFTP"
+        )
+        "file" -> Triple(
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer,
+            "Local"
+        )
+        "content" -> Triple(
+            MaterialTheme.colorScheme.tertiaryContainer,
+            MaterialTheme.colorScheme.onTertiaryContainer,
+            "SAF"
+        )
+        else -> Triple(
+            MaterialTheme.colorScheme.secondaryContainer,
+            MaterialTheme.colorScheme.onSecondaryContainer,
+            scheme.uppercase()
+        )
+    }
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.surface else bg,
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            style = MaterialTheme.typography.labelSmall,
+            color = if (isSelected) MaterialTheme.colorScheme.onSurface else fg,
+            maxLines = 1,
+        )
     }
 }
 
