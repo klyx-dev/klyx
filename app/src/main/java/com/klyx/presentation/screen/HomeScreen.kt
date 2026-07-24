@@ -160,6 +160,7 @@ import com.klyx.presentation.components.Rename
 import com.klyx.presentation.components.Share
 import com.klyx.presentation.components.UnsupportedFileDialog
 import com.klyx.presentation.components.WelcomeScreen
+import com.klyx.presentation.components.dialogs.CloseUnsavedTabDialog
 import com.klyx.presentation.components.dialogs.DeleteFileDialog
 import com.klyx.presentation.components.dialogs.ImageShareDialog
 import com.klyx.presentation.components.dialogs.NewFileDialog
@@ -412,6 +413,18 @@ fun HomeScreen(
                 tab.uri.share()
             }
         )
+    }
+
+    editorUiState.pendingCloseTabId?.let { tabId ->
+        val tab = openTabs.find { it.id == tabId } as? WorkspaceTab.TextFile
+        if (tab != null) {
+            CloseUnsavedTabDialog(
+                fileName = tab.title,
+                onDismiss = { editorViewModel.dismissCloseTab() },
+                onSaveAndClose = { editorViewModel.confirmCloseTab(tabId) },
+                onDiscard = { editorViewModel.discardCloseTab(tabId) }
+            )
+        }
     }
 
     var nodeToDelete by remember { mutableStateOf<FileNode?>(null) }

@@ -22,6 +22,7 @@ import com.klyx.api.system.firstAvailable
 import com.klyx.api.system.streamLines
 import com.klyx.api.system.which
 import com.klyx.api.util.applicationContext
+import com.klyx.api.util.isTextFile
 import com.klyx.api.util.tryOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
@@ -304,8 +305,10 @@ class LocalFileSystem : FileSystem {
                         ?.lowercase()
                 )
 
-            if (mimeType?.startsWith("image/") == true) FileCategory.IMAGE
-            else FileCategory.TEXT
+            if (mimeType?.startsWith("image/") == true) return FileCategory.IMAGE
+
+            if (isTextFile(uri, applicationContext().contentResolver)) FileCategory.TEXT
+            else FileCategory.BINARY_UNSUPPORTED
         } catch (_: Exception) {
             FileCategory.ERROR
         }

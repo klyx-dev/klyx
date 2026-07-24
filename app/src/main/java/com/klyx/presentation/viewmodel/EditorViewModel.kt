@@ -48,7 +48,8 @@ data class UnsupportedFileAlert(
 data class EditorUiState(
     val openTabs: PersistentList<WorkspaceTab> = persistentListOf(),
     val activeTabId: String? = null,
-    val unsupportedFileAlert: UnsupportedFileAlert? = null
+    val unsupportedFileAlert: UnsupportedFileAlert? = null,
+    val pendingCloseTabId: String? = null
 )
 
 sealed interface EditorEvent {
@@ -130,6 +131,15 @@ class EditorViewModel(
     }
 
     fun closeTab(tabId: String) {
+        val tab = _uiState.value.openTabs.find { it.id == tabId }
+        if (tab is WorkspaceTab.TextFile && tab.hasUnsavedChanges) {
+            _uiState.update { it.copy(pendingCloseTabId = tabId) }
+        } else {
+            forceCloseTab(tabId)
+        }
+    }
+
+    private fun forceCloseTab(tabId: String) {
         editorStateRegistry.unregister(tabId)
         lspManager.onEditorClosed(tabId)
         _uiState.update { state ->
@@ -161,6 +171,48 @@ class EditorViewModel(
                 activeTabId = newActiveTab
             )
         }
+    }
+
+    fun confirmCloseTab(tabId: String) {
+        val tab = _uiState.value.openTabs.find { it.id == tabId } as? WorkspaceTab.TextFile
+        if (tab != null) {
+            val editorState = editorStateRegistry[tabId]
+            if (editorState != null) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    runCatching {
+                        fileSystem.outputStream(tab.file.uri).use { output ->
+                            editorState.writeTextTo(output)
+                        }
+                        val savedText = editorState.text.toString()
+                        editorStateRegistry.setBaselineText(tabId, savedText)
+                        lspManager.onFileSaved(tabId)
+                        _uiState.update { state ->
+                            state.copy(
+                                openTabs = state.openTabs.mutate { tabs ->
+                                    val index = tabs.indexOfFirst { it.id == tabId }
+                                    if (index != -1) {
+                                        tabs[index] = tab.copy(hasUnsavedChanges = false)
+                                    }
+                                }
+                            )
+                        }
+                    }.getOrNull()
+                    forceCloseTab(tabId)
+                }
+            } else {
+                forceCloseTab(tabId)
+            }
+        }
+        _uiState.update { it.copy(pendingCloseTabId = null) }
+    }
+
+    fun discardCloseTab(tabId: String) {
+        forceCloseTab(tabId)
+        _uiState.update { it.copy(pendingCloseTabId = null) }
+    }
+
+    fun dismissCloseTab() {
+        _uiState.update { it.copy(pendingCloseTabId = null) }
     }
 
     fun closeOtherTabs(currentTabId: String) {

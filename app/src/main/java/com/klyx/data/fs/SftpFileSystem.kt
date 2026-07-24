@@ -392,8 +392,34 @@ class SftpFileSystem : FileSystem {
                 .getMimeTypeFromExtension(
                     MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
                 )
-            if (mimeType?.startsWith("image/") == true) FileCategory.IMAGE
-            else FileCategory.TEXT
+            if (mimeType?.startsWith("image/") == true) return FileCategory.IMAGE
+
+            val isBinary = withSftp(uri) { client ->
+                val path = sftpPath(uri)
+                try {
+                    client.open(path, OpenMode.Read).use { handle ->
+                        val buffer = ByteArray(4096)
+                        val bytesRead = client.read(handle, 0, buffer, 0, buffer.size)
+                        if (bytesRead <= 0) return@withSftp false
+
+                        for (i in 0 until bytesRead) {
+                            if ((buffer[i].toInt() and 0xFF) == 0) return@withSftp true
+                        }
+
+                        var suspicious = 0
+                        for (i in 0 until bytesRead) {
+                            val b = buffer[i].toInt() and 0xFF
+                            val printable = b == 0x09 || b == 0x0A || b == 0x0D || b in 0x20..0x7E
+                            if (!printable) suspicious++
+                        }
+                        suspicious.toFloat() / bytesRead >= 0.30f
+                    }
+                } catch (_: Exception) {
+                    false
+                }
+            }
+
+            if (isBinary) FileCategory.BINARY_UNSUPPORTED else FileCategory.TEXT
         } catch (_: Exception) {
             FileCategory.ERROR
         }
