@@ -86,8 +86,8 @@ android {
         }
 
         debug {
-            //applicationIdSuffix = ".debug"
-            signingConfig = releaseConfig
+            applicationIdSuffix = ".debug"
+            //signingConfig = releaseConfig
             versionNameSuffix = "-debug"
             resValue("string", "app_name", "Klyx [D]")
         }
