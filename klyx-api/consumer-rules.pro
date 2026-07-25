@@ -7,6 +7,7 @@
 -keep class androidx.compose.runtime.** { *; }
 -keep class androidx.compose.material3.** { *; }
 -keep class androidx.compose.ui.** { *; }
+-keep class androidx.compose.animation.** { *; }
 
 -keep class kotlin.Metadata { *; }
 -keep,includedescriptorclasses class kotlin.reflect.** { *; }
