@@ -154,6 +154,10 @@ fun FileTreeDrawer(
 
     var showSearchSheet by remember { mutableStateOf(false) }
     var showSftpSheet by remember { mutableStateOf(false) }
+    val sftpSheetState = rememberBottomSheetState(
+        initialValue = Hidden,
+        enabledValues = setOf(Hidden, Expanded)
+    )
     val searchSheetState = rememberBottomSheetState(
         initialValue = Hidden,
         enabledValues = setOf(Hidden, PartiallyExpanded, Expanded)
@@ -312,21 +316,32 @@ fun FileTreeDrawer(
                 viewModel.addRootNode(Uri.fromFile(Paths.home))
             },
             onSelectSftp = {
-                scope.launch { sheetState.hide() }.invokeOnCompletion {
-                    if (!sheetState.isVisible) {
-                        showLocationPicker = false
-                        showSftpSheet = true
-                    }
-                }
+                //dismiss()
+                showSftpSheet = true
             }
         )
     }
 
     if (showSftpSheet) {
+        fun cancel() {
+            scope.launch { sftpSheetState.hide() }.invokeOnCompletion {
+                if (!sftpSheetState.isVisible) {
+                    showSftpSheet = false
+                }
+            }
+        }
+
         SftpConnectionSheet(
-            onDismiss = { showSftpSheet = false },
+            sheetState = sftpSheetState,
+            onDismissRequest = { showSftpSheet = false },
+            onCancel = { cancel() },
             onConnect = { host, port, username, password, path ->
-                showSftpSheet = false
+                scope.launch { sftpSheetState.hide() }.invokeOnCompletion {
+                    if (!sftpSheetState.isVisible) {
+                        showSftpSheet = false
+                        showLocationPicker = false
+                    }
+                }
                 val userPart = if (password != null) "$username:$password" else username
                 val uri = Uri.parse("sftp://$userPart@$host:$port$path")
                 viewModel.addRootNode(uri)
@@ -987,7 +1002,9 @@ fun ProjectLocationBottomSheet(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SftpConnectionSheet(
-    onDismiss: () -> Unit,
+    sheetState: SheetState,
+    onDismissRequest: () -> Unit,
+    onCancel: () -> Unit,
     onConnect: (host: String, port: Int, username: String, password: String?, path: String) -> Unit
 ) {
     var host by remember { mutableStateOf("") }
@@ -1022,10 +1039,12 @@ private fun SftpConnectionSheet(
         }
     }
 
-    val sheetState = rememberBottomSheetState(initialValue = Expanded, enabledValues = setOf(Expanded, Hidden))
+    LaunchedEffect(Unit) {
+        sheetState.expand()
+    }
 
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = onDismissRequest,
         sheetState = sheetState
     ) {
         Column(
@@ -1159,7 +1178,7 @@ private fun SftpConnectionSheet(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 FilledTonalButton(
-                    onClick = onDismiss,
+                    onClick = onCancel,
                     modifier = Modifier
                         .weight(1f)
                         .heightIn(min = ButtonDefaults.MediumContainerHeight),
