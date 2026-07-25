@@ -2,8 +2,8 @@ package com.klyx.data.fs
 
 import android.content.Context
 import android.net.Uri
-import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.FileStatInfo
+import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
@@ -51,6 +51,14 @@ class RoutingFileSystem(
     }
 
     override suspend fun inputStream(uri: Uri): InputStream = providerFor(uri).inputStream(uri)
+
+    override suspend fun readRange(
+        uri: Uri,
+        position: Long,
+        buffer: ByteArray,
+        offset: Int,
+        length: Int
+    ): Int = providerFor(uri).readRange(uri, position, buffer, offset, length)
 
     override suspend fun outputStream(uri: Uri, mode: String): OutputStream =
         providerFor(uri).outputStream(uri, mode)
