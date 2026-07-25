@@ -183,6 +183,7 @@ import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.ExperimentalEditorApi
 import io.github.rosemoe.sora.compose.content
 import io.github.rosemoe.sora.event.ContentChangeEvent
+import io.github.rosemoe.sora.event.TextSizeChangeEvent
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
@@ -1391,6 +1392,15 @@ private fun TextFileEditor(
                 val baseline = registry.getBaselineText(tab.id) ?: ""
                 editorViewModel.markTabModified(tab.id, content.toString() != baseline)
             }
+    }
+
+    LaunchedEffect(state) {
+        state.subscribeAlways<TextSizeChangeEvent> {
+            val newSizeSp = with(density) { it.newTextSize.toSp().value }
+            if (settings.fontSize != newSizeSp) {
+                editorViewModel.updateFontSize(newSizeSp)
+            }
+        }
     }
 
     key(tab.id) {

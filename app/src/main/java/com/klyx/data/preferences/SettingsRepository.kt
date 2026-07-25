@@ -50,4 +50,8 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
             it.copy(fileTree = block(it.fileTree))
         }
     }
+
+    suspend fun updateFontSize(newSize: Float) = dataStore.updateData {
+        it.copy(editor = it.editor.copy(fontSize = newSize))
+    }
 }

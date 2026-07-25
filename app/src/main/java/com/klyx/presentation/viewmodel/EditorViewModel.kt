@@ -19,6 +19,7 @@ import com.klyx.core.event.EventBus
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.data.editor.EditorStateRegistry
+import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.repository.PluginTabRepository
 import com.klyx.data.repository.RecentFileRepository
 import com.klyx.event.eventBus
@@ -31,6 +32,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.plus
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,6 +64,7 @@ sealed interface EditorEvent {
 @KoinViewModel
 class EditorViewModel(
     private val fileSystem: FileSystem,
+    private val settingsRepository: SettingsRepository,
     private val recentFileRepository: RecentFileRepository,
     private val editorStateRegistry: EditorStateRegistry,
     private val lspManager: LspManager,
@@ -117,6 +120,14 @@ class EditorViewModel(
 
     private fun sendEvent(event: EditorEvent) {
         viewModelScope.launch { _events.send(event) }
+    }
+
+    private var fontSizeJob: Job? = null
+    fun updateFontSize(newSize: Float) {
+        fontSizeJob?.cancel()
+        fontSizeJob = viewModelScope.launch {
+            settingsRepository.updateFontSize(newSize)
+        }
     }
 
     fun openTab(tab: WorkspaceTab) {
@@ -188,6 +199,7 @@ class EditorViewModel(
                         recentFileRepository.removeByUri(Uri.parse(closedTab.id))
                         pluginTabRepository.removeTab(closedTab.id)
                     }
+
                     is WorkspaceTab.Welcome -> {}
                 }
             }
@@ -269,6 +281,7 @@ class EditorViewModel(
                         recentFileRepository.removeByUri(Uri.parse(tab.id))
                         pluginTabRepository.removeTab(tab.id)
                     }
+
                     is WorkspaceTab.Welcome -> {}
                 }
             }
