@@ -121,6 +121,7 @@ import com.klyx.api.data.editor.SaveAs
 import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
+import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.ToolbarAction
@@ -132,6 +133,7 @@ import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.api.util.share
 import com.klyx.api.util.shareText
+import com.klyx.api.util.thenIf
 import com.klyx.core.globalOf
 import com.klyx.data.editor.EditorStateRegistry
 import com.klyx.data.editor.KlyxEditorColorScheme
@@ -151,13 +153,13 @@ import com.klyx.presentation.components.Cut
 import com.klyx.presentation.components.Delete
 import com.klyx.presentation.components.ExpressiveMenuItem
 import com.klyx.presentation.components.FileActionBottomSheet
+import com.klyx.presentation.components.FileSystemImage
 import com.klyx.presentation.components.NewDirectory
 import com.klyx.presentation.components.NewFile
 import com.klyx.presentation.components.OpenWith
 import com.klyx.presentation.components.Paste
 import com.klyx.presentation.components.Rename
 import com.klyx.presentation.components.Share
-import com.klyx.presentation.components.FileSystemImage
 import com.klyx.presentation.components.UnsupportedFileDialog
 import com.klyx.presentation.components.WelcomeScreen
 import com.klyx.presentation.components.dialogs.CloseUnsavedTabDialog
@@ -700,7 +702,14 @@ private fun HomeTopBar(
         Brush.verticalGradient(colors = gradientColors)
     }
 
-    Column(modifier = Modifier.background(brush)) {
+    val isAmoledDarkMode = LocalAppSettings.current.appearance.amoledDarkMode && LocalIsDarkMode.current
+
+    Column(
+        modifier = Modifier
+            .thenIf(!isAmoledDarkMode) {
+                background(brush)
+            }
+    ) {
         TopAppBar(
             scrollBehavior = scrollBehavior,
             colors = TopAppBarDefaults.topAppBarColors(
