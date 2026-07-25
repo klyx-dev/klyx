@@ -6,9 +6,10 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [
         RecentProjectEntity::class,
-        RecentFileEntity::class
+        RecentFileEntity::class,
+        PluginTabEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class KlyxDatabase : RoomDatabase() {
@@ -16,4 +17,6 @@ abstract class KlyxDatabase : RoomDatabase() {
     abstract fun recentProjectDao(): RecentProjectDao
 
     abstract fun recentFileDao(): RecentFileDao
+
+    abstract fun pluginTabDao(): PluginTabDao
 }

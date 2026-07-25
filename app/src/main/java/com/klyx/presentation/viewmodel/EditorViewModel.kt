@@ -19,6 +19,7 @@ import com.klyx.core.event.EventBus
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.data.editor.EditorStateRegistry
+import com.klyx.data.repository.PluginTabRepository
 import com.klyx.data.repository.RecentFileRepository
 import com.klyx.event.eventBus
 import com.klyx.lsp.LspManager
@@ -63,7 +64,8 @@ class EditorViewModel(
     private val fileSystem: FileSystem,
     private val recentFileRepository: RecentFileRepository,
     private val editorStateRegistry: EditorStateRegistry,
-    private val lspManager: LspManager
+    private val lspManager: LspManager,
+    private val pluginTabRepository: PluginTabRepository,
 ) : ViewModel() {
 
     companion object {
@@ -108,6 +110,7 @@ class EditorViewModel(
                 }
             if (skipId != null) {
                 recentFileRepository.removeByUri(Uri.parse(skipId))
+                pluginTabRepository.removeTab(skipId)
             }
         }
     }
@@ -126,6 +129,14 @@ class EditorViewModel(
                 },
                 activeTabId = tab.id
             )
+        }
+        if (tab is WorkspaceTab.Custom) {
+            val pluginId = tab.pluginId
+            if (pluginId != null) {
+                viewModelScope.launch {
+                    pluginTabRepository.saveTab(tab.id, pluginId, tab.title)
+                }
+            }
         }
     }
 
@@ -172,7 +183,12 @@ class EditorViewModel(
                 when (closedTab) {
                     is WorkspaceTab.ImageFile -> recentFileRepository.removeByUri(closedTab.uri)
                     is WorkspaceTab.TextFile -> recentFileRepository.removeFile(closedTab.file)
-                    else -> {}
+                    is WorkspaceTab.Custom -> {
+                        closedTab.onClose?.invoke()
+                        recentFileRepository.removeByUri(Uri.parse(closedTab.id))
+                        pluginTabRepository.removeTab(closedTab.id)
+                    }
+                    is WorkspaceTab.Welcome -> {}
                 }
             }
 
@@ -248,7 +264,12 @@ class EditorViewModel(
                 when (tab) {
                     is WorkspaceTab.ImageFile -> recentFileRepository.removeByUri(tab.uri)
                     is WorkspaceTab.TextFile -> recentFileRepository.removeFile(tab.file)
-                    else -> {}
+                    is WorkspaceTab.Custom -> {
+                        tab.onClose?.invoke()
+                        recentFileRepository.removeByUri(Uri.parse(tab.id))
+                        pluginTabRepository.removeTab(tab.id)
+                    }
+                    is WorkspaceTab.Welcome -> {}
                 }
             }
         }
@@ -268,6 +289,7 @@ class EditorViewModel(
 
         viewModelScope.launch {
             recentFileRepository.clearAll()
+            pluginTabRepository.removeAll()
         }
     }
 

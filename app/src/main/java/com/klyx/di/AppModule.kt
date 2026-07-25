@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.klyx.BuildConfig
 import com.klyx.data.database.KlyxDatabase
 import com.klyx.data.database.MIGRATION_1_2
+import com.klyx.data.database.MIGRATION_2_3
 import com.klyx.data.preferences.SettingsDataStore
 import com.klyx.data.preferences.dataStore
 import org.koin.core.annotation.ComponentScan
@@ -26,7 +27,7 @@ fun provideAppDatabase(context: Context) = Room
         klass = KlyxDatabase::class.java,
         name = "klyx_database"
     )
-    .addMigrations(MIGRATION_1_2)
+    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
     .apply {
         if (BuildConfig.DEBUG) {
             fallbackToDestructiveMigration(dropAllTables = true)
@@ -39,6 +40,9 @@ fun provideRecentFileDao(db: KlyxDatabase) = db.recentFileDao()
 
 @Singleton
 fun provideRecentProjectDao(db: KlyxDatabase) = db.recentProjectDao()
+
+@Singleton
+fun providePluginTabDao(db: KlyxDatabase) = db.pluginTabDao()
 
 @Singleton
 fun provideAppPreferences(context: Context): SettingsDataStore = context.dataStore

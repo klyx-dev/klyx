@@ -33,7 +33,7 @@ sealed class WorkspaceTab {
      * @property hasUnsavedChanges Whether the file has modifications that haven't been saved to disk yet.
      */
     @Immutable
-    data class TextFile(
+    data class TextFile @JvmOverloads constructor(
         val file: KxFile,
         val projectUri: Uri? = null,
         val hasUnsavedChanges: Boolean = false,
@@ -48,7 +48,7 @@ sealed class WorkspaceTab {
      * @property projectUri The URI of the project this image belongs to, if any.
      */
     @Immutable
-    data class ImageFile(
+    data class ImageFile @JvmOverloads constructor(
         val uri: Uri,
         val projectUri: Uri? = null,
         override val title: String,
@@ -69,9 +69,11 @@ sealed class WorkspaceTab {
      * @property content The Composable UI to be rendered inside the tab.
      */
     @Stable
-    data class Custom(
+    data class Custom @JvmOverloads constructor(
         override val title: String,
         override val id: String,
         val content: @Composable () -> Unit,
+        val onClose: (suspend () -> Unit)? = null,
+        val pluginId: String? = null,
     ) : WorkspaceTab()
 }

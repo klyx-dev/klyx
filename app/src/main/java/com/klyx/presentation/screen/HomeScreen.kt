@@ -122,7 +122,6 @@ import com.klyx.api.data.editor.SaveAs
 import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
-import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.ToolbarAction

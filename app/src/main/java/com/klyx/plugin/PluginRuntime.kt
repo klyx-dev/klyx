@@ -6,6 +6,9 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import com.klyx.api.plugin.KlyxPlugin
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.fs.createDirIfMissing
+import com.klyx.api.data.fs.pluginsDir
 import com.klyx.api.plugin.PluginContext
 import com.klyx.api.plugin.PluginContextElement
 import com.klyx.api.plugin.PluginInfo
@@ -174,6 +177,10 @@ internal class PluginLifecycleOwnerImpl(
 internal class PluginContextImpl(
     override val app: App,
     override val pluginId: String
-) : PluginContext
+) : PluginContext {
+    override val dataDir by lazy {
+        Paths.pluginsDir.resolve(pluginId).also { it.createDirIfMissing() }
+    }
+}
 
 internal class PluginScopeImpl(override val coroutineContext: CoroutineContext) : PluginScope
