@@ -21,7 +21,6 @@ import org.apache.sshd.sftp.client.SftpClient
 import org.apache.sshd.sftp.client.SftpClient.DirEntry
 import org.apache.sshd.sftp.client.SftpClient.OpenMode
 import org.apache.sshd.sftp.client.SftpClientFactory
-import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
 import java.io.OutputStream
@@ -45,9 +44,9 @@ class SftpFileSystem : FileSystem {
                     .verify(15_000)
                     .session
                 password?.let { session.addPasswordIdentity(it) }
-                session.use { session ->
-                    session.auth().verify(15_000)
-                    return SftpClientFactory.instance().createSftpClient(session).use { sftp ->
+                session.use { s ->
+                    s.auth().verify(15_000)
+                    return SftpClientFactory.instance().createSftpClient(s).use { sftp ->
                         sftp.canonicalPath(".")
                     }
                 }
@@ -169,74 +168,32 @@ class SftpFileSystem : FileSystem {
             }
     }
 
-    override suspend fun search(
-        roots: List<Uri>,
-        query: String,
-        maxResults: Int
-    ): Flow<KxFile> = channelFlow {
-        if (query.isBlank()) return@channelFlow
-        val queryLower = query.lowercase()
-        val globalCount = AtomicInteger(0)
-
-        for (root in roots) {
-            if (globalCount.get() >= maxResults) break
-            val c = parseConn(root)
-            try {
-                withContext(Dispatchers.IO) {
-                    searchRecursive(c, sftpPath(root), queryLower, maxResults) { file ->
-                        if (globalCount.getAndIncrement() < maxResults) {
-                            trySend(file)
-                        }
-                    }
-                }
-            } catch (_: Exception) {
-            }
+    override suspend fun readRange(
+        uri: Uri,
+        position: Long,
+        buffer: ByteArray,
+        offset: Int,
+        length: Int
+    ): Int = withSftp(uri) { client ->
+        val path = sftpPath(uri)
+        client.open(path, OpenMode.Read).use { handle ->
+            client.read(handle, position, buffer, offset, length)
         }
     }
 
-    private fun searchRecursive(
-        c: Conn,
-        dirPath: String,
-        query: String,
-        maxResults: Int,
-        onResult: (KxFile) -> Unit
-    ) {
-        val count = AtomicInteger(0)
+    override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
+        val c = parseConn(uri)
         val session = getSessionBlocking(c)
-        SftpClientFactory.instance().createSftpClient(session).use { client ->
-            val entries = listDirEntries(client, dirPath)
-            for (entry in entries) {
-                if (count.get() >= maxResults) return
-                if (entry.filename in listOf(".", "..")) continue
-                if (entry.filename.lowercase().contains(query)) {
-                    if (count.getAndIncrement() < maxResults) {
-                        val childPath =
-                            if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
-                        val attrs = entry.attributes
-                        onResult(
-                            KxFile(
-                                uriString = buildUri(c, childPath).toString(),
-                                name = entry.filename,
-                                isDirectory = attrs.isDirectory,
-                                size = attrs.size,
-                                lastModified = attrs.modifyTime.toMillis(),
-                            )
-                        )
-                    }
-                }
-                if (entry.attributes.isDirectory) {
-                    val subPath =
-                        if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
-                    searchRecursive(c, subPath, query, maxResults, onResult)
-                }
+        val client = createClientWithRetry(session, c)
+        val rawStream = client.read(sftpPath(uri))
+
+        object : InputStream() {
+            override fun read(): Int = rawStream.read()
+            override fun read(b: ByteArray, off: Int, len: Int): Int = rawStream.read(b, off, len)
+            override fun close() {
+                client.use { rawStream.close() }
             }
         }
-    }
-
-    override suspend fun inputStream(uri: Uri): InputStream = withSftp(uri) { client ->
-        val baos = ByteArrayOutputStream()
-        client.read(sftpPath(uri)).use { input -> input.copyTo(baos) }
-        ByteArrayInputStream(baos.toByteArray())
     }
 
     override suspend fun outputStream(uri: Uri, mode: String): OutputStream {
@@ -430,6 +387,70 @@ class SftpFileSystem : FileSystem {
             .getMimeTypeFromExtension(
                 MimeTypeMap.getFileExtensionFromUrl(uri.toString())?.lowercase()
             )
+    }
+
+    override suspend fun search(
+        roots: List<Uri>,
+        query: String,
+        maxResults: Int
+    ): Flow<KxFile> = channelFlow {
+        if (query.isBlank()) return@channelFlow
+        val queryLower = query.lowercase()
+        val globalCount = AtomicInteger(0)
+
+        for (root in roots) {
+            if (globalCount.get() >= maxResults) break
+            val c = parseConn(root)
+            try {
+                withContext(Dispatchers.IO) {
+                    searchRecursive(c, sftpPath(root), queryLower, maxResults) { file ->
+                        if (globalCount.getAndIncrement() < maxResults) {
+                            trySend(file)
+                        }
+                    }
+                }
+            } catch (_: Exception) {
+            }
+        }
+    }
+
+    private fun searchRecursive(
+        c: Conn,
+        dirPath: String,
+        query: String,
+        maxResults: Int,
+        onResult: (KxFile) -> Unit
+    ) {
+        val count = AtomicInteger(0)
+        val session = getSessionBlocking(c)
+        SftpClientFactory.instance().createSftpClient(session).use { client ->
+            val entries = listDirEntries(client, dirPath)
+            for (entry in entries) {
+                if (count.get() >= maxResults) return
+                if (entry.filename in listOf(".", "..")) continue
+                if (entry.filename.lowercase().contains(query)) {
+                    if (count.getAndIncrement() < maxResults) {
+                        val childPath =
+                            if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
+                        val attrs = entry.attributes
+                        onResult(
+                            KxFile(
+                                uriString = buildUri(c, childPath).toString(),
+                                name = entry.filename,
+                                isDirectory = attrs.isDirectory,
+                                size = attrs.size,
+                                lastModified = attrs.modifyTime.toMillis(),
+                            )
+                        )
+                    }
+                }
+                if (entry.attributes.isDirectory) {
+                    val subPath =
+                        if (dirPath.endsWith("/")) "$dirPath${entry.filename}" else "$dirPath/${entry.filename}"
+                    searchRecursive(c, subPath, query, maxResults, onResult)
+                }
+            }
+        }
     }
 
     override suspend fun copy(source: Uri, targetParent: Uri): Uri {

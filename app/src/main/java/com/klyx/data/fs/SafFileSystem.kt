@@ -28,8 +28,10 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileInputStream
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicInteger
 
 class SafFileSystem(
@@ -230,6 +232,28 @@ class SafFileSystem(
 
     override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
         checkNotNull(content.openInputStream(uri)) { "the provider recently crashed." }
+    }
+
+    override suspend fun readRange(
+        uri: Uri,
+        position: Long,
+        buffer: ByteArray,
+        offset: Int,
+        length: Int
+    ): Int = withContext(Dispatchers.IO) {
+        val localFile = resolveToLocalFile(uri)
+        if (localFile != null) {
+            RandomAccessFile(localFile, "r").use { raf ->
+                raf.seek(position)
+                return@withContext raf.read(buffer, offset, length)
+            }
+        }
+        content.openFileDescriptor(uri, "r")?.use { pfd ->
+            FileInputStream(pfd.fileDescriptor).use { fis ->
+                fis.channel.position(position)
+                fis.read(buffer, offset, length)
+            }
+        } ?: -1
     }
 
     override suspend fun outputStream(uri: Uri, mode: String): OutputStream = withContext(Dispatchers.IO) {

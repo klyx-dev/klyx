@@ -62,6 +62,23 @@ interface FileSystem : PluginService {
     suspend fun inputStream(uri: Uri): InputStream
 
     /**
+     * Reads up to [length] bytes of data starting at [position] from the file at [uri] into [buffer].
+     *
+     * @param position The offset in the file where reading starts.
+     * @param buffer The buffer into which data is read.
+     * @param offset The start offset in array [buffer] at which data is written.
+     * @param length The maximum number of bytes to read.
+     * @return The total number of bytes read into the buffer, or -1 if the end of file is reached.
+     */
+    suspend fun readRange(
+        uri: Uri,
+        position: Long,
+        buffer: ByteArray,
+        offset: Int,
+        length: Int
+    ): Int
+
+    /**
      * Opens an [OutputStream] for writing to the file at the given [uri].
      *
      * @param mode The string representation of the file mode. Can be "r", "w", "wt", "wa", "rw" or "rwt".

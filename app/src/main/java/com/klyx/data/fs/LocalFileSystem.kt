@@ -37,6 +37,7 @@ import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.io.RandomAccessFile
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -50,6 +51,23 @@ class LocalFileSystem : FileSystem {
 
     override suspend fun list(uri: Uri): List<KxFile> = withContext(Dispatchers.IO) {
         uri.toFile().listFiles()?.map { it.wrap() }.orEmpty()
+    }
+
+    override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
+        uri.toFile().inputStream()
+    }
+
+    override suspend fun readRange(
+        uri: Uri,
+        position: Long,
+        buffer: ByteArray,
+        offset: Int,
+        length: Int
+    ): Int = withContext(Dispatchers.IO) {
+        RandomAccessFile(uri.toFile(), "r").use { raf ->
+            raf.seek(position)
+            raf.read(buffer, offset, length)
+        }
     }
 
     override suspend fun search(
@@ -203,10 +221,6 @@ class LocalFileSystem : FileSystem {
             }
         } catch (_: Exception) {
         }
-    }
-
-    override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
-        uri.toFile().inputStream()
     }
 
     override suspend fun outputStream(uri: Uri, mode: String): OutputStream = withContext(Dispatchers.IO) {
