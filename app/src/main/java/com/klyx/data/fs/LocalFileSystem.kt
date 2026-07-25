@@ -335,14 +335,17 @@ class LocalFileSystem : FileSystem {
         Files.walkFileTree(
             File(uri.path!!).toPath(), setOf(FileVisitOption.FOLLOW_LINKS), Int.MAX_VALUE,
             object : SimpleFileVisitor<Path>() {
+                override fun preVisitDirectory(path: Path, attrs: BasicFileAttributes): FileVisitResult {
+                    if (!isActive) return FileVisitResult.TERMINATE
+                    dirCount++
+                    trySend(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
+                    return FileVisitResult.CONTINUE
+                }
+
                 override fun visitFile(path: Path, attrs: BasicFileAttributes): FileVisitResult {
                     if (!isActive) return FileVisitResult.TERMINATE
-                    if (!attrs.isDirectory) {
-                        fileCount++
-                        totalSize += attrs.size()
-                    } else {
-                        dirCount++
-                    }
+                    fileCount++
+                    totalSize += attrs.size()
                     trySend(SizeProgress(totalSize, fileCount, dirCount, isFinished = false))
                     return FileVisitResult.CONTINUE
                 }
