@@ -66,6 +66,10 @@ class EditorViewModel(
     private val lspManager: LspManager
 ) : ViewModel() {
 
+    companion object {
+        var tabIdToSkipOnRestore: String? = null
+    }
+
     private val fileOpenerRegistry: FileOpenerRegistry by lazy {
         GlobalApp.global<FileOpenerRegistry>()
     }
@@ -90,15 +94,21 @@ class EditorViewModel(
 
     @SuppressLint("UseKtx")
     private fun restoreSession() {
+        val skipId = tabIdToSkipOnRestore
+        tabIdToSkipOnRestore = null
         viewModelScope.launch {
             recentFileRepository
                 .getRecentFiles()
-                .forEach {
+                .forEach { entity ->
+                    if (entity.uri == skipId) return@forEach
                     openFile(
-                        uri = Uri.parse(it.uri),
-                        projectUri = it.projectUri?.let { uri -> Uri.parse(uri) }
+                        uri = Uri.parse(entity.uri),
+                        projectUri = entity.projectUri?.let { uri -> Uri.parse(uri) }
                     )
                 }
+            if (skipId != null) {
+                recentFileRepository.removeByUri(Uri.parse(skipId))
+            }
         }
     }
 

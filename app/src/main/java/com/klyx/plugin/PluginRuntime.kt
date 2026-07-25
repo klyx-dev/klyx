@@ -1,5 +1,6 @@
 package com.klyx.plugin
 
+import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
@@ -11,8 +12,12 @@ import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.plugin.PluginLifecycleOwner
 import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.api.plugin.PluginScope
+import com.klyx.api.ui.showFailureToast
+import com.klyx.api.ui.toastHostState
+import com.klyx.api.util.extractMessage
 import com.klyx.core.App
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +25,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -90,6 +96,10 @@ internal class PluginRuntime(
         try {
             block()
         } catch (t: Throwable) {
+            Log.e("PluginRuntime", "Plugin '${info.id}' crashed", t)
+            context.app.toastHostState.showFailureToast(
+                "Plugin '${info.id}' crashed: ${t.extractMessage()}"
+            )
             lifecycle(Lifecycle.Event.ON_DESTROY)
             throw t
         }
@@ -130,10 +140,22 @@ internal class PluginRuntime(
 internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): PluginRuntime {
     val context = PluginContextImpl(app, info.id)
     val owner = PluginLifecycleOwnerImpl(context)
+    val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e("PluginRuntime", "Plugin '${info.id}' threw an unhandled exception", throwable)
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            app.toastHostState.showFailureToast(
+                "Plugin '${info.id}' crashed: ${throwable.extractMessage()}"
+            )
+        }
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            owner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        }
+    }
     val scope = PluginScopeImpl(
         SupervisorJob() +
                 Dispatchers.Default +
-                PluginContextElement(context, owner)
+                PluginContextElement(context, owner) +
+                exceptionHandler
     )
     return PluginRuntime(plugin, context, owner, scope, info)
 }

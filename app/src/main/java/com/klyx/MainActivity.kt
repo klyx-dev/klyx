@@ -64,6 +64,7 @@ import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.GlobalEventBus
 import com.klyx.platform.service.TerminalService
 import com.klyx.presentation.components.dialogs.AllFilesAccessDialog
+import com.klyx.presentation.components.dialogs.CrashReportDialog
 import com.klyx.presentation.components.dialogs.LegacyStorageAccessDialog
 import com.klyx.presentation.components.dialogs.NotificationPermissionDialog
 import com.klyx.presentation.navigation.Screen
@@ -122,6 +123,15 @@ class MainActivity : ComposeActivity() {
     override fun BoxScope.Content() {
         val lifecycleOwner = LocalLifecycleOwner.current
         val reduceMotion = LocalReduceMotion.current
+
+        var crashData by remember {
+            val data = CrashHandler.loadCrash(this@MainActivity)
+            if (data != null) {
+                EditorViewModel.tabIdToSkipOnRestore = data.crashedTabId
+            }
+            mutableStateOf(data)
+        }
+        var showCrashDialog by remember(crashData) { mutableStateOf(crashData != null) }
 
         fun hasLegacyStoragePermissions(): Boolean {
             val read = ContextCompat.checkSelfPermission(
@@ -271,6 +281,16 @@ class MainActivity : ComposeActivity() {
                     } else {
                         showNotificationDialog = false
                     }
+                }
+            )
+        }
+
+        if (showCrashDialog && crashData != null) {
+            CrashReportDialog(
+                crash = crashData!!,
+                onDismiss = {
+                    showCrashDialog = false
+                    crashData = null
                 }
             )
         }

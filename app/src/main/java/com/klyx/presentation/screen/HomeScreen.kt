@@ -114,6 +114,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.klyx.CrashHandler
 import com.klyx.R
 import com.klyx.api.data.editor.EditorAction
 import com.klyx.api.data.editor.Save
@@ -1270,6 +1271,7 @@ private fun EditorPager(
     onNewFileClick: () -> Unit,
     onOpenProjectClick: () -> Unit
 ) {
+    CrashHandler.currentTabId = null
     HorizontalPager(
         state = pagerState,
         userScrollEnabled = false,
@@ -1321,6 +1323,7 @@ private fun EditorPager(
             }
 
             is WorkspaceTab.Custom -> {
+                CrashHandler.currentTabId = tab.id
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
