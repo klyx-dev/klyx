@@ -346,9 +346,39 @@ class SafFileSystem(
                 (DocumentsContract.isDocumentUri(context, uri) &&
                         MIME_TYPE_DIR == context.contentResolver.getType(uri))
 
-        val name = if (DocumentsContract.isTreeUri(uri)) {
-            DocumentsContract.getTreeDocumentId(uri).substringAfterLast('/')
+        var displayName: String? = null
+        try {
+            val targetUri = if (DocumentsContract.isTreeUri(uri) && !DocumentsContract.isDocumentUri(context, uri)) {
+                val docId = DocumentsContract.getTreeDocumentId(uri)
+                DocumentsContract.buildDocumentUriUsingTree(uri, docId)
+            } else {
+                uri
+            }
+
+            content.query(
+                targetUri,
+                arrayOf(Document.COLUMN_DISPLAY_NAME, OpenableColumns.DISPLAY_NAME),
+                null,
+                null,
+                null
+            )?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val nameIdx = cursor.getColumnIndex(Document.COLUMN_DISPLAY_NAME)
+                        .takeIf { it >= 0 } ?: cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    if (nameIdx >= 0) {
+                        displayName = cursor.getString(nameIdx)
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            //ignore
+        }
+
+        val name = displayName?.takeIf { it.isNotBlank() } ?: if (DocumentsContract.isTreeUri(uri)) {
+            DocumentsContract.getTreeDocumentId(uri)
+                .substringAfterLast('/')
                 .substringAfterLast('%')
+                .substringAfterLast(':')
         } else {
             uri.lastPathSegment
         } ?: uri.toString()
