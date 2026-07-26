@@ -69,5 +69,26 @@ annotation class PluginManifest(
     val maxAppVersion: String = "",
     val description: String = "",
     val icon: String = "",
-    val license: String = ""
+    val license: String = "",
+    val author: Author = Author(name = ""),
+    val links: Links = Links(),
+    val permissions: Array<String> = []
+)
+
+@Target(AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class Author(
+    val name: String,
+    val email: String = "",
+    val url: String = "",
+    val github: String = ""
+)
+
+@Target(AnnotationTarget.ANNOTATION_CLASS)
+@Retention(AnnotationRetention.BINARY)
+annotation class Links(
+    val source: String = "",
+    val issues: String = "",
+    val website: String = "",
+    val donate: String = ""
 )

@@ -10,6 +10,9 @@ internal object KlyxPluginIds {
     val PLUGIN_MANIFEST_FQN = FqName("com.klyx.api.plugin.PluginManifest")
     val PLUGIN_MANIFEST_CLASS_ID = ClassId.topLevel(PLUGIN_MANIFEST_FQN)
 
+    val PLUGIN_AUTHOR_CLASS_ID = ClassId.topLevel(FqName("com.klyx.api.plugin.PluginAuthor"))
+    val PLUGIN_LINKS_CLASS_ID = ClassId.topLevel(FqName("com.klyx.api.plugin.PluginLinks"))
+
     val KLYX_PLUGIN_FQN = FqName("com.klyx.api.plugin.KlyxPlugin")
     val KLYX_PLUGIN_CLASS_ID = ClassId.topLevel(KLYX_PLUGIN_FQN)
 

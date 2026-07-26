@@ -8,7 +8,7 @@ plugins {
 buildConfig {
     packageName("com.klyx.compiler.plugin")
 
-    buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"com.klyx.compiler.plugin\"")
+    buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"io.github.klyx-dev.compiler.plugin\"")
 
     val pluginProject = project(":klyx-compiler-plugin")
     buildConfigField("String", "KOTLIN_PLUGIN_GROUP", "\"${pluginProject.group}\"")
@@ -26,7 +26,7 @@ buildConfig {
 gradlePlugin {
     plugins {
         create("KlyxPlugin") {
-            id = "com.klyx.compiler.plugin"
+            id = "io.github.klyx-dev.compiler.plugin"
             displayName = "KlyxPlugin"
             description = "KlyxPlugin"
             implementationClass = "com.klyx.compiler.plugin.KlyxCompilerPlugin"

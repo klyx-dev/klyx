@@ -11,6 +11,9 @@ kotlin {
     }
 }
 
+group = "io.github.klyx-dev"
+version = property("project.version") as String
+
 buildConfig {
     useKotlinOutput {
         internalVisibility = true
