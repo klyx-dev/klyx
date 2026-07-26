@@ -1,4 +1,4 @@
-package com.klyx.gradle
+package com.klyx.compiler.plugin
 
 import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project

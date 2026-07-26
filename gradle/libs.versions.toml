@@ -41,6 +41,9 @@ xz = "1.12"
 zoomable = "2.13.0"
 sshd = "2.19.0"
 
+# https://github.com/gmazzo/gradle-buildconfig-plugin
+buildconfig = "5.6.5"
+
 [libraries]
 # Test
 androidx-documentfile = { module = "androidx.documentfile:documentfile", version.ref = "documentfile" }
@@ -93,7 +96,7 @@ kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.re
 ktreesitter = { module = "io.github.tree-sitter:ktreesitter", version.ref = "ktreesitter" }
 material = { module = "com.google.android.material:material", version.ref = "material" }
 
-
+kotlin-compiler = { group = "org.jetbrains.kotlin", name = "kotlin-compiler", version.ref = "kotlin" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
@@ -141,6 +144,10 @@ ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotest = { id = "io.kotest", version.ref = "kotest" }
 ktreesitter = { id = "io.github.tree-sitter.ktreesitter-plugin", version.ref = "ktreesitter" }
 vanniktech-publish = { id = "com.vanniktech.maven.publish.base", version = "0.37.0" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+buildconfig = { id = "com.github.gmazzo.buildconfig", version.ref = "buildconfig"}
+
+gradle-plugin = { id = "java-gradle-plugin" }
 
 [bundles]
 androidx-compose = [

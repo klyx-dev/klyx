@@ -37,7 +37,8 @@ dependencyResolutionManagement {
 
 includeBuild("external/sora-editor")
 
-include(":app", ":terminal", ":editor", ":core", ":klyx-api", ":klyx-gradle-plugin")
+include(":app", ":terminal", ":editor", ":core", ":klyx-api")
+include(":klyx-gradle-plugin", ":klyx-compiler-plugin")
 include(":lsp:api", ":lsp:server")
 
 file("languages").listFiles()?.filter { it.isDirectory && it.name.startsWith("tree-sitter-") }?.forEach { repoDir ->

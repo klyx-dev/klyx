@@ -2,6 +2,7 @@ import com.android.build.api.dsl.LibraryExtension
 import com.vanniktech.maven.publish.AndroidSingleVariantLibrary
 import com.vanniktech.maven.publish.GradlePlugin
 import com.vanniktech.maven.publish.JavadocJar
+import com.vanniktech.maven.publish.KotlinJvm
 import com.vanniktech.maven.publish.MavenPublishBaseExtension
 import com.vanniktech.maven.publish.SourcesJar
 import io.github.treesitter.ktreesitter.plugin.GrammarExtension
@@ -18,6 +19,8 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.ktreesitter) apply false
     alias(libs.plugins.vanniktech.publish) apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.buildconfig) apply false
 }
 
 tasks.register("prepareTreeSitter") {
@@ -28,6 +31,11 @@ tasks.register("prepareTreeSitter") {
             .filter { it.path.startsWith(":languages:tree-sitter-") }
             .map { it.tasks.named("generateGrammarFiles") }
     )
+}
+
+allprojects {
+    group = "io.github.klyx-dev"
+    version = property("project.version") as String
 }
 
 subprojects {
@@ -53,7 +61,19 @@ subprojects {
                 )
             }
 
-            pluginManager.withPlugin("java-gradle-plugin") {
+            val hasKotlinJvm = pluginManager.hasPlugin("org.jetbrains.kotlin.jvm")
+            val hasGradle = pluginManager.hasPlugin("java-gradle-plugin")
+
+            if (hasKotlinJvm && !hasGradle) {
+                configure(
+                    KotlinJvm(
+                        sourcesJar = SourcesJar.Sources(),
+                        javadocJar = JavadocJar.Empty()
+                    )
+                )
+            }
+
+            if (hasGradle) {
                 configure(
                     GradlePlugin(
                         sourcesJar = SourcesJar.Sources(),

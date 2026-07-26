@@ -23,8 +23,8 @@ import kotlinx.serialization.Serializable
 @Immutable
 data class PluginDescriptor(
     val id: String,
-    val name: String = id,
     val version: String,
+    val name: String = id,
     val minAppVersion: String,
     val maxAppVersion: String? = null,
     val entryClass: String,

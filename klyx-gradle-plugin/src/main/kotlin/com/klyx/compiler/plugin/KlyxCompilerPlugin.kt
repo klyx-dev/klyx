@@ -1,21 +1,28 @@
-package com.klyx.gradle
+package com.klyx.compiler.plugin
 
 import com.android.build.api.dsl.CommonExtension
+import com.klyx.compiler.plugin.BuildConfig.KLYX_API_LIBRARY_COORDINATES
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
-import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
+import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
+import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import java.io.File
 
-class KlyxPluginPublishingPlugin : Plugin<Project> {
+@Suppress("unused")
+class KlyxCompilerPlugin : KotlinCompilerPluginSupportPlugin {
+
     override fun apply(target: Project) {
         target.pluginManager.apply("org.jetbrains.kotlin.plugin.serialization")
 
         val extension = target.extensions.create("klyx", KlyxPluginExtension::class.java, target)
 
-        extension.pluginJsonFile.convention(target.rootProject.layout.projectDirectory.file("plugin.json"))
+        extension.pluginJsonFile.convention(target.layout.buildDirectory.file("klyx/generated/plugin.json"))
         extension.outputFileName.convention(target.provider { target.rootProject.name })
         extension.outputDirectory.convention(target.layout.buildDirectory.dir("klyx"))
         extension.autoPushToDevice.convention(false)
@@ -24,6 +31,7 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
             task.group = "klyx"
             task.description = "Packages the debug variant into a valid .klyx distribution archive."
             task.dependsOn("assembleDebug")
+            task.dependsOn("compileDebugKotlin")
             setupBaseTarProperties(task, extension)
         }
 
@@ -31,6 +39,7 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
             task.group = "klyx"
             task.description = "Packages the release variant into a valid .klyx distribution archive."
             task.dependsOn("assembleRelease")
+            task.dependsOn("compileReleaseKotlin")
             setupBaseTarProperties(task, extension)
         }
 
@@ -71,54 +80,58 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
 
         target.plugins.withId("com.android.application") { configureAndroid(target) }
 
-        target.afterEvaluate {
-            val rootFiles = target.rootProject.projectDir.listFiles() ?: emptyArray()
-            if (!extension.readme.isPresent) {
-                rootFiles.firstOrNull { it.name.equals("readme.md", ignoreCase = true) }
-                    ?.let { extension.readme.set(it) }
-            }
-            if (!extension.changelog.isPresent) {
-                rootFiles.firstOrNull { it.name.equals("changelog.md", ignoreCase = true) }
-                    ?.let { extension.changelog.set(it) }
-            }
-            if (!extension.icon.isPresent) {
-                rootFiles.firstOrNull {
-                    it.name.equals("icon.png", ignoreCase = true) || it.name.equals("icon.jpg", ignoreCase = true)
-                }?.let { extension.icon.set(it) }
-            }
+        val rootFiles = target.rootProject.projectDir.listFiles() ?: emptyArray()
+        if (!extension.readme.isPresent) {
+            rootFiles.firstOrNull { it.name.equals("readme.md", ignoreCase = true) }
+                ?.let { extension.readme.set(it) }
+        }
+        if (!extension.changelog.isPresent) {
+            rootFiles.firstOrNull { it.name.equals("changelog.md", ignoreCase = true) }
+                ?.let { extension.changelog.set(it) }
+        }
+        if (!extension.icon.isPresent) {
+            rootFiles.firstOrNull {
+                it.name.equals("icon.png", ignoreCase = true) || it.name.equals("icon.jpg", ignoreCase = true)
+            }?.let { extension.icon.set(it) }
+        }
 
-            listOf(bundleDebug, bundleRelease).forEach { taskProvider ->
-                taskProvider.configure { task ->
+        listOf(bundleDebug, bundleRelease).forEach { taskProvider ->
+            taskProvider.configure { task ->
+                task.doFirst {
                     val jsonFile = extension.pluginJsonFile.asFile.get()
                     if (!jsonFile.exists()) {
-                        throw GradleException("Klyx compilation failed: Missing descriptor file mapping at '${jsonFile.absolutePath}'.")
+                        throw GradleException(
+                            "Klyx: no plugin descriptor found at '${jsonFile.absolutePath}'. " +
+                                    "Annotate your KlyxPlugin implementation with @PluginManifest(...), " +
+                                    "or set klyx.pluginJsonFile explicitly to use a hand-authored file."
+                        )
                     }
-                    task.from(jsonFile)
+                }
+                task.from(target.provider { extension.pluginJsonFile.asFile.get() })
 
-                    val iconFile = extension.icon.orNull?.asFile
-                    if (iconFile != null && iconFile.exists()) {
-                        task.from(iconFile) { copy ->
-                            copy.rename { "icon.${iconFile.extension}" }
-                        }
+                val iconFile = extension.icon.orNull?.asFile
+                if (iconFile != null && iconFile.exists()) {
+                    task.from(iconFile) { copy ->
+                        copy.rename { "icon.${iconFile.extension}" }
                     }
+                }
 
-                    val readmeFile = extension.readme.orNull?.asFile
-                    if (readmeFile != null && readmeFile.exists()) {
-                        task.from(readmeFile) { copy -> copy.rename { "readme.md" } }
-                    }
+                val readmeFile = extension.readme.orNull?.asFile
+                if (readmeFile != null && readmeFile.exists()) {
+                    task.from(readmeFile) { copy -> copy.rename { "readme.md" } }
+                }
 
-                    val changelogFile = extension.changelog.orNull?.asFile
-                    if (changelogFile != null && changelogFile.exists()) {
-                        task.from(changelogFile) { copy -> copy.rename { "changelog.md" } }
-                    }
+                val changelogFile = extension.changelog.orNull?.asFile
+                if (changelogFile != null && changelogFile.exists()) {
+                    task.from(changelogFile) { copy -> copy.rename { "changelog.md" } }
+                }
 
-                    extension.extraFiles.files.forEach { file ->
-                        if (file.exists()) {
-                            if (file.isDirectory) {
-                                task.from(file) { copy -> copy.into(file.name) }
-                            } else {
-                                task.from(file)
-                            }
+                extension.extraFiles.files.forEach { file ->
+                    if (file.exists()) {
+                        if (file.isDirectory) {
+                            task.from(file) { copy -> copy.into(file.name) }
+                        } else {
+                            task.from(file)
                         }
                     }
                 }
@@ -127,6 +140,40 @@ class KlyxPluginPublishingPlugin : Plugin<Project> {
 
         target.plugins.withId("com.android.library") { configureAndroid(target) }
     }
+
+    override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
+        val project = kotlinCompilation.target.project
+        val descriptorDir = project.layout.buildDirectory.dir("klyx/generated")
+
+        kotlinCompilation.defaultSourceSet.dependencies {
+            compileOnly(KLYX_API_LIBRARY_COORDINATES)
+        }
+
+        kotlinCompilation.compileTaskProvider.configure {
+            // Run this compiler plugin before Compose plugin.
+            it.compilerOptions.freeCompilerArgs.add("-Xcompiler-plugin-order=${BuildConfig.KOTLIN_PLUGIN_ID}>androidx.compose.compiler.plugins.kotlin")
+        }
+
+        return project.provider {
+            val extension = project.extensions.getByType(KlyxPluginExtension::class.java)
+            listOf(
+                SubpluginOption(
+                    key = "descriptorOutputDir",
+                    value = descriptorDir.get().asFile.absolutePath
+                )
+            )
+        }
+    }
+
+    override fun getCompilerPluginId(): String = BuildConfig.KOTLIN_PLUGIN_ID
+
+    override fun getPluginArtifact(): SubpluginArtifact = SubpluginArtifact(
+        groupId = BuildConfig.KOTLIN_PLUGIN_GROUP,
+        artifactId = BuildConfig.KOTLIN_PLUGIN_NAME,
+        version = BuildConfig.KOTLIN_PLUGIN_VERSION
+    )
+
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
 
     private fun configureAndroid(project: Project) {
         project.extensions.configure(CommonExtension::class.java) { android ->

@@ -186,6 +186,8 @@ class PluginManager(
         )
 
         val cls = loader.loadClass(desc.entryClass)
+        verifyDescriptorIntegrity(cls, desc)
+
         val instance = cls.getConstructor().newInstance()
         return instance as? KlyxPlugin
             ?: throw PluginLoadException("Class ${desc.entryClass} does not implement KlyxPlugin")

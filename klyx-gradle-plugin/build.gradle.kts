@@ -1,17 +1,35 @@
 plugins {
-    `java-gradle-plugin`
-    kotlin("jvm")
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.gradle.plugin)
+    alias(libs.plugins.buildconfig)
     alias(libs.plugins.vanniktech.publish)
 }
 
-group = "io.github.klyx-dev"
-version = property("project.version") as String
+buildConfig {
+    packageName("com.klyx.compiler.plugin")
+
+    buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"com.klyx.compiler.plugin\"")
+
+    val pluginProject = project(":klyx-compiler-plugin")
+    buildConfigField("String", "KOTLIN_PLUGIN_GROUP", "\"${pluginProject.group}\"")
+    buildConfigField("String", "KOTLIN_PLUGIN_NAME", "\"${pluginProject.name}\"")
+    buildConfigField("String", "KOTLIN_PLUGIN_VERSION", "\"${pluginProject.version}\"")
+
+    val apiProject = project(":klyx-api")
+    buildConfigField(
+        type = "String",
+        name = "KLYX_API_LIBRARY_COORDINATES",
+        expression = "\"${apiProject.group}:${apiProject.name}:${apiProject.version}\""
+    )
+}
 
 gradlePlugin {
     plugins {
-        register("klyxBundle") {
-            id = "io.github.klyx-dev.plugin"
-            implementationClass = "com.klyx.gradle.KlyxPluginPublishingPlugin"
+        create("KlyxPlugin") {
+            id = "com.klyx.compiler.plugin"
+            displayName = "KlyxPlugin"
+            description = "KlyxPlugin"
+            implementationClass = "com.klyx.compiler.plugin.KlyxCompilerPlugin"
         }
     }
 }
