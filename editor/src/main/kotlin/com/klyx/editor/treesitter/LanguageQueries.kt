@@ -124,6 +124,19 @@ data class LanguageQueries(
             )
         }
 
+        fun loadQuerySources(context: Context, languageName: String): QuerySources {
+            val highlights = loadQuery(context, languageName, "highlights")
+                ?: throw IllegalArgumentException("Missing highlights query for $languageName")
+            return QuerySources(
+                highlights = highlights,
+                indents = loadQuery(context, languageName, "indents"),
+                folds = loadQuery(context, languageName, "folds"),
+                locals = loadQuery(context, languageName, "locals"),
+                injections = loadQuery(context, languageName, "injections"),
+                tags = loadQuery(context, languageName, "tags"),
+            )
+        }
+
         private fun loadQuery(context: Context, languageName: String, queryName: String): String? {
             val visited = mutableSetOf<String>()
             val compiledSource = resolveQueryRecursively(context, languageName, queryName, visited)

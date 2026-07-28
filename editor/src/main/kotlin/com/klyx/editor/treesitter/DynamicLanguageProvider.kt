@@ -1,42 +1,89 @@
 package com.klyx.editor.treesitter
 
-import com.klyx.editor.TSLanguageRegistry
+import android.util.Log
 import io.github.treesitter.ktreesitter.Language
 import java.util.concurrent.ConcurrentHashMap
 
-class DynamicLanguageProvider(
-    private val builtIn: TSLanguageRegistry,
-) : LanguageProvider {
+class DynamicLanguageProvider : LanguageProvider {
 
-    private val dynamicLanguages = ConcurrentHashMap<String, Language>()
-    private val dynamicQueries = ConcurrentHashMap<String, LanguageQueries>()
+    private val languages = ConcurrentHashMap<String, LanguageEntry>()
+    private val queriesCache = ConcurrentHashMap<String, LanguageQueries>()
 
-    fun registerLanguage(name: String, language: Language, queries: LanguageQueries) {
+    fun register(
+        name: String,
+        language: Language,
+        querySources: QuerySources,
+        extensions: List<String>,
+        fileNames: List<String>,
+        priority: LanguagePriority,
+        themeOverrides: Map<String, Long> = emptyMap(),
+    ): Boolean {
         val normalized = name.lowercase()
-        dynamicLanguages[normalized] = language
-        dynamicQueries[normalized] = queries
+        val existing = languages[normalized]
+        if (existing != null && !priority.canOverride(existing.priority)) {
+            Log.w(
+                "DynamicLanguageProvider", "Cannot register language '$name': " +
+                        "existing ${existing.priority} registration has higher priority than $priority"
+            )
+            return false
+        }
+        languages[normalized] = LanguageEntry(
+            name = normalized,
+            language = language,
+            querySources = querySources,
+            priority = priority,
+            extensions = extensions.map { it.lowercase() },
+            fileNames = fileNames.map { it.lowercase() },
+            themeOverrides = themeOverrides,
+        )
+        queriesCache.remove(normalized)
+        return true
     }
 
-    fun unregisterLanguage(name: String) {
+    fun unregister(name: String) {
         val normalized = name.lowercase()
-        dynamicQueries.remove(normalized)?.closeSafely()
-        dynamicLanguages.remove(normalized)
+        languages.remove(normalized)
+        queriesCache.remove(normalized)?.closeSafely()
+    }
+
+    fun getEntryForExtension(extension: String): LanguageEntry? {
+        val ext = extension.lowercase()
+        return languages.values
+            .filter { ext in it.extensions }
+            .maxByOrNull { it.priority.tier }
+    }
+
+    fun getEntryForFileName(fileName: String): LanguageEntry? {
+        val name = fileName.lowercase()
+        return languages.values
+            .filter { name in it.fileNames }
+            .maxByOrNull { it.priority.tier }
     }
 
     override fun getLanguage(languageName: String): Language? {
-        val normalized = languageName.lowercase()
-        return dynamicLanguages[normalized] ?: builtIn.getLanguage(normalized)
+        return languages[languageName.lowercase()]?.language
     }
 
     override fun getQueries(languageName: String): LanguageQueries? {
-        val normalized = languageName.lowercase()
-        return dynamicQueries[normalized] ?: builtIn.getQueries(normalized)
+        val name = languageName.lowercase()
+        return queriesCache.getOrPut(name) {
+            val entry = languages[name] ?: return@getOrPut null
+            LanguageQueries.fromSource(
+                language = entry.language,
+                languageName = entry.name,
+                highlights = entry.querySources.highlights,
+                indents = entry.querySources.indents,
+                folds = entry.querySources.folds,
+                locals = entry.querySources.locals,
+                injections = entry.querySources.injections,
+                tags = entry.querySources.tags,
+            )
+        }
     }
 
     fun clear() {
-        builtIn.clear()
-        dynamicQueries.values.forEach { it.closeSafely() }
-        dynamicQueries.clear()
-        dynamicLanguages.clear()
+        queriesCache.values.forEach { it.closeSafely() }
+        queriesCache.clear()
+        languages.clear()
     }
 }

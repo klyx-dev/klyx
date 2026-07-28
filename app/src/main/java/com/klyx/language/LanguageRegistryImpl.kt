@@ -13,9 +13,7 @@ import com.klyx.api.language.QueryProvider
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.info
 import com.klyx.editor.TreeSitter
-import com.klyx.editor.treesitter.EditorLanguage
-import com.klyx.editor.treesitter.LanguageQueries
-import com.klyx.editor.treesitter.editorTheme
+import com.klyx.editor.treesitter.QuerySources
 import io.github.rosemoe.sora.lang.styling.textStyle
 import io.github.rosemoe.sora.widget.schemes.EditorColorScheme
 import java.util.concurrent.ConcurrentHashMap
@@ -36,7 +34,6 @@ class LanguageRegistryImpl(
     private val activeExtensions = ConcurrentHashMap<String, String>()
     private val activeFileNames = ConcurrentHashMap<String, String>()
     private val activeDescriptors = ConcurrentHashMap<String, LanguageDescriptor>()
-    private val activeEditorLanguages = ConcurrentHashMap<String, EditorLanguage>()
 
     @Volatile
     private var treeSitter: TreeSitter? = null
@@ -92,11 +89,9 @@ class LanguageRegistryImpl(
         try {
             val pointer = reg.grammarProvider.provide()
             val langName = reg.descriptor.name.lowercase()
-
             val tsLanguage = io.github.treesitter.ktreesitter.Language(pointer)
-            val queries = LanguageQueries.fromSource(
-                language = tsLanguage,
-                languageName = langName,
+
+            val querySources = QuerySources(
                 highlights = reg.queries.highlights(),
                 indents = reg.queries.indents(),
                 folds = reg.queries.folds(),
@@ -105,26 +100,29 @@ class LanguageRegistryImpl(
                 tags = reg.queries.tags(),
             )
 
-            val language = EditorLanguage(
-                tsLanguage = tsLanguage,
-                queries = { queries },
-                languageProvider = ts.languageProvider,
-                themeDescription = { editorTheme() }
-            )
-
-            if (reg.theme != null) {
-                applyThemeOverrides(language, reg.theme)
+            val themeOverrides = if (reg.theme != null) {
+                buildThemeOverrides(reg.theme, querySources.highlights)
+            } else {
+                emptyMap()
             }
 
-            ts.registerDynamicLanguage(
+            val accepted = ts.registerDynamicLanguage(
                 name = langName,
                 extensions = reg.descriptor.extensions,
                 fileNames = reg.descriptor.fileNames,
-                editorLanguage = language,
-                queries = queries,
+                language = tsLanguage,
+                querySources = querySources,
+                themeOverrides = themeOverrides,
             )
 
-            activeEditorLanguages[langName] = language
+            if (!accepted) {
+                Log.w(
+                    "LanguageRegistry", "Plugin language '${reg.descriptor.name}' " +
+                            "from '${reg.pluginId}' rejected: a higher-priority language already exists"
+                )
+                return
+            }
+
             activeDescriptors[langName] = reg.descriptor
             reg.descriptor.extensions.forEach { ext ->
                 activeExtensions[ext.lowercase()] = langName
@@ -151,16 +149,17 @@ class LanguageRegistryImpl(
 
         val ts = treeSitter
         ts?.unregisterDynamicLanguage(langName)
-        activeEditorLanguages.remove(langName)
         activeExtensions.values.removeAll { it == langName }
         activeFileNames.values.removeAll { it == langName }
         activeDescriptors.remove(langName)
     }
 
-    private fun applyThemeOverrides(language: EditorLanguage, theme: LanguageThemeProvider) {
-        val captureNames = language.queries.highlights.captureNames
+    private fun buildThemeOverrides(theme: LanguageThemeProvider, highlightsSource: String): Map<String, Long> {
+        val captureNames = Regex("""@([a-zA-Z_.]+)""")
+            .findAll(highlightsSource)
+            .map { it.groupValues[1] }
+            .distinct()
         val overrides = mutableMapOf<String, Long>()
-
         for (captureName in captureNames) {
             val style = theme.getStyleForCapture(captureName) ?: continue
             val styleLong = buildStyle(style)
@@ -168,10 +167,7 @@ class LanguageRegistryImpl(
                 overrides[captureName] = styleLong
             }
         }
-
-        if (overrides.isNotEmpty()) {
-            language.applyThemeOverrides(overrides)
-        }
+        return overrides
     }
 
     private fun buildStyle(style: CaptureStyle): Long {

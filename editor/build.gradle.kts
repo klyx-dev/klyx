@@ -104,14 +104,9 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             "kotlin" to listOf("kt", "kts"),
         )
 
-        // Accumulators for TreeSitter.kt
-        val tsImports = StringBuilder()
-        val tsFunctions = StringBuilder()
-        val tsWhenBranches = StringBuilder()
+        data class TargetInfo(val className: String, val packageName: String, val extensions: List<String>)
 
-        // Accumulators for TSLanguageRegistry.kt
-        val registryImports = StringBuilder()
-        val supplierBranches = StringBuilder()
+        val targetInfos = mutableMapOf<String, TargetInfo>()
 
         for (lang in modules) {
             val capName = lang.replaceFirstChar {
@@ -119,32 +114,40 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             }
             val className = "TreeSitter$capName"
             val packageName = "com.klyx.languages.$lang"
+            val extensions = extMap[lang] ?: listOf(lang)
 
-            tsImports.appendLine("import $packageName.$className")
-            tsFunctions.appendLine("    fun ${lang}() = createEditorLanguage(\"$lang\", $className.language())")
-
-            registryImports.appendLine("import $packageName.$className")
-            supplierBranches.appendLine("        \"$lang\" to { $className.language() },")
+            targetInfos[lang] = TargetInfo(className, packageName, extensions)
 
             aliasMap.forEach { (aliasName, baseModule) ->
                 if (baseModule == lang) {
-                    tsFunctions.appendLine("    fun ${aliasName}() = createEditorLanguage(\"$aliasName\", $className.language())")
-                    supplierBranches.appendLine("        \"$aliasName\" to { $className.language() },")
+                    val aliasExts = extMap[aliasName] ?: listOf(aliasName)
+                    targetInfos[aliasName] = TargetInfo(className, packageName, aliasExts)
                 }
             }
         }
 
-        val allActiveTargets = modules.toMutableList()
-        aliasMap.forEach { (aliasName, baseModule) ->
-            if (modules.contains(baseModule)) {
-                allActiveTargets.add(aliasName)
-            }
-        }
+        // Accumulators for TreeSitter.kt
+        val tsFunctions = StringBuilder()
 
-        for (target in allActiveTargets) {
-            val extensions = extMap[target] ?: listOf(target)
-            val extListStr = extensions.joinToString(", ") { "\"$it\"" }
-            tsWhenBranches.appendLine("            $extListStr -> ${target}()")
+        // Accumulators for TSLanguageRegistry.kt
+        val registryImports = StringBuilder()
+        val supplierBranches = StringBuilder()
+        val extBranches = StringBuilder()
+
+        val addedImports = mutableSetOf<String>()
+
+        for ((targetName, info) in targetInfos) {
+            val (className, packageName, extensions) = info
+            val importLine = "import $packageName.$className"
+
+            if (addedImports.add(importLine)) {
+                registryImports.appendLine(importLine)
+            }
+            supplierBranches.appendLine("        \"$targetName\" to { $className.language() },")
+            extBranches.appendLine("        \"$targetName\" to listOf(${extensions.joinToString(", ") { "\"$it\"" }}),")
+
+            val primaryExt = extensions.first()
+            tsFunctions.appendLine("    fun ${targetName}(): Language = getLanguageForExtension(\"$primaryExt\")")
         }
 
         outputFileTreeSitter.writeText(
@@ -152,64 +155,84 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             |package com.klyx.editor
             |
             |import android.content.Context
-            |import com.klyx.editor.treesitter.createEditorLanguage
             |import com.klyx.editor.treesitter.DynamicLanguageProvider
             |import com.klyx.editor.treesitter.EditorLanguage
+            |import com.klyx.editor.treesitter.LanguageEntry
+            |import com.klyx.editor.treesitter.LanguagePriority
             |import com.klyx.editor.treesitter.LanguageQueries
+            |import com.klyx.editor.treesitter.QuerySources
+            |import com.klyx.editor.treesitter.editorTheme
             |import io.github.rosemoe.sora.lang.Language
             |import io.github.rosemoe.sora.lang.EmptyLanguage
             |import java.util.concurrent.ConcurrentHashMap
             |
-            |$tsImports
             |/** AUTO-GENERATED CLASS: Do not edit manually! */
             |class TreeSitter(private val context: Context) : AutoCloseable {
-            |    val languageProvider = DynamicLanguageProvider(TSLanguageRegistry(context))
-            |    private val dynamicExtensions = ConcurrentHashMap<String, String>()
-            |    private val dynamicFileNames = ConcurrentHashMap<String, String>()
+            |    val languageProvider = DynamicLanguageProvider()
+            |    private val builtInRegistry = TSLanguageRegistry(context, languageProvider)
             |    private val dynamicLanguages = ConcurrentHashMap<String, EditorLanguage>()
-            |    
-            |$tsFunctions
-            |    private fun createEditorLanguage(name: String, language: Any): Language =
-            |        createEditorLanguage(context, name, language, languageProvider)
             |
+            |$tsFunctions
             |    fun getLanguageForExtension(extension: String): Language {
             |        val ext = extension.lowercase()
-            |        val builtIn = when(ext) {
-            |$tsWhenBranches            else -> null
-            |        }
-            |        if (builtIn != null) return builtIn
-            |        val dynamicName = dynamicExtensions[ext]
-            |            ?: return dynamicFileNames[ext]?.let { dynamicLanguages[it] } ?: EmptyLanguage()
-            |        return dynamicLanguages[dynamicName] ?: EmptyLanguage()
+            |        val entry = languageProvider.getEntryForExtension(ext) ?: return EmptyLanguage()
+            |        return dynamicLanguages.getOrPut(entry.name) { buildEditorLanguage(entry) }
             |    }
             |
             |    fun getLanguageForFileName(fileName: String): Language {
             |        val name = fileName.lowercase()
-            |        return dynamicFileNames[name]?.let { langName ->
-            |            dynamicLanguages[langName]
-            |        } ?: getLanguageForExtension(name.substringAfterLast('.', ""))
+            |        val entry = languageProvider.getEntryForFileName(name)
+            |        if (entry != null) {
+            |            return dynamicLanguages.getOrPut(entry.name) { buildEditorLanguage(entry) }
+            |        }
+            |        return getLanguageForExtension(name.substringAfterLast('.', ""))
+            |    }
+            |
+            |    private fun buildEditorLanguage(entry: LanguageEntry): EditorLanguage {
+            |        val queries = LanguageQueries.fromSource(
+            |            language = entry.language,
+            |            languageName = entry.name,
+            |            highlights = entry.querySources.highlights,
+            |            indents = entry.querySources.indents,
+            |            folds = entry.querySources.folds,
+            |            locals = entry.querySources.locals,
+            |            injections = entry.querySources.injections,
+            |            tags = entry.querySources.tags,
+            |        )
+            |        val editorLang = EditorLanguage(
+            |            tsLanguage = entry.language,
+            |            queries = { queries },
+            |            languageProvider = languageProvider,
+            |            themeDescription = { editorTheme() }
+            |        )
+            |        if (entry.themeOverrides.isNotEmpty()) {
+            |            editorLang.applyThemeOverrides(entry.themeOverrides)
+            |        }
+            |        return editorLang
             |    }
             |
             |    fun registerDynamicLanguage(
             |        name: String,
             |        extensions: List<String>,
             |        fileNames: List<String>,
-            |        editorLanguage: EditorLanguage,
-            |        queries: LanguageQueries,
-            |    ) {
-            |        val normalized = name.lowercase()
-            |        dynamicLanguages[normalized] = editorLanguage
-            |        languageProvider.registerLanguage(normalized, editorLanguage.tsLanguage, queries)
-            |        extensions.forEach { ext -> dynamicExtensions[ext.lowercase()] = normalized }
-            |        fileNames.forEach { fn -> dynamicFileNames[fn.lowercase()] = normalized }
+            |        language: io.github.treesitter.ktreesitter.Language,
+            |        querySources: QuerySources,
+            |        themeOverrides: Map<String, Long> = emptyMap(),
+            |    ): Boolean {
+            |        return languageProvider.register(
+            |            name = name,
+            |            language = language,
+            |            querySources = querySources,
+            |            extensions = extensions,
+            |            fileNames = fileNames,
+            |            priority = LanguagePriority.PLUGIN,
+            |            themeOverrides = themeOverrides,
+            |        )
             |    }
             |
             |    fun unregisterDynamicLanguage(name: String) {
-            |        val normalized = name.lowercase()
-            |        dynamicLanguages.remove(normalized)
-            |        languageProvider.unregisterLanguage(normalized)
-            |        dynamicExtensions.values.removeAll { it == normalized }
-            |        dynamicFileNames.values.removeAll { it == normalized }
+            |        languageProvider.unregister(name)
+            |        dynamicLanguages.remove(name.lowercase())
             |    }
             |
             |    override fun close() {
@@ -226,44 +249,38 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             |package com.klyx.editor
             |
             |import android.content.Context
-            |import com.klyx.editor.treesitter.LanguageProvider
+            |import com.klyx.editor.treesitter.DynamicLanguageProvider
+            |import com.klyx.editor.treesitter.LanguagePriority
             |import com.klyx.editor.treesitter.LanguageQueries
-            |import com.klyx.editor.treesitter.closeSafely
+            |import com.klyx.editor.treesitter.QuerySources
             |import io.github.treesitter.ktreesitter.Language
-            |import java.util.concurrent.ConcurrentHashMap
             |
             |$registryImports
             |/** AUTO-GENERATED CLASS: Do not edit manually! */
-            |class TSLanguageRegistry(private val context: Context) : LanguageProvider {
+            |class TSLanguageRegistry(context: Context, provider: DynamicLanguageProvider) {
             |
-            |    private val languageCache = ConcurrentHashMap<String, Language>()
-            |    private val queriesCache = ConcurrentHashMap<String, LanguageQueries>()
-            |
-            |    private val languageSuppliers = mapOf(
+            |    init {
+            |        val suppliers = mapOf<String, () -> Any>(
             |$supplierBranches
-            |    )
+            |        )
             |
-            |    override fun getLanguage(languageName: String): Language? {
-            |        val normalizedName = languageName.lowercase()
-            |        return languageCache.getOrPut(normalizedName) {
-            |            val nativePointer = languageSuppliers[normalizedName]?.invoke() ?: return null
-            |            Language(nativePointer)
+            |        val extMap = mapOf<String, List<String>>(
+            |$extBranches
+            |        )
+            |
+            |        for ((name, supplier) in suppliers) {
+            |            val tsLanguage = Language(supplier())
+            |            val querySources = LanguageQueries.loadQuerySources(context, name)
+            |            val extensions = extMap[name] ?: listOf(name)
+            |            provider.register(
+            |                name = name,
+            |                language = tsLanguage,
+            |                querySources = querySources,
+            |                extensions = extensions,
+            |                fileNames = emptyList(),
+            |                priority = LanguagePriority.BUILT_IN,
+            |            )
             |        }
-            |    }
-            |
-            |    override fun getQueries(languageName: String): LanguageQueries? {
-            |        val normalizedName = languageName.lowercase()
-            |        val lang = getLanguage(normalizedName) ?: return null
-            |
-            |        return queriesCache.getOrPut(normalizedName) {
-            |            LanguageQueries(context, lang, normalizedName)
-            |        }
-            |    }
-            |
-            |    fun clear() {
-            |        queriesCache.values.forEach { it.closeSafely() }
-            |        queriesCache.clear()
-            |        languageCache.clear()
             |    }
             |}
             """.trimMargin()
