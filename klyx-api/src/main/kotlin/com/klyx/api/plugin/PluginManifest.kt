@@ -63,7 +63,7 @@ package com.klyx.api.plugin
 @MustBeDocumented
 annotation class PluginManifest(
     val id: String,
-    val version: String,
+    val version: String = "0.1.0",
     val name: String = "",
     val minAppVersion: String = "4.2.0",
     val maxAppVersion: String = "",

@@ -20,7 +20,7 @@ buildConfig {
     }
 
     packageName("com.klyx.compiler.plugin")
-    buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"com.klyx.compiler.plugin\"")
+    buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"io.github.klyx-dev.compiler.plugin\"")
 }
 
 val klyxRuntimeClasspath = configurations.dependencyScope("klyxRuntimeClasspath") {
