@@ -62,7 +62,7 @@ class KlyxDescriptorGenerationExtension(
     override fun getCallableNamesForClass(classSymbol: FirClassSymbol<*>, context: MemberGenerationContext): Set<Name> {
         info("getCallableNamesForClass: ${classSymbol.name}")
         val key = (classSymbol.origin as? FirDeclarationOrigin.Plugin)?.key
-        if (key is Key) setOf(KlyxPluginIds.DESCRIPTOR_PROPERTY_NAME, SpecialNames.INIT)
+        if (key is Key) return setOf(KlyxPluginIds.DESCRIPTOR_PROPERTY_NAME, SpecialNames.INIT)
 
         if (classSymbol.isCompanion) {
             val owner = classSymbol.getContainingClassSymbol() ?: return emptySet()
