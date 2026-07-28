@@ -227,11 +227,11 @@ private object PluginManifestClassChecker : FirClassChecker(MppCheckerKind.Commo
             .filterIsInstance<FirRegularClass>()
             .firstOrNull { it.isCompanion }
             ?.declarations
-            ?.any { (it as? FirCallableDeclaration)?.symbol?.callableId?.callableName == KlyxPluginIds.DESCRIPTOR_PROPERTY_NAME }
-            ?: false
+            ?.filterIsInstance<FirCallableDeclaration>()
+            ?.firstOrNull { it.symbol.callableId?.callableName == KlyxPluginIds.DESCRIPTOR_PROPERTY_NAME }
 
-        if (ownDescriptor) {
-            reporter.reportOn(classSource, KlyxManifestErrors.RESERVED_DESCRIPTOR_NAME)
+        if (ownDescriptor != null) {
+            reporter.reportOn(ownDescriptor.source ?: classSource, KlyxManifestErrors.RESERVED_DESCRIPTOR_NAME)
         }
 
         val hasPublicNoArgConstructor = declaration.declarations

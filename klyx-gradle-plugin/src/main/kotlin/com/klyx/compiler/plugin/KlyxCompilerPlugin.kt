@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import java.io.File
+import java.util.concurrent.TimeUnit
 
 @Suppress("unused")
 class KlyxCompilerPlugin : KotlinCompilerPluginSupportPlugin {
@@ -147,6 +148,12 @@ class KlyxCompilerPlugin : KotlinCompilerPluginSupportPlugin {
 
         kotlinCompilation.defaultSourceSet.dependencies {
             compileOnly(KLYX_API_LIBRARY_COORDINATES)
+        }
+
+        if (BuildConfig.KOTLIN_PLUGIN_VERSION.contains("SNAPSHOT", ignoreCase = true)) {
+            project.configurations.all {
+                it.resolutionStrategy.cacheChangingModulesFor(0, TimeUnit.SECONDS)
+            }
         }
 
         kotlinCompilation.compileTaskProvider.configure {
