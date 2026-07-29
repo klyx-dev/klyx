@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.klyx.api.system
 
 import android.annotation.SuppressLint
@@ -7,6 +9,8 @@ import com.klyx.api.terminal.processEnv
 import com.klyx.api.terminal.prootFile
 import com.klyx.api.terminal.rootFs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.launch
@@ -18,18 +22,20 @@ import java.io.OutputStream
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 
+internal val EMPTY_BYTE_ARRAY = ByteArray(0)
+
 /**
- * Creates a [CommandBuilder] to run the specified [program].
+ * Creates a [Command] to run the specified [program].
  *
  * The program will be searched for in the terminal rootfs first, then in the system paths.
  */
-fun command(program: String): CommandBuilder = CommandBuilder(program)
+fun command(program: String): Command = Command(program)
 
 /**
- * Creates a [CommandBuilder] to run the specified [program] with the given [args].
+ * Creates a [Command] to run the specified [program] with the given [args].
  */
-fun command(program: String, vararg args: Any): CommandBuilder =
-    CommandBuilder(program).args(*args)
+fun command(program: String, vararg args: Any): Command =
+    Command(program).args(*args)
 
 /**
  * A builder for configuring and executing system processes.
@@ -40,84 +46,92 @@ fun command(program: String, vararg args: Any): CommandBuilder =
  * It automatically handles running binaries within the Klyx PRoot environment if they
  * are found in the terminal rootfs.
  */
-class CommandBuilder internal constructor(
-    private val program: String,
+class Command internal constructor(
+    internal val program: String,
 ) {
-    private val args = mutableListOf<String>()
-    private val env = mutableMapOf<String, String>()
-    private var cwd: File? = null
-    private var stdinSource: StdinSource = StdinSource.Pipe
-    private var stdoutDest: StdioDest = StdioDest.Capture
-    private var stderrDest: StdioDest = StdioDest.Capture
+    internal val args = mutableListOf<String>()
+    internal val env = mutableMapOf<String, String>()
+    internal var cwd: File? = null
+    internal var stdinSource: Stdin = Stdin.Pipe
+    internal var stdoutDest: Stdio = Stdio.Capture
+    internal var stderrDest: Stdio = Stdio.Capture
+
+    internal data class IoConfig(
+        val stdin: Stdin,
+        val stdout: Stdio,
+        val stderr: Stdio,
+    )
+
+    private fun ioConfig(): IoConfig = IoConfig(stdinSource, stdoutDest, stderrDest)
 
     /** Adds a single argument to the command. */
-    fun arg(a: Any): CommandBuilder {
+    fun arg(a: Any): Command {
         args.add(a.toString())
         return this
     }
 
     /** Adds multiple arguments to the command. */
-    fun args(vararg a: Any): CommandBuilder {
+    fun args(vararg a: Any): Command {
         a.forEach { args.add(it.toString()) }
         return this
     }
 
     /** Adds a list of arguments to the command. */
-    fun args(a: List<Any>): CommandBuilder {
+    fun args(a: List<Any>): Command {
         a.forEach { args.add(it.toString()) }
         return this
     }
 
     /** Adds an environment variable. */
-    fun env(key: String, value: String): CommandBuilder {
+    fun env(key: String, value: String): Command {
         env[key] = value
         return this
     }
 
     /** Adds multiple environment variables from a map. */
-    fun env(map: Map<String, String>): CommandBuilder {
+    fun env(map: Map<String, String>): Command {
         env.putAll(map)
         return this
     }
 
     /** Sets the current working directory for the process. */
-    fun cwd(dir: File): CommandBuilder {
+    fun cwd(dir: File): Command {
         cwd = dir
         return this
     }
 
     /** Sets the current working directory path for the process. */
-    fun cwd(path: String): CommandBuilder {
+    fun cwd(path: String): Command {
         cwd = File(path)
         return this
     }
 
     /** Configures where the process reads its standard input from. */
-    fun stdin(source: StdinSource): CommandBuilder {
+    fun stdin(source: Stdin): Command {
         stdinSource = source
         return this
     }
 
     /** Provides standard input to the process as a [ByteArray]. */
-    fun stdin(bytes: ByteArray): CommandBuilder {
-        stdinSource = StdinSource.Bytes(bytes)
+    fun stdin(bytes: ByteArray): Command {
+        stdinSource = Stdin.Bytes(bytes)
         return this
     }
 
     /** Provides standard input to the process as a [String]. */
-    fun stdin(text: String): CommandBuilder {
-        stdinSource = StdinSource.Bytes(text.encodeToByteArray())
+    fun stdin(text: String): Command {
+        stdinSource = Stdin.Bytes(text.encodeToByteArray())
         return this
     }
 
     /** Configures where the process writes its standard output. */
-    fun stdout(dest: StdioDest): CommandBuilder {
+    fun stdout(dest: Stdio): Command {
         stdoutDest = dest
         return this
     }
 
     /** Configures where the process writes its standard error. */
-    fun stderr(dest: StdioDest): CommandBuilder {
+    fun stderr(dest: Stdio): Command {
         stderrDest = dest
         return this
     }
@@ -125,32 +139,35 @@ class CommandBuilder internal constructor(
     /**
      * Executes the command and waits for it to finish, capturing all output.
      *
-     * @return A [ProcessOutput] containing the exit code and captured stdout/stderr.
+     * @return A [CommandResult] containing the exit code and captured stdout/stderr.
      */
-    suspend fun output(): ProcessOutput {
-        val child = spawnRaw()
-        val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
-        return withContext(Dispatchers.IO) {
-            if (stdinBytes != null) {
-                child.process.outputStream.use { it.write(stdinBytes) }
-            }
-            val outBytes = if (stdoutDest == StdioDest.Capture) {
-                child.process.inputStream.readBytes()
-            } else ByteArray(0)
-            val errBytes = if (stderrDest == StdioDest.Capture) {
-                child.process.errorStream.readBytes()
-            } else ByteArray(0)
-            child.process.waitFor()
-            ProcessOutput(child.process.exitValue(), outBytes, errBytes)
+    suspend fun output(): CommandResult = coroutineScope {
+        val config = ioConfig()
+        val child = spawnRaw(config)
+        val stdinBytes = (config.stdin as? Stdin.Bytes)?.data
+        withContext(Dispatchers.IO) {
+            if (stdinBytes != null) child.process.outputStream.use { it.write(stdinBytes) }
         }
+        val outDeferred = if (config.stdout == Stdio.Capture) {
+            async(Dispatchers.IO) { child.process.inputStream.readBytes() }
+        } else null
+        val errDeferred = if (config.stderr == Stdio.Capture) {
+            async(Dispatchers.IO) { child.process.errorStream.readBytes() }
+        } else null
+        withContext(Dispatchers.IO) { child.process.waitFor() }
+        CommandResult(
+            exitCode = child.process.exitValue(),
+            stdout = outDeferred?.await() ?: EMPTY_BYTE_ARRAY,
+            stderr = errDeferred?.await() ?: EMPTY_BYTE_ARRAY,
+        )
     }
 
     /**
-     * Starts the process and returns a [ChildProcess] handle.
+     * Starts the process and returns a [ProcessHandle] handle.
      */
-    suspend fun spawn(): ChildProcess {
+    suspend fun spawn(): ProcessHandle {
         val child = spawnRaw()
-        val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
+        val stdinBytes = (stdinSource as? Stdin.Bytes)?.data
         if (stdinBytes != null) {
             withContext(Dispatchers.IO) {
                 child.process.outputStream.write(stdinBytes)
@@ -160,14 +177,13 @@ class CommandBuilder internal constructor(
     }
 
     /**
-     * Executes the command and returns a [Flow] of [ProcessOutputEvent]s.
-     * Standard output and error are automatically set to [StdioDest.Capture].
+     * Executes the command and returns a [Flow] of [ProcessEvent]s.
+     * Standard output and error are automatically set to [Stdio.Capture].
      */
-    suspend fun stream(): Flow<ProcessOutputEvent> {
-        stdoutDest = StdioDest.Capture
-        stderrDest = StdioDest.Capture
-        val child = spawnRaw()
-        val stdinBytes = (stdinSource as? StdinSource.Bytes)?.data
+    suspend fun stream(): Flow<ProcessEvent> {
+        val config = IoConfig(stdinSource, Stdio.Capture, Stdio.Capture)
+        val child = spawnRaw(config)
+        val stdinBytes = (config.stdin as? Stdin.Bytes)?.data
         if (stdinBytes != null) {
             withContext(Dispatchers.IO) {
                 child.process.outputStream.use { it.write(stdinBytes) }
@@ -180,114 +196,134 @@ class CommandBuilder internal constructor(
      * Executes the command and waits for it to finish, returning only the exit code.
      */
     suspend fun status(): Int {
-        val child = spawnRaw()
+        val config = IoConfig(stdinSource, Stdio.Null, Stdio.Null)
+        val child = spawnRaw(config)
         return withContext(Dispatchers.IO) {
             child.process.waitFor()
             child.process.exitValue()
         }
     }
 
-    private suspend fun spawnRaw(): ChildProcess {
-        val resolved = resolveProgram(program)
-        val pb = buildProcess(resolved)
-        val process = withContext(Dispatchers.IO) { pb.start() }
-        return ChildProcess(process)
+    internal suspend fun spawnRaw(config: IoConfig = ioConfig()): ProcessHandle {
+        val process = createProcess(
+            program = program,
+            args = args,
+            env = env,
+            cwd = cwd,
+            stdin = config.stdin,
+            stdout = config.stdout,
+            stderr = config.stderr,
+        )
+        return ProcessHandle(process)
     }
 
-    @SuppressLint("SdCardPath")
-    private fun buildProcess(resolved: ResolvedProgram): ProcessBuilder {
-        val outDest = stdoutDest
-        val errDest = stderrDest
+    companion object {
+        /** Creates a [Command] that executes [script] via `sh -c`. */
+        fun shell(script: String): Command = Command("sh").args("-c", script)
+    }
+}
 
-        val pb = when (resolved) {
-            is ResolvedProgram.Direct -> {
-                ProcessBuilder(listOf(resolved.path) + args)
-            }
+@Deprecated("Use Command", ReplaceWith("Command"))
+typealias CommandBuilder = Command
 
-            is ResolvedProgram.PRoot -> {
-                val rootFsPath = Paths.rootFs.absolutePath
-                val homePath = Paths.home.absolutePath
-                val guestCmd = buildString {
-                    append(resolved.guestPath)
-                    for (arg in args) {
-                        append(' ')
-                        append(shellEscape(arg))
-                    }
+internal suspend fun createProcess(
+    program: String,
+    args: List<String>,
+    env: Map<String, String>,
+    cwd: File?,
+    stdin: Stdin,
+    stdout: Stdio,
+    stderr: Stdio,
+): Process {
+    val resolved = resolveProgram(program)
+    val pb = buildProcessBuilder(resolved, args, env, cwd, stdin, stdout, stderr)
+    return withContext(Dispatchers.IO) { pb.start() }
+}
+
+@SuppressLint("SdCardPath")
+internal fun buildProcessBuilder(
+    resolved: ResolvedProgram,
+    args: List<String>,
+    env: Map<String, String>,
+    cwd: File?,
+    stdin: Stdin,
+    stdout: Stdio,
+    stderr: Stdio,
+): ProcessBuilder {
+    val pb = when (resolved) {
+        is ResolvedProgram.Direct -> ProcessBuilder(listOf(resolved.path) + args)
+        is ResolvedProgram.PRoot -> {
+            val rootFsPath = Paths.rootFs.absolutePath
+            val homePath = Paths.home.absolutePath
+            val guestCmd = buildString {
+                append(resolved.guestPath)
+                for (arg in args) {
+                    append(' ')
+                    append(shellEscape(arg))
                 }
-                val prootArgs = mutableListOf(
-                    prootFile().absolutePath,
-                    "-0",
-                    "--kill-on-exit",
-                    "--link2symlink",
-                    "--sysvipc",
-                    "-L",
-                    "-r", rootFsPath,
-                    "-w", "/root",
-                    "-b", "/dev",
-                    "-b", "/proc",
-                    "-b", "/sys",
-                    "-b", "/sdcard",
-                    "-b", "/storage",
-                    "-b", Paths.dataDir.canonicalPath,
-                    "-b", Paths.dataDir.absolutePath,
-                    "-b", "${homePath}:/root",
-                    "/bin/bash",
-                    "-lc",
-                    guestCmd,
-                )
-                ProcessBuilder(prootArgs)
             }
+            val prootArgs = mutableListOf(
+                prootFile().absolutePath,
+                "-0", "--kill-on-exit", "--link2symlink", "--sysvipc", "-L",
+                "-r", rootFsPath,
+                "-w", "/root",
+                "-b", "/dev", "-b", "/proc", "-b", "/sys",
+                "-b", "/sdcard", "-b", "/storage",
+                "-b", Paths.dataDir.canonicalPath,
+                "-b", Paths.dataDir.absolutePath,
+                "-b", "${homePath}:/root",
+                "/bin/bash", "-lc", guestCmd,
+            )
+            ProcessBuilder(prootArgs)
         }
-
-        val envMap = pb.environment()
-        envMap.clear()
-        try {
-            envMap.putAll(processEnv())
-        } catch (_: Throwable) {
-            // Running outside Android (JVM tests, etc.)
-            // processEnv() not available, proceed with just user env
-            envMap.putAll(System.getenv())
-        }
-        envMap.putAll(env)
-
-        cwd?.let { pb.directory(it) }
-
-        when (stdinSource) {
-            StdinSource.Inherit -> pb.redirectInput(ProcessBuilder.Redirect.INHERIT)
-            is StdinSource.Bytes, StdinSource.Pipe -> pb.redirectInput(ProcessBuilder.Redirect.PIPE)
-        }
-
-        when (outDest) {
-            StdioDest.Inherit -> pb.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-            StdioDest.Capture -> pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
-            StdioDest.Null -> pb.redirectOutput(ProcessBuilder.Redirect.to(File("/dev/null")))
-            is StdioDest.File -> pb.redirectOutput(ProcessBuilder.Redirect.appendTo(outDest.file))
-        }
-
-        when (errDest) {
-            StdioDest.Inherit -> pb.redirectError(ProcessBuilder.Redirect.INHERIT)
-            StdioDest.Capture -> pb.redirectError(ProcessBuilder.Redirect.PIPE)
-            StdioDest.Null -> pb.redirectError(ProcessBuilder.Redirect.to(File("/dev/null")))
-            is StdioDest.File -> pb.redirectError(ProcessBuilder.Redirect.appendTo(errDest.file))
-        }
-
-        return pb
     }
+
+    val envMap = pb.environment()
+    envMap.clear()
+    try {
+        envMap.putAll(processEnv())
+    } catch (_: Throwable) {
+        envMap.putAll(System.getenv())
+    }
+    envMap.putAll(env)
+
+    cwd?.let { pb.directory(it) }
+
+    when (stdin) {
+        Stdin.Inherit -> pb.redirectInput(ProcessBuilder.Redirect.INHERIT)
+        is Stdin.Bytes, Stdin.Pipe -> pb.redirectInput(ProcessBuilder.Redirect.PIPE)
+    }
+
+    when (stdout) {
+        Stdio.Inherit -> pb.redirectOutput(ProcessBuilder.Redirect.INHERIT)
+        Stdio.Capture -> pb.redirectOutput(ProcessBuilder.Redirect.PIPE)
+        Stdio.Null -> pb.redirectOutput(ProcessBuilder.Redirect.to(File("/dev/null")))
+        is Stdio.File -> pb.redirectOutput(ProcessBuilder.Redirect.appendTo(stdout.file))
+    }
+
+    when (stderr) {
+        Stdio.Inherit -> pb.redirectError(ProcessBuilder.Redirect.INHERIT)
+        Stdio.Capture -> pb.redirectError(ProcessBuilder.Redirect.PIPE)
+        Stdio.Null -> pb.redirectError(ProcessBuilder.Redirect.to(File("/dev/null")))
+        is Stdio.File -> pb.redirectError(ProcessBuilder.Redirect.appendTo(stderr.file))
+    }
+
+    return pb
 }
 
 /**
  * Defines the source of the process's standard input.
  */
-sealed interface StdinSource {
+sealed interface Stdin {
 
     /** The process inherits the parent process's standard input. */
-    data object Inherit : StdinSource
+    data object Inherit : Stdin
 
     /** Standard input is provided via a pipe that can be written to. */
-    data object Pipe : StdinSource
+    data object Pipe : Stdin
 
     /** Standard input is provided as a fixed [ByteArray]. */
-    data class Bytes(val data: ByteArray) : StdinSource {
+    data class Bytes(val data: ByteArray) : Stdin {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
@@ -303,23 +339,29 @@ sealed interface StdinSource {
     }
 }
 
+@Deprecated("Use Stdin", ReplaceWith("Stdin"))
+typealias StdinSource = Stdin
+
 /**
  * Defines where the process's standard output or error should be directed.
  */
-sealed interface StdioDest {
+sealed interface Stdio {
 
     /** Output is inherited from the parent process. */
-    data object Inherit : StdioDest
+    data object Inherit : Stdio
 
     /** Output is captured and can be read as bytes or text. */
-    data object Capture : StdioDest
+    data object Capture : Stdio
 
     /** Output is discarded (sent to `/dev/null`). */
-    data object Null : StdioDest
+    data object Null : Stdio
 
     /** Output is appended to the specified [file]. */
-    data class File(val file: java.io.File) : StdioDest
+    data class File(val file: java.io.File) : Stdio
 }
+
+@Deprecated("Use Stdio", ReplaceWith("Stdio"))
+typealias StdioDest = Stdio
 
 /**
  * Captured results of a process execution.
@@ -328,7 +370,7 @@ sealed interface StdioDest {
  * @property stdout Captured standard output as bytes.
  * @property stderr Captured standard error as bytes.
  */
-data class ProcessOutput(
+data class CommandResult(
     val exitCode: Int,
     val stdout: ByteArray,
     val stderr: ByteArray,
@@ -339,11 +381,17 @@ data class ProcessOutput(
     /** The captured standard error decoded as a UTF-8 string. */
     val stderrText: String get() = stderr.decodeToString()
 
+    /** The captured standard output split into lines. */
+    val stdoutLines: List<String> get() = stdoutText.lines()
+
+    /** The captured standard error split into lines. */
+    val stderrLines: List<String> get() = stderrText.lines()
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ProcessOutput
+        other as CommandResult
 
         if (exitCode != other.exitCode) return false
         if (!stdout.contentEquals(other.stdout)) return false
@@ -360,13 +408,16 @@ data class ProcessOutput(
     }
 }
 
+@Deprecated("Use CommandResult", ReplaceWith("CommandResult"))
+typealias ProcessOutput = CommandResult
+
 /**
  * Events emitted during a streaming process execution.
  */
-sealed interface ProcessOutputEvent {
+sealed interface ProcessEvent {
 
     /** Standard output data chunk. */
-    data class Stdout(val data: ByteArray) : ProcessOutputEvent {
+    data class Stdout(val data: ByteArray) : ProcessEvent {
         /** The data chunk decoded as a UTF-8 string. */
         val text: String get() = data.decodeToString()
 
@@ -381,7 +432,7 @@ sealed interface ProcessOutputEvent {
     }
 
     /** Standard error data chunk. */
-    data class Stderr(val data: ByteArray) : ProcessOutputEvent {
+    data class Stderr(val data: ByteArray) : ProcessEvent {
         /** The data chunk decoded as a UTF-8 string. */
         val text: String get() = data.decodeToString()
 
@@ -396,13 +447,16 @@ sealed interface ProcessOutputEvent {
     }
 
     /** The process has finished with the given [code]. */
-    data class ExitCode(val code: Int) : ProcessOutputEvent
+    data class ExitCode(val code: Int) : ProcessEvent
 }
+
+@Deprecated("Use ProcessEvent", ReplaceWith("ProcessEvent"))
+typealias ProcessOutputEvent = ProcessEvent
 
 /**
  * A handle to a running process, providing methods to wait for its completion or terminate it.
  */
-class ChildProcess internal constructor(
+class ProcessHandle internal constructor(
     internal val process: Process,
 ) {
     /** The Process ID (PID) of the child process. */
@@ -431,24 +485,26 @@ class ChildProcess internal constructor(
     /**
      * Suspends until the process completes and returns its full output.
      */
-    suspend fun waitFor(): ProcessOutput = withContext(Dispatchers.IO) {
-        val outBytes = process.inputStream.readBytes()
-        val errBytes = process.errorStream.readBytes()
-        process.waitFor()
-        ProcessOutput(process.exitValue(), outBytes, errBytes)
+    suspend fun waitFor(): CommandResult = coroutineScope {
+        val out = async(Dispatchers.IO) { process.inputStream.readBytes() }
+        val err = async(Dispatchers.IO) { process.errorStream.readBytes() }
+        withContext(Dispatchers.IO) { process.waitFor() }
+        CommandResult(process.exitValue(), out.await(), err.await())
     }
 
     /**
      * Suspends until the process completes or the [timeoutMillis] is reached.
      *
-     * @return The [ProcessOutput] if the process finished, or null if it timed out.
+     * @return The [CommandResult] if the process finished, or null if it timed out.
      */
-    suspend fun waitForTimeout(timeoutMillis: Long): ProcessOutput? = withContext(Dispatchers.IO) {
-        val exited = process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)
-        if (!exited) return@withContext null
-        val outBytes = if (process.inputStream.available() > 0) process.inputStream.readBytes() else ByteArray(0)
-        val errBytes = if (process.errorStream.available() > 0) process.errorStream.readBytes() else ByteArray(0)
-        ProcessOutput(process.exitValue(), outBytes, errBytes)
+    suspend fun waitForTimeout(timeoutMillis: Long): CommandResult? = coroutineScope {
+        val exited = withContext(Dispatchers.IO) {
+            process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)
+        }
+        if (!exited) return@coroutineScope null
+        val out = async(Dispatchers.IO) { process.inputStream.readBytes() }
+        val err = async(Dispatchers.IO) { process.errorStream.readBytes() }
+        CommandResult(process.exitValue(), out.await(), err.await())
     }
 
     /**
@@ -460,55 +516,210 @@ class ChildProcess internal constructor(
      * Returns a [Flow] that emits stdout/stderr chunks and the final exit code as they occur.
      * The process is automatically forcibly destroyed if the flow collection is cancelled.
      */
-    fun flow(): Flow<ProcessOutputEvent> = channelFlow {
+    fun flow(): Flow<ProcessEvent> = channelFlow {
         val bufferSize = 8192
 
         val outJob = launch(Dispatchers.IO) {
-            try {
+            process.inputStream.use { stream ->
                 val buffer = ByteArray(bufferSize)
-                var bytesRead: Int
-                while (process.inputStream.read(buffer).also { bytesRead = it } >= 0) {
-                    if (bytesRead > 0) {
-                        send(ProcessOutputEvent.Stdout(buffer.copyOf(bytesRead)))
-                    }
+                while (true) {
+                    val n = stream.read(buffer)
+                    if (n < 0) break
+                    if (n > 0) send(ProcessEvent.Stdout(buffer.copyOf(n)))
                 }
-            } catch (_: IOException) {
             }
         }
 
         val errJob = launch(Dispatchers.IO) {
-            try {
+            process.errorStream.use { stream ->
                 val buffer = ByteArray(bufferSize)
-                var bytesRead: Int
-                while (process.errorStream.read(buffer).also { bytesRead = it } >= 0) {
-                    if (bytesRead > 0) {
-                        send(ProcessOutputEvent.Stderr(buffer.copyOf(bytesRead)))
-                    }
+                while (true) {
+                    val n = stream.read(buffer)
+                    if (n < 0) break
+                    if (n > 0) send(ProcessEvent.Stderr(buffer.copyOf(n)))
                 }
-            } catch (_: IOException) {
             }
         }
 
         try {
-            withContext(Dispatchers.IO) {
-                process.waitFor()
-            }
+            withContext(Dispatchers.IO) { process.waitFor() }
             outJob.join()
             errJob.join()
-            send(ProcessOutputEvent.ExitCode(process.exitValue()))
+            send(ProcessEvent.ExitCode(process.exitValue()))
         } finally {
-            if (process.isAlive) {
-                process.destroyForcibly()
-            }
+            if (process.isAlive) process.destroyForcibly()
         }
     }
 
     /** Forcibly kills the child process. */
-    fun kill(): ChildProcess = ChildProcess(process.destroyForcibly())
+    fun kill() {
+        process.destroyForcibly()
+    }
 
     /** Gracefully terminates the child process. */
     fun terminate() = process.destroy()
 }
+
+@Deprecated("Use ProcessHandle", ReplaceWith("ProcessHandle"))
+typealias ChildProcess = ProcessHandle
+
+/**
+ * A pipeline of commands where the stdout of each feeds the stdin of the next.
+ *
+ * The exit code is that of the last command. Intermediate stdout and stderr are
+ * piped automatically. Built via [Command.pipe].
+ */
+class Pipeline internal constructor(
+    val commands: List<Command>,
+) {
+    /**
+     * Executes the pipeline and returns the output of the last command.
+     * All intermediate processes are piped together and cleaned up on completion.
+     */
+    suspend fun execute(): CommandResult = coroutineScope {
+        if (commands.isEmpty()) error("Empty pipeline")
+        val processes = mutableListOf<Process>()
+        try {
+            for ((i, cmd) in commands.withIndex()) {
+                val isFirst = i == 0
+                val isLast = i == commands.lastIndex
+                val process = createProcess(
+                    program = cmd.program,
+                    args = cmd.args,
+                    env = cmd.env,
+                    cwd = cmd.cwd,
+                    stdin = if (isFirst) cmd.stdinSource else Stdin.Pipe,
+                    stdout = if (isLast) cmd.stdoutDest else Stdio.Capture,
+                    stderr = cmd.stderrDest,
+                )
+                processes.add(process)
+            }
+
+            for (i in 0 until processes.size - 1) {
+                launch(Dispatchers.IO) {
+                    try {
+                        processes[i].inputStream.use { out ->
+                            processes[i + 1].outputStream.use { `in` -> out.copyTo(`in`) }
+                        }
+                    } catch (_: IOException) {
+                    }
+                }
+            }
+
+            val firstCmd = commands.first()
+            if (firstCmd.stdinSource is Stdin.Bytes) {
+                val bytes = (firstCmd.stdinSource as Stdin.Bytes).data
+                launch(Dispatchers.IO) {
+                    processes.first().outputStream.use { it.write(bytes) }
+                }
+            }
+
+            val lastCmd = commands.last()
+            val lastProc = processes.last()
+            val outDeferred = if (lastCmd.stdoutDest == Stdio.Capture) {
+                async(Dispatchers.IO) { lastProc.inputStream.readBytes() }
+            } else null
+            val errDeferred = if (lastCmd.stderrDest == Stdio.Capture) {
+                async(Dispatchers.IO) { lastProc.errorStream.readBytes() }
+            } else null
+
+            withContext(Dispatchers.IO) { lastProc.waitFor() }
+
+            CommandResult(
+                exitCode = lastProc.exitValue(),
+                stdout = outDeferred?.await() ?: EMPTY_BYTE_ARRAY,
+                stderr = errDeferred?.await() ?: EMPTY_BYTE_ARRAY,
+            )
+        } finally {
+            processes.forEach { if (it.isAlive) it.destroyForcibly() }
+        }
+    }
+
+    /**
+     * Executes the pipeline and returns a stream of events from the last command.
+     * Intermediate stdout is piped to the next command's stdin. Stderr from all
+     * commands uses each command's configured [Command.stderr].
+     */
+    fun watch(): Flow<ProcessEvent> = channelFlow {
+        if (commands.isEmpty()) error("Empty pipeline")
+        val processes = mutableListOf<Process>()
+        try {
+            for ((i, cmd) in commands.withIndex()) {
+                val isFirst = i == 0
+                val isLast = i == commands.lastIndex
+                val process = createProcess(
+                    program = cmd.program,
+                    args = cmd.args,
+                    env = cmd.env,
+                    cwd = cmd.cwd,
+                    stdin = if (isFirst) cmd.stdinSource else Stdin.Pipe,
+                    stdout = if (isLast) Stdio.Capture else Stdio.Capture,
+                    stderr = cmd.stderrDest,
+                )
+                processes.add(process)
+            }
+
+            for (i in 0 until processes.size - 1) {
+                launch(Dispatchers.IO) {
+                    try {
+                        processes[i].inputStream.use { out ->
+                            processes[i + 1].outputStream.use { `in` -> out.copyTo(`in`) }
+                        }
+                    } catch (_: IOException) { }
+                }
+            }
+
+            val firstCmd = commands.first()
+            if (firstCmd.stdinSource is Stdin.Bytes) {
+                launch(Dispatchers.IO) {
+                    processes.first().outputStream.use { it.write((firstCmd.stdinSource as Stdin.Bytes).data) }
+                }
+            }
+
+            val last = processes.last()
+            val lastCmd = commands.last()
+
+            val outJob = if (lastCmd.stdoutDest == Stdio.Capture) {
+                launch(Dispatchers.IO) {
+                    last.inputStream.use { stream ->
+                        val buf = ByteArray(8192)
+                        while (true) {
+                            val n = stream.read(buf)
+                            if (n < 0) break
+                            if (n > 0) send(ProcessEvent.Stdout(buf.copyOf(n)))
+                        }
+                    }
+                }
+            } else null
+
+            val errJob = if (lastCmd.stderrDest == Stdio.Capture) {
+                launch(Dispatchers.IO) {
+                    last.errorStream.use { stream ->
+                        val buf = ByteArray(8192)
+                        while (true) {
+                            val n = stream.read(buf)
+                            if (n < 0) break
+                            if (n > 0) send(ProcessEvent.Stderr(buf.copyOf(n)))
+                        }
+                    }
+                }
+            } else null
+
+            withContext(Dispatchers.IO) { last.waitFor() }
+            outJob?.join()
+            errJob?.join()
+            send(ProcessEvent.ExitCode(last.exitValue()))
+        } finally {
+            processes.forEach { if (it.isAlive) it.destroyForcibly() }
+        }
+    }
+
+    /** Appends [next] to this pipeline. */
+    infix fun pipe(next: Command): Pipeline = Pipeline(commands + next)
+}
+
+/** Creates a [Pipeline] where this command's stdout is piped to [next]'s stdin. */
+infix fun Command.pipe(next: Command): Pipeline = Pipeline(listOf(this, next))
 
 /**
  * Shell-escapes a single argument for inclusion in a `bash -c` command string.

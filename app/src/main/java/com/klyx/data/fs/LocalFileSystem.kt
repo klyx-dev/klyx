@@ -16,7 +16,7 @@ import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.fs.SizeProgress
-import com.klyx.api.system.StdioDest
+import com.klyx.api.system.Stdio
 import com.klyx.api.system.command
 import com.klyx.api.system.firstAvailable
 import com.klyx.api.system.streamLines
@@ -133,8 +133,8 @@ class LocalFileSystem : FileSystem {
                 "*${query}*",
                 root.absolutePath
             )
-                .stdout(StdioDest.Capture)
-                .stderr(StdioDest.Null)
+                .stdout(Stdio.Capture)
+                .stderr(Stdio.Null)
                 .streamLines()
                 .collect { line ->
                     if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {
@@ -163,8 +163,8 @@ class LocalFileSystem : FileSystem {
                 "-iname",
                 "*${query}*"
             )
-                .stdout(StdioDest.Capture)
-                .stderr(StdioDest.Null)
+                .stdout(Stdio.Capture)
+                .stderr(Stdio.Null)
                 .streamLines()
                 .collect { line ->
                     if (line.isNotEmpty() && count.getAndIncrement() < maxResults) {

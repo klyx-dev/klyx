@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package com.klyx.api.system
 
 import com.klyx.api.data.fs.Paths
@@ -5,6 +7,9 @@ import com.klyx.api.terminal.home
 import com.klyx.api.terminal.rootFs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.mapNotNull
@@ -16,9 +21,10 @@ import java.io.IOException
 import kotlin.time.Duration
 
 /**
- * Creates a [CommandBuilder] that executes the given [script] in a shell (`sh -c`).
+ * Creates a [Command] that executes the given [script] in a shell (`sh -c`).
  */
-fun shell(script: String): CommandBuilder = command("sh", "-c", script)
+@Deprecated("Use Command.shell()", ReplaceWith("Command.shell(script)"))
+fun shell(script: String): Command = Command.shell(script)
 
 /**
  * Returns `true` if the given [program] can be found in the current environment's path.
@@ -68,10 +74,10 @@ suspend fun which(program: String): String? = withContext(Dispatchers.IO) {
     }
 
     runCatching {
-        command("which", program)
-            .stdout(StdioDest.Capture)
-            .stderr(StdioDest.Null)
-            .outputText()
+        command("bash", "-lc", "command -v $program")
+            .stdout(Stdio.Capture)
+            .stderr(Stdio.Null)
+            .output().stdoutText
             .trim()
             .ifEmpty { null }
     }.getOrNull()
@@ -100,23 +106,25 @@ suspend fun firstAvailable(commands: Iterable<String>): String? {
 }
 
 /** Executes the command and returns the captured standard output as a string. */
-suspend fun CommandBuilder.outputText(): String = output().stdoutText
+@Deprecated("Use output().stdoutText", ReplaceWith("output().stdoutText"))
+suspend fun Command.outputText(): String = output().stdoutText
 
 /** Executes the command and returns the captured standard output as a list of lines. */
-suspend fun CommandBuilder.outputLines(): List<String> = outputText().lines()
+@Deprecated("Use output().stdoutLines", ReplaceWith("output().stdoutLines"))
+suspend fun Command.outputLines(): List<String> = output().stdoutText.lines()
 
 /** Executes the command and returns `true` if the exit code is 0. */
-suspend fun CommandBuilder.isSuccess(): Boolean = status() == 0
+suspend fun Command.isSuccess(): Boolean = status() == 0
 
 /** Executes the command and returns `true` if the exit code is non-zero. */
-suspend fun CommandBuilder.isFailure(): Boolean = status() != 0
+suspend fun Command.isFailure(): Boolean = status() != 0
 
 /**
  * Executes the command and waits for it to finish, with a specified [timeout].
  *
- * @return The [ProcessOutput] if finished within timeout, or null if it timed out.
+ * @return The [CommandResult] if finished within timeout, or null if it timed out.
  */
-suspend fun CommandBuilder.outputWithTimeout(timeout: Duration): ProcessOutput? {
+suspend fun Command.outputWithTimeout(timeout: Duration): CommandResult? {
     val child = spawn()
     return try {
         withTimeoutOrNull(timeout) {
@@ -130,7 +138,7 @@ suspend fun CommandBuilder.outputWithTimeout(timeout: Duration): ProcessOutput? 
 /**
  * Executes the command and retries up to [times] if it fails (non-zero exit code).
  */
-suspend fun CommandBuilder.retry(times: Int = 3): ProcessOutput {
+suspend fun Command.retry(times: Int = 3): CommandResult {
     var result = output()
     repeat(times) {
         if (result.exitCode == 0) return result
@@ -140,59 +148,77 @@ suspend fun CommandBuilder.retry(times: Int = 3): ProcessOutput {
 }
 
 /**
- * Executes the command and returns the result as a [Result] wrapping [ProcessOutput].
+ * Executes the command and returns the result as a [Result] wrapping [CommandResult].
  */
-suspend fun CommandBuilder.result(): Result<ProcessOutput> = runCatching { output() }
+suspend fun Command.result(): Result<CommandResult> = runCatching { output() }
 
 /**
  * Pipes the standard output of this command into the standard input of the [destination] command.
  *
- * @return The [ChildProcess] handle for the destination command.
+ * @return The [ProcessHandle] handle for the destination command.
  */
-suspend fun CommandBuilder.pipeTo(destination: CommandBuilder): ChildProcess {
-    val src = stdout(StdioDest.Capture).spawn()
-    val dest = destination.stdin(StdinSource.Pipe).spawn()
-    CoroutineScope(Dispatchers.IO).launch {
+suspend fun Command.pipeTo(destination: Command): ProcessHandle {
+    val srcProcess = createProcess(
+        program = program,
+        args = args,
+        env = env,
+        cwd = cwd,
+        stdin = stdinSource,
+        stdout = Stdio.Capture,
+        stderr = stderrDest,
+    )
+    val destProcess = createProcess(
+        program = destination.program,
+        args = destination.args,
+        env = destination.env,
+        cwd = destination.cwd,
+        stdin = Stdin.Pipe,
+        stdout = destination.stdoutDest,
+        stderr = destination.stderrDest,
+    )
+
+    val parentJob = currentCoroutineContext()[Job]
+    CoroutineScope(Dispatchers.IO + (parentJob ?: SupervisorJob())).launch {
         try {
-            src.stdout.use { out ->
-                dest.stdin.use { `in` ->
+            srcProcess.inputStream.use { out ->
+                destProcess.outputStream.use { `in` ->
                     out.copyTo(`in`)
                 }
             }
         } catch (_: IOException) {
         }
     }
-    return dest
+    return ProcessHandle(destProcess)
 }
 
 /** Suspends until the process completes and returns the stdout decoded as text. */
-suspend fun ChildProcess.waitForText(): String = waitFor().stdoutText
+suspend fun ProcessHandle.waitForText(): String = waitFor().stdoutText
 
 /** Suspends until the process completes and returns the stdout split into lines. */
-suspend fun ChildProcess.waitForLines(): List<String> = waitForText().lines()
+suspend fun ProcessHandle.waitForLines(): List<String> = waitForText().lines()
 
 /**
  * Suspends until the process completes or [timeout] is reached, returning stdout text.
  */
-suspend fun ChildProcess.waitForTimeoutText(timeout: Duration): String? =
+suspend fun ProcessHandle.waitForTimeoutText(timeout: Duration): String? =
     waitForTimeout(timeout)?.stdoutText
 
 /**
  * Suspends until the process completes or [timeout] is reached, returning stdout split into lines.
  */
-suspend fun ChildProcess.waitForTimeoutLines(timeout: Duration): List<String>? =
+suspend fun ProcessHandle.waitForTimeoutLines(timeout: Duration): List<String>? =
     waitForTimeoutText(timeout)?.lines()
 
 /**
  * Merges standard output and standard error events into a single stream of lines.
  */
-fun Flow<ProcessOutputEvent>.combinedLines(): Flow<String> = channelFlow {
+fun Flow<ProcessEvent>.combinedLines(): Flow<String> = channelFlow {
     val buffer = StringBuilder()
     collect { event ->
         when (event) {
-            is ProcessOutputEvent.Stdout -> buffer.append(event.text)
-            is ProcessOutputEvent.Stderr -> buffer.append(event.text)
-            is ProcessOutputEvent.ExitCode -> {}
+            is ProcessEvent.Stdout -> buffer.append(event.text)
+            is ProcessEvent.Stderr -> buffer.append(event.text)
+            is ProcessEvent.ExitCode -> {}
         }
         while (true) {
             val idx = buffer.indexOf("\n")
@@ -209,54 +235,54 @@ fun Flow<ProcessOutputEvent>.combinedLines(): Flow<String> = channelFlow {
 /**
  * Streams both standard output and error merged as a stream of lines.
  */
-suspend fun CommandBuilder.combinedLines(): Flow<String> = stream().combinedLines()
+suspend fun Command.combinedLines(): Flow<String> = stream().combinedLines()
 
 /**
  * Streams both standard output and error merged as a stream of lines from a running process.
  */
-fun ChildProcess.combinedLines(): Flow<String> = flow().combinedLines()
+fun ProcessHandle.combinedLines(): Flow<String> = flow().combinedLines()
 
 /**
  * Filters a process event stream to only emit standard output as byte arrays.
  */
-fun Flow<ProcessOutputEvent>.stdoutBytes(): Flow<ByteArray> = mapNotNull {
-    (it as? ProcessOutputEvent.Stdout)?.data
+fun Flow<ProcessEvent>.stdoutBytes(): Flow<ByteArray> = mapNotNull {
+    (it as? ProcessEvent.Stdout)?.data
 }
 
 /**
  * Filters a process event stream to only emit standard error as byte arrays.
  */
-fun Flow<ProcessOutputEvent>.stderrBytes(): Flow<ByteArray> = mapNotNull {
-    (it as? ProcessOutputEvent.Stderr)?.data
+fun Flow<ProcessEvent>.stderrBytes(): Flow<ByteArray> = mapNotNull {
+    (it as? ProcessEvent.Stderr)?.data
 }
 
 /**
  * Streams the process standard output as a sequence of byte arrays.
  */
-suspend fun CommandBuilder.stdoutBytes(): Flow<ByteArray> = stream().stdoutBytes()
+suspend fun Command.stdoutBytes(): Flow<ByteArray> = stream().stdoutBytes()
 
 /**
  * Streams the process standard error as a sequence of byte arrays.
  */
-suspend fun CommandBuilder.stderrBytes(): Flow<ByteArray> = stream().stderrBytes()
+suspend fun Command.stderrBytes(): Flow<ByteArray> = stream().stderrBytes()
 
 /**
  * Streams the running process's standard output as byte arrays.
  */
-fun ChildProcess.stdoutBytes(): Flow<ByteArray> = flow().stdoutBytes()
+fun ProcessHandle.stdoutBytes(): Flow<ByteArray> = flow().stdoutBytes()
 
 /**
  * Streams the running process's standard error as byte arrays.
  */
-fun ChildProcess.stderrBytes(): Flow<ByteArray> = flow().stderrBytes()
+fun ProcessHandle.stderrBytes(): Flow<ByteArray> = flow().stderrBytes()
 
 /**
  * Filters a process event stream to only emit standard output as a stream of lines.
  */
-fun Flow<ProcessOutputEvent>.stdoutLines(): Flow<String> = channelFlow {
+fun Flow<ProcessEvent>.stdoutLines(): Flow<String> = channelFlow {
     val buffer = StringBuilder()
     collect { event ->
-        if (event is ProcessOutputEvent.Stdout) {
+        if (event is ProcessEvent.Stdout) {
             buffer.append(event.text)
             while (true) {
                 val idx = buffer.indexOf("\n")
@@ -274,10 +300,10 @@ fun Flow<ProcessOutputEvent>.stdoutLines(): Flow<String> = channelFlow {
 /**
  * Filters a process event stream to only emit standard error as a stream of lines.
  */
-fun Flow<ProcessOutputEvent>.stderrLines(): Flow<String> = channelFlow {
+fun Flow<ProcessEvent>.stderrLines(): Flow<String> = channelFlow {
     val buffer = StringBuilder()
     collect { event ->
-        if (event is ProcessOutputEvent.Stderr) {
+        if (event is ProcessEvent.Stderr) {
             buffer.append(event.text)
             while (true) {
                 val idx = buffer.indexOf("\n")
@@ -295,19 +321,19 @@ fun Flow<ProcessOutputEvent>.stderrLines(): Flow<String> = channelFlow {
 /**
  * Streams the command's standard output as a stream of lines.
  */
-suspend fun CommandBuilder.streamLines(): Flow<String> = stream().stdoutLines()
+suspend fun Command.streamLines(): Flow<String> = stream().stdoutLines()
 
 /**
  * Streams the command's standard error as a stream of lines.
  */
-suspend fun CommandBuilder.streamErrLines(): Flow<String> = stream().stderrLines()
+suspend fun Command.streamErrLines(): Flow<String> = stream().stderrLines()
 
 /**
  * Streams the running process's standard output as a stream of lines.
  */
-fun ChildProcess.streamLines(): Flow<String> = flow().stdoutLines()
+fun ProcessHandle.streamLines(): Flow<String> = flow().stdoutLines()
 
 /**
  * Streams the running process's standard error as a stream of lines.
  */
-fun ChildProcess.streamErrLines(): Flow<String> = flow().stderrLines()
+fun ProcessHandle.streamErrLines(): Flow<String> = flow().stderrLines()
