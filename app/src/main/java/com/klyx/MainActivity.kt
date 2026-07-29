@@ -51,7 +51,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.ui.NavDisplay
 import com.klyx.api.NavDestination
 import com.klyx.api.Navigator
-import com.klyx.api.data.file.wrap
+import com.klyx.api.SpecialScreens
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.event.terminal.TerminalNotificationTapEvent
 import com.klyx.api.event.terminal.TerminateAllSessionEvent
@@ -220,7 +220,14 @@ class MainActivity : ComposeActivity() {
                         is NavDestination.Home -> Screen.Home
                         is NavDestination.Settings -> Screen.Settings
                         is NavDestination.Terminal -> Screen.Terminal
-                        is NavDestination.Custom -> Screen.Custom(destination.id)
+                        is NavDestination.Custom -> {
+                            when (destination.id) {
+                                SpecialScreens.Home -> Screen.Home
+                                SpecialScreens.Settings -> Screen.Settings
+                                SpecialScreens.Terminal -> Screen.Terminal
+                                else -> Screen.Custom(destination.id)
+                            }
+                        }
                     }
                     navigator.navigateTo(screen)
                 }

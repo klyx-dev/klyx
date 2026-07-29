@@ -27,3 +27,11 @@ sealed class NavDestination {
      */
     data class Custom(val id: ScreenId) : NavDestination()
 }
+
+/**
+ * Creates a [NavDestination] for the given [screenId].
+ *
+ * @param screenId The unique identifier of the screen to navigate to.
+ * @return A [NavDestination] instance representing the custom screen.
+ */
+fun NavDestination(screenId: ScreenId): NavDestination = NavDestination.Custom(screenId)
