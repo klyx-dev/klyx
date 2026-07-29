@@ -55,6 +55,7 @@ import com.klyx.api.data.file.wrap
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.event.terminal.TerminalNotificationTapEvent
 import com.klyx.api.event.terminal.TerminateAllSessionEvent
+import com.klyx.api.ui.ScreenId
 import com.klyx.api.ui.ScreenRegistry
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.toastHostState
@@ -63,6 +64,7 @@ import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.GlobalEventBus
 import com.klyx.platform.service.TerminalService
+import com.klyx.plugin.PluginManager
 import com.klyx.presentation.components.dialogs.AllFilesAccessDialog
 import com.klyx.presentation.components.dialogs.CrashReportDialog
 import com.klyx.presentation.components.dialogs.LegacyStorageAccessDialog
@@ -106,8 +108,15 @@ class MainActivity : ComposeActivity() {
 
     private val terminalManager: TerminalManager by lazy { app.global() }
 
+    private var pendingCrashData: CrashHandler.CrashData? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        pendingCrashData = CrashHandler.loadCrash(this)
+        pendingCrashData?.let { data ->
+            EditorViewModel.tabIdToSkipOnRestore = data.crashedTabId
+        }
 
         GlobalEventBus.subscribeIn<TerminateAllSessionEvent>(lifecycleScope) {
             terminalManager.sessionBinder.unbind(this)
@@ -124,13 +133,7 @@ class MainActivity : ComposeActivity() {
         val lifecycleOwner = LocalLifecycleOwner.current
         val reduceMotion = LocalReduceMotion.current
 
-        var crashData by remember {
-            val data = CrashHandler.loadCrash(this@MainActivity)
-            if (data != null) {
-                EditorViewModel.tabIdToSkipOnRestore = data.crashedTabId
-            }
-            mutableStateOf(data)
-        }
+        val crashData = pendingCrashData
         var showCrashDialog by remember(crashData) { mutableStateOf(crashData != null) }
 
         fun hasLegacyStoragePermissions(): Boolean {
@@ -287,11 +290,8 @@ class MainActivity : ComposeActivity() {
 
         if (showCrashDialog && crashData != null) {
             CrashReportDialog(
-                crash = crashData!!,
-                onDismiss = {
-                    showCrashDialog = false
-                    crashData = null
-                }
+                crash = crashData,
+                onDismiss = { showCrashDialog = false }
             )
         }
     }
@@ -319,7 +319,13 @@ class MainActivity : ComposeActivity() {
         settingsEntry<SettingsScreen.PluginDetail> { PluginDetailsScreen(it.payload) }
 
         entry<Screen.Custom> { screen ->
-            app.global<ScreenRegistry>()[screen.id]?.invoke() ?: UnknownScreen(screen)
+            val ownerId = app.global<ScreenRegistry>().ownerOf(screen.id)
+            CrashHandler.currentPluginId = ownerId
+            if (ownerId != null && app.global<PluginManager>().isCrashed(ownerId)) {
+                PluginCrashedScreen(screen.id)
+            } else {
+                app.global<ScreenRegistry>()[screen.id]?.invoke() ?: UnknownScreen(screen)
+            }
         }
     }
 
@@ -348,6 +354,25 @@ class MainActivity : ComposeActivity() {
                         color = MaterialTheme.colorScheme.error
                     )
                 }
+            }
+        }
+    }
+
+    @Composable
+    private fun PluginCrashedScreen(id: ScreenId) {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Screen \"$id\" is not available because the plugin crashed.\n" +
+                            "Please open the Plugins settings to unload or reinstall it.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

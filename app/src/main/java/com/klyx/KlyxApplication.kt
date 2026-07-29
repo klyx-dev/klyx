@@ -107,19 +107,23 @@ class KlyxApplication : Application() {
     private class MutableScreenRegistry : ScreenRegistry {
 
         private val screens = mutableStateMapOf<ScreenId, Content>()
+        private val screenOwner = mutableMapOf<ScreenId, String>()
 
         context(plugin: KlyxPlugin)
         override fun register(screen: Screen): ScreenRegistration {
             screens[screen.id] = screen.content
+            screenOwner[screen.id] = plugin.info.id
             return object : ScreenRegistration {
                 override fun unregister() {
                     screens.remove(screen.id)
+                    screenOwner.remove(screen.id)
                 }
             }
         }
 
         override fun unregister(id: ScreenId) {
             screens.remove(id)
+            screenOwner.remove(id)
         }
 
         override fun set(id: ScreenId, content: Content) {
@@ -128,6 +132,14 @@ class KlyxApplication : Application() {
 
         override fun get(id: ScreenId): Content? {
             return screens[id]
+        }
+
+        override fun ownerOf(id: ScreenId): String? = screenOwner[id]
+
+        @InternalKlyxApi
+        override fun unregisterAll(pluginId: String) {
+            val toRemove = screenOwner.filterValues { it == pluginId }.keys.toList()
+            toRemove.forEach { unregister(it) }
         }
     }
 

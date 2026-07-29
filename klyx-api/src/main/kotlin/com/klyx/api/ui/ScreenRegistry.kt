@@ -3,6 +3,7 @@ package com.klyx.api.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocal
 import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
+import com.klyx.api.InternalKlyxApi
 import com.klyx.api.Navigator
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginService
@@ -97,6 +98,17 @@ interface ScreenRegistry : PluginService {
      * Retrieves the UI content for a given [id], or null if not registered.
      */
     operator fun get(id: ScreenId): Content?
+
+    /**
+     * Returns the plugin ID that owns the screen with the given [id], or null if not registered.
+     */
+    fun ownerOf(id: ScreenId): String?
+
+    /**
+     * Unregisters all screens owned by the plugin with the given [pluginId].
+     */
+    @InternalKlyxApi
+    fun unregisterAll(pluginId: String)
 }
 
 /**

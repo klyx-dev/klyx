@@ -20,6 +20,7 @@ object CrashHandler {
     private var defaultHandler: Thread.UncaughtExceptionHandler? = null
 
     var currentTabId: String? = null
+    var currentPluginId: String? = null
 
     fun install(context: Context) {
         defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
@@ -39,7 +40,8 @@ object CrashHandler {
         if (!file.exists()) return null
         return try {
             val text = file.readText()
-            val parts = text.split("\n---END---\n", limit = 5)
+            val parts = text.split("\n---END---\n", limit = 6)
+            val hasPluginId = parts.size >= 6
             val hasTabId = parts.size >= 5
             if (parts.size >= 4) {
                 CrashData(
@@ -47,7 +49,8 @@ object CrashHandler {
                     exceptionClass = parts[1],
                     message = parts[2],
                     crashedTabId = if (hasTabId) parts[3].takeIf { it.isNotBlank() } else null,
-                    stackTrace = if (hasTabId) parts[4] else parts[3]
+                    crashedPluginId = if (hasPluginId) parts[4].takeIf { it.isNotBlank() } else null,
+                    stackTrace = if (hasPluginId) parts[5] else if (hasTabId) parts[4] else parts[3]
                 )
             } else null
         } catch (_: Exception) {
@@ -83,6 +86,8 @@ object CrashHandler {
                 appendLine("---END---")
                 appendLine(currentTabId ?: "")
                 appendLine("---END---")
+                appendLine(currentPluginId ?: "")
+                appendLine("---END---")
                 append(stackTrace)
             }
             crashFile(context).writeText(content)
@@ -110,6 +115,7 @@ object CrashHandler {
         val exceptionClass: String,
         val message: String,
         val crashedTabId: String? = null,
+        val crashedPluginId: String? = null,
         val stackTrace: String
     )
 }

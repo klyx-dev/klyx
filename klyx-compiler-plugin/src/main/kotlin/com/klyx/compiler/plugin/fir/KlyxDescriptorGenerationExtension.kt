@@ -60,7 +60,6 @@ class KlyxDescriptorGenerationExtension(
     }
 
     override fun getCallableNamesForClass(classSymbol: FirClassSymbol<*>, context: MemberGenerationContext): Set<Name> {
-        info("getCallableNamesForClass: ${classSymbol.name}")
         val key = (classSymbol.origin as? FirDeclarationOrigin.Plugin)?.key
         if (key is Key) return setOf(KlyxPluginIds.DESCRIPTOR_PROPERTY_NAME, SpecialNames.INIT)
 
@@ -90,7 +89,6 @@ class KlyxDescriptorGenerationExtension(
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirPropertySymbol> {
-        info("generateProperties: ${callableId.callableName}")
         if (callableId.callableName != KlyxPluginIds.DESCRIPTOR_PROPERTY_NAME) return emptyList()
         val owner = context?.owner ?: return emptyList()
 
@@ -115,7 +113,6 @@ class KlyxDescriptorGenerationExtension(
     }
 
     override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
-        messageCollector.report(CompilerMessageSeverity.FIXED_WARNING, "generateConstructors: ${context.owner.name}")
         val owner = context.owner
 
         val key = (owner.origin as? FirDeclarationOrigin.Plugin)?.key

@@ -5,6 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
+import com.klyx.api.InternalKlyxApi
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.createDirIfMissing
@@ -15,6 +16,7 @@ import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.plugin.PluginLifecycleOwner
 import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.api.plugin.PluginScope
+import com.klyx.api.ui.ScreenRegistry
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.toastHostState
 import com.klyx.api.util.extractMessage
@@ -34,6 +36,8 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 import kotlin.reflect.KClass
 
+enum class PluginState { LOADED, STARTED, CRASHED, DISABLED }
+
 internal class PluginRuntime(
     val plugin: KlyxPlugin,
     val context: PluginContext,
@@ -41,6 +45,9 @@ internal class PluginRuntime(
     val scope: PluginScope,
     val info: PluginInfo
 ) {
+    @Volatile
+    var state: PluginState = PluginState.LOADED
+        private set
 
     private val lifecycle = owner.lifecycle
 
@@ -95,15 +102,23 @@ internal class PluginRuntime(
         scope.cancel()
     }
 
+    fun crash(t: Throwable) {
+        if (state == PluginState.CRASHED) return
+        state = PluginState.CRASHED
+        Log.e("PluginRuntime", "Plugin '${info.id}' crashed", t)
+
+        scope.cancel(CancellationException("Plugin '${info.id}' crashed", t))
+        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+
+        @OptIn(InternalKlyxApi::class)
+        context.app.global<ScreenRegistry>().unregisterAll(info.id)
+    }
+
     private suspend inline fun tryOrDestroy(block: suspend () -> Unit) {
         try {
             block()
         } catch (t: Throwable) {
-            Log.e("PluginRuntime", "Plugin '${info.id}' crashed", t)
-            context.app.toastHostState.showFailureToast(
-                "Plugin '${info.id}' crashed: ${t.extractMessage()}"
-            )
-            lifecycle(Lifecycle.Event.ON_DESTROY)
+            crash(t)
             throw t
         }
     }
@@ -143,16 +158,10 @@ internal class PluginRuntime(
 internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): PluginRuntime {
     val context = PluginContextImpl(app, info.id)
     val owner = PluginLifecycleOwnerImpl(context)
+    val runtimeRef = object { var value: PluginRuntime? = null }
     val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         Log.e("PluginRuntime", "Plugin '${info.id}' threw an unhandled exception", throwable)
-        CoroutineScope(Dispatchers.Main.immediate).launch {
-            app.toastHostState.showFailureToast(
-                "Plugin '${info.id}' crashed: ${throwable.extractMessage()}"
-            )
-        }
-        CoroutineScope(Dispatchers.Main.immediate).launch {
-            owner.lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
-        }
+        runtimeRef.value?.crash(throwable)
     }
     val scope = PluginScopeImpl(
         SupervisorJob() +
@@ -160,7 +169,7 @@ internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): Plug
                 PluginContextElement(context, owner) +
                 exceptionHandler
     )
-    return PluginRuntime(plugin, context, owner, scope, info)
+    return PluginRuntime(plugin, context, owner, scope, info).also { runtimeRef.value = it }
 }
 
 internal class PluginLifecycleOwnerImpl(

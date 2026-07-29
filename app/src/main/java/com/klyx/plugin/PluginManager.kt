@@ -44,10 +44,14 @@ class PluginManager(
     private val installedList = mutableListOf<String>()
     private val runtimes = IdentityHashMap<KlyxPlugin, PluginRuntime>()
     private val runtimesById = HashMap<String, PluginRuntime>()
+    private val crashedPluginIds = mutableSetOf<String>()
 
     val loadedPlugins get() = synchronized(runtimes) { runtimes.values.map(PluginRuntime::info) }
+    val crashedPlugins get() = synchronized(runtimes) { runtimes.values.filter { it.state == PluginState.CRASHED }.map { it.info.id } }
 
     init {
+        readCrashedPluginIdsFromCrashFile()
+
         app.backgroundScope.launch {
             loadInstalledList()
             try {
@@ -56,6 +60,21 @@ class PluginManager(
                 Log.e("PluginManager", "Failed to load installed plugins", t)
             }
         }
+    }
+
+    private fun readCrashedPluginIdsFromCrashFile() {
+        try {
+            val crashFile = File(app.application.filesDir, "last_crash.json")
+            if (!crashFile.exists()) return
+            val text = crashFile.readText()
+            val parts = text.split("\n---END---\n")
+            if (parts.size >= 6) {
+                parts[4].takeIf { it.isNotBlank() }?.let { pluginId ->
+                    crashedPluginIds.add(pluginId)
+                    Log.w("PluginManager", "Plugin '$pluginId' will be disabled due to prior crash")
+                }
+            }
+        } catch (_: Exception) { }
     }
 
     fun interface PluginLoadProgressListener {
@@ -146,7 +165,7 @@ class PluginManager(
             runtime.load(progress)
         } catch (t: Throwable) {
             discard(runtime)
-            throw t
+            throw PluginLoadException("plugin crashed on loading: ${t.localizedMessage}", t)
         }
     }
 
@@ -155,7 +174,7 @@ class PluginManager(
             runtime.start(progress)
         } catch (t: Throwable) {
             discard(runtime)
-            throw t
+            throw PluginLoadException("plugin crashed on startup: ${t.localizedMessage}", t)
         }
     }
 
@@ -354,12 +373,26 @@ class PluginManager(
         }
     }
 
+    fun markCrashed(pluginId: String) {
+        crashedPluginIds.add(pluginId)
+    }
+
+    fun isCrashed(pluginId: String): Boolean {
+        val runtime = synchronized(runtimes) { runtimesById[pluginId] }
+        return runtime?.state == PluginState.CRASHED || pluginId in crashedPluginIds
+    }
+
     private suspend fun loadInstalledPlugins(progress: PluginLoadProgressListener? = null) =
         withContext(Dispatchers.IO) {
             // onLoad() every plugin. onStart() must not run until all plugins are
             // loaded (see KlyxPlugin.onStart docs: "all dependencies should be loaded and ready").
             val loaded = mutableListOf<PluginRuntime>()
             for (pluginId in installedList.toList()) {
+                if (pluginId in crashedPluginIds) {
+                    Log.w("PluginManager", "Skipping crashed plugin '$pluginId'")
+                    continue
+                }
+
                 try {
                     val pluginDir = File(Paths.pluginsDir, pluginId)
                     val apkFile = File(pluginDir, "plugin.apk")

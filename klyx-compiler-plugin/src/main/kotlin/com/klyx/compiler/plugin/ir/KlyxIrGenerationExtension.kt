@@ -80,11 +80,17 @@ class KlyxIrGenerationExtension(
             super.visitClass(declaration)
         }
 
-        private fun IrConstructorCall.stringArg(name: String): String =
-            (getValueArgument(Name.identifier(name))?.let { it as? IrConst }?.value as? String).orEmpty()
+        private fun IrConstructorCall.stringArg(name: String): String = stringArgOrNull(name).orEmpty()
 
-        private fun IrConstructorCall.stringArgOrNull(name: String): String? =
-            getValueArgument(Name.identifier(name))?.let { it as? IrConst }?.value as? String
+        private fun IrConstructorCall.stringArgOrNull(name: String): String? {
+            val index = symbol
+                .owner
+                .parameters.find { it.name == Name.identifier(name) }
+                ?.indexInParameters
+                ?: return null
+            val expression = arguments[index] ?: symbol.owner.parameters[index].defaultValue?.expression
+            return expression?.let { it as? IrConst }?.value as? String
+        }
 
         private fun fillDescriptor(
             pluginClass: IrClass,
@@ -93,19 +99,14 @@ class KlyxIrGenerationExtension(
         ) {
             val annotation = pluginClass.getAnnotation(KlyxPluginIds.PLUGIN_MANIFEST_FQN) ?: return
 
-            fun arg(name: String): String? =
-                annotation.getValueArgument(Name.identifier(name))
-                    ?.let { it as? IrConst }
-                    ?.value as? String
-
-            val id = arg("id").orEmpty()
-            val rawName = arg("name").orEmpty()
-            val version = arg("version").orEmpty()
-            val minAppVersion = arg("minAppVersion").orEmpty()
-            val maxAppVersion = arg("maxAppVersion").orEmpty().ifBlank { null }
-            val description = arg("description").orEmpty()
-            val icon = arg("icon").orEmpty().ifBlank { null }
-            val license = arg("license").orEmpty()
+            val id = annotation.stringArg("id")
+            val rawName = annotation.stringArg("name")
+            val version = annotation.stringArg("version")
+            val minAppVersion = annotation.stringArg("minAppVersion")
+            val maxAppVersion = annotation.stringArg("maxAppVersion").ifBlank { null }
+            val description = annotation.stringArg("description")
+            val icon = annotation.stringArg("icon").ifBlank { null }
+            val license = annotation.stringArg("license")
             val entryClass = pluginClass.kotlinFqName.asString()
             val displayName = rawName.ifBlank { id }
 
