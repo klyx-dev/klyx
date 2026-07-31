@@ -148,9 +148,10 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                 }
 
                 withContext(Dispatchers.Main) {
-                    editorState.editorLanguage = LspLanguage(this@LspManager, baseLanguage, tabId, documentUri)
+                    val lspLang = LspLanguage(this@LspManager, baseLanguage, tabId, documentUri)
+                    editorState.editorLanguage = lspLang
 
-                    scope.launch {
+                    lspLang.scope.launch {
                         var version = 0
                         editorState.content
                             .conflate()
@@ -190,7 +191,7 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                             }
                     }
 
-                    scope.launch {
+                    lspLang.scope.launch {
                         settingsRepository.settings
                             .map { it.editor.inlayHints }
                             .collectLatest { enabled ->

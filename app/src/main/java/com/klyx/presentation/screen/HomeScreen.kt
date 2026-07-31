@@ -1374,7 +1374,7 @@ private fun TextFileEditor(
 
     var isAccessoryBarVisible by remember { mutableStateOf(true) }
 
-    LaunchedEffect(tab.id, state) {
+    LaunchedEffect(tab.id, state, treeSitter) {
         state.lineNumberMarginLeft = with(density) { 5.dp.toPx() }
         val baseLanguage = treeSitter.getLanguageForExtension(tab.file.extension)
         lspManager.onEditorCreated(tab.id, tab.file, tab.projectUri, state, baseLanguage)

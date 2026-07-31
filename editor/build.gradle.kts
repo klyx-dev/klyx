@@ -170,20 +170,19 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             |class TreeSitter(private val context: Context) : AutoCloseable {
             |    val languageProvider = DynamicLanguageProvider()
             |    private val builtInRegistry = TSLanguageRegistry(context, languageProvider)
-            |    private val dynamicLanguages = ConcurrentHashMap<String, EditorLanguage>()
             |
             |$tsFunctions
             |    fun getLanguageForExtension(extension: String): Language {
             |        val ext = extension.lowercase()
             |        val entry = languageProvider.getEntryForExtension(ext) ?: return EmptyLanguage()
-            |        return dynamicLanguages.getOrPut(entry.name) { buildEditorLanguage(entry) }
+            |        return buildEditorLanguage(entry)
             |    }
             |
             |    fun getLanguageForFileName(fileName: String): Language {
             |        val name = fileName.lowercase()
             |        val entry = languageProvider.getEntryForFileName(name)
             |        if (entry != null) {
-            |            return dynamicLanguages.getOrPut(entry.name) { buildEditorLanguage(entry) }
+            |            return buildEditorLanguage(entry)
             |        }
             |        return getLanguageForExtension(name.substringAfterLast('.', ""))
             |    }
@@ -232,12 +231,9 @@ abstract class GenerateTreeSitterTask : DefaultTask() {
             |
             |    fun unregisterDynamicLanguage(name: String) {
             |        languageProvider.unregister(name)
-            |        dynamicLanguages.remove(name.lowercase())
             |    }
             |
             |    override fun close() {
-            |        dynamicLanguages.values.forEach { it.destroy() }
-            |        dynamicLanguages.clear()
             |        languageProvider.clear()
             |    }
             |}

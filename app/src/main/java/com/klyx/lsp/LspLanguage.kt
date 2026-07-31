@@ -13,6 +13,9 @@ import io.github.rosemoe.sora.text.CharPosition
 import io.github.rosemoe.sora.text.ContentReference
 import io.github.rosemoe.sora.util.MyCharacter
 import io.github.rosemoe.sora.widget.SymbolPairMatch
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
@@ -29,6 +32,8 @@ class LspLanguage(
     private val tabId: String,
     private val uri: String,
 ) : Language {
+
+    internal val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     override fun getAnalyzeManager(): AnalyzeManager {
         return base.analyzeManager
@@ -184,6 +189,7 @@ class LspLanguage(
     }
 
     override fun destroy() {
+        scope.cancel()
         base.destroy()
     }
 }
