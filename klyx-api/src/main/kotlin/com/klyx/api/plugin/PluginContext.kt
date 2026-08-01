@@ -1,5 +1,7 @@
 package com.klyx.api.plugin
 
+import android.content.Context
+import android.content.res.Resources
 import com.klyx.api.Navigator
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.terminal.TerminalManager
@@ -46,6 +48,40 @@ interface PluginContext : PluginRuntimeService {
      * ```
      */
     val dataDir: File
+
+    /**
+     * The plugin's own [Resources], backed by its APK's compiled resource table
+     * (`resources.arsc`).
+     *
+     * Unlike the host's resources, this table contains the exact resource IDs generated
+     * by the plugin's own module, so references like `R.drawable.x`, `R.string.y` and
+     * `R.style.z` resolve against the plugin's resources instead of the klyx's.
+     *
+     * Klyx keeps this table in sync with the app's configuration (locale, density,
+     * night mode), so qualifier-aware lookups behave like a regular Android app.
+     *
+     * ### Example
+     * ```kotlin
+     * val label = context.resources.getString(R.string.plugin_title)
+     * val icon = context.resources.getDrawable(R.drawable.plugin_icon, null)
+     * ```
+     */
+    val resources: Resources
+
+    /**
+     * An Android [Context] whose [Context.getResources] and [Context.getAssets] point at
+     * this plugin's own resources.
+     *
+     * Provide it to Compose so resource-backed APIs resolve against the plugin:
+     * ```kotlin
+     * CompositionLocalProvider(LocalContext provides context) {
+     *     // painterResource(R.drawable.x), stringResource(R.string.y) now resolve
+     * }
+     * ```
+     *
+     * @see withResources
+     */
+    val context: Context
 }
 
 /**

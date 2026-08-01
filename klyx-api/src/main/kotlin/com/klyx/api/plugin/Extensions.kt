@@ -4,7 +4,11 @@
 
 package com.klyx.api.plugin
 
+import android.annotation.SuppressLint
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import com.klyx.api.DiscouragedInSuspend
 import com.klyx.api.ui.ToastDuration
 import com.klyx.api.ui.ToastHostState
@@ -19,12 +23,8 @@ val KlyxPlugin.info: PluginInfo by runtime()
 
 /**
  * Access the [PluginContext] for this plugin.
- *
- * **Recommendation:** Use [currentPluginContext] instead whenever in a suspend function.
- * Use this property only if you are in a non-suspending function.
  */
-@DiscouragedInSuspend
-val KlyxPlugin.context: PluginContext by runtime()
+val KlyxPlugin.pluginContext: PluginContext by runtime()
 
 /**
  * Access the [PluginLifecycleOwner] for this plugin.
@@ -47,12 +47,41 @@ val KlyxPlugin.lifecycleOwner: PluginLifecycleOwner by runtime()
 val KlyxPlugin.pluginScope: PluginScope by runtime()
 
 /**
+ * Wraps [content] with this plugin's [PluginContext.context] as the Compose [LocalContext].
+ *
+ * This makes resource-backed Compose APIs resolve against the plugin's own resources
+ * instead of the klyx's:
+ *
+ * ```kotlin
+ * fun registerScreens() {
+ *     registry.register(Screen(ScreenId("my.plugin.screen")) {
+ *         withResources {
+ *             Icon(
+ *                 painterResource(R.drawable.plugin_icon),
+ *                 contentDescription = stringResource(R.string.plugin_icon_desc)
+ *             )
+ *         }
+ *     })
+ * }
+ * ```
+ *
+ * @see PluginContext.context
+ */
+@SuppressLint("ComposableNaming")
+@Composable
+fun KlyxPlugin.withResources(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalContext provides pluginContext.context) {
+        content()
+    }
+}
+
+/**
  * Provides access to the [ToastHostState] for this plugin.
  *
  * This property allows plugins to interact with the application's global toast notification system.
  */
 val KlyxPlugin.toastHostState: ToastHostState
-    get() = context.app.toastHostState
+    get() = pluginContext.app.toastHostState
 
 /**
  * Displays a non-blocking toast notification.

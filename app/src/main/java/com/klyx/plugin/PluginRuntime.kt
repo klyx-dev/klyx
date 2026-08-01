@@ -1,15 +1,17 @@
 package com.klyx.plugin
 
+import android.content.Context
+import android.content.res.Resources
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.lifecycleScope
 import com.klyx.api.InternalKlyxApi
-import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.createDirIfMissing
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginContext
 import com.klyx.api.plugin.PluginContextElement
 import com.klyx.api.plugin.PluginInfo
@@ -17,9 +19,6 @@ import com.klyx.api.plugin.PluginLifecycleOwner
 import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.api.plugin.PluginScope
 import com.klyx.api.ui.ScreenRegistry
-import com.klyx.api.ui.showFailureToast
-import com.klyx.api.ui.toastHostState
-import com.klyx.api.util.extractMessage
 import com.klyx.core.App
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -30,7 +29,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
@@ -156,9 +154,11 @@ internal class PluginRuntime(
 }
 
 internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): PluginRuntime {
-    val context = PluginContextImpl(app, info.id)
+    val context = PluginContextImpl(app, info.id, info.apkPath)
     val owner = PluginLifecycleOwnerImpl(context)
-    val runtimeRef = object { var value: PluginRuntime? = null }
+    val runtimeRef = object {
+        var value: PluginRuntime? = null
+    }
     val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
         Log.e("PluginRuntime", "Plugin '${info.id}' threw an unhandled exception", throwable)
         runtimeRef.value?.crash(throwable)
@@ -185,11 +185,20 @@ internal class PluginLifecycleOwnerImpl(
 
 internal class PluginContextImpl(
     override val app: App,
-    override val pluginId: String
+    override val pluginId: String,
+    private val apkPath: String
 ) : PluginContext {
     override val dataDir by lazy {
         Paths.pluginsDir.resolve(pluginId).also { it.createDirIfMissing() }
     }
+
+    private val resourceManager by lazy { PluginResourceManager(app, apkPath) }
+
+    override val resources: Resources
+        get() = resourceManager.resources
+
+    override val context: Context
+        get() = resourceManager.context
 }
 
 internal class PluginScopeImpl(override val coroutineContext: CoroutineContext) : PluginScope
