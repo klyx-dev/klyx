@@ -158,7 +158,9 @@ private object PluginManifestClassChecker : FirClassChecker(MppCheckerKind.Commo
         val args = annotation.argumentMapping.mapping
         val classSource = declaration.source ?: return
 
-        fun sourceFor(argName: String) = args[Name.identifier(argName)]?.source ?: classSource
+        fun sourceFor(argName: String) = args[Name.identifier(argName)]?.source
+            ?: annotation.source
+            ?: classSource
 
         val id = args.stringArg("id")
         val name = args.stringArg("name")

@@ -23,12 +23,6 @@ buildConfig {
     buildConfigField("String", "KOTLIN_PLUGIN_ID", "\"io.github.klyx-dev.compiler.plugin\"")
 }
 
-val klyxRuntimeClasspath = configurations.dependencyScope("klyxRuntimeClasspath") {
-    isTransitive = false
-}
-
 dependencies {
     compileOnly(libs.kotlin.compiler)
-
-    klyxRuntimeClasspath(projects.klyxApi)
 }

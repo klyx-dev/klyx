@@ -1,6 +1,8 @@
 package com.klyx.compiler.plugin
 
 import com.android.build.api.dsl.CommonExtension
+import com.android.build.gradle.AppPlugin
+import com.android.build.gradle.LibraryPlugin
 import com.klyx.compiler.plugin.BuildConfig.KLYX_API_LIBRARY_COORDINATES
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
@@ -8,25 +10,51 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.bundling.Compression
 import org.gradle.api.tasks.bundling.Tar
+import org.jetbrains.kotlin.compose.compiler.gradle.ComposeCompilerGradleSubplugin
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlinx.serialization.gradle.SerializationGradleSubplugin
 import java.io.File
 import java.util.concurrent.TimeUnit
 
 @Suppress("unused")
-class KlyxCompilerPlugin : KotlinCompilerPluginSupportPlugin {
+class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
 
     override fun apply(target: Project) {
-        target.pluginManager.apply("org.jetbrains.kotlin.plugin.serialization")
+        val pluginManager = target.pluginManager
+        pluginManager.apply(SerializationGradleSubplugin::class.java)
 
         val extension = target.extensions.create("klyx", KlyxPluginExtension::class.java, target)
+
+        extension.library.convention(false)
+        extension.compose.convention(true)
 
         extension.pluginJsonFile.convention(target.layout.buildDirectory.file("klyx/generated/plugin.json"))
         extension.outputFileName.convention(target.provider { target.rootProject.name })
         extension.outputDirectory.convention(target.layout.buildDirectory.dir("klyx"))
         extension.autoPushToDevice.convention(false)
+
+        if (extension.library.get()) {
+            pluginManager.apply(LibraryPlugin::class.java)
+        } else {
+            pluginManager.apply(AppPlugin::class.java)
+        }
+
+        fun Project.configureAndroidPlugin() {
+            configureAndroid(this)
+
+            if (extension.compose.get()) {
+                extensions.configure(CommonExtension::class.java) { android ->
+                    android.buildFeatures.compose = true
+                }
+            }
+        }
+
+        if (extension.compose.get()) {
+            pluginManager.apply(ComposeCompilerGradleSubplugin::class.java)
+        }
 
         val bundleDebug = target.tasks.register("klyxBundleDebug", Tar::class.java) { task ->
             task.group = "klyx"
@@ -79,7 +107,7 @@ class KlyxCompilerPlugin : KotlinCompilerPluginSupportPlugin {
             bundleTaskProvider.configure { it.finalizedBy(pushTask) }
         }
 
-        target.plugins.withId("com.android.application") { configureAndroid(target) }
+        target.plugins.withType(AppPlugin::class.java) { target.configureAndroidPlugin() }
 
         val rootFiles = target.rootProject.projectDir.listFiles() ?: emptyArray()
         if (!extension.readme.isPresent) {
@@ -139,7 +167,7 @@ class KlyxCompilerPlugin : KotlinCompilerPluginSupportPlugin {
             }
         }
 
-        target.plugins.withId("com.android.library") { configureAndroid(target) }
+        target.plugins.withType(LibraryPlugin::class.java) { target.configureAndroidPlugin() }
     }
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {

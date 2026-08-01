@@ -1,6 +1,5 @@
 package com.klyx.compiler.plugin
 
-import com.android.build.api.dsl.CommonExtension
 import org.gradle.api.Project
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
@@ -33,16 +32,6 @@ abstract class KlyxPluginExtension @Inject constructor(private val project: Proj
     /** Whether to automatically push the bundle to device's klyx/plugins directory using adb */
     abstract val autoPushToDevice: Property<Boolean>
 
-    fun enableCompose() {
-        project.pluginManager.apply("org.jetbrains.kotlin.plugin.compose")
-
-        project.plugins.withId("com.android.application") { configureAndroidCompose() }
-        project.plugins.withId("com.android.library") { configureAndroidCompose() }
-    }
-
-    private fun configureAndroidCompose() {
-        project.extensions.configure(CommonExtension::class.java) { android ->
-            android.buildFeatures.compose = true
-        }
-    }
+    abstract val library: Property<Boolean>
+    abstract val compose: Property<Boolean>
 }

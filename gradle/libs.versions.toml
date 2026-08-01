@@ -131,6 +131,8 @@ sora-editor-compose = { module = "io.github.rosemoe:editor-compose" }
 sora-language-treesitter = { module = "io.github.rosemoe:language-treesitter" }
 sora-oniguruma-native = { module = "io.github.rosemoe:oniguruma-native" }
 
+compose-gradle-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+kotlin-serialization = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
 android-tools = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 sshd-sftp = { module = "org.apache.sshd:sshd-sftp", version.ref = "sshd" }
 

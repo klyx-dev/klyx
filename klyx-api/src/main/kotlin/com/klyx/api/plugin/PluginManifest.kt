@@ -1,5 +1,7 @@
 package com.klyx.api.plugin
 
+internal const val AUTO_NAME = "<auto>"
+
 /**
  * Declares plugin metadata directly on the [KlyxPlugin] implementation.
  *
@@ -64,7 +66,7 @@ package com.klyx.api.plugin
 annotation class PluginManifest(
     val id: String,
     val version: String = "0.1.0",
-    val name: String = "",
+    val name: String = AUTO_NAME,
     val minAppVersion: String = "4.2.0",
     val maxAppVersion: String = "",
     val description: String = "",

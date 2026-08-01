@@ -108,7 +108,7 @@ class KlyxIrGenerationExtension(
             val icon = annotation.stringArg("icon").ifBlank { null }
             val license = annotation.stringArg("license")
             val entryClass = pluginClass.kotlinFqName.asString()
-            val displayName = rawName.ifBlank { id }
+            val displayName = if (rawName.isBlank() || rawName == "<auto>") id else rawName
 
             val authorCall = annotation.getValueArgument(Name.identifier("author")) as? IrConstructorCall
             val authorName = authorCall?.stringArg("name").orEmpty()

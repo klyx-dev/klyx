@@ -21,20 +21,26 @@ buildConfig {
         name = "KLYX_API_LIBRARY_COORDINATES",
         expression = "\"${apiProject.group}:${apiProject.name}:${apiProject.version}\""
     )
+
+    buildConfigField("String", "KOTLIN_VERSION", "\"${libs.versions.kotlin}\"")
+    buildConfigField("String", "AGP_VERSION", "\"${libs.versions.agp}\"")
 }
 
 gradlePlugin {
     plugins {
-        create("KlyxPlugin") {
+        create("KlyxCompilerGradleSubplugin") {
             id = "io.github.klyx-dev.compiler.plugin"
             displayName = "KlyxPlugin"
-            description = "KlyxPlugin"
-            implementationClass = "com.klyx.compiler.plugin.KlyxCompilerPlugin"
+            description = "KlyxCompilerGradleSubplugin"
+            implementationClass = "com.klyx.compiler.plugin.KlyxCompilerGradleSubplugin"
         }
     }
 }
 
 dependencies {
-    implementation(gradleApi())
-    compileOnly(libs.android.tools)
+    compileOnly(gradleApi())
+    implementation(kotlin("gradle-plugin"))
+    implementation(libs.compose.gradle.plugin)
+    implementation(libs.kotlin.serialization)
+    implementation(libs.android.tools)
 }
