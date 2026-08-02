@@ -37,10 +37,6 @@ interface PluginContext : PluginRuntimeService {
      * configuration, cache, or any other private data. The host guarantees that
      * no other plugin can access this directory.
      *
-     * **Note:** This directory is not backed up automatically. Use [Settings] or
-     * Android [SharedPreferences][android.content.SharedPreferences] for data
-     * that must survive a device wipe or reinstall.
-     *
      * ### Example
      * ```kotlin
      * val configFile = dataDir.resolve("config.json")

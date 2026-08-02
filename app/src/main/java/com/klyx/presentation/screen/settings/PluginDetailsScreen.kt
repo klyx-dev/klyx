@@ -393,7 +393,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = installState?.message ?: "Installing...",
+                                    text = installState.message ?: "Installing...",
                                     style = MaterialTheme.typography.labelLarge
                                 )
                             } else {
@@ -404,7 +404,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                         }
                         
                         AnimatedVisibility(
-                            visible = isThisInstalling && installState != null,
+                            visible = isThisInstalling,
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {

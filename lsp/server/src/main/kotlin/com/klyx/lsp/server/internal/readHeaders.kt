@@ -9,7 +9,7 @@ internal fun readHeaders(source: Source, buffer: Buffer) {
     val delimiter = HEADER_DELIMITER.encodeToByteArray()
 
     while (true) {
-        source.readAtMostTo(buffer, 1)
+        val _ = source.readAtMostTo(buffer, 1)
         if (buffer.endsWith(delimiter)) return
     }
 }

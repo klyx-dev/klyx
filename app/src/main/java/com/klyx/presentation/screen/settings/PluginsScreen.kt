@@ -299,7 +299,7 @@ fun PluginsScreen() {
                             )
 
                             AnimatedVisibility(
-                                visible = isInstalling && installState != null,
+                                visible = isInstalling,
                                 enter = fadeIn() + expandVertically(),
                                 exit = fadeOut() + shrinkVertically()
                             ) {

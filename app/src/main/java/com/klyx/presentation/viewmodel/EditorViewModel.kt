@@ -217,7 +217,7 @@ class EditorViewModel(
             val editorState = editorStateRegistry[tabId]
             if (editorState != null) {
                 viewModelScope.launch(Dispatchers.IO) {
-                    runCatching {
+                    val _ = runCatching {
                         fileSystem.outputStream(tab.file.uri).use { output ->
                             editorState.writeTextTo(output)
                         }
@@ -234,7 +234,7 @@ class EditorViewModel(
                                 }
                             )
                         }
-                    }.getOrNull()
+                    }
                     forceCloseTab(tabId)
                 }
             } else {

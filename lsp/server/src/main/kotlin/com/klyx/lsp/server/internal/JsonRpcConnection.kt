@@ -18,7 +18,6 @@ import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.asLeft
 import com.klyx.lsp.types.asRight
 import com.klyx.lsp.types.fold
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -38,8 +37,8 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.Volatile
-import kotlin.experimental.ExperimentalTypeInference
 import kotlin.reflect.typeOf
 
 internal const val CONTENT_LEN_HEADER = "Content-Length: "
@@ -478,12 +477,10 @@ private suspend inline fun handleVoidNoParamsRequest(
     }
 }
 
-@OptIn(ExperimentalTypeInference::class)
 context(connection: JsonRpcConnection)
 private suspend inline fun <reified P> handleVoidRequest(
     id: RequestId,
     params: JsonElement?,
-    @BuilderInference
     action: suspend (P) -> Unit
 ): ResponseMessage {
     return try {
