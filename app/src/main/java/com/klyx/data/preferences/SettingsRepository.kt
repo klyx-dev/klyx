@@ -5,7 +5,9 @@ import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.AppearanceSettings
 import com.klyx.api.data.preferences.EditorSettings
 import com.klyx.api.data.preferences.FileTreeSettings
+import com.klyx.api.data.preferences.PluginSettingsData
 import com.klyx.api.data.preferences.TerminalSettings
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import org.koin.core.annotation.Single
 
@@ -53,5 +55,15 @@ class SettingsRepository(private val dataStore: SettingsDataStore) {
 
     suspend fun updateFontSize(newSize: Float) = dataStore.updateData {
         it.copy(editor = it.editor.copy(fontSize = newSize))
+    }
+
+    suspend fun getPluginSettings(pluginId: String): PluginSettingsData {
+        return dataStore.data.first().plugins[pluginId] ?: PluginSettingsData()
+    }
+
+    suspend fun updatePluginSettings(pluginId: String, block: suspend (PluginSettingsData) -> PluginSettingsData) {
+        dataStore.updateData {
+            it.copy(plugins = it.plugins + (pluginId to block(it.plugins[pluginId] ?: PluginSettingsData())))
+        }
     }
 }

@@ -18,6 +18,8 @@ import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.plugin.PluginLifecycleOwner
 import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.api.plugin.PluginScope
+import com.klyx.api.plugin.PluginSettings
+import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.api.ui.ScreenRegistry
 import com.klyx.core.App
 import kotlinx.coroutines.CancellationException
@@ -41,7 +43,8 @@ internal class PluginRuntime(
     val context: PluginContext,
     val owner: PluginLifecycleOwnerImpl,
     val scope: PluginScope,
-    val info: PluginInfo
+    val info: PluginInfo,
+    val settings: PluginSettings
 ) {
     @Volatile
     var state: PluginState = PluginState.LOADED
@@ -110,6 +113,8 @@ internal class PluginRuntime(
 
         @OptIn(InternalKlyxApi::class)
         context.app.global<ScreenRegistry>().unregisterAll(info.id)
+        @OptIn(InternalKlyxApi::class)
+        context.app.global<PluginSettingsRegistry>().unregisterAll(info.id)
     }
 
     private suspend inline fun tryOrDestroy(block: suspend () -> Unit) {
@@ -149,6 +154,7 @@ internal class PluginRuntime(
             PluginScope::class -> scope as T
             PluginInfo::class -> info as T
             PluginLifecycleOwner::class -> owner as T
+            PluginSettings::class -> settings as T
             else -> error("Unknown runtime service: ${type.qualifiedName}")
         }
 }
@@ -169,7 +175,8 @@ internal fun PluginRuntime(app: App, plugin: KlyxPlugin, info: PluginInfo): Plug
                 PluginContextElement(context, owner) +
                 exceptionHandler
     )
-    return PluginRuntime(plugin, context, owner, scope, info).also { runtimeRef.value = it }
+    val settings = PluginSettingsImpl(app, info.id, scope)
+    return PluginRuntime(plugin, context, owner, scope, info, settings).also { runtimeRef.value = it }
 }
 
 internal class PluginLifecycleOwnerImpl(

@@ -28,7 +28,7 @@ data class FileOpenRequest(
 /**
  * A handle returned when a [FileOpener] is registered.
  */
-interface FileOpenerRegistration {
+fun interface FileOpenerRegistration {
 
     /**
      * Removes the opener from the registry.

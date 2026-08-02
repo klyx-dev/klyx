@@ -47,6 +47,26 @@ val KlyxPlugin.lifecycleOwner: PluginLifecycleOwner by runtime()
 val KlyxPlugin.pluginScope: PluginScope by runtime()
 
 /**
+ * Access the typed, per-plugin [PluginSettings] store.
+ *
+ * Every plugin has its own isolated settings namespace that persists across app
+ * restarts. Use this to read and write configuration with a type-safe API.
+ *
+ * ```kotlin
+ * val fontSize = settings.getInt("fontSize", 14)
+ * settings.putBoolean("wordWrap", true)
+ * ```
+ *
+ * **Security:** Do not store secrets or sensitive data (API keys, tokens, passwords,
+ * credentials, personal data) in settings. Settings are stored in plain text and can
+ * be read by anyone with access to the app's data directory, exported by the user from
+ * the developer options, or inspected by other code running on the device. Treat every
+ * value you store here as public. Use the platform's secure storage (e.g. Android
+ * Keystore) for anything that must remain private.
+ */
+val KlyxPlugin.settings: PluginSettings by runtime()
+
+/**
  * Wraps [content] with this plugin's [PluginContext.context] as the Compose [LocalContext].
  *
  * This makes resource-backed Compose APIs resolve against the plugin's own resources

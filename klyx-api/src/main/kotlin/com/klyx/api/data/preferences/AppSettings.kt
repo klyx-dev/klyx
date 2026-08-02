@@ -29,7 +29,8 @@ data class AppSettings(
     val appearance: AppearanceSettings = AppearanceSettings(),
     val editor: EditorSettings = EditorSettings(),
     val terminal: TerminalSettings = TerminalSettings(),
-    val fileTree: FileTreeSettings = FileTreeSettings()
+    val fileTree: FileTreeSettings = FileTreeSettings(),
+    val plugins: Map<String, PluginSettingsData> = emptyMap()
 )
 
 /**
@@ -173,8 +174,8 @@ data class EditorSettings(
 )
 
 /**
- * Defines the behavior of the editor interface when interacting with a mouse.
- */
+  * Defines the behavior of the editor interface when interacting with a mouse.
+  */
 @Serializable
 @JvmInline
 value class MouseMode(val value: Int) {
@@ -207,3 +208,18 @@ value class MouseMode(val value: Int) {
         val Never = MouseMode(2)
     }
 }
+
+/**
+ * Raw per-plugin settings stored in [AppSettings.plugins].
+ *
+ * This is the low-level storage used by the host's settings persistence.
+ * Plugins should not interact with this type directly; use the typed
+ * [com.klyx.api.plugin.PluginSettings] API instead, which reads and writes
+ * these values in a type-safe way.
+ *
+ * @property values The plugin's settings as raw string key-value pairs.
+ */
+@Serializable
+data class PluginSettingsData(
+    val values: Map<String, String> = emptyMap()
+)

@@ -44,7 +44,7 @@ data class Screen(
  *
  * Use this to unregister the screen when it is no longer needed or when the plugin is unloaded.
  */
-interface ScreenRegistration {
+fun interface ScreenRegistration {
 
     /**
      * Removes the screen from the registry.

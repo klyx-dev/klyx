@@ -5,6 +5,7 @@ import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.data.preferences.AppearanceSettings
 import com.klyx.api.data.preferences.EditorSettings
 import com.klyx.api.data.preferences.FileTreeSettings
+import com.klyx.api.data.preferences.PluginSettingsData
 import com.klyx.api.data.preferences.TerminalSettings
 import com.klyx.api.service.Fonts
 import com.klyx.api.service.Settings
@@ -38,6 +39,14 @@ class SettingsWrapper(private val repo: SettingsRepository) : Settings {
 
     override suspend fun updateEditorSettings(transform: (EditorSettings) -> EditorSettings) {
         repo.updateEditorSettings(transform)
+    }
+
+    override suspend fun getPluginSettings(pluginId: String): PluginSettingsData {
+        return repo.getPluginSettings(pluginId)
+    }
+
+    override suspend fun updatePluginSettings(pluginId: String, transform: (PluginSettingsData) -> PluginSettingsData) {
+        repo.updatePluginSettings(pluginId, transform)
     }
 }
 

@@ -16,6 +16,8 @@ import com.klyx.api.plugin.PluginDescriptor
 import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.plugin.PluginRuntimeRegistry
 import com.klyx.api.plugin.PluginRuntimeService
+import com.klyx.api.plugin.PluginSettings
+import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.koin
@@ -333,6 +335,8 @@ class PluginManager(
             r
         }
         runtime.unload()
+        @OptIn(InternalKlyxApi::class)
+        app.global<PluginSettingsRegistry>().unregisterAll(id)
         uninstallPlugin(id)
     }
 
@@ -440,6 +444,15 @@ class PluginManager(
         val info = createPluginInfo(pluginDir, desc)
         progress?.step("creating runtime (${desc.id})")
         return PluginRuntime(app, plugin, info)
+    }
+
+    /**
+     * Returns the typed [PluginSettings] for the loaded plugin with [pluginId],
+     * or `null` if the plugin is not loaded.
+     */
+    fun pluginSettings(pluginId: String): PluginSettings? {
+        val runtime = synchronized(runtimes) { runtimesById[pluginId] }
+        return runtime?.settings
     }
 
     override fun <T : PluginRuntimeService> service(plugin: KlyxPlugin, type: KClass<T>): T {

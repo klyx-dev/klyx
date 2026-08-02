@@ -58,7 +58,7 @@ value class ToolbarCategory(val name: String) : Comparable<ToolbarCategory> {
 /**
  * Handle returned when a toolbar contribution is registered.
  */
-interface ToolbarRegistration {
+fun interface ToolbarRegistration {
 
     /**
      * Removes the toolbar action.

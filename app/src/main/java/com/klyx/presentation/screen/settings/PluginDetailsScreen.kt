@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -72,10 +73,13 @@ import coil3.request.ImageRequest
 import coil3.request.crossfade
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.api.service.Logger
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.core.unsafe.GlobalApp
+import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.UiEvent
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginManager
@@ -84,6 +88,8 @@ import com.klyx.presentation.components.InstallationLogCard
 import com.klyx.presentation.components.LogEntryItem
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginDetailPayload
+import com.klyx.presentation.navigation.PluginSettingsPayload
+import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
 import com.klyx.presentation.viewmodel.StorePlugin
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
@@ -121,7 +127,7 @@ private suspend fun fetchTextContent(id: String, fileName: String): String? =
         }
     }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, UnsafeGlobalAccess::class)
 @Composable
 fun PluginDetailsScreen(payload: PluginDetailPayload) {
     val navigator = LocalNavigator.current
@@ -163,6 +169,9 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
         }
     }
 
+    val settingsRegistry: PluginSettingsRegistry = GlobalApp.global()
+    val hasPluginSettings = settingsRegistry.hasSettings(payload.id)
+
     val allLogs by logger.entries.collectAsState()
     val pluginLogs by remember(allLogs, payload.id) {
         derivedStateOf {
@@ -194,6 +203,34 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = "Back"
                         )
+                    }
+                },
+                actions = {
+                    if (isPluginActuallyInstalled && hasPluginSettings) {
+                        FilledIconButton(
+                            modifier = Modifier.padding(end = 12.dp, top = 4.dp),
+                            onClick = {
+                                navigator.navigateTo(
+                                    SettingsScreen.PluginSettings(
+                                        PluginSettingsPayload(
+                                            id = payload.id,
+                                            name = payload.name,
+                                            iconUrl = payload.iconUrl
+                                        )
+                                    )
+                                )
+                            },
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Settings,
+                                contentDescription = "Settings"
+                            )
+                        }
                     }
                 }
             )

@@ -41,6 +41,7 @@ sealed interface Screen : NavKey {
                     subclass(SettingsScreen.Plugins::class)
                     subclass(SettingsScreen.Logs::class)
                     subclass(SettingsScreen.PluginDetail::class)
+                    subclass(SettingsScreen.PluginSettings::class)
                 }
             }
         }
@@ -78,6 +79,9 @@ sealed interface SettingsScreen : Screen {
 
     @Serializable
     data class PluginDetail(val payload: PluginDetailPayload) : SettingsScreen
+
+    @Serializable
+    data class PluginSettings(val payload: PluginSettingsPayload) : SettingsScreen
 }
 
 @Serializable
@@ -90,4 +94,11 @@ data class PluginDetailPayload(
     val isInstalled: Boolean,
     val iconUrl: String? = null,
     val downloadCount: Int = 0
+)
+
+@Serializable
+data class PluginSettingsPayload(
+    val id: String,
+    val name: String,
+    val iconUrl: String? = null
 )

@@ -1,6 +1,7 @@
 package com.klyx.api.service
 
 import com.klyx.api.data.preferences.AppSettings
+import com.klyx.api.data.preferences.PluginSettingsData
 import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.AppearanceSettings
 import com.klyx.api.data.preferences.EditorSettings
@@ -61,6 +62,21 @@ interface Settings : PluginService {
      * Updates only the [FileTreeSettings] sub-section.
      */
     suspend fun updateFileTreeSettings(transform: (FileTreeSettings) -> FileTreeSettings)
+
+    /**
+     * Retrieves the raw [PluginSettingsData] for the given [pluginId].
+     *
+     * Returns an empty [PluginSettingsData] if no settings have been stored for this plugin.
+     * Prefer using the typed [com.klyx.api.plugin.PluginSettings] API from inside a plugin.
+     */
+    suspend fun getPluginSettings(pluginId: String): PluginSettingsData
+
+    /**
+     * Updates the raw [PluginSettingsData] for the given [pluginId] using the provided [transform].
+     *
+     * Prefer using the typed [com.klyx.api.plugin.PluginSettings] API from inside a plugin.
+     */
+    suspend fun updatePluginSettings(pluginId: String, transform: (PluginSettingsData) -> PluginSettingsData)
 }
 
 /**

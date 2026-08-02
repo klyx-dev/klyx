@@ -2,6 +2,7 @@ package com.klyx
 
 import android.app.Application
 import android.util.Log
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import com.klyx.api.InternalKlyxApi
@@ -21,6 +22,9 @@ import com.klyx.api.language.LanguageRegistry
 import com.klyx.api.lsp.LanguageServerRegistry
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginInfo
+import com.klyx.api.plugin.PluginSettings
+import com.klyx.api.plugin.PluginSettingsRegistration
+import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.api.plugin.info
 import com.klyx.api.service.Logger
 import com.klyx.api.ui.Content
@@ -88,6 +92,7 @@ class KlyxApplication : Application() {
         app.setGlobal(MutableScreenRegistry())
         app.setGlobal(MutableToolbarRegistry())
         app.setGlobal(MutableFileOpenerRegistry())
+        app.setGlobal(MutablePluginSettingsRegistry())
         app.setGlobal(SettingsWrapper(auto()))
         app.setGlobal(FontsWrapper(auto()))
         app.setGlobal(TabsWrapper { auto() })
@@ -113,11 +118,9 @@ class KlyxApplication : Application() {
         override fun register(screen: Screen): ScreenRegistration {
             screens[screen.id] = screen.content
             screenOwner[screen.id] = plugin.info.id
-            return object : ScreenRegistration {
-                override fun unregister() {
-                    screens.remove(screen.id)
-                    screenOwner.remove(screen.id)
-                }
+            return ScreenRegistration {
+                screens.remove(screen.id)
+                screenOwner.remove(screen.id)
             }
         }
 
@@ -150,12 +153,7 @@ class KlyxApplication : Application() {
         override fun register(action: ToolbarAction): ToolbarRegistration {
             val resolved = action.resolve(plugin.info)
             _actions += resolved
-
-            return object : ToolbarRegistration {
-                override fun unregister() {
-                    _actions.remove(resolved)
-                }
-            }
+            return ToolbarRegistration { _actions.remove(resolved) }
         }
 
         fun ToolbarAction.resolve(info: PluginInfo): ToolbarAction {
@@ -196,11 +194,7 @@ class KlyxApplication : Application() {
         override fun register(opener: FileOpener): FileOpenerRegistration {
             _openers.removeAll { it.id == opener.id }
             _openers += opener
-            return object : FileOpenerRegistration {
-                override fun unregister() {
-                    _openers.removeAll { it.id == opener.id }
-                }
-            }
+            return FileOpenerRegistration { _openers.removeAll { it.id == opener.id } }
         }
 
         override fun unregister(id: String) {
@@ -216,6 +210,31 @@ class KlyxApplication : Application() {
                 if (tab != null) return tab
             }
             return null
+        }
+    }
+
+    private class MutablePluginSettingsRegistry : PluginSettingsRegistry {
+
+        private val content = mutableStateMapOf<String, @Composable PluginSettings.() -> Unit>()
+
+        context(plugin: KlyxPlugin)
+        override fun register(
+            content: @Composable PluginSettings.() -> Unit
+        ): PluginSettingsRegistration {
+            val pluginId = plugin.info.id
+            this.content[pluginId] = content
+            return PluginSettingsRegistration { this@MutablePluginSettingsRegistry.content.remove(pluginId) }
+        }
+
+        override fun hasSettings(pluginId: String): Boolean = content.containsKey(pluginId)
+
+        @InternalKlyxApi
+        override fun contentFor(pluginId: String): (@Composable PluginSettings.() -> Unit)? =
+            content[pluginId]
+
+        @InternalKlyxApi
+        override fun unregisterAll(pluginId: String) {
+            content.remove(pluginId)
         }
     }
 }

@@ -83,6 +83,7 @@ import com.klyx.presentation.screen.settings.EditorSettings
 import com.klyx.presentation.screen.settings.FileTreeSettingsScreen
 import com.klyx.presentation.screen.settings.LogScreen
 import com.klyx.presentation.screen.settings.PluginDetailsScreen
+import com.klyx.presentation.screen.settings.PluginSettingsScreen
 import com.klyx.presentation.screen.settings.PluginsScreen
 import com.klyx.presentation.screen.settings.SystemDetailsScreen
 import com.klyx.presentation.screen.settings.TerminalSettings
@@ -324,6 +325,7 @@ class MainActivity : ComposeActivity() {
         settingsEntry<SettingsScreen.FileTree> { FileTreeSettingsScreen() }
         settingsEntry<SettingsScreen.Plugins> { PluginsScreen() }
         settingsEntry<SettingsScreen.PluginDetail> { PluginDetailsScreen(it.payload) }
+        settingsEntry<SettingsScreen.PluginSettings> { PluginSettingsScreen(it.payload) }
 
         entry<Screen.Custom> { screen ->
             val ownerId = app.global<ScreenRegistry>().ownerOf(screen.id)
