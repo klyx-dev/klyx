@@ -41,6 +41,7 @@ import com.klyx.core.App
 import com.klyx.core.initApp
 import com.klyx.data.terminal.DefaultTerminalSessionManager
 import com.klyx.data.terminal.TerminalSessionBinderImpl
+import com.klyx.di.AppModule
 import com.klyx.event.eventBus
 import com.klyx.event.initializeGlobalEventBus
 import com.klyx.plugin.PluginManager
@@ -56,7 +57,7 @@ import org.koin.core.annotation.KoinApplication
 import org.koin.core.context.GlobalContext
 import org.koin.plugin.module.dsl.startKoin
 
-@KoinApplication
+@KoinApplication(modules = [AppModule::class])
 class KlyxApplication : Application() {
 
     lateinit var app: App
