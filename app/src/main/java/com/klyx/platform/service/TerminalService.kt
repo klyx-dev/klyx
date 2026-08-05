@@ -71,12 +71,13 @@ class TerminalService : Service() {
         }
 
         GlobalEventBus.subscribeIn<NewSessionEvent>(serviceScope) {
-            updateNotification()
+            startForeground(NOTIFICATION_ID, createNotification())
         }
 
         GlobalEventBus.subscribeIn<SessionTerminateEvent>(serviceScope) { event ->
             if (sessionManager.sessions.value.isEmpty()) {
                 daemonRunning = false
+                stopForeground(STOP_FOREGROUND_REMOVE)
                 stopSelf()
             } else {
                 updateNotification()

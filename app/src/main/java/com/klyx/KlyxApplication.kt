@@ -14,6 +14,10 @@ import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.data.runner.FileRunner
+import com.klyx.api.data.runner.FileRunRequest
+import com.klyx.api.data.runner.FileRunnerRegistration
+import com.klyx.api.data.runner.FileRunnerRegistry
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.data.terminal.TerminalSessionBinder
 import com.klyx.api.data.terminal.TerminalSessionManager
@@ -41,6 +45,7 @@ import com.klyx.core.App
 import com.klyx.core.initApp
 import com.klyx.data.terminal.DefaultTerminalSessionManager
 import com.klyx.data.terminal.TerminalSessionBinderImpl
+import com.klyx.data.runner.PythonFileRunner
 import com.klyx.di.AppModule
 import com.klyx.event.eventBus
 import com.klyx.event.initializeGlobalEventBus
@@ -92,6 +97,9 @@ class KlyxApplication : Application() {
         app.setGlobal(auto<FileSystem>())
         app.setGlobal(MutableScreenRegistry())
         app.setGlobal(MutableToolbarRegistry())
+        app.setGlobal(MutableFileRunnerRegistry().apply {
+            registerInternal(PythonFileRunner())
+        })
         app.setGlobal(MutableFileOpenerRegistry())
         app.setGlobal(MutablePluginSettingsRegistry())
         app.setGlobal(SettingsWrapper(auto()))
@@ -184,6 +192,56 @@ class KlyxApplication : Application() {
 
         override fun actions(): List<ToolbarAction> {
             return _actions
+        }
+    }
+
+    private class MutableFileRunnerRegistry : FileRunnerRegistry {
+
+        private val _runners = mutableStateListOf<FileRunner>()
+        private val _owners = mutableMapOf<String, String>()
+
+        context(plugin: KlyxPlugin)
+        override fun register(runner: FileRunner): FileRunnerRegistration {
+            _runners.removeAll { it.id == runner.id }
+            _runners += runner
+            _owners[runner.id] = plugin.info.id
+            return FileRunnerRegistration {
+                _runners.removeAll { it.id == runner.id }
+                _owners.remove(runner.id)
+            }
+        }
+
+        /**
+         * Registers a built-in runner that is not owned by any plugin, so it is never removed
+         * by [unregisterAll].
+         */
+        fun registerInternal(runner: FileRunner): FileRunnerRegistration {
+            _runners.removeAll { it.id == runner.id }
+            _runners += runner
+            return FileRunnerRegistration {
+                _runners.removeAll { it.id == runner.id }
+                _owners.remove(runner.id)
+            }
+        }
+
+        override fun unregister(id: String) {
+            _runners.removeAll { it.id == id }
+            _owners.remove(id)
+        }
+
+        override fun runnerFor(request: FileRunRequest): FileRunner? =
+            runners().firstOrNull { runCatching { it.supports(request) }.getOrDefault(false) }
+
+        override fun supports(request: FileRunRequest): Boolean =
+            runnerFor(request) != null
+
+        override fun runners(): List<FileRunner> =
+            _runners.sortedByDescending { it.priority }
+
+        @InternalKlyxApi
+        override fun unregisterAll(pluginId: String) {
+            val toRemove = _owners.filterValues { it == pluginId }.keys.toList()
+            toRemove.forEach { unregister(it) }
         }
     }
 

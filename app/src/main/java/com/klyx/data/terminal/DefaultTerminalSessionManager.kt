@@ -77,6 +77,29 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
         id: Uuid,
         transcriptRows: Int,
         showMotd: Boolean
+    ): TerminalSession = newSessionInternal(
+        id = id,
+        client = client,
+        args = terminalArgs(showMotd),
+        transcriptRows = transcriptRows
+    )
+
+    override suspend fun newCommandSession(
+        command: String,
+        client: TerminalSessionClient,
+        transcriptRows: Int
+    ): TerminalSession = newSessionInternal(
+        id = Uuid.generateV7(),
+        client = client,
+        args = terminalArgs(command = command),
+        transcriptRows = transcriptRows
+    )
+
+    private suspend fun newSessionInternal(
+        id: Uuid,
+        client: TerminalSessionClient,
+        args: List<String>,
+        transcriptRows: Int
     ): TerminalSession = withContext(Dispatchers.IO) {
         val linker = "/system/bin/linker64"
 
@@ -95,7 +118,7 @@ class DefaultTerminalSessionManager : TerminalSessionManager {
         TerminalSession(
             shellPath = linker,
             cwd = Paths.home.absolutePath,
-            args = listOf(linker) + terminalArgs(showMotd),
+            args = listOf(linker) + args,
             env = env,
             client = client,
             transcriptRows = transcriptRows

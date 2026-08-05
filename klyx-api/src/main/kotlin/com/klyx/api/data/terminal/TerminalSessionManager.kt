@@ -60,6 +60,21 @@ interface TerminalSessionManager {
     ): TerminalSession
 
     /**
+     * Creates and starts a terminal session that runs the single shell [command] and exits
+     * when it completes.
+     *
+     * @param command The shell command to execute.
+     * @param client The client implementation that will handle session output and events.
+     * @param transcriptRows The number of rows to keep in the session's scrollback buffer.
+     * @return The newly created [TerminalSession].
+     */
+    suspend fun newCommandSession(
+        command: String,
+        client: TerminalSessionClient,
+        transcriptRows: Int = TerminalEmulator.DEFAULT_TERMINAL_TRANSCRIPT_ROWS,
+    ): TerminalSession
+
+    /**
      * Returns an existing session with the given [id] if it is still running,
      * otherwise creates and starts a new one.
      */

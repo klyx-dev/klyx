@@ -514,37 +514,46 @@ class EditorViewModel(
     }
 
     private fun saveFile(action: Save) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val activeTabId = _uiState.value.activeTabId ?: return@launch
-            val editorState = activeEditorState ?: run {
-                sendEvent(EditorEvent.ShowError("Editor state not available"))
-                return@launch
-            }
-
-            try {
-                fileSystem.outputStream(action.file.uri).use { output ->
-                    editorState.writeTextTo(output)
-                }
-                val savedText = editorState.text.toString()
-
-                editorStateRegistry.setBaselineText(activeTabId, savedText)
-                lspManager.onFileSaved(activeTabId)
-
-                _uiState.update { state ->
-                    state.copy(
-                        openTabs = state.openTabs.mutate { tabs ->
-                            val index = tabs.indexOfFirst { it.id == activeTabId }
-                            if (index != -1) {
-                                val tab = tabs[index] as? WorkspaceTab.TextFile ?: return@mutate
-                                tabs[index] = tab.copy(hasUnsavedChanges = false)
-                            }
-                        }
-                    )
-                }
+        viewModelScope.launch {
+            if (saveFileSuspending(action.file)) {
                 sendEvent(EditorEvent.ShowMessage("Saved ${action.file.name}"))
-            } catch (e: Exception) {
-                sendEvent(EditorEvent.ShowError("Failed to save: ${e.localizedMessage}"))
             }
+        }
+    }
+
+    /**
+     * Saves the active editor tab to [file] and suspends until the write completes.
+     *
+     * @return `true` if the file was saved successfully, `false` otherwise.
+     */
+    suspend fun saveFileSuspending(file: KxFile): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val activeTabId = _uiState.value.activeTabId ?: return@withContext false
+            val editorState = activeEditorState ?: return@withContext false
+
+            fileSystem.outputStream(file.uri).use { output ->
+                editorState.writeTextTo(output)
+            }
+            val savedText = editorState.text.toString()
+
+            editorStateRegistry.setBaselineText(activeTabId, savedText)
+            lspManager.onFileSaved(activeTabId)
+
+            _uiState.update { state ->
+                state.copy(
+                    openTabs = state.openTabs.mutate { tabs ->
+                        val index = tabs.indexOfFirst { it.id == activeTabId }
+                        if (index != -1) {
+                            val tab = tabs[index] as? WorkspaceTab.TextFile ?: return@mutate
+                            tabs[index] = tab.copy(hasUnsavedChanges = false)
+                        }
+                    }
+                )
+            }
+            true
+        } catch (e: Exception) {
+            sendEvent(EditorEvent.ShowError("Failed to save: ${e.localizedMessage}"))
+            false
         }
     }
 

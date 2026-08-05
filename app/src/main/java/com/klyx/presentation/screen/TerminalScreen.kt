@@ -500,7 +500,7 @@ private fun TerminalEmulator(
         bellSoundType = terminalSettings.bellSoundType
     )
 
-    LaunchedEffect(terminalSettings.cursorStyle) {
+    LaunchedEffect(terminalSettings.cursorStyle, sessions) {
         sessions.forEach { entry ->
             entry.session.updateTerminalSessionClient(sessionClient)
         }
@@ -508,7 +508,7 @@ private fun TerminalEmulator(
 
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(sessions.isEmpty()) {
+    LaunchedEffect(Unit) {
         if (sessions.isEmpty()) {
             sessionManager.newSession(
                 client = sessionClient,
@@ -548,7 +548,6 @@ private fun TerminalEmulator(
             val terminalClient = remember {
                 KlyxTerminalClient(
                     extraKeysState = extraKeysState,
-                    scope = scope,
                     onFinishRequest = { navigator.navigateBack() }
                 )
             }

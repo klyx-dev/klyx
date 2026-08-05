@@ -1,3 +1,5 @@
+@file:OptIn(InternalKlyxApi::class)
+
 package com.klyx.plugin
 
 import android.content.Context
@@ -11,6 +13,7 @@ import com.klyx.api.InternalKlyxApi
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.createDirIfMissing
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.data.runner.FileRunnerRegistry
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginContext
 import com.klyx.api.plugin.PluginContextElement
@@ -111,10 +114,9 @@ internal class PluginRuntime(
         scope.cancel(CancellationException("Plugin '${info.id}' crashed", t))
         lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
 
-        @OptIn(InternalKlyxApi::class)
         context.app.global<ScreenRegistry>().unregisterAll(info.id)
-        @OptIn(InternalKlyxApi::class)
         context.app.global<PluginSettingsRegistry>().unregisterAll(info.id)
+        context.app.global<FileRunnerRegistry>().unregisterAll(info.id)
     }
 
     private suspend inline fun tryOrDestroy(block: suspend () -> Unit) {

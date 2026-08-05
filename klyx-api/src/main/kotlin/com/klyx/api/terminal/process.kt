@@ -66,9 +66,12 @@ fun processEnv(): Map<String, String> {
  * and the initial shell command.
  *
  * @param showMotd Whether to display the Message of the Day (MOTD) on startup.
+ * @param command When non-null, runs [command] directly instead of starting an interactive
+ * login shell. This is used for one-shot tasks (e.g. running a file) where only the command's
+ * stdout/stderr and stdin are shown.
  */
 @SuppressLint("SdCardPath")
-fun terminalArgs(showMotd: Boolean = true) = listOf(
+fun terminalArgs(showMotd: Boolean = true, command: String? = null) = listOf(
     prootFile().absolutePath,
 
     "-0",
@@ -92,6 +95,9 @@ fun terminalArgs(showMotd: Boolean = true) = listOf(
     "-b", "${Paths.home.absolutePath}:/root",
 
     "/bin/sh", "-c",
-    if (showMotd) "cat /etc/motd; /bin/bash --login"
-    else "/bin/bash --login"
+    when {
+        command != null -> command
+        showMotd -> "cat /etc/motd; /bin/bash --login"
+        else -> "/bin/bash --login"
+    }
 )

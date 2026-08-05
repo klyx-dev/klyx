@@ -53,6 +53,7 @@ import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -123,6 +124,8 @@ import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.file.wrap
 import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.api.data.runner.FileRunRequest
+import com.klyx.api.data.runner.FileRunnerRegistry
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.ToolbarAction
 import com.klyx.api.ui.ToolbarCategory
@@ -142,6 +145,8 @@ import com.klyx.data.file.openWith
 import com.klyx.data.file.share
 import com.klyx.data.file.shareableUri
 import com.klyx.data.preferences.FontManager
+import com.klyx.data.runner.FileRunnerContextImpl
+import com.klyx.data.runner.TerminalCommandRunner
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.lsp.LspManager
@@ -222,6 +227,43 @@ fun HomeScreen(
     val editorUiState by editorViewModel.uiState.collectAsStateWithLifecycle()
     val openTabs by editorViewModel.openTabs.collectAsStateWithLifecycle()
     val activeTab by editorViewModel.activeTab.collectAsStateWithLifecycle()
+
+    val navigator = LocalNavigator.current
+    val fileRunnerRegistry = globalOf<FileRunnerRegistry>()
+    val terminalRunner: TerminalCommandRunner = koinInject()
+
+    val runnableTab = activeTab as? WorkspaceTab.TextFile
+    val canRun = runnableTab != null &&
+        fileRunnerRegistry.supports(
+            FileRunRequest(runnableTab.file, runnableTab.file.uri, runnableTab.projectUri, runnableTab.id)
+        )
+
+    val onRunFile: (() -> Unit)? = if (runnableTab != null && canRun) {
+        {
+            val tab = runnableTab
+            val request = FileRunRequest(tab.file, tab.file.uri, tab.projectUri, tab.id)
+            val runner = fileRunnerRegistry.runnerFor(request)
+            if (runner != null) {
+                scope.launch {
+                    runCatching {
+                        editorViewModel.saveFileSuspending(tab.file)
+                        runner.run(
+                            request,
+                            FileRunnerContextImpl(
+                                terminalRunner = terminalRunner,
+                                navigator = navigator,
+                                openTab = editorViewModel::openTab,
+                            )
+                        )
+                    }.onFailure { t ->
+                        toastHostState.showFailureToast("Failed to run ${tab.title}: ${t.localizedMessage}")
+                    }
+                }
+            }
+        }
+    } else {
+        null
+    }
 
     LaunchedEffect(editorViewModel.events, lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -322,6 +364,8 @@ fun HomeScreen(
                         openTabs = openTabs,
                         activeTab = activeTab,
                         toolbarActions = toolbarActions,
+                        runnable = canRun,
+                        onRun = onRunFile,
                         onTabClick = editorViewModel::selectTab,
                         onTabClose = editorViewModel::closeTab,
                         onTabCloseOthers = editorViewModel::closeOtherTabs,
@@ -686,6 +730,8 @@ private fun HomeTopBar(
     openTabs: ImmutableList<WorkspaceTab>,
     activeTab: WorkspaceTab?,
     toolbarActions: List<ToolbarAction>,
+    runnable: Boolean,
+    onRun: (() -> Unit)?,
     onTabClick: (String) -> Unit,
     onTabClose: (String) -> Unit,
     onTabCloseOthers: (String) -> Unit,
@@ -759,6 +805,22 @@ private fun HomeTopBar(
                             Icon(
                                 Icons.Outlined.Save,
                                 contentDescription = "Save File"
+                            )
+                        }
+                    }
+
+                    if (runnable && onRun != null) {
+                        FilledIconButton(
+                            shapes = IconButtonDefaults.shapes(),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            onClick = onRun
+                        ) {
+                            Icon(
+                                Icons.Rounded.PlayArrow,
+                                contentDescription = "Run File"
                             )
                         }
                     }
