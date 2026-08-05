@@ -6,6 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import com.klyx.api.InternalKlyxApi
+import com.klyx.api.NavDestination
+import com.klyx.api.Navigator
 import com.klyx.api.data.editor.FileOpenRequest
 import com.klyx.api.data.editor.FileOpener
 import com.klyx.api.data.editor.FileOpenerRegistration
@@ -46,6 +48,7 @@ import com.klyx.core.initApp
 import com.klyx.data.terminal.DefaultTerminalSessionManager
 import com.klyx.data.terminal.TerminalSessionBinderImpl
 import com.klyx.data.runner.PythonFileRunner
+import com.klyx.data.runner.TerminalCommandRunner
 import com.klyx.di.AppModule
 import com.klyx.event.eventBus
 import com.klyx.event.initializeGlobalEventBus
@@ -91,7 +94,9 @@ class KlyxApplication : Application() {
 
         val terminalManager = TerminalManagerImpl(
             sessionBinder = TerminalSessionBinderImpl(),
-            sessionManager = DefaultTerminalSessionManager()
+            sessionManager = DefaultTerminalSessionManager(),
+            terminalRunner = auto(),
+            app = app,
         )
         app.setGlobal(terminalManager)
         app.setGlobal(auto<FileSystem>())
@@ -113,8 +118,28 @@ class KlyxApplication : Application() {
 
     private class TerminalManagerImpl(
         override val sessionManager: TerminalSessionManager,
-        override val sessionBinder: TerminalSessionBinder
-    ) : TerminalManager
+        override val sessionBinder: TerminalSessionBinder,
+        private val terminalRunner: TerminalCommandRunner,
+        private val app: App,
+    ) : TerminalManager {
+
+        override suspend fun runInTerminal(
+            command: String,
+            cwd: String?,
+            sessionName: String?,
+        ) {
+            terminalRunner.run(
+                navigateToTerminal = { app.global<Navigator>().navigateTo(NavDestination.Terminal) },
+                command = command,
+                cwd = cwd,
+                sessionName = sessionName,
+            )
+        }
+
+        override fun openTerminal() {
+            app.global<Navigator>().navigateTo(NavDestination.Terminal)
+        }
+    }
 
     private inline fun <reified T> auto(): T = GlobalContext.get().get()
 

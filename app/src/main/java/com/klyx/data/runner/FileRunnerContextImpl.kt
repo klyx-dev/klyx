@@ -17,7 +17,12 @@ internal class FileRunnerContextImpl(
         cwd: String?,
         sessionName: String?,
     ) {
-        terminalRunner.run(navigator, command, cwd, sessionName)
+        terminalRunner.run(
+            navigateToTerminal = { navigator.navigateTo(Screen.Terminal) },
+            command = command,
+            cwd = cwd,
+            sessionName = sessionName,
+        )
     }
 
     override fun openTerminal() {

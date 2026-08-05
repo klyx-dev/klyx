@@ -4,8 +4,6 @@ import android.content.Context
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
-import com.klyx.presentation.navigation.Navigator
-import com.klyx.presentation.navigation.Screen
 import com.klyx.terminal.TerminalInstaller
 import com.klyx.terminal.emulator.CursorStyle
 import com.klyx.terminal.emulator.TerminalSession
@@ -30,13 +28,13 @@ class TerminalCommandRunner(
     /**
      * Opens the terminal screen and runs [command] in a fresh command session.
      *
-     * @param navigator Used to open the terminal screen.
+     * @param navigateToTerminal Invoked to open the terminal screen.
      * @param command The shell command to execute.
      * @param cwd The directory to `cd` into before running [command], or null to keep the default.
      * @param sessionName An optional name shown on the terminal session tab.
      */
     suspend fun run(
-        navigator: Navigator,
+        navigateToTerminal: () -> Unit,
         command: String,
         cwd: String? = null,
         sessionName: String? = null,
@@ -46,7 +44,7 @@ class TerminalCommandRunner(
 
         if (!terminalInstaller.isInstalled()) {
             // The terminal screen shows the setup UI, guiding the user through installation.
-            navigator.navigateTo(Screen.Terminal)
+            navigateToTerminal()
             return
         }
 
@@ -67,7 +65,7 @@ class TerminalCommandRunner(
         )
         sessionName?.let { session.sessionName = it }
 
-        navigator.navigateTo(Screen.Terminal)
+        navigateToTerminal()
     }
 }
 
