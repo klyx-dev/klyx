@@ -29,8 +29,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
-import java.io.InputStream
-import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -230,9 +228,7 @@ class SafFileSystem(
         }
     }
 
-    override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
-        checkNotNull(content.openInputStream(uri)) { "the provider recently crashed." }
-    }
+    override fun inputStream(uri: Uri) = checkNotNull(content.openInputStream(uri)) { "the provider recently crashed." }
 
     override suspend fun readRange(
         uri: Uri,
@@ -256,9 +252,8 @@ class SafFileSystem(
         } ?: -1
     }
 
-    override suspend fun outputStream(uri: Uri, mode: String): OutputStream = withContext(Dispatchers.IO) {
+    override fun outputStream(uri: Uri, mode: String) =
         checkNotNull(content.openOutputStream(uri, mode)) { "the provider recently crashed." }
-    }
 
     override suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
         DocumentsContract.deleteDocument(content, uri)

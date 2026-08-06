@@ -53,9 +53,7 @@ class LocalFileSystem : FileSystem {
         uri.toFile().listFiles()?.map { it.wrap() }.orEmpty()
     }
 
-    override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
-        uri.toFile().inputStream()
-    }
+    override fun inputStream(uri: Uri): InputStream = uri.toFile().inputStream()
 
     override suspend fun readRange(
         uri: Uri,
@@ -223,9 +221,7 @@ class LocalFileSystem : FileSystem {
         }
     }
 
-    override suspend fun outputStream(uri: Uri, mode: String): OutputStream = withContext(Dispatchers.IO) {
-        uri.toFile().outputStream()
-    }
+    override fun outputStream(uri: Uri, mode: String): OutputStream = uri.toFile().outputStream()
 
     override suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
         uri.toFile().deleteRecursively()

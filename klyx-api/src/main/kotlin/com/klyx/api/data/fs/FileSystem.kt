@@ -59,7 +59,7 @@ interface FileSystem : PluginService {
     /**
      * Opens an [InputStream] for reading the file at the given [uri].
      */
-    suspend fun inputStream(uri: Uri): InputStream
+    fun inputStream(uri: Uri): InputStream
 
     /**
      * Reads up to [length] bytes of data starting at [position] from the file at [uri] into [buffer].
@@ -85,7 +85,7 @@ interface FileSystem : PluginService {
      * Please note the exact implementation of these may differ for each Provider implementation -
      * for example, "w" may or may not truncate. Defaults to "w".
      */
-    suspend fun outputStream(uri: Uri, mode: String = "w"): OutputStream
+    fun outputStream(uri: Uri, mode: String = "w"): OutputStream
 
     /**
      * Deletes the file or directory at the given [uri].

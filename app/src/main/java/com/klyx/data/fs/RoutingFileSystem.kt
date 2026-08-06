@@ -50,7 +50,7 @@ class RoutingFileSystem(
         }
     }
 
-    override suspend fun inputStream(uri: Uri): InputStream = providerFor(uri).inputStream(uri)
+    override fun inputStream(uri: Uri): InputStream = providerFor(uri).inputStream(uri)
 
     override suspend fun readRange(
         uri: Uri,
@@ -60,7 +60,7 @@ class RoutingFileSystem(
         length: Int
     ): Int = providerFor(uri).readRange(uri, position, buffer, offset, length)
 
-    override suspend fun outputStream(uri: Uri, mode: String): OutputStream =
+    override fun outputStream(uri: Uri, mode: String): OutputStream =
         providerFor(uri).outputStream(uri, mode)
 
     override suspend fun delete(uri: Uri): Boolean = providerFor(uri).delete(uri)

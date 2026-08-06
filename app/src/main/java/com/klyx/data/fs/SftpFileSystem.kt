@@ -181,13 +181,13 @@ class SftpFileSystem : FileSystem {
         }
     }
 
-    override suspend fun inputStream(uri: Uri): InputStream = withContext(Dispatchers.IO) {
+    override fun inputStream(uri: Uri): InputStream {
         val c = parseConn(uri)
         val session = getSessionBlocking(c)
         val client = createClientWithRetry(session, c)
         val rawStream = client.read(sftpPath(uri))
 
-        object : InputStream() {
+        return object : InputStream() {
             override fun read(): Int = rawStream.read()
             override fun read(b: ByteArray, off: Int, len: Int): Int = rawStream.read(b, off, len)
             override fun close() {
@@ -196,7 +196,7 @@ class SftpFileSystem : FileSystem {
         }
     }
 
-    override suspend fun outputStream(uri: Uri, mode: String): OutputStream {
+    override fun outputStream(uri: Uri, mode: String): OutputStream {
         val c = parseConn(uri)
         return SftpOutputStream(conn(c), c, sftpPath(uri), mode == "wa" || mode == "a", sshClient, sessionCache)
     }
