@@ -548,7 +548,7 @@ class PluginManager(
             ignoreUnknownKeys = true
         }
 
-        const val CDN = "https://plugins.klyx.workers.dev/api"
+        const val CDN = "https://cdn.jsdelivr.net/gh/klyx-dev/plugins@HEAD/plugins"
         const val API = "https://plugins.klyx.workers.dev"
     }
 }
