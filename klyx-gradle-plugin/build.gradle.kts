@@ -42,5 +42,6 @@ dependencies {
     implementation(kotlin("gradle-plugin"))
     implementation(libs.compose.gradle.plugin)
     implementation(libs.kotlin.serialization)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.android.tools)
 }

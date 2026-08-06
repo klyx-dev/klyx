@@ -41,6 +41,7 @@ import java.io.File
 
 class KlyxIrGenerationExtension(
     private val descriptorOutputDir: String?,
+    private val descriptorIcon: String?,
     private val messageCollector: MessageCollector
 ) : IrGenerationExtension {
     override fun generate(moduleFragment: IrModuleFragment, pluginContext: IrPluginContext) {
@@ -105,7 +106,7 @@ class KlyxIrGenerationExtension(
             val minAppVersion = annotation.stringArg("minAppVersion")
             val maxAppVersion = annotation.stringArg("maxAppVersion").ifBlank { null }
             val description = annotation.stringArg("description")
-            val icon = annotation.stringArg("icon").ifBlank { null }
+            val icon = annotation.stringArg("icon").ifBlank { descriptorIcon.orEmpty() }.ifBlank { null }
             val license = annotation.stringArg("license")
             val entryClass = pluginClass.kotlinFqName.asString()
             val displayName = if (rawName.isBlank() || rawName == "<auto>") id else rawName

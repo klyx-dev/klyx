@@ -6,6 +6,7 @@ import org.jetbrains.kotlin.name.Name
 
 internal object KlyxPluginIds {
     const val OPTION_DESCRIPTOR_OUTPUT_DIR = "descriptorOutputDir"
+    const val OPTION_DESCRIPTOR_ICON = "descriptorIcon"
 
     val PLUGIN_MANIFEST_FQN = FqName("com.klyx.api.plugin.PluginManifest")
     val PLUGIN_MANIFEST_CLASS_ID = ClassId.topLevel(PLUGIN_MANIFEST_FQN)

@@ -16,6 +16,12 @@ class KlyxCommandLineProcessor : CommandLineProcessor {
             valueDescription = "<path>",
             description = "Directory to write the generated plugin.json descriptor into.",
             required = false
+        ),
+        CliOption(
+            optionName = KlyxPluginIds.OPTION_DESCRIPTOR_ICON,
+            valueDescription = "<name>",
+            description = "Bundle-root icon filename to write into the generated plugin.json descriptor.",
+            required = false
         )
     )
 
@@ -23,6 +29,10 @@ class KlyxCommandLineProcessor : CommandLineProcessor {
         when (option.optionName) {
             KlyxPluginIds.OPTION_DESCRIPTOR_OUTPUT_DIR -> {
                 configuration.put(KlyxConfigurationKeys.DESCRIPTOR_OUTPUT_DIR, value)
+            }
+
+            KlyxPluginIds.OPTION_DESCRIPTOR_ICON -> {
+                configuration.put(KlyxConfigurationKeys.DESCRIPTOR_ICON, value)
             }
 
             else -> error("Unexpected config option: '${option.optionName}'")
@@ -33,4 +43,7 @@ class KlyxCommandLineProcessor : CommandLineProcessor {
 object KlyxConfigurationKeys {
     val DESCRIPTOR_OUTPUT_DIR: CompilerConfigurationKey<String> =
         CompilerConfigurationKey.create("directory to write generated plugin.json into")
+
+    val DESCRIPTOR_ICON: CompilerConfigurationKey<String> =
+        CompilerConfigurationKey.create("bundle-root icon filename to write into generated plugin.json")
 }

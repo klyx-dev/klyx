@@ -18,6 +18,10 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlinx.serialization.gradle.SerializationGradleSubplugin
 import java.io.File
 import java.util.concurrent.TimeUnit
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 @Suppress("unused")
 class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
@@ -31,7 +35,7 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         extension.library.convention(false)
         extension.compose.convention(true)
 
-        extension.pluginJsonFile.convention(target.layout.buildDirectory.file("klyx/generated/plugin.json"))
+        val pluginJson = target.layout.buildDirectory.file("klyx/generated/plugin.json")
         extension.outputFileName.convention(target.provider { target.rootProject.name })
         extension.outputDirectory.convention(target.layout.buildDirectory.dir("klyx"))
         extension.autoPushToDevice.convention(false)
@@ -118,32 +122,33 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
             rootFiles.firstOrNull { it.name.equals("changelog.md", ignoreCase = true) }
                 ?.let { extension.changelog.set(it) }
         }
-        if (!extension.icon.isPresent) {
-            rootFiles.firstOrNull {
-                it.name.equals("icon.png", ignoreCase = true) || it.name.equals("icon.jpg", ignoreCase = true)
-            }?.let { extension.icon.set(it) }
-        }
 
         listOf(bundleDebug, bundleRelease).forEach { taskProvider ->
             taskProvider.configure { task ->
                 task.doFirst {
-                    val jsonFile = extension.pluginJsonFile.asFile.get()
+                    val jsonFile = pluginJson.get().asFile
                     if (!jsonFile.exists()) {
                         throw GradleException(
                             "Klyx: no plugin descriptor found at '${jsonFile.absolutePath}'. " +
-                                    "Annotate your KlyxPlugin implementation with @PluginManifest(...), " +
-                                    "or set klyx.pluginJsonFile explicitly to use a hand-authored file."
+                                    "Annotate your KlyxPlugin implementation with @PluginManifest(...); " +
+                                    "the plugin.json is generated automatically and cannot be overridden."
                         )
                     }
                 }
-                task.from(target.provider { extension.pluginJsonFile.asFile.get() })
+                task.from(target.provider { pluginJson.get().asFile })
 
-                val iconFile = extension.icon.orNull?.asFile
-                if (iconFile != null && iconFile.exists()) {
-                    task.from(iconFile) { copy ->
-                        copy.rename { "icon.${iconFile.extension}" }
+                task.from(target.provider {
+                    val jsonFile = pluginJson.get().asFile
+                    val iconPath = readDescriptorIcon(jsonFile) ?: return@provider emptyMap<String, File>()
+                    val projectRoot = target.rootProject.projectDir
+                    val iconFile = projectRoot.resolve(iconPath)
+                    val isInsideProject = iconFile.canonicalPath.startsWith(projectRoot.canonicalPath + File.separator)
+                    if (iconPath.isBlank() || !iconFile.isFile || !isInsideProject) {
+                        emptyMap<String, File>()
+                    } else {
+                        mapOf(iconPath to iconFile)
                     }
-                }
+                })
 
                 val readmeFile = extension.readme.orNull?.asFile
                 if (readmeFile != null && readmeFile.exists()) {
@@ -191,10 +196,17 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
 
         return project.provider {
             val extension = project.extensions.getByType(KlyxPluginExtension::class.java)
+            val descriptorIcon = project.rootProject.projectDir.listFiles()?.firstOrNull {
+                it.name.lowercase() == "icon.png" || it.name.lowercase() == "icon.jpg"
+            }?.name.orEmpty()
             listOf(
                 SubpluginOption(
                     key = "descriptorOutputDir",
                     value = descriptorDir.get().asFile.absolutePath
+                ),
+                SubpluginOption(
+                    key = "descriptorIcon",
+                    value = descriptorIcon
                 )
             )
         }
@@ -232,6 +244,19 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         task.compression = Compression.GZIP
         task.archiveBaseName.set(extension.outputFileName)
         task.destinationDirectory.set(extension.outputDirectory)
+    }
+
+    /**
+     * Reads the `icon` field from the generated plugin.json, or null if absent/unreadable.
+     */
+    private fun readDescriptorIcon(jsonFile: File): String? = try {
+        Json.parseToJsonElement(jsonFile.readText())
+            .jsonObject["icon"]
+            ?.jsonPrimitive
+            ?.contentOrNull
+            ?.takeIf { it.isNotBlank() }
+    } catch (_: Exception) {
+        null
     }
 
     private fun pushBundleToDevice(project: Project, bundleFile: File) {

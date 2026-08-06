@@ -8,12 +8,6 @@ import org.gradle.api.provider.Property
 import javax.inject.Inject
 
 abstract class KlyxPluginExtension @Inject constructor(private val project: Project) {
-    /** Path to the plugin descriptor JSON. Defaults to project root 'plugin.json' */
-    abstract val pluginJsonFile: RegularFileProperty
-
-    /** Path to the plugin icon. Auto-matches case-insensitive 'icon.png' or 'icon.jpg' */
-    abstract val icon: RegularFileProperty
-
     /** Path to the plugin documentation. Auto-matches case-insensitive 'readme.md' */
     abstract val readme: RegularFileProperty
 
