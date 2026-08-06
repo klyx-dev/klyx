@@ -3,7 +3,9 @@ package com.klyx.api
 import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import com.klyx.api.plugin.PluginService
 import com.klyx.api.plugin.pluginService
+import com.klyx.api.ui.Content
 import com.klyx.api.ui.ScreenId
+import com.klyx.api.ui.ScreenRegistration
 import com.klyx.core.LocalApp
 
 /**
@@ -32,6 +34,29 @@ interface Navigator : PluginService {
      * Navigates back to the previous screen in the stack.
      */
     fun navigateBack()
+
+    /**
+     * Registers the [content] for [screenId] and navigates to it.
+     *
+     * Unlike [navigateTo], which only opens a screen that was already registered via the
+     * [ScreenRegistry][com.klyx.api.ui.ScreenRegistry], this lets a plugin start a screen
+     * directly from the given composable. Since the [content] is a closure, it can capture any
+     * data the screen needs (a file, a URI, a result object, etc.).
+     *
+     * The screen is registered as a *transient* screen: klyx auto-unregisters it when its
+     * navigation entry is popped, so no cleanup is required. It can also be removed early via the
+     * returned [ScreenRegistration].
+     *
+     * ### Example
+     * ```kotlin
+     * val navigator: Navigator by plugin()
+     *
+     * navigator.openScreen(ScreenId("com.example.html.preview")) {
+     *     HtmlPreviewScreen(uri)
+     * }
+     * ```
+     */
+    fun openScreen(screenId: ScreenId, content: Content): ScreenRegistration
 }
 
 /**

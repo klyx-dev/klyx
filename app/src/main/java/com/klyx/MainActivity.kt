@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
@@ -55,7 +56,9 @@ import com.klyx.api.SpecialScreens
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.event.terminal.TerminalNotificationTapEvent
 import com.klyx.api.event.terminal.TerminateAllSessionEvent
+import com.klyx.api.ui.Content
 import com.klyx.api.ui.ScreenId
+import com.klyx.api.ui.ScreenRegistration
 import com.klyx.api.ui.ScreenRegistry
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.toastHostState
@@ -214,6 +217,22 @@ class MainActivity : ComposeActivity() {
         )
         val entryProvider = remember { appScreenEntryProvider() }
 
+        // Auto-unregister transient screens (opened via Navigator.openScreen) when their
+        // navigation entry is popped, so they don't leak composables or stale data.
+        val screenRegistry = app.global<ScreenRegistry>()
+        LaunchedEffect(navigator) {
+            var previous = navigator.mapNotNull { (it as? Screen.Custom)?.id }
+            snapshotFlow { navigator.mapNotNull { (it as? Screen.Custom)?.id } }
+                .collect { current ->
+                    previous.forEach { id ->
+                        if (id !in current) {
+                            screenRegistry.unregisterTransient(id)
+                        }
+                    }
+                    previous = current
+                }
+        }
+
         LaunchedEffect(navigator) {
             app.setGlobal<Navigator>(object : Navigator {
                 override fun navigateTo(destination: NavDestination) {
@@ -235,6 +254,13 @@ class MainActivity : ComposeActivity() {
 
                 override fun navigateBack() {
                     navigator.navigateBack()
+                }
+
+                override fun openScreen(screenId: ScreenId, content: Content): ScreenRegistration {
+                    val registry = app.global<ScreenRegistry>()
+                    registry.setTransient(screenId, content)
+                    navigator.navigateTo(Screen.Custom(screenId))
+                    return ScreenRegistration { registry.unregisterTransient(screenId) }
                 }
             })
         }

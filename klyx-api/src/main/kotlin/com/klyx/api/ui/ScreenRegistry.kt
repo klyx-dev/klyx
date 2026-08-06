@@ -90,12 +90,29 @@ interface ScreenRegistry : PluginService {
     fun unregister(id: ScreenId)
 
     /**
-     * Directly sets or updates the [content] for a given [id].
+     * Directly sets or updates the [content] for a given [id], removing any transient screen.
      */
     operator fun set(id: ScreenId, content: Content)
 
     /**
+     * Temporarily registers [content] for [id], shadowing any previously registered screen.
+     *
+     * Transient screens are intended to be short-lived: klyx auto-unregisters them when the
+     * navigation entry that opened them is popped, at which point the previously registered screen
+     * (if any) is restored. Use [register] for screens that should persist.
+     */
+    fun setTransient(id: ScreenId, content: Content)
+
+    /**
+     * Removes the transient screen registered via [setTransient] for [id], restoring the
+     * previously registered screen (if any). No-op if [id] has no transient registration.
+     */
+    fun unregisterTransient(id: ScreenId)
+
+    /**
      * Retrieves the UI content for a given [id], or null if not registered.
+     *
+     * A transient screen (see [setTransient]) takes precedence over a persistent registration.
      */
     operator fun get(id: ScreenId): Content?
 

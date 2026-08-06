@@ -127,6 +127,7 @@ import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.data.runner.FileRunRequest
 import com.klyx.api.data.runner.FileRunnerRegistry
 import com.klyx.api.ui.LocalToastHostState
+import com.klyx.api.ui.ScreenRegistry
 import com.klyx.api.ui.ToolbarAction
 import com.klyx.api.ui.ToolbarCategory
 import com.klyx.api.ui.ToolbarRegistry
@@ -230,6 +231,7 @@ fun HomeScreen(
 
     val navigator = LocalNavigator.current
     val fileRunnerRegistry = globalOf<FileRunnerRegistry>()
+    val screenRegistry = globalOf<ScreenRegistry>()
     val terminalRunner: TerminalCommandRunner = koinInject()
 
     val runnableTab = activeTab as? WorkspaceTab.TextFile
@@ -252,6 +254,7 @@ fun HomeScreen(
                             FileRunnerContextImpl(
                                 terminalRunner = terminalRunner,
                                 navigator = navigator,
+                                screenRegistry = screenRegistry,
                                 openTab = editorViewModel::openTab,
                             )
                         )

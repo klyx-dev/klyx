@@ -7,6 +7,8 @@ import com.klyx.api.InternalKlyxApi
 import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.plugin.KlyxPlugin
+import com.klyx.api.ui.Content
+import com.klyx.api.ui.ScreenRegistration
 import com.klyx.api.plugin.PluginService
 import com.klyx.api.plugin.pluginService
 import com.klyx.api.ui.ScreenId
@@ -61,7 +63,9 @@ fun interface FileRunnerRegistration {
  *         request.extension == "html"
  *
  *     override suspend fun run(request: FileRunRequest, runner: FileRunnerContext) {
- *         runner.openScreen(ScreenId("com.example.html.preview"))
+ *         runner.openScreen(ScreenId("com.example.html.preview")) {
+ *             HtmlPreviewScreen(uri = request.uri)
+ *         }
  *     }
  * }
  *
@@ -139,6 +143,27 @@ interface FileRunnerContext {
      * This is useful for runners that preview a file (e.g. open an HTML file in a WebView screen).
      */
     fun openScreen(screenId: ScreenId)
+
+    /**
+     * Registers the [content] for [screenId] and navigates to it.
+     *
+     * This is the direct way for a runner to start a screen without pre-registering it. Because
+     * the [content] is a closure, it can capture whatever data the runner needs to pass along,
+     * typically the file being run and its URI:
+     *
+     * ```kotlin
+     * override suspend fun run(request: FileRunRequest, runner: FileRunnerContext) {
+     *     runner.openScreen(ScreenId("com.example.html.preview")) {
+     *         HtmlPreviewScreen(file = request.file, uri = request.uri)
+     *     }
+     * }
+     * ```
+     *
+     * The screen is registered as a *transient* screen: klyx auto-unregisters it when its
+     * navigation entry is popped, so no cleanup is required. It can also be removed early via the
+     * returned [ScreenRegistration].
+     */
+    fun openScreen(screenId: ScreenId, content: Content): ScreenRegistration
 
     /**
      * Opens a custom [tab] in the editor workspace.
