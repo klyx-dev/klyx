@@ -84,6 +84,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
@@ -185,6 +186,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
     var loadingFiles by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var showAboutSheet by remember { mutableStateOf(false) }
+    var reinstalling by remember { mutableStateOf(false) }
 
     LaunchedEffect(payload.id) {
         descriptor = fetchPluginDescriptor(payload.id)
@@ -329,47 +331,77 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                     Column {
                         Button(
                             onClick = {
-                                storeViewModel.installPlugin(
-                                    plugin = StorePlugin(
-                                        id = payload.id,
-                                        name = payload.name,
-                                        description = payload.description,
-                                        author = payload.author,
-                                        version = payload.version,
-                                        minAppVersion = "",
-                                        maxAppVersion = null,
-                                        downloadCount = payload.downloadCount,
-                                        iconUrl = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
-                                        downloadUrl = "$API/dl/${payload.id}/${payload.version}"
-                                    )
-                                ) {
-                                    pluginViewModel.refresh()
+                                val localSource = payload.sourceUri?.takeIf { it.isNotBlank() }
+                                if (localSource != null) {
+                                    val uri = localSource.toUri()
+                                    if (pluginViewModel.bundleSourceExists(uri)) {
+                                        reinstalling = true
+                                        pluginViewModel.loadPluginBundle(uri) {
+                                            reinstalling = false
+                                        }
+                                    } else {
+                                        navigator.navigateBack()
+                                    }
+                                } else {
+                                    storeViewModel.installPlugin(
+                                        plugin = StorePlugin(
+                                            id = payload.id,
+                                            name = payload.name,
+                                            description = payload.description,
+                                            author = payload.author,
+                                            version = payload.version,
+                                            minAppVersion = "",
+                                            maxAppVersion = null,
+                                            downloadCount = payload.downloadCount,
+                                            iconUrl = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
+                                            downloadUrl = "$API/dl/${payload.id}/${payload.version}"
+                                        )
+                                    ) {
+                                        pluginViewModel.refresh()
+                                    }
                                 }
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 44.dp),
                             shape = RoundedCornerShape(16.dp),
-                            enabled = !installing || isThisInstalling
+                            enabled = (!installing && !reinstalling) || isThisInstalling || reinstalling
                         ) {
-                            if (isThisInstalling) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onPrimary
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = installState.message ?: "Installing...",
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            } else {
-                                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    if (installing) "Another task running" else "Install",
-                                    style = MaterialTheme.typography.labelLarge
-                                )
+                            when {
+                                isThisInstalling -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = installState.message ?: "Installing...",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+
+                                reinstalling -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(18.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Installing...",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+
+                                else -> {
+                                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        if (installing) "Another task running" else "Install",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
                             }
                         }
 

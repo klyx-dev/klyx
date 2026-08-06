@@ -137,18 +137,19 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
                 }
                 task.from(target.provider { pluginJson.get().asFile })
 
-                task.from(target.provider {
+                val iconTarget = target.provider {
                     val jsonFile = pluginJson.get().asFile
-                    val iconPath = readDescriptorIcon(jsonFile) ?: return@provider emptyMap<String, File>()
+                    val iconPath = readDescriptorIcon(jsonFile) ?: return@provider null
                     val projectRoot = target.rootProject.projectDir
                     val iconFile = projectRoot.resolve(iconPath)
                     val isInsideProject = iconFile.canonicalPath.startsWith(projectRoot.canonicalPath + File.separator)
-                    if (iconPath.isBlank() || !iconFile.isFile || !isInsideProject) {
-                        emptyMap<String, File>()
-                    } else {
-                        mapOf(iconPath to iconFile)
-                    }
-                })
+                    if (iconPath.isBlank() || !iconFile.isFile || !isInsideProject) null else iconFile to iconPath
+                }
+                task.from(iconTarget.map { listOfNotNull(it?.first) }) { copy ->
+                    val iconPath = iconTarget.get()?.second ?: return@from
+                    val dir = iconPath.substringBeforeLast('/', "")
+                    if (dir != iconPath) copy.into(dir)
+                }
 
                 val readmeFile = extension.readme.orNull?.asFile
                 if (readmeFile != null && readmeFile.exists()) {

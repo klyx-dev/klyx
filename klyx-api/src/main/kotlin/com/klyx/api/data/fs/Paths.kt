@@ -63,3 +63,9 @@ val Paths.pluginsDir get() = dataDir.resolve("klyx/plugins").also { it.createDir
  * The JSON file containing ids of currently installed plugins.
  */
 val Paths.installedPluginsJson get() = pluginsDir.resolve("installed.json")
+
+/**
+ * The JSON file recording the last-picked source bundle URI for each locally installed plugin.
+ * Used to reinstall a local plugin after it has been uninstalled.
+ */
+val Paths.localBundleSourcesJson get() = pluginsDir.resolve("local_sources.json")

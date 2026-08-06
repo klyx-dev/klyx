@@ -146,7 +146,7 @@ class PluginStoreViewModel(
                         }
                     )
                 }
-                pluginManager.loadPluginBundle(bundleFile.toUri()) { step ->
+                pluginManager.loadPluginBundle(bundleFile.toUri(), recordSource = false) { step ->
                     _uiState.update { state ->
                         state.copy(
                             installState = state.installState?.copy(

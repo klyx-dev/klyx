@@ -261,7 +261,9 @@ fun PluginsScreen() {
                                 version = info.descriptor.version,
                                 description = info.descriptor.description,
                                 author = info.descriptor.author?.name ?: "Unknown",
-                                isInstalled = true
+                                isInstalled = true,
+                                iconUrl = info.iconPath,
+                                sourceUri = viewModel.localBundleSource(info.descriptor.id)?.toString()
                             )
                             navigator.navigateTo(SettingsScreen.PluginDetail(payload))
                         }

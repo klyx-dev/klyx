@@ -63,7 +63,7 @@ class PluginViewModel(
         }
     }
 
-    fun loadPluginBundle(uri: Uri) {
+    fun loadPluginBundle(uri: Uri, onCompletion: (() -> Unit)? = null) {
         viewModelScope.launch {
             _uiState.update { it.copy(loadingState = PluginLoadingState(desc = null)) }
             
@@ -117,9 +117,14 @@ class PluginViewModel(
             } finally {
                 logJob?.cancel()
                 _uiState.update { it.copy(loadingState = null) }
+                onCompletion?.invoke()
             }
         }
     }
+
+    fun localBundleSource(id: String): Uri? = pluginManager.localBundleSource(id)
+
+    fun bundleSourceExists(uri: Uri): Boolean = pluginManager.bundleSourceExists(uri)
 
     fun unloadPlugin(id: String) {
         viewModelScope.launch {

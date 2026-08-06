@@ -93,7 +93,8 @@ data class PluginDetailPayload(
     val author: String,
     val isInstalled: Boolean,
     val iconUrl: String? = null,
-    val downloadCount: Int = 0
+    val downloadCount: Int = 0,
+    val sourceUri: String? = null
 )
 
 @Serializable

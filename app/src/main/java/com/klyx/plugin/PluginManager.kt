@@ -10,6 +10,7 @@ import com.klyx.api.InternalKlyxApi
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.installedPluginsJson
+import com.klyx.api.data.fs.localBundleSourcesJson
 import com.klyx.api.data.fs.pluginsDir
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginDescriptor
@@ -47,12 +48,14 @@ class PluginManager(
     private val runtimes = IdentityHashMap<KlyxPlugin, PluginRuntime>()
     private val runtimesById = HashMap<String, PluginRuntime>()
     private val crashedPluginIds = mutableSetOf<String>()
+    private val localBundleSources = HashMap<String, String>()
 
     val loadedPlugins get() = synchronized(runtimes) { runtimes.values.map(PluginRuntime::info) }
     val crashedPlugins get() = synchronized(runtimes) { runtimes.values.filter { it.state == PluginState.CRASHED }.map { it.info.id } }
 
     init {
         readCrashedPluginIdsFromCrashFile()
+        loadLocalBundleSources()
 
         app.backgroundScope.launch {
             loadInstalledList()
@@ -91,6 +94,7 @@ class PluginManager(
 
     suspend fun loadPluginBundle(
         bundleUri: Uri,
+        recordSource: Boolean = true,
         progress: PluginLoadProgressListener? = null
     ) = withContext(Dispatchers.IO) {
         //println("loading plugin from $bundleUri")
@@ -148,6 +152,12 @@ class PluginManager(
             startRuntime(runtime, progress)
             progress?.step("loading successfully")
             installPlugin(pluginId)
+            if (recordSource) {
+                synchronized(localBundleSources) {
+                    localBundleSources[pluginId] = bundleUri.toString()
+                }
+                saveLocalBundleSources()
+            }
         } catch (e: ErrnoException) {
             throw PluginLoadException("Failed to load plugin bundle", e)
         } finally {
@@ -377,6 +387,51 @@ class PluginManager(
         }
     }
 
+    /**
+     * The last-picked source bundle URI for a locally installed plugin, if any.
+     * Used to reinstall a local plugin after it has been uninstalled.
+     */
+    fun localBundleSource(id: String): Uri? =
+        synchronized(localBundleSources) { localBundleSources[id] }
+            ?.let { runCatching { Uri.parse(it) }.getOrNull() }
+
+    /**
+     * Whether the given bundle URI can still be resolved (a file path that exists,
+     * or a content URI that is still readable).
+     */
+    fun bundleSourceExists(uri: Uri): Boolean = try {
+        if (uri.scheme == "file") {
+            uri.path?.let { File(it).exists() } ?: false
+        } else {
+            app.application.contentResolver.openAssetFileDescriptor(uri, "r") != null
+        }
+    } catch (e: Exception) {
+        false
+    }
+
+    private fun loadLocalBundleSources() {
+        try {
+            val sourcesJson = Paths.localBundleSourcesJson
+            if (!sourcesJson.exists()) return
+            val ids = json.decodeFromString<LocalBundleSources>(sourcesJson.readText()).ids
+            synchronized(localBundleSources) {
+                localBundleSources.putAll(ids)
+            }
+        } catch (e: Exception) {
+            Log.e("PluginManager", "Failed to load local bundle sources", e)
+        }
+    }
+
+    private suspend fun saveLocalBundleSources() = withContext(Dispatchers.IO) {
+        try {
+            val snapshot = synchronized(localBundleSources) { localBundleSources.toMap() }
+            Paths.localBundleSourcesJson
+                .writeText(json.encodeToString(LocalBundleSources(snapshot)))
+        } catch (e: Exception) {
+            Log.e("PluginManager", "Failed to save local bundle sources", e)
+        }
+    }
+
     fun markCrashed(pluginId: String) {
         crashedPluginIds.add(pluginId)
     }
@@ -484,6 +539,9 @@ class PluginManager(
 
     @Serializable
     data class InstalledList(val ids: List<String>)
+
+    @Serializable
+    data class LocalBundleSources(val ids: Map<String, String> = emptyMap())
 
     companion object {
         private val json = Json {
