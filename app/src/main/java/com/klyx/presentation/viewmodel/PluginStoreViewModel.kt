@@ -53,7 +53,7 @@ data class PluginInstallState(
     val plugin: StorePlugin,
     val progress: Float = 0f,
     val message: String? = null,
-    val logs: List<LogEntry> = emptyList()
+    val logs: ImmutableList<LogEntry> = persistentListOf()
 )
 
 data class PluginStoreUiState(
@@ -111,12 +111,10 @@ class PluginStoreViewModel(
             // Collect logs for this plugin while installing
             val logJob = launch {
                 logger.entries.collect { entries ->
-                    val pluginLogs = entries.filter { it.sourcePluginId == plugin.id }
+                    val pluginLogs = entries.filter { it.sourcePluginId == plugin.id }.toImmutableList()
                     _uiState.update { state ->
                         state.copy(
-                            installState = state.installState?.copy(
-                                logs = pluginLogs
-                            )
+                            installState = state.installState?.copy(logs = pluginLogs)
                         )
                     }
                 }

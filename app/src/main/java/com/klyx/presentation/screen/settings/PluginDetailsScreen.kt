@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,9 +26,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.Extension
+import androidx.compose.material.icons.rounded.AlternateEmail
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Mail
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -36,16 +45,22 @@ import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue.Expanded
+import androidx.compose.material3.SheetValue.Hidden
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,29 +70,30 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.plugin.PluginDescriptor
 import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.api.service.Logger
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.api.util.openUrl
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.UiEvent
@@ -86,6 +102,7 @@ import com.klyx.plugin.PluginManager
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.InstallationLogCard
 import com.klyx.presentation.components.LogEntryItem
+import com.klyx.presentation.components.PluginIcon
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginDetailPayload
 import com.klyx.presentation.navigation.PluginSettingsPayload
@@ -109,21 +126,44 @@ import dev.snipme.highlights.model.SyntaxThemes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 private const val CDN = PluginManager.CDN
 private const val API = PluginManager.API
 
+private val pluginJson = Json { ignoreUnknownKeys = true }
+
 private suspend fun fetchTextContent(id: String, fileName: String): String? =
     withContext(Dispatchers.IO) {
         val pluginDir = Paths.pluginsDir.resolve(id)
-        try {
+        val localFile = pluginDir.resolve(fileName)
+        val localText = runCatching { localFile.readText().takeIf { it.isNotBlank() } }.getOrNull()
+        localText ?: try {
             fetchBody<String?>("$CDN/$id/$fileName")
         } catch (_: Exception) {
-            runCatching { pluginDir.resolve(fileName).readText() }.getOrNull()
+            null
+        }
+    }
+
+private suspend fun fetchPluginDescriptor(id: String): PluginDescriptor? =
+    withContext(Dispatchers.IO) {
+        val pluginDir = Paths.pluginsDir.resolve(id)
+        val localJson = pluginDir.resolve("plugin.json")
+        if (localJson.exists()) {
+            runCatching {
+                pluginJson.decodeFromString<PluginDescriptor>(localJson.readText())
+            }.getOrNull()
+        } else {
+            try {
+                fetchBody("$CDN/$id/plugin.json")
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 
@@ -138,14 +178,16 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
     val pluginUiState by pluginViewModel.uiState.collectAsStateWithLifecycle()
     val storeUiState by storeViewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-    val context = LocalContext.current
 
+    var descriptor by remember { mutableStateOf<PluginDescriptor?>(null) }
     var readme by remember { mutableStateOf<String?>(null) }
     var changelog by remember { mutableStateOf<String?>(null) }
     var loadingFiles by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showAboutSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(payload.id) {
+        descriptor = fetchPluginDescriptor(payload.id)
         readme = fetchTextContent(payload.id, "readme.md")
         changelog = fetchTextContent(payload.id, "changelog.md")
         loadingFiles = false
@@ -241,88 +283,14 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerLow
-                ) {
-                    Row(
-                        modifier = Modifier.padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(context)
-                                .data(payload.iconUrl ?: "$CDN/${payload.id}/icon.png")
-                                .crossfade(true)
-                                .build(),
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                            placeholder = rememberVectorPainter(Icons.Outlined.Extension),
-                            error = rememberVectorPainter(Icons.Outlined.Extension),
-                            contentScale = ContentScale.Fit,
-                        )
-
-                        Spacer(modifier = Modifier.width(14.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = payload.name,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = "by ${payload.author}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            Spacer(modifier = Modifier.height(4.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "v${payload.version}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier
-                                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                                if (payload.downloadCount > 0) {
-                                    Text(
-                                        text = "${payload.downloadCount} dl",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (payload.description.isNotBlank()) {
-                item {
-                    Text(
-                        text = payload.description,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 6.dp)
-                    )
-                }
+                PluginHeroCard(
+                    payload = payload,
+                    descriptor = descriptor,
+                    onAuthorClick = { showAboutSheet = true }
+                )
             }
 
             item {
@@ -332,13 +300,12 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                         onClick = { pluginViewModel.unloadPlugin(payload.id) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = 40.dp),
-                        shape = RoundedCornerShape(12.dp),
+                            .heightIn(min = 44.dp),
+                        shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer,
                             contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        ),
-                        enabled = !uninstalling
+                        )
                     ) {
                         if (uninstalling) {
                             CircularProgressIndicator(
@@ -358,7 +325,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                     val installState = storeUiState.installState
                     val isThisInstalling = installState?.plugin?.id == payload.id
                     val installing by remember { derivedStateOf { storeUiState.installState != null } }
-                    
+
                     Column {
                         Button(
                             onClick = {
@@ -381,15 +348,15 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 40.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            enabled = !installing
+                                .heightIn(min = 44.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            enabled = !installing || isThisInstalling
                         ) {
                             if (isThisInstalling) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = MaterialTheme.colorScheme.onPrimary
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
@@ -399,20 +366,43 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                             } else {
                                 Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(if (installing) "Another task running" else "Install", style = MaterialTheme.typography.labelLarge)
+                                Text(
+                                    if (installing) "Another task running" else "Install",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
                             }
                         }
-                        
+
                         AnimatedVisibility(
                             visible = isThisInstalling,
                             enter = fadeIn() + expandVertically(),
                             exit = fadeOut() + shrinkVertically()
                         ) {
-                            if (installState != null) {
-                                InstallationLogCard(
-                                    title = "Installation Logs",
-                                    logs = installState.logs
-                                )
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (installState != null) {
+                                    if (installState.message != null) {
+                                        Text(
+                                            text = installState.message,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                        )
+                                    }
+                                    if (installState.progress > 0f) {
+                                        LinearProgressIndicator(
+                                            progress = { installState.progress.coerceIn(0f, 1f) },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            color = MaterialTheme.colorScheme.primary,
+                                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                                        )
+                                    }
+                                }
+                                if (installState != null) {
+                                    InstallationLogCard(
+                                        title = "Installation Logs",
+                                        logs = installState.logs
+                                    )
+                                }
                             }
                         }
                     }
@@ -432,96 +422,733 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                 }
             } else {
                 val availableTabs = buildList {
-                    if (readme != null) add("Readme")
-                    if (changelog != null) add("Changelog")
+                    add("Details")
+                    if (!changelog.isNullOrBlank()) add("Changelog")
                     if (pluginLogs.isNotEmpty()) add("Logs")
                 }
 
-                if (availableTabs.isNotEmpty()) {
+                if (availableTabs.size > 1) {
                     item {
-                        PrimaryTabRow(
-                            selectedTabIndex = selectedTab.coerceIn(0, availableTabs.size - 1),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp)),
-                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-                            divider = { }
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            availableTabs.forEachIndexed { index, title ->
-                                Tab(
-                                    selected = selectedTab == index,
-                                    onClick = { selectedTab = index },
-                                    text = { Text(title, fontWeight = FontWeight.Bold) }
-                                )
+                            Column {
+                                PrimaryTabRow(
+                                    selectedTabIndex = selectedTab.coerceIn(0, availableTabs.size - 1),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    divider = { }
+                                ) {
+                                    availableTabs.forEachIndexed { index, title ->
+                                        Tab(
+                                            selected = selectedTab == index,
+                                            onClick = { selectedTab = index },
+                                            text = { Text(title, fontWeight = FontWeight.Bold) }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
+                }
 
-                    val currentTabTitle = availableTabs.getOrNull(selectedTab)
+                val currentTabTitle = availableTabs.getOrNull(selectedTab)
 
-                    if (currentTabTitle == "Logs") {
+                when (currentTabTitle) {
+                    "Logs" -> {
                         items(pluginLogs.reversed(), key = { "${it.timestamp}_${it.hashCode()}" }) { entry ->
                             LogEntryItem(entry = entry, timeFormat = logTimeFormat)
                         }
-                    } else if (currentTabTitle != null) {
+                    }
+
+                    "Changelog" -> {
                         item {
-                            val tabContent = if (currentTabTitle == "Readme") readme else changelog
-                            val isDarkMode = LocalIsDarkMode.current
-                            val highlightBuilder = remember(isDarkMode) {
-                                Highlights.Builder().theme(SyntaxThemes.atom(darkMode = isDarkMode))
-                            }
-
-                            val state by produceState<State>(State.Loading(), tabContent) {
-                                withContext(Dispatchers.Default) {
-                                    value = parseMarkdown(tabContent ?: "No content available")
-                                }
-                            }
-
-                            Markdown(
-                                state = state,
-                                extendedSpans = markdownExtendedSpans {
-                                    val animator = rememberSquigglyUnderlineAnimator()
-                                    remember {
-                                        ExtendedSpans(
-                                            RoundedCornerSpanPainter(),
-                                            SquigglyUnderlineSpanPainter(animator = animator)
-                                        )
-                                    }
-                                },
-                                imageTransformer = Coil3ImageTransformerImpl,
-                                components = markdownComponents(
-                                    codeBlock = {
-                                        MarkdownHighlightedCodeBlock(
-                                            content = it.content,
-                                            node = it.node,
-                                            highlightsBuilder = highlightBuilder,
-                                            showHeader = true
-                                        )
-                                    },
-                                    codeFence = {
-                                        MarkdownHighlightedCodeFence(
-                                            content = it.content,
-                                            node = it.node,
-                                            highlightsBuilder = highlightBuilder,
-                                            showHeader = true
-                                        )
-                                    }
-                                )
+                            PluginMarkdownContent(
+                                content = changelog,
+                                emptyText = "No changelog provided for this plugin."
                             )
                         }
                     }
-                } else if (isPluginActuallyInstalled) {
-                    item {
-                         Text(
-                             text = "No additional info available for this plugin.",
-                             modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
-                             textAlign = TextAlign.Center,
-                             style = MaterialTheme.typography.bodyMedium,
-                             color = MaterialTheme.colorScheme.onSurfaceVariant
-                         )
+
+                    else -> {
+                        item {
+                            PluginMarkdownContent(
+                                content = readme,
+                                emptyText = "No details provided for this plugin."
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAboutSheet) {
+        PluginAboutSheet(
+            payload = payload,
+            descriptor = descriptor,
+            onDismiss = { showAboutSheet = false }
+        )
+    }
+}
+
+@Composable
+private fun PluginMarkdownContent(
+    content: String?,
+    emptyText: String,
+) {
+    if (content.isNullOrBlank()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = emptyText,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        return
+    }
+
+    val isDarkMode = LocalIsDarkMode.current
+    val highlightBuilder = remember(isDarkMode) {
+        Highlights.Builder().theme(SyntaxThemes.atom(darkMode = isDarkMode))
+    }
+
+    val state by produceState<State>(State.Loading(), content) {
+        withContext(Dispatchers.Default) {
+            value = parseMarkdown(content)
+        }
+    }
+
+    Markdown(
+        state = state,
+        extendedSpans = markdownExtendedSpans {
+            val animator = rememberSquigglyUnderlineAnimator()
+            remember {
+                ExtendedSpans(
+                    RoundedCornerSpanPainter(),
+                    SquigglyUnderlineSpanPainter(animator = animator)
+                )
+            }
+        },
+        imageTransformer = Coil3ImageTransformerImpl,
+        components = markdownComponents(
+            codeBlock = {
+                MarkdownHighlightedCodeBlock(
+                    content = it.content,
+                    node = it.node,
+                    highlightsBuilder = highlightBuilder,
+                    showHeader = true
+                )
+            },
+            codeFence = {
+                MarkdownHighlightedCodeFence(
+                    content = it.content,
+                    node = it.node,
+                    highlightsBuilder = highlightBuilder,
+                    showHeader = true
+                )
+            }
+        )
+    )
+}
+
+@Composable
+private fun PluginHeroCard(
+    payload: PluginDetailPayload,
+    descriptor: PluginDescriptor?,
+    onAuthorClick: () -> Unit,
+) {
+    val heroShape = AbsoluteSmoothCornerShape(30.dp, 30)
+    val author = descriptor?.author?.name ?: payload.author
+    val github = descriptor?.author?.github
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = heroShape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 2.dp,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.radialGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.25f),
+                            MaterialTheme.colorScheme.surfaceContainerLow,
+                        ),
+                    ),
+                ),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 16.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    PluginIcon(
+                        model = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
+                        size = 60.dp,
+                        cornerRadius = 16.dp,
+                    )
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = payload.name,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+
+                        val authorShape = RoundedCornerShape(8.dp)
+                        val authorModifier = Modifier
+                            .clip(authorShape)
+                            .clickable(onClick = onAuthorClick)
+
+                        Surface(
+                            modifier = authorModifier,
+                            shape = authorShape,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.25f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = "by $author",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                if (!github.isNullOrBlank()) {
+                                    Text(
+                                        text = " @$github",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Rounded.ChevronRight,
+                                    contentDescription = "View author details",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                    ) {
+                        Text(
+                            text = "v${payload.version}",
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        )
+                    }
+
+                    if (payload.downloadCount > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Download,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Text(
+                                    text = "${payload.downloadCount}",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+
+                    val license = descriptor?.license
+                    if (!license.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Text(
+                                text = license,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+
+                if (payload.description.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = payload.description,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PluginAboutSheet(
+    payload: PluginDetailPayload,
+    descriptor: PluginDescriptor?,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = Hidden,
+        enabledValues = setOf(Hidden, Expanded)
+    )
+    val coroutineScope = rememberCoroutineScope()
+    val author = descriptor?.author
+    val authorName = author?.name ?: payload.author
+    val github = author?.github
+    val email = author?.email
+    val website = author?.url
+    val minAppVersion = descriptor?.minAppVersion
+    val license = descriptor?.license
+    val links = descriptor?.links
+
+    ModalBottomSheet(
+        sheetState = sheetState,
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                PluginIcon(
+                    model = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
+                    size = 52.dp,
+                    cornerRadius = 14.dp,
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = payload.name,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = "v${payload.version}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Surface(
+                    onClick = {
+                        coroutineScope.launch { sheetState.hide() }
+                            .invokeOnCompletion { onDismiss() }
+                    },
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = "Close",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(10.dp)
+                            .size(20.dp),
+                    )
+                }
+            }
+
+            Surface(
+                shape = AbsoluteSmoothCornerShape(22.dp, 60),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        AuthorAvatar(name = authorName)
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Author",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Text(
+                                text = authorName,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+
+                        if (!github.isNullOrBlank()) {
+                            Surface(
+                                onClick = { openUrl(githubUrl(github)) },
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.AlternateEmail,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                    Text(
+                                        text = "@$github",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (!email.isNullOrBlank() || !website.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            if (!email.isNullOrBlank()) {
+                                ContactPill(
+                                    icon = Icons.Rounded.Mail,
+                                    text = email,
+                                    onClick = { openUrl("mailto:$email") },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (!website.isNullOrBlank()) {
+                                ContactPill(
+                                    icon = Icons.Rounded.Link,
+                                    text = website,
+                                    onClick = { openUrl(website) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                PluginStatTile(
+                    label = "Version",
+                    value = "v${payload.version}",
+                    modifier = Modifier.weight(1f),
+                )
+                if (payload.downloadCount > 0) {
+                    PluginStatTile(
+                        label = "Downloads",
+                        value = "${payload.downloadCount}",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            if (!minAppVersion.isNullOrBlank() || !license.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (!minAppVersion.isNullOrBlank()) {
+                        PluginStatTile(
+                            label = "Requires App",
+                            value = "v$minAppVersion",
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                    if (!license.isNullOrBlank()) {
+                        PluginStatTile(
+                            label = "License",
+                            value = license,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+
+            if (links != null) {
+                val linkItems = buildList {
+                    links.source?.let { add(SheetLinkItem("Source", it, Icons.Rounded.Code)) }
+                    links.issues?.let { add(SheetLinkItem("Issues", it, Icons.Rounded.BugReport)) }
+                    links.website?.let { add(SheetLinkItem("Website", it, Icons.Rounded.Public)) }
+                    links.donate?.let { add(SheetLinkItem("Donate", it, Icons.Rounded.Favorite)) }
+                }
+
+                if (linkItems.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "Links",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                        Surface(
+                            shape = AbsoluteSmoothCornerShape(22.dp, 60),
+                            color = MaterialTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Column {
+                                linkItems.forEachIndexed { index, item ->
+                                    if (index > 0) {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 16.dp),
+                                            thickness = 0.5.dp,
+                                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        )
+                                    }
+                                    SheetLinkRow(item = item)
+                                }
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+@Composable
+private fun AuthorAvatar(
+    name: String,
+    modifier: Modifier = Modifier.size(56.dp),
+) {
+    val initials = remember(name) {
+        name.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .mapNotNull { it.firstOrNull()?.uppercase() }
+            .take(2)
+            .joinToString("")
+            .ifBlank { "?" }
+    }
+
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primaryContainer,
+                        MaterialTheme.colorScheme.tertiaryContainer,
+                    )
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = initials,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+    }
+}
+
+@Composable
+private fun ContactPill(
+    icon: ImageVector,
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp),
+            )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+private data class SheetLinkItem(
+    val label: String,
+    val url: String,
+    val icon: ImageVector,
+)
+
+@Composable
+private fun SheetLinkRow(item: SheetLinkItem) {
+    Surface(
+        onClick = { openUrl(item.url) },
+        shape = RectangleShape,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .size(18.dp),
+                )
+            }
+            Text(
+                text = item.label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                text = item.url,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1.4f),
+            )
+            Icon(
+                imageVector = Icons.Rounded.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun PluginStatTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        shape = AbsoluteSmoothCornerShape(14.dp, 60),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+private fun githubUrl(github: String): String =
+    if (github.startsWith("http")) github else "https://github.com/$github"

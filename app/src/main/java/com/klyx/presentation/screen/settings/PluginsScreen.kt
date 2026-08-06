@@ -7,7 +7,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,7 +31,6 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material3.Button
@@ -45,6 +43,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -59,18 +58,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.request.crossfade
 import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
@@ -78,9 +71,12 @@ import com.klyx.event.UiEvent
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.ExpressiveMenuItem
 import com.klyx.presentation.components.InstallationLogCard
+import com.klyx.presentation.components.PluginIcon
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginDetailPayload
 import com.klyx.presentation.navigation.SettingsScreen
+import com.klyx.presentation.screen.settings.components.SettingsSubsectionHeader
+import com.klyx.presentation.viewmodel.PluginInstallState
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
 import com.klyx.presentation.viewmodel.StorePlugin
 import kotlinx.coroutines.launch
@@ -206,21 +202,19 @@ fun PluginsScreen() {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             val installedIds = pluginUiState.plugins.map { it.descriptor.id }.toSet()
-            val installed = pluginUiState.plugins.map(CombinedItem::Installed)
-            val store = storeUiState.storePlugins.filterNot { it.id in installedIds }.map(CombinedItem::Store)
-
-            val all = installed + store
+            val installed = pluginUiState.plugins
+            val store = storeUiState.storePlugins.filterNot { it.id in installedIds }
 
             if (pluginUiState.loadingState != null) {
-                 item(key = "loading-bundle") {
-                     InstallationLogCard(
-                         title = "Installing Local Bundle",
-                         logs = pluginUiState.loadingState?.logs ?: emptyList()
-                     )
-                 }
+                item(key = "loading-bundle") {
+                    InstallationLogCard(
+                        title = "Installing Local Bundle",
+                        logs = pluginUiState.loadingState?.logs ?: emptyList()
+                    )
+                }
             }
 
-            if (all.isEmpty() && !storeUiState.storeLoading) {
+            if (installed.isEmpty() && store.isEmpty() && !storeUiState.storeLoading) {
                 item(key = "empty") {
                     Spacer(modifier = Modifier.height(64.dp))
                     Text(
@@ -233,83 +227,89 @@ fun PluginsScreen() {
                         textAlign = TextAlign.Center
                     )
                 }
-            } else if (all.isNotEmpty()) {
-                items(all, key = { it.key }) { item ->
-                    when (item) {
-                        is CombinedItem.Installed -> {
-                            val storePlugin = storeUiState.storePlugins.find { it.id == item.info.descriptor.id }
-                            var operationRunning by remember { mutableStateOf(false) }
+            }
 
-                            InstalledPluginCard(
-                                plugin = item.info,
-                                storeVersion = storePlugin?.version,
-                                runningState = operationRunning,
-                                onUnload = {
-                                    operationRunning = true
-                                    viewModel.unloadPlugin(item.info.descriptor.id)
-                                },
-                                onUpdate = {
-                                    if (storePlugin != null) {
-                                        operationRunning = true
-                                        storeViewModel.installPlugin(storePlugin) {
-                                            viewModel.refresh()
-                                            operationRunning = false
-                                        }
-                                    }
-                                },
-                                onDetail = {
-                                    val payload = PluginDetailPayload(
-                                        id = item.info.descriptor.id,
-                                        name = item.info.descriptor.name,
-                                        version = item.info.descriptor.version,
-                                        description = item.info.descriptor.description,
-                                        author = item.info.descriptor.author?.name ?: "Unknown",
-                                        isInstalled = true
-                                    )
-                                    navigator.navigateTo(SettingsScreen.PluginDetail(payload))
-                                }
-                            )
-                        }
+            if (installed.isNotEmpty()) {
+                item(key = "header-installed") {
+                    SettingsSubsectionHeader(title = "Installed")
+                }
+                items(installed, key = { "installed:${it.descriptor.id}" }) { info ->
+                    val storePlugin = storeUiState.storePlugins.find { it.id == info.descriptor.id }
+                    var operationRunning by remember { mutableStateOf(false) }
 
-                        is CombinedItem.Store -> {
-                            val installState = storeUiState.installState
-                            val isInstalling = installState?.plugin?.id == item.plugin.id
-
-                            StorePluginCard(
-                                plugin = item.plugin,
-                                installing = isInstalling,
-                                onInstall = {
-                                    storeViewModel.installPlugin(item.plugin) {
-                                        viewModel.refresh()
-                                    }
-                                },
-                                onDetail = {
-                                    val payload = PluginDetailPayload(
-                                        id = item.plugin.id,
-                                        name = item.plugin.name,
-                                        version = item.plugin.version,
-                                        description = item.plugin.description,
-                                        author = item.plugin.author,
-                                        isInstalled = false,
-                                        iconUrl = item.plugin.iconUrl,
-                                        downloadCount = item.plugin.downloadCount
-                                    )
-                                    navigator.navigateTo(SettingsScreen.PluginDetail(payload))
-                                }
-                            )
-
-                            AnimatedVisibility(
-                                visible = isInstalling,
-                                enter = fadeIn() + expandVertically(),
-                                exit = fadeOut() + shrinkVertically()
-                            ) {
-                                if (installState != null) {
-                                    InstallationLogCard(
-                                        title = "Installing ${item.plugin.name}",
-                                        logs = installState.logs
-                                    )
+                    InstalledPluginCard(
+                        plugin = info,
+                        storeVersion = storePlugin?.version,
+                        runningState = operationRunning,
+                        onUnload = {
+                            operationRunning = true
+                            viewModel.unloadPlugin(info.descriptor.id)
+                        },
+                        onUpdate = {
+                            if (storePlugin != null) {
+                                operationRunning = true
+                                storeViewModel.installPlugin(storePlugin) {
+                                    viewModel.refresh()
+                                    operationRunning = false
                                 }
                             }
+                        },
+                        onDetail = {
+                            val payload = PluginDetailPayload(
+                                id = info.descriptor.id,
+                                name = info.descriptor.name,
+                                version = info.descriptor.version,
+                                description = info.descriptor.description,
+                                author = info.descriptor.author?.name ?: "Unknown",
+                                isInstalled = true
+                            )
+                            navigator.navigateTo(SettingsScreen.PluginDetail(payload))
+                        }
+                    )
+                }
+            }
+
+            if (store.isNotEmpty()) {
+                item(key = "header-store") {
+                    SettingsSubsectionHeader(title = "Store")
+                }
+                items(store, key = { "store:${it.id}" }) { plugin ->
+                    val installState = storeUiState.installState
+                    val isInstalling = installState?.plugin?.id == plugin.id
+
+                    StorePluginCard(
+                        plugin = plugin,
+                        installState = installState.takeIf { isInstalling },
+                        onInstall = {
+                            storeViewModel.installPlugin(plugin) {
+                                viewModel.refresh()
+                            }
+                        },
+                        onDetail = {
+                            val payload = PluginDetailPayload(
+                                id = plugin.id,
+                                name = plugin.name,
+                                version = plugin.version,
+                                description = plugin.description,
+                                author = plugin.author,
+                                isInstalled = false,
+                                iconUrl = plugin.iconUrl,
+                                downloadCount = plugin.downloadCount
+                            )
+                            navigator.navigateTo(SettingsScreen.PluginDetail(payload))
+                        }
+                    )
+
+                    AnimatedVisibility(
+                        visible = isInstalling,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        if (installState != null) {
+                            InstallationLogCard(
+                                title = "Installing ${plugin.name}",
+                                logs = installState.logs
+                            )
                         }
                     }
                 }
@@ -331,18 +331,6 @@ fun PluginsScreen() {
     }
 }
 
-private sealed interface CombinedItem {
-    val key: String
-
-    data class Installed(val info: PluginInfo) : CombinedItem {
-        override val key get() = "installed:${info.descriptor.id}"
-    }
-
-    data class Store(val plugin: StorePlugin) : CombinedItem {
-        override val key get() = "store:${plugin.id}"
-    }
-}
-
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun InstalledPluginCard(
@@ -359,16 +347,16 @@ private fun InstalledPluginCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onDetail() },
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PluginIcon(plugin)
+            PluginIcon(model = plugin.iconPath)
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -406,7 +394,6 @@ private fun InstalledPluginCard(
             if (updateAvailable) {
                 Button(
                     onClick = onUpdate,
-                    enabled = !runningState,
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
@@ -430,7 +417,6 @@ private fun InstalledPluginCard(
             } else {
                 FilledIconButton(
                     onClick = onUnload,
-                    enabled = !runningState,
                     modifier = Modifier.size(36.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
@@ -457,38 +443,25 @@ private fun InstalledPluginCard(
 @Composable
 private fun StorePluginCard(
     plugin: StorePlugin,
-    installing: Boolean,
+    installState: PluginInstallState?,
     onInstall: () -> Unit,
     onDetail: () -> Unit,
 ) {
-    val context = LocalContext.current
+    val installing = installState != null
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onDetail() },
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLow
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(context)
-                        .data(plugin.iconUrl)
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    placeholder = rememberVectorPainter(Icons.Rounded.Extension),
-                    error = rememberVectorPainter(Icons.Rounded.Extension),
-                    contentScale = ContentScale.Fit,
-                )
+                PluginIcon(model = plugin.iconUrl)
 
                 Spacer(modifier = Modifier.width(12.dp))
 
@@ -513,7 +486,6 @@ private fun StorePluginCard(
 
                 Button(
                     onClick = onInstall,
-                    enabled = !installing,
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     modifier = Modifier.heightIn(min = 32.dp)
@@ -543,24 +515,33 @@ private fun StorePluginCard(
                     modifier = Modifier.padding(horizontal = 2.dp)
                 )
             }
+
+            if (installing) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = installState.message ?: "Installing...",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                val progress = installState.progress
+                if (progress > 0f) {
+                    LinearProgressIndicator(
+                        progress = { progress.coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                    )
+                } else {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                    )
+                }
+            }
         }
     }
-}
-
-@Composable
-private fun PluginIcon(plugin: PluginInfo) {
-    AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(plugin.iconPath)
-            .crossfade(true)
-            .build(),
-        contentDescription = null,
-        modifier = Modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        placeholder = rememberVectorPainter(Icons.Rounded.Extension),
-        error = rememberVectorPainter(Icons.Rounded.Extension),
-        contentScale = ContentScale.Fit,
-    )
 }
