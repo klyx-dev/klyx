@@ -783,20 +783,23 @@ internal suspend fun resolveProgram(program: String): ResolvedProgram {
             return ResolvedProgram.PRoot(absPath, guestPath)
         }
         if (home != null && absPath.startsWith(home.absolutePath)) {
-            return ResolvedProgram.PRoot(absPath)
+            val rel = absPath.substring(home.absolutePath.length).trimStart('/')
+            return ResolvedProgram.PRoot(absPath, "/root/$rel")
         }
 
         if (home != null && program.startsWith("/root/")) {
-            val inHome = home.resolve(program.substringAfter("/root/"))
+            val rel = program.substringAfter("/root/")
+            val inHome = home.resolve(rel)
             if (inHome.exists()) {
-                return ResolvedProgram.PRoot(inHome.absolutePath)
+                return ResolvedProgram.PRoot(inHome.absolutePath, "/root/$rel")
             }
         }
 
         if (rootFs != null && program.startsWith("/")) {
             val inRootfs = rootFs.resolve(program.trimStart('/'))
             if (inRootfs.exists()) {
-                return ResolvedProgram.PRoot(inRootfs.absolutePath)
+                val guestPath = "/" + program.trimStart('/')
+                return ResolvedProgram.PRoot(inRootfs.absolutePath, guestPath)
             }
         }
 
@@ -827,7 +830,7 @@ internal suspend fun resolveProgram(program: String): ResolvedProgram {
         for (dir in HOME_BIN_PATHS) {
             val f = home.resolve(dir).resolve(program)
             if (f.exists()) {
-                return ResolvedProgram.PRoot(f.absolutePath)
+                return ResolvedProgram.PRoot(f.absolutePath, "/root/$dir/$program")
             }
         }
     }
