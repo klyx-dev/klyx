@@ -110,6 +110,7 @@ import com.klyx.terminal.ui.extrakeys.rememberExtraKeysState
 import com.klyx.terminal.ui.rememberTerminalSessionClient
 import com.klyx.ui.animation.orSnap
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -158,12 +159,15 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
     val navigator = LocalNavigator.current
     var sessionTitle by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) {
-        GlobalEventBus.subscribe<TerminateAllSessionEvent> {
+    DisposableEffect(Unit) {
+        val subscription = GlobalEventBus.subscribe<TerminateAllSessionEvent>(
+            dispatcher = Dispatchers.Main.immediate
+        ) {
             if (navigator.currentScreen is Screen.Terminal) {
                 navigator.navigateBack()
             }
         }
+        onDispose { subscription.cancel() }
     }
 
     Scaffold(

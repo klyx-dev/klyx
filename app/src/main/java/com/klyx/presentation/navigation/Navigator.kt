@@ -42,22 +42,35 @@ class Navigator(
     private val backStack: NavBackStack<Screen>
 ) : MutableList<Screen> by backStack, StateObject by backStack {
 
+    private val mutationLock = Any()
+
     inline val currentScreen get() = last()
 
     fun navigateTo(screen: Screen) {
-        if (backStack.lastOrNull() === screen) return
-        backStack.add(screen)
+        synchronized(mutationLock) {
+            if (backStack.lastOrNull() === screen) return
+            backStack.add(screen)
+        }
     }
 
     fun navigateBack() {
-        backStack.removeLastOrNull()
+        synchronized(mutationLock) {
+            // Never pop the root screen: an empty back stack would break NavDisplay,
+            // and concurrent pops (e.g. EventBus handler + UI back) could otherwise
+            // race on the last element.
+            if (backStack.size > 1) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+        }
     }
 
     fun replaceCurrentScreenWith(screen: Screen) {
-        if (backStack.isNotEmpty()) {
-            backStack.removeAt(lastIndex)
+        synchronized(mutationLock) {
+            if (backStack.isNotEmpty()) {
+                backStack.removeAt(backStack.lastIndex)
+            }
+            backStack.add(screen)
         }
-        navigateTo(screen)
     }
 }
 

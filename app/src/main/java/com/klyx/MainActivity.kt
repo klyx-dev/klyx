@@ -377,7 +377,7 @@ class MainActivity : ComposeActivity() {
                     Text(
                         text = "Screen \"${screen.id}\" is not registered.\n\n" +
                                 "If you're a plugin developer, make sure to\n" +
-                                "register the screen via ctx.screens.register()\n" +
+                                "register the screen via screens.register()\n" +
                                 "before navigating to it.",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
