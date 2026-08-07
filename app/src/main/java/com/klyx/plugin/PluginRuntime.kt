@@ -4,6 +4,8 @@ package com.klyx.plugin
 
 import android.content.Context
 import android.content.res.Resources
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -112,7 +114,9 @@ internal class PluginRuntime(
         Log.e("PluginRuntime", "Plugin '${info.id}' crashed", t)
 
         scope.cancel(CancellationException("Plugin '${info.id}' crashed", t))
-        lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        Handler(Looper.getMainLooper()).post {
+            lifecycle.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        }
 
         context.app.global<ScreenRegistry>().unregisterAll(info.id)
         context.app.global<PluginSettingsRegistry>().unregisterAll(info.id)

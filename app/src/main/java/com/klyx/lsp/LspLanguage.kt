@@ -7,6 +7,10 @@ import io.github.rosemoe.sora.lang.analysis.AnalyzeManager
 import io.github.rosemoe.sora.lang.completion.CompletionCancelledException
 import io.github.rosemoe.sora.lang.completion.CompletionHelper
 import io.github.rosemoe.sora.lang.completion.CompletionPublisher
+import io.github.rosemoe.sora.lang.completion.createCompletionItemComparator
+import io.github.rosemoe.sora.lang.completion.filterCompletionItems
+import io.github.rosemoe.sora.lang.completion.snippet.CodeSnippet
+import io.github.rosemoe.sora.lang.completion.snippet.parser.CodeSnippetParser
 import io.github.rosemoe.sora.lang.format.Formatter
 import io.github.rosemoe.sora.lang.smartEnter.NewlineHandler
 import io.github.rosemoe.sora.text.CharPosition
@@ -24,6 +28,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
+import io.github.rosemoe.sora.lang.completion.CompletionItem as SoraCompletionItem
 import io.github.rosemoe.sora.lang.completion.CompletionItemKind as EditorItemKind
 
 class LspLanguage(
@@ -34,6 +39,15 @@ class LspLanguage(
 ) : Language {
 
     internal val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    @get:JvmName("formatter")
+    private val formatter: Formatter by lazy {
+        if (lspManager.getServersSupporting(tabId, LspFeature.Formatting).isNotEmpty()) {
+            LspFormatter(lspManager, tabId, uri)
+        } else {
+            base.formatter
+        }
+    }
 
     override fun getAnalyzeManager(): AnalyzeManager {
         return base.analyzeManager
@@ -51,9 +65,7 @@ class LspLanguage(
         return base.useTab()
     }
 
-    override fun getFormatter(): Formatter {
-        return base.formatter
-    }
+    override fun getFormatter(): Formatter = formatter
 
     override fun getSymbolPairs(): SymbolPairMatch {
         return base.symbolPairs
@@ -87,7 +99,7 @@ class LspLanguage(
 
         try {
             runBlocking {
-                val servers = lspManager.getLanguageServers(tabId)
+                val servers = lspManager.getServersSupporting(tabId, LspFeature.Completion)
                 val params = CompletionParams(
                     textDocument = TextDocumentIdentifier(uri),
                     position = Position(position.line, position.column)
@@ -118,24 +130,20 @@ class LspLanguage(
                 checkCancelled()
 
                 val prefixLower = prefix.lowercase()
-                val completionItems = lspItems.filter { item ->
-                    val filterText = (item.filterText ?: item.label).lowercase()
-                    prefixLower.isEmpty() || filterText.contains(prefixLower)
-                }.map { item ->
-                    LspCompletionItem(
-                        item.label,
-                        item.detail ?: "",
-                        prefix.length,
-                        item.insertText ?: item.label
-                    ).apply {
-                        sortText = item.sortText ?: item.label
-                        filterText = item.filterText ?: item.label
-                        kind = mapKind(item.kind)
-                    }
+                val completionItems = lspItems.mapNotNull { item -> buildCompletionItem(item, prefix, prefixLower) }
+
+                // Rank by relevance to the typed prefix, with LSP
+                // `preselect` items pinned first, then LSP `sortText`, then label. Items that
+                // don't fuzzy-match the prefix are dropped by the scorer.
+                try {
+                    val filtered = filterCompletionItems(content, position, completionItems)
+                    publisher.setComparator(lspCompletionComparator(filtered))
+                    publisher.addItems(filtered)
+                } catch (_: Exception) {
+                    publisher.addItems(completionItems)
                 }
 
                 checkCancelled()
-                publisher.addItems(completionItems)
 
                 try {
                     base.requireAutoComplete(content, position, publisher, extraArguments)
@@ -148,6 +156,89 @@ class LspLanguage(
         } catch (e: CompletionCancelledException) {
             throw e
         } catch (_: Exception) {
+        }
+    }
+
+    private fun buildCompletionItem(
+        item: CompletionItem,
+        prefix: String,
+        prefixLower: String
+    ): LspCompletionItem? {
+        val filterText = item.filterText ?: item.label
+        if (prefix.isNotEmpty() && !filterText.contains(prefixLower, ignoreCase = true)) {
+            return null
+        }
+
+        val snippetFormat = item.insertTextFormat == InsertTextFormat.Snippet
+
+        var newText = item.insertText ?: item.label
+        var replaceStartLine: Int? = null
+        var replaceStartColumn: Int? = null
+        var replaceEndLine: Int? = null
+        var replaceEndColumn: Int? = null
+
+        item.textEdit?.fold(
+            leftFn = { edit ->
+                newText = edit.newText
+                replaceStartLine = edit.range.start.line.toInt()
+                replaceStartColumn = edit.range.start.character.toInt()
+                replaceEndLine = edit.range.end.line.toInt()
+                replaceEndColumn = edit.range.end.character.toInt()
+            },
+            rightFn = { edit ->
+                // The client replaces the typed prefix, so the replace range applies.
+                newText = edit.newText
+                replaceStartLine = edit.replace.start.line.toInt()
+                replaceStartColumn = edit.replace.start.character.toInt()
+                replaceEndLine = edit.replace.end.line.toInt()
+                replaceEndColumn = edit.replace.end.character.toInt()
+            }
+        )
+
+        val parsedSnippet: CodeSnippet? = if (snippetFormat) {
+            try {
+                CodeSnippetParser.parse(newText).takeIf { it.checkContent() }
+            } catch (_: Exception) {
+                null
+            }
+        } else null
+
+        val commitText = when {
+            parsedSnippet != null -> parsedSnippet.toInsertTextForLsp()
+            snippetFormat -> stripSnippet(newText)
+            else -> newText
+        }
+
+        return LspCompletionItem(
+            label = item.label,
+            desc = item.detail ?: "",
+            prefixLength = prefix.length,
+            commitText = commitText,
+            replaceStartLine = replaceStartLine,
+            replaceStartColumn = replaceStartColumn,
+            replaceEndLine = replaceEndLine,
+            replaceEndColumn = replaceEndColumn,
+            snippet = parsedSnippet,
+        ).apply {
+            this.sortText = item.sortText ?: item.label
+            this.filterText = filterText
+            this.kind = mapKind(item.kind)
+            this.preselect = item.preselect == true
+        }
+    }
+
+    private fun lspCompletionComparator(
+        filtered: List<SoraCompletionItem>
+    ): Comparator<SoraCompletionItem> {
+        val baseComparator = createCompletionItemComparator(filtered)
+        return Comparator { a, b ->
+            val aPreselect = (a as? LspCompletionItem)?.preselect == true
+            val bPreselect = (b as? LspCompletionItem)?.preselect == true
+            when {
+                aPreselect && !bPreselect -> -1
+                !aPreselect && bPreselect -> 1
+                else -> baseComparator.compare(a, b)
+            }
         }
     }
 
@@ -192,4 +283,74 @@ class LspLanguage(
         scope.cancel()
         base.destroy()
     }
+}
+
+private fun stripSnippet(snippet: String): String {
+    val out = StringBuilder(snippet.length)
+    var i = 0
+    while (i < snippet.length) {
+        when (val c = snippet[i]) {
+            '\\' if i + 1 < snippet.length -> {
+                out.append(snippet[i + 1]); i += 2
+            }
+
+            '$' if i + 1 < snippet.length -> {
+                val next = snippet[i + 1]
+                when {
+                    next == '$' -> {
+                        out.append('$'); i += 2
+                    }
+
+                    next == '{' -> {
+                        val close = snippet.findMatchingBrace(i + 1)
+                        if (close != -1) {
+                            val inner = snippet.substring(i + 2, close)
+                            val colon = inner.indexOf(':')
+                            val pipe = inner.indexOf('|')
+                            when {
+                                colon != -1 -> out.append(stripSnippet(inner.substring(colon + 1)))
+                                pipe != -1 -> out.append(inner.substring(pipe + 1).substringBefore('|'))
+                            }
+                            i = close + 1
+                        } else {
+                            out.append(c); i++
+                        }
+                    }
+
+                    next.isDigit() -> {
+                        var j = i + 1
+                        while (j < snippet.length && snippet[j].isDigit()) j++
+                        i = j
+                    }
+
+                    else -> {
+                        out.append(c); i++
+                    }
+                }
+            }
+
+            else -> {
+                out.append(c); i++
+            }
+        }
+    }
+    return out.toString()
+}
+
+private fun String.findMatchingBrace(openIndex: Int): Int {
+    var depth = 1
+    var i = openIndex + 1
+    while (i < length) {
+        when (this[i]) {
+            '{' -> depth++
+            '}' -> {
+                depth--
+                if (depth == 0) return i
+            }
+
+            '\\' -> i++
+        }
+        i++
+    }
+    return -1
 }

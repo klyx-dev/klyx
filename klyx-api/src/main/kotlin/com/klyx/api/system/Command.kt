@@ -835,5 +835,9 @@ internal suspend fun resolveProgram(program: String): ResolvedProgram {
         }
     }
 
-    return ResolvedProgram.PRoot(program)
+    // Final fallback. When the terminal rootfs is installed, assume the program lives inside it
+    // and execute via PRoot. Otherwise the terminal isn't installed. fabricating a PRoot
+    // execution would only fail with a confusing proot binding error, so fall back to a direct
+    // exec attempt and let the failure surface as a clear "command not found" (IOException).
+    return if (rootFs == null) ResolvedProgram.Direct(program) else ResolvedProgram.PRoot(program)
 }

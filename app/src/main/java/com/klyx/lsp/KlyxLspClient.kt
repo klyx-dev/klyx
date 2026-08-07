@@ -59,7 +59,8 @@ internal class DiagnosticsAggregator {
 internal class KlyxLspClient(
     private val scope: CoroutineScope,
     private val serverId: String,
-    private val aggregator: DiagnosticsAggregator
+    private val aggregator: DiagnosticsAggregator,
+    private val activityStore: LspActivityStore
 ) : LanguageClient {
 
     private val registeredUris = ConcurrentHashMap.newKeySet<String>()
@@ -81,12 +82,14 @@ internal class KlyxLspClient(
     }
 
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
-        println(params)
-        val uri = params.uri
+        publish(params.uri, params.diagnostics)
+    }
+
+    private suspend fun publish(uri: String, diagnostics: List<Diagnostic>) {
         val editorState = aggregator.editorFor(uri) ?: return
         val text = editorState.text
 
-        val regions = params.diagnostics.mapNotNull { diagnostic ->
+        val regions = diagnostics.mapNotNull { diagnostic ->
             runCatching {
                 val severity = when (diagnostic.severity) {
                     DiagnosticSeverity.Error -> DiagnosticRegion.SEVERITY_ERROR
@@ -119,6 +122,7 @@ internal class KlyxLspClient(
     }
 
     override suspend fun showMessage(params: ShowMessageParams) {
+        activityStore.log(serverId, params.message, params.type.toSeverity())
         Log.i("LspClient", "Show Message: ${params.message}")
     }
 
@@ -128,7 +132,12 @@ internal class KlyxLspClient(
     }
 
     override suspend fun logMessage(params: LogMessageParams) {
+        activityStore.log(serverId, params.message, params.type.toSeverity())
         Log.i("LspClient", "Log Message: ${params.message}")
+    }
+
+    override suspend fun notifyProgress(params: ProgressParams) {
+        activityStore.progress(serverId, params)
     }
 
     override suspend fun telemetryEvent(params: OneOf<LSPObject, LSPArray>) {
@@ -156,7 +165,7 @@ internal class KlyxLspClient(
     }
 
     override suspend fun createProgress(params: WorkDoneProgressCreateParams) {
-        // No-op
+        //activityStore.log(serverId, "Progress started: ${params.token}", LspActivityStore.Severity.Debug)
     }
 
     override suspend fun showDocument(params: ShowDocumentParams): ShowDocumentResult {
@@ -186,4 +195,11 @@ internal class KlyxLspClient(
     override suspend fun refreshSemanticTokens() {
         // No-op
     }
+}
+
+private fun MessageType.toSeverity() = when (this) {
+    MessageType.Error -> LspActivityStore.Severity.Error
+    MessageType.Warning -> LspActivityStore.Severity.Warning
+    MessageType.Debug -> LspActivityStore.Severity.Debug
+    else -> LspActivityStore.Severity.Info
 }

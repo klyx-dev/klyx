@@ -103,6 +103,11 @@ inline fun <reified T : PluginService> plugin() = PluginServiceDelegate(T::class
 /**
  * A delegate for accessing a [PluginRuntimeService] associated with a [KlyxPlugin].
  *
+ * Runtime services are provided by the klyx only after a plugin is constructed and
+ * registered. **Plugin constructors must not access runtime services**. resolve them
+ * lazily (e.g. `val context: PluginContext by runtime()`) or inside
+ * [KlyxPlugin.onLoad] / [KlyxPlugin.onStart].
+ *
  * @param T The type of [PluginRuntimeService] to retrieve.
  */
 inline fun <reified T : PluginRuntimeService> runtime() = PluginRuntimeDelegate(T::class)
@@ -133,7 +138,7 @@ class PluginServiceDelegate<T : PluginService>(
     override fun getValue(thisRef: Any?, property: KProperty<*>): T {
         if (thisRef is KlyxPlugin && service is Logger && clazz == Logger::class) {
             @Suppress("UNCHECKED_CAST")
-            return PluginLogger(service as Logger, thisRef.info.id) as T
+            return PluginLogger(service as Logger) { thisRef.info.id } as T
         }
         return service
     }

@@ -31,6 +31,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.IOException
+import java.lang.reflect.InvocationTargetException
 import java.util.IdentityHashMap
 import java.util.zip.ZipFile
 import kotlin.reflect.KClass
@@ -50,7 +51,10 @@ class PluginManager(
     private val localBundleSources = HashMap<String, String>()
 
     val loadedPlugins get() = synchronized(runtimes) { runtimes.values.map(PluginRuntime::info) }
-    val crashedPlugins get() = synchronized(runtimes) { runtimes.values.filter { it.state == PluginState.CRASHED }.map { it.info.id } }
+    val crashedPlugins
+        get() = synchronized(runtimes) {
+            runtimes.values.filter { it.state == PluginState.CRASHED }.map { it.info.id }
+        }
 
     init {
         readCrashedPluginIdsFromCrashFile()
@@ -78,7 +82,8 @@ class PluginManager(
                     Log.w("PluginManager", "Plugin '$pluginId' will be disabled due to prior crash")
                 }
             }
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 
     fun interface PluginLoadProgressListener {
@@ -218,7 +223,16 @@ class PluginManager(
         val cls = loader.loadClass(desc.entryClass)
         verifyDescriptorIntegrity(cls, desc)
 
-        val instance = cls.getConstructor().newInstance()
+        val instance = try {
+            cls.getConstructor().newInstance()
+        } catch (e: InvocationTargetException) {
+            throw PluginLoadException(
+                "Plugin '${desc.id}' failed to construct: ${e.cause?.message ?: "unknown error"}. " +
+                        "Plugin constructors must not access runtime services " +
+                        "(info, context, scope); use onLoad()/onStart() instead.",
+                e.cause ?: e
+            )
+        }
         return instance as? KlyxPlugin
             ?: throw PluginLoadException("Class ${desc.entryClass} does not implement KlyxPlugin")
     }

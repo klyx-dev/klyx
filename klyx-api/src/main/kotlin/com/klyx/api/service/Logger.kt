@@ -98,11 +98,18 @@ interface Logger : PluginService {
 
 /**
  * A wrapper for [Logger] that automatically associates all logs with a specific plugin.
+ *
+ * The plugin id is resolved lazily via [pluginIdProvider], so constructing a [PluginLogger]
+ * never requires the plugin's runtime to be registered yet. This allows plugins to obtain a
+ * runtime-bound logger (e.g. via the `plugin()` delegate) during construction without hitting
+ * the klyx's runtime registry.
  */
 class PluginLogger(
     private val delegate: Logger,
-    private val pluginId: String
+    private val pluginIdProvider: () -> String
 ) : Logger by delegate {
+
+    constructor(delegate: Logger, pluginId: String) : this(delegate, { pluginId })
 
     override fun log(
         level: LogLevel,
@@ -111,7 +118,7 @@ class PluginLogger(
         throwable: Throwable?,
         sourcePluginId: String?
     ) {
-        delegate.log(level, tag, message, throwable, sourcePluginId ?: pluginId)
+        delegate.log(level, tag, message, throwable, sourcePluginId ?: pluginIdProvider())
     }
 }
 

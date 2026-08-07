@@ -13,6 +13,12 @@ import kotlin.coroutines.CoroutineContext
  * The base interface for all Klyx plugins.
  *
  * Plugins are the core components of the Klyx system, allowing for modular functionality.
+ *
+ * ### Constructor contract
+ * Plugin constructors must not access runtime services ([info], [pluginContext], [runtime]
+ * delegates). These are provided by the klyx only after construction and registration, so
+ * resolving them in the constructor throws [IllegalStateException]. Access them lazily (`val x by lazy { ... }`)
+ * or inside [onLoad] / [onStart].
  */
 @JvmDefaultWithoutCompatibility
 interface KlyxPlugin : LogContext {

@@ -150,6 +150,7 @@ import com.klyx.data.runner.FileRunnerContextImpl
 import com.klyx.data.runner.TerminalCommandRunner
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
+import com.klyx.lsp.LspActivityStore
 import com.klyx.lsp.LspManager
 import com.klyx.presentation.components.AnimatedTab
 import com.klyx.presentation.components.CloseProject
@@ -160,6 +161,7 @@ import com.klyx.presentation.components.Delete
 import com.klyx.presentation.components.ExpressiveMenuItem
 import com.klyx.presentation.components.FileActionBottomSheet
 import com.klyx.presentation.components.FileSystemImage
+import com.klyx.presentation.components.LspStatusBar
 import com.klyx.presentation.components.NewDirectory
 import com.klyx.presentation.components.NewFile
 import com.klyx.presentation.components.OpenWith
@@ -1429,6 +1431,7 @@ private fun TextFileEditor(
     }
 
     val lspManager: LspManager = koinInject()
+    val lspActivityStore: LspActivityStore = koinInject()
     val scheme = remember(isDarkMode, colorScheme, selectionColors) {
         KlyxEditorColorScheme(isDarkMode, colorScheme, selectionColors)
     }
@@ -1513,6 +1516,8 @@ private fun TextFileEditor(
                     }
                 }
             }
+
+            LspStatusBar(lspActivityStore)
 
             AnimatedVisibility(
                 visible = isAccessoryBarVisible,
@@ -1690,4 +1695,3 @@ private fun AccessoryKeyButton(
         }
     }
 }
-

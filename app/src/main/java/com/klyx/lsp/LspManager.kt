@@ -11,6 +11,7 @@ import com.klyx.api.lsp.LanguageServerRegistry
 import com.klyx.api.lsp.languageId
 import com.klyx.core.koin
 import com.klyx.data.preferences.SettingsRepository
+import com.klyx.lsp.capabilities.ServerCapabilities
 import com.klyx.lsp.server.LanguageServer
 import com.klyx.lsp.server.ResponseErrorException
 import com.klyx.lsp.types.OneOf
@@ -20,6 +21,7 @@ import io.github.rosemoe.sora.compose.content
 import io.github.rosemoe.sora.lang.Language
 import io.github.rosemoe.sora.lang.styling.inlayHint.InlayHintsContainer
 import io.github.rosemoe.sora.lang.styling.inlayHint.TextInlayHint
+import io.github.rosemoe.sora.text.TextRange
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,13 +48,17 @@ import kotlin.time.Duration.Companion.milliseconds
 
 @OptIn(InternalKlyxApi::class, FlowPreview::class)
 @Single
-class LspManager(private val settingsRepository: SettingsRepository) {
+class LspManager(
+    private val settingsRepository: SettingsRepository,
+    private val activityStore: LspActivityStore
+) {
 
     private data class ServerKey(val projectUri: String?, val languageId: String, val providerId: String)
 
     private class ServerInstance(
         val server: LanguageServer,
         val client: KlyxLspClient,
+        val capabilities: ServerCapabilities,
         @Volatile var isDead: Boolean = false
     )
 
@@ -127,6 +133,7 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                     instances.map { (key, instance) ->
                         async {
                             instance.client.registerEditor(documentUri, editorState)
+                            if (!instance.capabilities.supportsDidOpenClose()) return@async
                             try {
                                 withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
                                     instance.server.textDocument.didOpen(
@@ -164,6 +171,7 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                                     keysNow.map { key ->
                                         async {
                                             val instance = activeServers[key]?.takeIf { !it.isDead } ?: return@async
+                                            if (!instance.capabilities.supportsDidChange()) return@async
                                             try {
                                                 withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
                                                     println("didChange")
@@ -221,16 +229,24 @@ class LspManager(private val settingsRepository: SettingsRepository) {
     ): ServerInstance {
         return activeServers[key]?.takeIf { !it.isDead } ?: mutexFor(key).withLock {
             activeServers[key]?.takeIf { !it.isDead } ?: run {
-                val client = KlyxLspClient(scope, key.toString(), diagnosticsAggregator)
+                val client = KlyxLspClient(scope, key.toString(), diagnosticsAggregator, activityStore)
                 val server = provider.startServer(client)
 
                 val initParams = createInitializeParams(projectUri?.toFile())
 
-                server.initialize(initParams)
+                val initializeResult = server.initialize(initParams)
                 server.initialized(InitializedParams)
 
-                val newInstance = ServerInstance(server, client)
+                val newInstance = ServerInstance(server, client, initializeResult.capabilities)
                 activeServers[key] = newInstance
+                activityStore.registerServer(
+                    id = key.toString(),
+                    languageId = key.languageId,
+                    workspace = key.projectUri,
+                    info = initializeResult.serverInfo,
+                    capabilities = initializeResult.capabilities
+                )
+                activityStore.log(key.providerId, "Connected ${initializeResult.serverInfo?.name ?: "language server"}")
 
                 // Re-open all editors that are already registered for this exact
                 // (project, language, provider) key.
@@ -240,6 +256,7 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                     val state = editorStates[tabId] ?: return@forEach
 
                     client.registerEditor(uri, state)
+                    if (!newInstance.capabilities.supportsDidOpenClose()) return@forEach
                     scope.launch(Dispatchers.IO) {
                         try {
                             withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
@@ -276,6 +293,45 @@ class LspManager(private val settingsRepository: SettingsRepository) {
         return keys.mapNotNull { activeServers[it]?.takeIf { instance -> !instance.isDead }?.server }
     }
 
+    /** Returns only servers which explicitly advertised [feature] during initialize. */
+    internal fun getServersSupporting(tabId: String, feature: LspFeature): List<LanguageServer> {
+        val keys = editorServerKeys[tabId] ?: return emptyList()
+        return keys.mapNotNull { key ->
+            activeServers[key]?.takeIf { !it.isDead && feature.isSupportedBy(it.capabilities) }?.server
+        }
+    }
+
+    /**
+     * Formats through the first provider advertising the requested operation.
+     * Formatting is intentionally not merged: overlapping edits from independent
+     * servers are ambiguous and would corrupt the document.
+     */
+    internal suspend fun format(tabId: String, uri: String, range: TextRange?): List<TextEdit>? {
+        val feature = if (range == null) LspFeature.Formatting else LspFeature.RangeFormatting
+        val server = getServersSupporting(tabId, feature).firstOrNull() ?: return null
+        return withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
+            if (range == null) {
+                server.textDocument.formatting(
+                    DocumentFormattingParams(
+                        TextDocumentIdentifier(uri),
+                        FormattingOptions(tabSize = 4, insertSpaces = true)
+                    )
+                )
+            } else {
+                server.textDocument.rangeFormatting(
+                    DocumentRangeFormattingParams(
+                        TextDocumentIdentifier(uri),
+                        Range(
+                            Position(range.start.line, range.start.column),
+                            Position(range.end.line, range.end.column)
+                        ),
+                        FormattingOptions(tabSize = 4, insertSpaces = true)
+                    )
+                )
+            }
+        }
+    }
+
     private fun handleServerError(key: ServerKey, instance: ServerInstance, e: Exception) {
         when (e) {
             is ResponseErrorException -> {
@@ -283,6 +339,11 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                     ErrorCodes.MethodNotFound, ErrorCodes.RequestCancelled, ErrorCodes.ContentModified -> {}
                     else -> {
                         Log.w("LspManager", "LSP ${e.message}")
+                        activityStore.log(
+                            key.providerId,
+                            e.message,
+                            LspActivityStore.Severity.Warning
+                        )
                     }
                 }
                 return
@@ -292,9 +353,11 @@ class LspManager(private val settingsRepository: SettingsRepository) {
         }
 
         e.printStackTrace()
+        activityStore.log(key.providerId, e.message ?: "Language server disconnected", LspActivityStore.Severity.Error)
         instance.isDead = true
         instance.client.clearContributedDiagnostics()
         activeServers.remove(key, instance)
+        activityStore.unregisterServer(key.toString())
     }
 
     private fun getOrCreateInlayHintFlow(tabId: String, editorState: CodeEditorState): MutableSharedFlow<Int> {
@@ -337,19 +400,22 @@ class LspManager(private val settingsRepository: SettingsRepository) {
         // Query every live server for this tab in parallel; a hung/slow server is
         // bounded by a timeout and can't hold up hints from the others.
         val results = supervisorScope {
-            keys.mapNotNull { key -> key to (activeServers[key]?.takeIf { !it.isDead } ?: return@mapNotNull null) }
-                .map { (key, instance) ->
-                    async(Dispatchers.IO) {
-                        try {
-                            withTimeoutOrNull(INLAY_HINT_TIMEOUT_MS.milliseconds) {
-                                instance.server.textDocument.inlayHint(params)
-                            }
-                        } catch (e: Exception) {
-                            handleServerError(key, instance, e)
-                            null
+            keys.mapNotNull { key ->
+                key to (activeServers[key]?.takeIf {
+                    !it.isDead && LspFeature.InlayHints.isSupportedBy(it.capabilities)
+                } ?: return@mapNotNull null)
+            }.map { (key, instance) ->
+                async(Dispatchers.IO) {
+                    try {
+                        withTimeoutOrNull(INLAY_HINT_TIMEOUT_MS.milliseconds) {
+                            instance.server.textDocument.inlayHint(params)
                         }
+                    } catch (e: Exception) {
+                        handleServerError(key, instance, e)
+                        null
                     }
-                }.awaitAll()
+                }
+            }.awaitAll()
         }
 
         val hints = results
@@ -389,7 +455,23 @@ class LspManager(private val settingsRepository: SettingsRepository) {
         cachedInlayHints.remove(tabId)
 
         if (uri == null) return
-        keys.forEach { key -> activeServers[key]?.takeIf { !it.isDead }?.client?.unregisterEditor(uri) }
+        keys.forEach { key ->
+            val instance = activeServers[key]?.takeIf { !it.isDead } ?: return@forEach
+            instance.client.unregisterEditor(uri)
+            if (instance.capabilities.supportsDidOpenClose()) {
+                scope.launch(Dispatchers.IO) {
+                    runCatching {
+                        withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
+                            instance.server.textDocument.didClose(
+                                DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
+                            )
+                        }
+                    }.onFailure { error ->
+                        (error as? Exception)?.let { handleServerError(key, instance, it) }
+                    }
+                }
+            }
+        }
         diagnosticsAggregator.removeEditor(uri)
     }
 
@@ -402,6 +484,7 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                 keys.map { key ->
                     async {
                         val instance = activeServers[key]?.takeIf { !it.isDead } ?: return@async
+                        if (!instance.capabilities.supportsDidSave()) return@async
                         try {
                             withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
                                 instance.server.textDocument.didSave(
@@ -429,5 +512,6 @@ class LspManager(private val settingsRepository: SettingsRepository) {
                 }
             }
         }
+        activeServers.keys.forEach { activityStore.unregisterServer(it.toString()) }
     }
 }

@@ -35,6 +35,7 @@ fun processEnv(): Map<String, String> {
         "HOME" to "/root",
         "ROOTFS" to Paths.rootFs.absolutePath,
         "PATH" to "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "BASH_ENV" to "/root/.bashrc",
     )
 
     env += listOf(
@@ -97,7 +98,7 @@ fun terminalArgs(showMotd: Boolean = true, command: String? = null) = listOf(
     "/bin/sh", "-c",
     when {
         command != null -> command
-        showMotd -> "cat /etc/motd; /bin/bash --login"
-        else -> "/bin/bash --login"
+        showMotd -> "cat /etc/motd; /bin/bash --login -c 'printf \"%s\\n\" \". /root/.bashrc 2>/dev/null\" \". /etc/profile.d/klyx.sh 2>/dev/null\" > /tmp/klyx-rc; exec /bin/bash --rcfile /tmp/klyx-rc'"
+        else -> "/bin/bash --login -c 'printf \"%s\\n\" \". /root/.bashrc 2>/dev/null\" \". /etc/profile.d/klyx.sh 2>/dev/null\" > /tmp/klyx-rc; exec /bin/bash --rcfile /tmp/klyx-rc'"
     }
 )
