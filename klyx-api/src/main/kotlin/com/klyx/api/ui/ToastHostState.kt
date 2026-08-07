@@ -1,8 +1,6 @@
 package com.klyx.api.ui
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ErrorOutline
-import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.compositionLocalWithComputedDefaultOf
 import androidx.compose.runtime.getValue

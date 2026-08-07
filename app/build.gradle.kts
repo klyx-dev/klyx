@@ -175,11 +175,9 @@ dependencies {
 
     implementation(libs.bundles.navigation3)
     implementation(libs.androidx.ui.text.google.fonts)
-    implementation(libs.material)
 
     // Icons
     implementation(libs.androidx.material.icons.core)
-    implementation(libs.androidx.material.icons.extended)
 
     implementation(platform(libs.koin.bom))
     implementation(libs.bundles.koin)
@@ -200,7 +198,11 @@ dependencies {
     implementation(libs.apache.commons.compress)
     implementation(libs.xz)
 
-    implementation(libs.smooth.corner.rect.android.compose)
+    implementation(libs.smooth.corner.rect.android.compose) {
+        exclude(group = "androidx.compose.material", module = "material")
+        exclude(group = "com.google.android.material", module = "material")
+        exclude(group = "androidx.appcompat", module = "appcompat")
+    }
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.ktor3)

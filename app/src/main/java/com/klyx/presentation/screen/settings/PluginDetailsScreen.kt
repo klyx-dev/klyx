@@ -26,17 +26,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.AlternateEmail
-import androidx.compose.material.icons.rounded.BugReport
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Mail
-import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -95,6 +87,14 @@ import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.api.util.openUrl
+import com.klyx.app.icons.AlternateEmail
+import com.klyx.app.icons.BugReport
+import com.klyx.app.icons.ChevronRight
+import com.klyx.app.icons.Code
+import com.klyx.app.icons.Download
+import com.klyx.app.icons.Link
+import com.klyx.app.icons.Mail
+import com.klyx.app.icons.Public
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.UiEvent
@@ -395,7 +395,11 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                                 }
 
                                 else -> {
-                                    Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Icon(
+                                        Icons.Rounded.Download,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         if (installing) "Another task running" else "Install",

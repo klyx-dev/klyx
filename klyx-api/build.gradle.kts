@@ -49,7 +49,7 @@ dependencies {
     api(libs.androidx.compose.material3)
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.material.icons.core)
     implementation(libs.androidx.ui.text.google.fonts)
 
     implementation(platform(libs.koin.bom))
@@ -57,7 +57,7 @@ dependencies {
 
     api(libs.kotlinx.serialization.json)
     api(libs.kotlinx.coroutines.core)
-    api(libs.kotlinx.collections.immutable)
+    implementation(libs.kotlinx.collections.immutable)
     api(libs.androidx.documentfile)
     api(libs.androidx.lifecycle.runtime.ktx)
 

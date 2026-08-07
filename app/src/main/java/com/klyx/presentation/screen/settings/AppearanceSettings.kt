@@ -7,10 +7,6 @@ import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.rounded.Animation
-import androidx.compose.material.icons.rounded.Contrast
-import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -29,12 +25,16 @@ import androidx.compose.ui.unit.dp
 import com.klyx.R
 import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.app.icons.Animation
+import com.klyx.app.icons.Contrast
+import com.klyx.app.icons.Fullscreen
+import com.klyx.app.icons.LightMode
 import com.klyx.data.preferences.updateAppearanceSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
-import com.klyx.api.ui.theme.LocalIsDarkMode
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
 

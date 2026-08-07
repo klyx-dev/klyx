@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -23,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.app.icons.VisibilityOff
 import com.klyx.data.preferences.updateFileTreeSettings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SettingsSubsection

@@ -1,15 +1,15 @@
 package com.klyx.presentation.model
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Code
-import androidx.compose.material.icons.rounded.DeveloperMode
-import androidx.compose.material.icons.rounded.Extension
-import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Memory
-import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.klyx.R
+import com.klyx.app.icons.Code
+import com.klyx.app.icons.DeveloperMode
+import com.klyx.app.icons.Extension
+import com.klyx.app.icons.Folder
+import com.klyx.app.icons.Memory
+import com.klyx.app.icons.Palette
 
 sealed class IconSource {
     data class Vector(val imageVector: ImageVector) : IconSource()

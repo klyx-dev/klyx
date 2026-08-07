@@ -25,9 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Android
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -69,13 +66,16 @@ import coil3.request.crossfade
 import coil3.size.Size
 import coil3.toBitmap
 import com.klyx.R
+import com.klyx.api.util.openUrl
+import com.klyx.app.icons.Android
+import com.klyx.app.icons.Palette
+import com.klyx.app.icons.Public
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.components.SmartImage
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.ui.util.ImageVectorOrPainter
 import com.klyx.ui.util.asImageVectorOrPainter
-import com.klyx.api.util.openUrl
 import kotlinx.collections.immutable.persistentListOf
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 

@@ -1,5 +1,7 @@
 package com.klyx.presentation.screen.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,11 +21,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.BugReport
-import androidx.compose.material.icons.rounded.DeleteSweep
-import androidx.compose.material.icons.rounded.FileDownload
-import androidx.compose.material.icons.rounded.FileUpload
-import androidx.compose.material.icons.rounded.Unarchive
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularWavyProgressIndicator
@@ -54,18 +51,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import com.klyx.BuildConfig
 import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.platform.currentArchitecture
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.app.icons.BugReport
+import com.klyx.app.icons.DeleteSweep
+import com.klyx.app.icons.FileDownload
+import com.klyx.app.icons.FileUpload
+import com.klyx.app.icons.Unarchive
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.preferences.settingsJson
-import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.components.dialogs.TerminalWipeConfirmationDialog
 import com.klyx.presentation.navigation.LocalNavigator
+import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.screen.settings.components.SettingsItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.terminal.InstallProgressListener

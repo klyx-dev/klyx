@@ -19,6 +19,8 @@
 
 -keep class io.github.treesitter.ktreesitter.** { *; }
 
+-keep class androidx.compose.** { *; }
+
 -keepclasseswithmembernames,includedescriptorclasses class * {
     native <methods>;
 }

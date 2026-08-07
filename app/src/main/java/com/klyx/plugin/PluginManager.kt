@@ -23,7 +23,6 @@ import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.koin
 import com.klyx.data.file.archive.extractGzipTar
-import dalvik.system.PathClassLoader
 import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -210,7 +209,7 @@ class PluginManager(
 
         val nativeLibDir = extractNativeLibs(apkFile)
 
-        val loader = PathClassLoader(
+        val loader = PluginClassLoader(
             apkPath,
             nativeLibDir?.absolutePath,
             app.application.classLoader

@@ -17,8 +17,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BugReport
-import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -38,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.klyx.CrashHandler
+import com.klyx.app.icons.BugReport
+import com.klyx.app.icons.ContentCopy
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -41,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.app.icons.DeleteForever
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)

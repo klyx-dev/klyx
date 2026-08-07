@@ -17,9 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Article
-import androidx.compose.material.icons.automirrored.rounded.TextSnippet
-import androidx.compose.material.icons.rounded.AttachFile
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -43,6 +40,9 @@ import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.klyx.R
 import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.app.icons.Article
+import com.klyx.app.icons.AttachFile
+import com.klyx.app.icons.TextSnippet
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable

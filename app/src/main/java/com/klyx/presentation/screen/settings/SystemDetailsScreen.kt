@@ -15,8 +15,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Memory
-import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +41,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
+import com.klyx.app.icons.Memory
+import com.klyx.app.icons.Storage
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.navigation.LocalNavigator

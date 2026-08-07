@@ -43,12 +43,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.FolderOpen
-import androidx.compose.material.icons.rounded.FolderShared
-import androidx.compose.material.icons.rounded.FolderSpecial
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DrawerState
@@ -109,6 +104,11 @@ import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.terminal.home
 import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.app.icons.Cloud
+import com.klyx.app.icons.FolderOpen
+import com.klyx.app.icons.FolderShared
+import com.klyx.app.icons.FolderSpecial
+import com.klyx.app.icons.Smartphone
 import com.klyx.data.file.resolveName
 import com.klyx.data.fs.SftpFileSystem
 import com.klyx.presentation.viewmodel.FileTreeViewModel

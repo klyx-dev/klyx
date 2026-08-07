@@ -22,7 +22,6 @@
     <application
         android:name=".KlyxApplication"
         android:allowBackup="true"
-        android:extractNativeLibs="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"

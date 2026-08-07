@@ -28,11 +28,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.Update
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,6 +64,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.api.plugin.PluginInfo
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.showFailureToast
+import com.klyx.app.icons.Archive
+import com.klyx.app.icons.Download
+import com.klyx.app.icons.Update
 import com.klyx.event.UiEvent
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.ExpressiveMenuItem

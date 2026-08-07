@@ -44,12 +44,7 @@ import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Redo
-import androidx.compose.material.icons.automirrored.rounded.Undo
-import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.CloseFullscreen
-import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MoreVert
@@ -138,6 +133,11 @@ import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.api.util.share
 import com.klyx.api.util.shareText
 import com.klyx.api.util.thenIf
+import com.klyx.app.icons.CloseFullscreen
+import com.klyx.app.icons.DeleteSweep
+import com.klyx.app.icons.Redo
+import com.klyx.app.icons.Save
+import com.klyx.app.icons.Undo
 import com.klyx.core.globalOf
 import com.klyx.data.editor.EditorStateRegistry
 import com.klyx.data.editor.KlyxEditorColorScheme
@@ -236,9 +236,9 @@ fun HomeScreen(
 
     val runnableTab = activeTab as? WorkspaceTab.TextFile
     val canRun = runnableTab != null &&
-        fileRunnerRegistry.supports(
-            FileRunRequest(runnableTab.file, runnableTab.file.uri, runnableTab.projectUri, runnableTab.id)
-        )
+            fileRunnerRegistry.supports(
+                FileRunRequest(runnableTab.file, runnableTab.file.uri, runnableTab.projectUri, runnableTab.id)
+            )
 
     val onRunFile: (() -> Unit)? = if (runnableTab != null && canRun) {
         {

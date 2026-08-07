@@ -23,8 +23,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Clear
-import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -58,6 +56,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.blankj.utilcode.util.ClipboardUtils
 import com.klyx.api.data.log.LogLevel
 import com.klyx.api.ui.LocalToastHostState
+import com.klyx.app.icons.ContentCopy
+import com.klyx.app.icons.DeleteSweep
 import com.klyx.presentation.components.LogEntryItem
 import com.klyx.presentation.components.toColor
 import com.klyx.presentation.navigation.LocalNavigator
