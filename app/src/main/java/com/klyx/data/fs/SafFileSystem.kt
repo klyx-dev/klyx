@@ -29,6 +29,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
+import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -252,8 +253,10 @@ class SafFileSystem(
         } ?: -1
     }
 
-    override fun outputStream(uri: Uri, mode: String) =
-        checkNotNull(content.openOutputStream(uri, mode)) { "the provider recently crashed." }
+    override fun outputStream(uri: Uri, mode: String): OutputStream {
+        val safeMode = if (mode == "w" || mode == "wt") "wt" else mode
+        return checkNotNull(content.openOutputStream(uri, safeMode)) { "the provider recently crashed." }
+    }
 
     override suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
         DocumentsContract.deleteDocument(content, uri)
