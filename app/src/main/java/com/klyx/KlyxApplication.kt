@@ -235,15 +235,23 @@ class KlyxApplication : Application() {
     private class MutableFileRunnerRegistry : FileRunnerRegistry {
 
         private val _runners = mutableStateListOf<FileRunner>()
+        private val _sortedRunners = mutableStateListOf<FileRunner>()
         private val _owners = mutableMapOf<String, String>()
+
+        private fun updateSortedRunners() {
+            _sortedRunners.clear()
+            _sortedRunners.addAll(_runners.sortedByDescending { it.priority })
+        }
 
         context(plugin: KlyxPlugin)
         override fun register(runner: FileRunner): FileRunnerRegistration {
             _runners.removeAll { it.id == runner.id }
             _runners += runner
+            updateSortedRunners()
             _owners[runner.id] = plugin.info.id
             return FileRunnerRegistration {
                 _runners.removeAll { it.id == runner.id }
+                updateSortedRunners()
                 _owners.remove(runner.id)
             }
         }
@@ -255,14 +263,17 @@ class KlyxApplication : Application() {
         fun registerInternal(runner: FileRunner): FileRunnerRegistration {
             _runners.removeAll { it.id == runner.id }
             _runners += runner
+            updateSortedRunners()
             return FileRunnerRegistration {
                 _runners.removeAll { it.id == runner.id }
+                updateSortedRunners()
                 _owners.remove(runner.id)
             }
         }
 
         override fun unregister(id: String) {
             _runners.removeAll { it.id == id }
+            updateSortedRunners()
             _owners.remove(id)
         }
 
@@ -273,7 +284,7 @@ class KlyxApplication : Application() {
             runnerFor(request) != null
 
         override fun runners(): List<FileRunner> =
-            _runners.sortedByDescending { it.priority }
+            _sortedRunners
 
         @InternalKlyxApi
         override fun unregisterAll(pluginId: String) {
@@ -285,20 +296,31 @@ class KlyxApplication : Application() {
     private class MutableFileOpenerRegistry : FileOpenerRegistry {
 
         private val _openers = mutableStateListOf<FileOpener>()
+        private val _sortedOpeners = mutableStateListOf<FileOpener>()
+
+        private fun updateSortedOpeners() {
+            _sortedOpeners.clear()
+            _sortedOpeners.addAll(_openers.sortedByDescending { it.priority })
+        }
 
         context(plugin: KlyxPlugin)
         override fun register(opener: FileOpener): FileOpenerRegistration {
             _openers.removeAll { it.id == opener.id }
             _openers += opener
-            return FileOpenerRegistration { _openers.removeAll { it.id == opener.id } }
+            updateSortedOpeners()
+            return FileOpenerRegistration {
+                _openers.removeAll { it.id == opener.id }
+                updateSortedOpeners()
+            }
         }
 
         override fun unregister(id: String) {
             _openers.removeAll { it.id == id }
+            updateSortedOpeners()
         }
 
         override fun openers(): List<FileOpener> =
-            _openers.sortedByDescending { it.priority }
+            _sortedOpeners
 
         override suspend fun open(request: FileOpenRequest): WorkspaceTab? {
             for (opener in openers()) {
