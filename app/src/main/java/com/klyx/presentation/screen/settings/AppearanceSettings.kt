@@ -24,6 +24,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.klyx.R
 import com.klyx.api.data.preferences.AppTheme
+import com.klyx.api.data.preferences.AppearanceSettings
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.app.icons.Animation
@@ -36,6 +37,7 @@ import com.klyx.presentation.screen.settings.components.SelectorItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,91 +85,107 @@ fun AppearanceSettings() {
             )
         ) {
             item {
-                SettingsSubsection(title = "Application Theme") {
-                    SelectorItem(
-                        label = "App Theme",
-                        description = "Switch between light, dark, or follow system appearance.",
-                        options = AppTheme.entries.toImmutableList(),
-                        selected = settings.theme,
-                        optionLabel = AppTheme::displayName,
-                        onSelectionChanged = {
-                            scope.launch {
-                                updateAppearanceSettings { copy(theme = it) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Outlined.LightMode,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-
-                    SwitchSettingItem(
-                        title = "AMOLED Dark Mode",
-                        subtitle = "Turn dark backgrounds pure black to save battery on OLED screens",
-                        checked = settings.amoledDarkMode,
-                        enabled = LocalIsDarkMode.current,
-                        onCheckedChange = { isChecked ->
-                            scope.launch {
-                                updateAppearanceSettings { copy(amoledDarkMode = isChecked) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Contrast,
-                                contentDescription = null,
-                                tint = if (!LocalIsDarkMode.current) {
-                                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                }
-                            )
-                        }
-                    )
-                }
+                ApplicationThemeSection(settings = settings, scope = scope)
             }
 
             item {
-                SettingsSubsection("Window & Motion") {
-                    SwitchSettingItem(
-                        title = "Immersive Mode",
-                        subtitle = "Hide the system status and navigation bars to maximize coding space",
-                        checked = settings.immersiveMode,
-                        onCheckedChange = { isChecked ->
-                            scope.launch {
-                                updateAppearanceSettings { copy(immersiveMode = isChecked) }
-                            }
-                        },
-                        leadingIcon = { Icon(Icons.Rounded.Fullscreen, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Terminal in Topbar",
-                        subtitle = "Show the terminal button beside the save button in the topbar. When off, Terminal is only available in the overflow menu.",
-                        checked = settings.showTerminalInTopbar,
-                        onCheckedChange = { isChecked ->
-                            scope.launch {
-                                updateAppearanceSettings { copy(showTerminalInTopbar = isChecked) }
-                            }
-                        },
-                        leadingIcon = { Icon(painterResource(R.drawable.terminal_2_24px), null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Reduce Motion",
-                        subtitle = "Disable UI animations for instant menu and dialog transitions",
-                        checked = settings.reduceMotion,
-                        onCheckedChange = { isChecked ->
-                            scope.launch {
-                                updateAppearanceSettings { copy(reduceMotion = isChecked) }
-                            }
-                        },
-                        leadingIcon = { Icon(Icons.Rounded.Animation, null) }
-                    )
-                }
+                WindowMotionSection(settings = settings, scope = scope)
             }
         }
+    }
+}
+
+@Composable
+private fun ApplicationThemeSection(
+    settings: AppearanceSettings,
+    scope: CoroutineScope
+) {
+    SettingsSubsection(title = "Application Theme") {
+        SelectorItem(
+            label = "App Theme",
+            description = "Switch between light, dark, or follow system appearance.",
+            options = AppTheme.entries.toImmutableList(),
+            selected = settings.theme,
+            optionLabel = AppTheme::displayName,
+            onSelectionChanged = {
+                scope.launch {
+                    updateAppearanceSettings { copy(theme = it) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    Icons.Outlined.LightMode,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+
+        SwitchSettingItem(
+            title = "AMOLED Dark Mode",
+            subtitle = "Turn dark backgrounds pure black to save battery on OLED screens",
+            checked = settings.amoledDarkMode,
+            enabled = LocalIsDarkMode.current,
+            onCheckedChange = { isChecked ->
+                scope.launch {
+                    updateAppearanceSettings { copy(amoledDarkMode = isChecked) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Contrast,
+                    contentDescription = null,
+                    tint = if (!LocalIsDarkMode.current) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun WindowMotionSection(
+    settings: AppearanceSettings,
+    scope: CoroutineScope
+) {
+    SettingsSubsection("Window & Motion") {
+        SwitchSettingItem(
+            title = "Immersive Mode",
+            subtitle = "Hide the system status and navigation bars to maximize coding space",
+            checked = settings.immersiveMode,
+            onCheckedChange = { isChecked ->
+                scope.launch {
+                    updateAppearanceSettings { copy(immersiveMode = isChecked) }
+                }
+            },
+            leadingIcon = { Icon(Icons.Rounded.Fullscreen, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Terminal in Topbar",
+            subtitle = "Show the terminal button beside the save button in the topbar. When off, Terminal is only available in the overflow menu.",
+            checked = settings.showTerminalInTopbar,
+            onCheckedChange = { isChecked ->
+                scope.launch {
+                    updateAppearanceSettings { copy(showTerminalInTopbar = isChecked) }
+                }
+            },
+            leadingIcon = { Icon(painterResource(R.drawable.terminal_2_24px), null) }
+        )
+
+        SwitchSettingItem(
+            title = "Reduce Motion",
+            subtitle = "Disable UI animations for instant menu and dialog transitions",
+            checked = settings.reduceMotion,
+            onCheckedChange = { isChecked ->
+                scope.launch {
+                    updateAppearanceSettings { copy(reduceMotion = isChecked) }
+                }
+            },
+            leadingIcon = { Icon(Icons.Rounded.Animation, null) }
+        )
     }
 }

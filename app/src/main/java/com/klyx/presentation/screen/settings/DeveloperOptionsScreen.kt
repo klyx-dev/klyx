@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -228,87 +229,104 @@ fun DeveloperOptionsScreen() {
                 bottom = 16.dp
             )
         ) {
-            item {
-                SettingsSubsection("Terminal Testing") {
-                    SettingsItem(
-                        title = "Wipe Terminal Environment",
-                        subtitle = "Deletes the prefix and version file to force a reinstall",
-                        onClick = { showWipeDialog = true },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.DeleteSweep,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
+            developerOptionsList(
+                onWipeClick = { showWipeDialog = true },
+                onLogsClick = { navigator.navigateTo(SettingsScreen.Logs) },
+                onExportClick = { exportLauncher.launch("klyx-settings.json") },
+                onImportClick = { importLauncher.launch(arrayOf("application/json")) },
+                onAssetInstallClick = { showAssetDialog = true }
+            )
+        }
+    }
+}
+
+/** All items shown in the developer options [LazyColumn]. */
+private fun LazyListScope.developerOptionsList(
+    onWipeClick: () -> Unit,
+    onLogsClick: () -> Unit,
+    onExportClick: () -> Unit,
+    onImportClick: () -> Unit,
+    onAssetInstallClick: () -> Unit
+) {
+    item {
+        SettingsSubsection("Terminal Testing") {
+            SettingsItem(
+                title = "Wipe Terminal Environment",
+                subtitle = "Deletes the prefix and version file to force a reinstall",
+                onClick = onWipeClick,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.DeleteSweep,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
                     )
                 }
-            }
+            )
+        }
+    }
 
-            item {
-                SettingsSubsection("Logging") {
-                    SettingsItem(
-                        title = "View App Logs",
-                        subtitle = "Browse in-app logs from plugins and system services",
-                        onClick = { navigator.navigateTo(SettingsScreen.Logs) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.BugReport,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+    item {
+        SettingsSubsection("Logging") {
+            SettingsItem(
+                title = "View App Logs",
+                subtitle = "Browse in-app logs from plugins and system services",
+                onClick = onLogsClick,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.BugReport,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
+            )
+        }
+    }
 
-            item {
-                SettingsSubsection("Backup & Restore") {
-                    SettingsItem(
-                        title = "Export Settings",
-                        subtitle = "Save all settings (appearance, editor, terminal, file tree) to a JSON file",
-                        onClick = { exportLauncher.launch("klyx-settings.json") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.FileUpload,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    )
-
-                    SettingsItem(
-                        title = "Import Settings",
-                        subtitle = "Restore settings from a previously exported JSON file",
-                        onClick = { importLauncher.launch(arrayOf("application/json")) },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.FileDownload,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
+    item {
+        SettingsSubsection("Backup & Restore") {
+            SettingsItem(
+                title = "Export Settings",
+                subtitle = "Save all settings (appearance, editor, terminal, file tree) to a JSON file",
+                onClick = onExportClick,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.FileUpload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
-            }
+            )
 
-            if (BuildConfig.DEBUG) {
-                item {
-                    SettingsSubsection("Debug Testing") {
-                        SettingsItem(
-                            title = "Install Bootstrap from Assets",
-                            subtitle = "Wipes and extracts bootstrap-${currentArchitecture()}.zip from APK assets",
-                            onClick = { showAssetDialog = true },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Rounded.Unarchive,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+            SettingsItem(
+                title = "Import Settings",
+                subtitle = "Restore settings from a previously exported JSON file",
+                onClick = onImportClick,
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.FileDownload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            )
+        }
+    }
+
+    if (BuildConfig.DEBUG) {
+        item {
+            SettingsSubsection("Debug Testing") {
+                SettingsItem(
+                    title = "Install Bootstrap from Assets",
+                    subtitle = "Wipes and extracts bootstrap-${currentArchitecture()}.zip from APK assets",
+                    onClick = onAssetInstallClick,
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Rounded.Unarchive,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                }
+                )
             }
         }
     }

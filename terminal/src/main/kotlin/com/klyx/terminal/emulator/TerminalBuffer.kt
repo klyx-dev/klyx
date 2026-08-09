@@ -116,34 +116,7 @@ class TerminalBuffer(
     }
 
     fun getWordAtLocation(x: Int, y: Int): String {
-        // Set y1 and y2 to the lines where the wrapped line starts and ends.
-        // I.e. if a line that is wrapped to 3 lines starts at line 4, and this
-        // is called with y=5, then y1 would be set to 4 and y2 would be set to 6.
-        var y1 = y
-        var y2 = y
-        while (y1 > 0 && !getSelectedText(
-                selX1 = 0,
-                selY1 = y1 - 1,
-                selX2 = columns,
-                selY2 = y,
-                joinBackLines = true,
-                joinFullLines = true
-            ).contains("\n")
-        ) {
-            y1--
-        }
-        while (
-            y2 < screenRows && !getSelectedText(
-                selX1 = 0,
-                selY1 = y,
-                selX2 = columns,
-                selY2 = y2 + 1,
-                joinBackLines = true,
-                joinFullLines = true
-            ).contains("\n")
-        ) {
-            y2++
-        }
+        val (y1, y2) = findWrappedLineBounds(y)
 
         // Get the text for the whole wrapped line
         val text = getSelectedText(
@@ -176,6 +149,40 @@ class TerminalBuffer(
             return ""
         }
         return text.substring(x1 + 1, x2)
+    }
+
+    /**
+     * Set y1 and y2 to the lines where the wrapped line that contains [y] starts and ends.
+     * I.e. if a line that is wrapped to 3 lines starts at line 4, and this
+     * is called with y=5, then y1 would be set to 4 and y2 would be set to 6.
+     */
+    private fun findWrappedLineBounds(y: Int): Pair<Int, Int> {
+        var y1 = y
+        var y2 = y
+        while (y1 > 0 && !getSelectedText(
+                selX1 = 0,
+                selY1 = y1 - 1,
+                selX2 = columns,
+                selY2 = y,
+                joinBackLines = true,
+                joinFullLines = true
+            ).contains("\n")
+        ) {
+            y1--
+        }
+        while (
+            y2 < screenRows && !getSelectedText(
+                selX1 = 0,
+                selY1 = y,
+                selX2 = columns,
+                selY2 = y2 + 1,
+                joinBackLines = true,
+                joinFullLines = true
+            ).contains("\n")
+        ) {
+            y2++
+        }
+        return y1 to y2
     }
 
     val activeRows: Int

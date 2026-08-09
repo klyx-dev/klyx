@@ -342,101 +342,111 @@ class TerminalEmulator(
         val b = byteToProcess.toInt() //and 0xFF
 
         if (utf8ToFollow > 0) {
-            if ((b and 0b1100_0000) == 0b1000_0000) {
-                // 10xxxxxx, a continuation byte.
-                utf8InputBuffer[utf8Index++] = b
-                if (--utf8ToFollow == 0) {
+            doUtf8ContinuationByte(b, byteToProcess)
+        } else {
+            doUtf8LeadByte(b)
+        }
+    }
 
-                    val firstByteMask = when (utf8Index) {
-                        2 -> 0b0001_1111
-                        3 -> 0b0000_1111
-                        else -> 0b0000_0111
-                    }
+    /** Decode a UTF-8 continuation byte while a multi-byte sequence is in progress. */
+    private suspend fun doUtf8ContinuationByte(b: Int, byteToProcess: Byte) {
+        if ((b and 0b1100_0000) == 0b1000_0000) {
+            // 10xxxxxx, a continuation byte.
+            utf8InputBuffer[utf8Index++] = b
+            if (--utf8ToFollow == 0) {
 
-                    var codePoint = utf8InputBuffer[0] and firstByteMask
-                    for (i in 1 until utf8Index) {
-                        codePoint = (codePoint shl 6) or (utf8InputBuffer[i] and 0b0011_1111)
-                    }
-
-                    if ((codePoint <= 0x7F && utf8Index > 1) ||
-                        (codePoint < 0x7FF && utf8Index > 2) ||
-                        (codePoint < 0xFFFF && utf8Index > 3)
-                    ) {
-                        // Overlong encoding.
-                        codePoint = UNICODE_REPLACEMENT_CHAR
-                    }
-
-                    utf8Index = 0
-                    utf8ToFollow = 0
-
-                    if (codePoint in 0x80..0x9F) {
-                        // Sequence decoded to a C1 control character which we ignore. They are
-                        // not used nowadays and increases the risk of messing up the terminal state
-                        // on binary input. XTerm does not allow them in utf-8:
-                        // "It is not possible to use a C1 control obtained from decoding the
-                        // UTF-8 text" - http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-                    } else {
-                        if (codePoint > 0x10FFFF) {
-                            processCodePoint(UNICODE_REPLACEMENT_CHAR)
-                            return
-                        }
-
-                        if (codePoint <= 0xFFFF) {
-                            when (codePoint.toChar().category) {
-                                CharCategory.UNASSIGNED,
-                                CharCategory.SURROGATE -> {
-                                    processCodePoint(UNICODE_REPLACEMENT_CHAR)
-                                    return
-                                }
-
-                                else -> Unit
-                            }
-                        }
-
-                        processCodePoint(codePoint)
-                    }
+                val firstByteMask = when (utf8Index) {
+                    2 -> 0b0001_1111
+                    3 -> 0b0000_1111
+                    else -> 0b0000_0111
                 }
-            } else {
-                // Not a UTF-8 continuation byte so replace the entire sequence up to now with the replacement char:
+
+                var codePoint = utf8InputBuffer[0] and firstByteMask
+                for (i in 1 until utf8Index) {
+                    codePoint = (codePoint shl 6) or (utf8InputBuffer[i] and 0b0011_1111)
+                }
+
+                if ((codePoint <= 0x7F && utf8Index > 1) ||
+                    (codePoint < 0x7FF && utf8Index > 2) ||
+                    (codePoint < 0xFFFF && utf8Index > 3)
+                ) {
+                    // Overlong encoding.
+                    codePoint = UNICODE_REPLACEMENT_CHAR
+                }
+
                 utf8Index = 0
                 utf8ToFollow = 0
-                emitCodePoint(UNICODE_REPLACEMENT_CHAR)
-                // The Unicode Standard Version 6.2 – Core Specification
-                // (http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf):
-                // "If the converter encounters an ill-formed UTF-8 code unit sequence which starts with a valid first
-                // byte, but which does not continue with valid successor bytes (see Table 3-7), it must not consume the
-                // successor bytes as part of the ill-formed subsequence
-                // whenever those successor bytes themselves constitute part of a well-formed UTF-8 code unit
-                // subsequence."
-                processByte(byteToProcess)
+
+                if (codePoint in 0x80..0x9F) {
+                    // Sequence decoded to a C1 control character which we ignore. They are
+                    // not used nowadays and increases the risk of messing up the terminal state
+                    // on binary input. XTerm does not allow them in utf-8:
+                    // "It is not possible to use a C1 control obtained from decoding the
+                    // UTF-8 text" - http://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+                } else {
+                    if (codePoint > 0x10FFFF) {
+                        processCodePoint(UNICODE_REPLACEMENT_CHAR)
+                        return
+                    }
+
+                    if (codePoint <= 0xFFFF) {
+                        when (codePoint.toChar().category) {
+                            CharCategory.UNASSIGNED,
+                            CharCategory.SURROGATE -> {
+                                processCodePoint(UNICODE_REPLACEMENT_CHAR)
+                                return
+                            }
+
+                            else -> Unit
+                        }
+                    }
+
+                    processCodePoint(codePoint)
+                }
             }
         } else {
-            when {
-                (b and 0b1000_0000) == 0 -> { // The leading bit is not set so it is a 7-bit ASCII character.
-                    processCodePoint(b)
-                    return
-                }
-
-                (b and 0b1110_0000) == 0b1100_0000 -> { // 110xxxxx, a two-byte sequence.
-                    utf8ToFollow = 1
-                }
-
-                (b and 0b1111_0000) == 0b1110_0000 -> { // 1110xxxx, a three-byte sequence.
-                    utf8ToFollow = 2
-                }
-
-                (b and 0b1111_1000) == 0b1111_0000 -> { // 11110xxx, a four-byte sequence.
-                    utf8ToFollow = 3
-                }
-
-                else -> {
-                    // Not a valid UTF-8 sequence start, signal invalid data:
-                    processCodePoint(UNICODE_REPLACEMENT_CHAR)
-                    return
-                }
-            }
-            utf8InputBuffer[utf8Index++] = b
+            // Not a UTF-8 continuation byte so replace the entire sequence up to now with the replacement char:
+            utf8Index = 0
+            utf8ToFollow = 0
+            emitCodePoint(UNICODE_REPLACEMENT_CHAR)
+            // The Unicode Standard Version 6.2 – Core Specification
+            // (http://www.unicode.org/versions/Unicode6.2.0/ch03.pdf):
+            // "If the converter encounters an ill-formed UTF-8 code unit sequence which starts with a valid first
+            // byte, but which does not continue with valid successor bytes (see Table 3-7), it must not consume the
+            // successor bytes as part of the ill-formed subsequence
+            // whenever those successor bytes themselves constitute part of a well-formed UTF-8 code unit
+            // subsequence."
+            processByte(byteToProcess)
         }
+    }
+
+    /** Decode a UTF-8 lead byte when no multi-byte sequence is in progress. */
+    private suspend fun doUtf8LeadByte(b: Int) {
+        when {
+            (b and 0b1000_0000) == 0 -> { // The leading bit is not set so it is a 7-bit ASCII character.
+                processCodePoint(b)
+                return
+            }
+
+            (b and 0b1110_0000) == 0b1100_0000 -> { // 110xxxxx, a two-byte sequence.
+                utf8ToFollow = 1
+            }
+
+            (b and 0b1111_0000) == 0b1110_0000 -> { // 1110xxxx, a three-byte sequence.
+                utf8ToFollow = 2
+            }
+
+            (b and 0b1111_1000) == 0b1111_0000 -> { // 11110xxx, a four-byte sequence.
+                utf8ToFollow = 3
+            }
+
+            else -> {
+                // Not a valid UTF-8 sequence start, signal invalid data:
+                processCodePoint(UNICODE_REPLACEMENT_CHAR)
+                return
+            }
+        }
+        utf8InputBuffer[utf8Index++] = b
     }
 
     suspend fun processCodePoint(b: Int) {
@@ -450,79 +460,17 @@ class TerminalEmulator(
         }
 
         when (b) {
-            0 -> {
-                // Null character (NUL, ^@). Do nothing.
-            }
+            0 -> Unit // Null character (NUL, ^@). Do nothing.
 
-            7 -> { // Bell (BEL, ^G, \a). If in an OSC sequence, BEL may terminate a string; otherwise signal bell.
-                if (escapeState == ESC_OSC) {
-                    doOsc(b)
-                } else {
-                    session.onBell()
-                }
-            }
-
-            8 -> { // Backspace (BS, ^H).
-                if (leftMargin == cursorColumn) {
-                    // Jump to previous line if it was auto-wrapped.
-                    val previousRow = cursorRow - 1
-                    if (previousRow >= 0 && screen.getLineWrap(previousRow)) {
-                        screen.clearLineWrap(previousRow)
-                        setCursorRowColumn(previousRow, rightMargin - 1)
-                    }
-                } else {
-                    setCursorColumn(cursorColumn - 1)
-                }
-            }
-
-            9 -> { // Horizontal tab (HT, \t) - move to next tab stop, but not past edge of screen
-                // XXX: Should perhaps use color if writing to new cells. Try with
-                //       printf "\033[41m\tXX\033[0m\n"
-                // The OSX Terminal.app colors the spaces from the tab red, but xterm does not.
-                // Note that Terminal.app only colors on new cells, in e.g.
-                //       printf "\033[41m\t\r\033[42m\tXX\033[0m\n"
-                // the first cells are created with a red background, but when tabbing over
-                // them again with a green background they are not overwritten.
-                cursorColumn = nextTabStop(1)
-            }
-
-            10, // Line feed (LF, \n).
-            11, // Vertical tab (VT, \v).
-            12 -> { // Form feed (FF, \f).
-                doLineFeed()
-            }
-
-            13 -> { // Carriage return (CR, \r).
-                setCursorColumn(leftMargin)
-            }
-
-            14 -> { // Shift Out (Ctrl-N, SO) → Switch to Alternate Character Set. This invokes the G1 character set.
-                useLineDrawingUsesG0 = false
-            }
-
-            15 -> { // Shift In (Ctrl-O, SI) → Switch to Standard Character Set. This invokes the G0 character set.
-                useLineDrawingUsesG0 = true
-            }
-
-            24, 26 -> { // CAN, SUB
-                if (escapeState != ESC_NONE) {
-                    // FIXME: What is this??
-                    escapeState = ESC_NONE
-                    emitCodePoint(127)
-                }
-            }
-
-            27 -> { // ESC
-                // Starts an escape sequence unless we're parsing a string
-                if (escapeState == ESC_P) {
-                    // XXX: Ignore escape when reading device control sequence, since it may be part of string terminator.
-                    return
-                } else if (escapeState != ESC_OSC) {
-                    startEscapeSequence()
-                } else {
-                    doOsc(b)
-                }
-            }
+            7 -> doBell(b)
+            8 -> doBackspace()
+            9 -> cursorColumn = nextTabStop(1)
+            10, 11, 12 -> doLineFeed()
+            13 -> setCursorColumn(leftMargin)
+            14 -> useLineDrawingUsesG0 = false
+            15 -> useLineDrawingUsesG0 = true
+            24, 26 -> doCancelOrSubstitute()
+            27 -> doEscapeKey(b)
 
             else -> {
                 continueSequence = false
@@ -546,362 +494,22 @@ class TerminalEmulator(
                         b
                     )
 
-                    ESC_CSI_EXCLAMATION -> {
-                        if (b == 'p'.code) { // Soft terminal reset (DECSTR, http://vt100.net/docs/vt510-rm/DECSTR).
-                            reset()
-                        } else {
-                            unknownSequence(b)
-                        }
-                    }
+                    ESC_CSI_EXCLAMATION -> doCsiExclamation(b)
 
                     ESC_CSI_QUESTIONMARK -> doCsiQuestionMark(b)
                     ESC_CSI_BIGGERTHAN -> doCsiBiggerThan(b)
-
-                    ESC_CSI_DOLLAR -> {
-                        val originMode = isDecsetInternalBitSet(DECSET_BIT_ORIGIN_MODE)
-                        val effectiveTopMargin = if (originMode) topMargin else 0
-                        val effectiveBottomMargin = if (originMode) bottomMargin else rows
-                        val effectiveLeftMargin = if (originMode) leftMargin else 0
-                        val effectiveRightMargin = if (originMode) rightMargin else columns
-
-                        when (b) {
-                            'v'.code -> { // ${CSI}${SRC_TOP}${SRC_LEFT}${SRC_BOTTOM}${SRC_RIGHT}${SRC_PAGE}${DST_TOP}${DST_LEFT}${DST_PAGE}$v"
-                                // Copy rectangular area (DECCRA - http://vt100.net/docs/vt510-rm/DECCRA):
-                                // "If Pbs is greater than Pts, or Pls is greater than Prs, the terminal ignores DECCRA.
-                                // The coordinates of the rectangular area are affected by the setting of origin mode (DECOM).
-                                // DECCRA is not affected by the page margins.
-                                // The copied text takes on the line attributes of the destination area.
-                                // If the value of Pt, Pl, Pb, or Pr exceeds the width or height of the active page, then the value
-                                // is treated as the width or height of that page.
-                                // If the destination area is partially off the page, then DECCRA clips the off-page data.
-                                // DECCRA does not change the active cursor position."
-                                val topSource =
-                                    minOf(getArg(0, 1, true) - 1 + effectiveTopMargin, rows)
-                                val leftSource =
-                                    minOf(getArg(1, 1, true) - 1 + effectiveLeftMargin, columns)
-                                // Inclusive, so do not subtract one:
-                                val bottomSource =
-                                    minOf(
-                                        maxOf(
-                                            getArg(2, rows, true) + effectiveTopMargin,
-                                            topSource
-                                        ),
-                                        rows
-                                    )
-                                val rightSource =
-                                    minOf(
-                                        maxOf(
-                                            getArg(3, columns, true) + effectiveLeftMargin,
-                                            leftSource
-                                        ),
-                                        columns
-                                    )
-                                // val sourcePage = getArg(4, 1, true)
-
-                                val destinationTop =
-                                    minOf(getArg(5, 1, true) - 1 + effectiveTopMargin, rows)
-                                val destinationLeft =
-                                    minOf(getArg(6, 1, true) - 1 + effectiveLeftMargin, columns)
-                                // val destinationPage = getArg(7, 1, true)
-
-                                val heightToCopy =
-                                    minOf(rows - destinationTop, bottomSource - topSource)
-                                val widthToCopy =
-                                    minOf(columns - destinationLeft, rightSource - leftSource)
-
-                                screen.blockCopy(
-                                    leftSource,
-                                    topSource,
-                                    widthToCopy,
-                                    heightToCopy,
-                                    destinationLeft,
-                                    destinationTop
-                                )
-                            }
-
-                            '{'.code, // ${CSI}${TOP}${LEFT}${BOTTOM}${RIGHT}${"
-                                // Selective erase rectangular area (DECSERA - http://www.vt100.net/docs/vt510-rm/DECSERA).
-                            'x'.code, // ${CSI}${CHAR};${TOP}${LEFT}${BOTTOM}${RIGHT}$x"
-                                // Fill rectangular area (DECFRA - http://www.vt100.net/docs/vt510-rm/DECFRA).
-                            'z'.code // ${CSI}$${TOP}${LEFT}${BOTTOM}${RIGHT}$z"
-                                -> {
-                                // Erase rectangular area (DECERA - http://www.vt100.net/docs/vt510-rm/DECERA).
-                                val erase = b != 'x'.code
-                                val selective = b == '{'.code
-                                // Only DECSERA keeps visual attributes, DECERA does not:
-                                val keepVisualAttributes = erase && selective
-                                var argIndex = 0
-                                val fillChar = if (erase) ' '.code else getArg(argIndex++, -1, true)
-                                // "Pch can be any value from 32 to 126 or from 160 to 255. If Pch is not in this range, then the
-                                // terminal ignores the DECFRA command":
-                                if ((fillChar in 32..126) || (fillChar in 160..255)) {
-                                    // "If the value of Pt, Pl, Pb, or Pr exceeds the width or height of the active page, the value
-                                    // is treated as the width or height of that page."
-                                    val top =
-                                        minOf(
-                                            getArg(argIndex++, 1, true) + effectiveTopMargin,
-                                            effectiveBottomMargin + 1
-                                        )
-                                    val left =
-                                        minOf(
-                                            getArg(argIndex++, 1, true) + effectiveLeftMargin,
-                                            effectiveRightMargin + 1
-                                        )
-                                    val bottom =
-                                        minOf(
-                                            getArg(argIndex++, rows, true) + effectiveTopMargin,
-                                            effectiveBottomMargin
-                                        )
-                                    val right =
-                                        minOf(
-                                            getArg(argIndex, columns, true) + effectiveLeftMargin,
-                                            effectiveRightMargin
-                                        )
-
-                                    for (row in top - 1 until bottom) {
-                                        for (col in left - 1 until right) {
-                                            if (!selective || (TextStyle.decodeEffect(
-                                                    screen.getStyleAt(
-                                                        row,
-                                                        col
-                                                    )
-                                                ) and TextStyle.CHARACTER_ATTRIBUTE_PROTECTED) == 0
-                                            ) {
-                                                screen.setChar(
-                                                    column = col,
-                                                    row = row,
-                                                    codePoint = fillChar,
-                                                    style = if (keepVisualAttributes) {
-                                                        screen.getStyleAt(row, col)
-                                                    } else {
-                                                        style
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            'r'.code, // "${CSI}${TOP}${LEFT}${BOTTOM}${RIGHT}${ATTRIBUTES}$r"
-                                // Change attributes in rectangular area (DECCARA - http://vt100.net/docs/vt510-rm/DECCARA).
-                            't'.code -> { // "${CSI}${TOP}${LEFT}${BOTTOM}${RIGHT}${ATTRIBUTES}$t"
-                                // Reverse attributes in rectangular area (DECRARA - http://www.vt100.net/docs/vt510-rm/DECRARA).
-                                val reverse = b == 't'.code
-                                // FIXME: "coordinates of the rectangular area are affected by the setting of origin mode (DECOM)".
-                                val top =
-                                    minOf(getArg(0, 1, true) - 1, effectiveBottomMargin) +
-                                            effectiveTopMargin
-                                val left =
-                                    minOf(getArg(1, 1, true) - 1, effectiveRightMargin) +
-                                            effectiveLeftMargin
-                                val bottom =
-                                    minOf(getArg(2, rows, true) + 1, effectiveBottomMargin - 1) +
-                                            effectiveTopMargin
-                                val right =
-                                    minOf(getArg(3, columns, true) + 1, effectiveRightMargin - 1) +
-                                            effectiveLeftMargin
-
-                                if (argIndex >= 4) {
-                                    if (argIndex >= args.size) argIndex = args.size - 1
-                                    for (i in 4..argIndex) {
-                                        var bits = 0
-                                        var setOrClear = true // True if setting, false if clearing.
-                                        when (getArg(i, 0, false)) {
-                                            0 -> { // Attributes off (no bold, no underline, no blink, positive image).
-                                                bits =
-                                                    TextStyle.CHARACTER_ATTRIBUTE_BOLD or
-                                                            TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE or
-                                                            TextStyle.CHARACTER_ATTRIBUTE_BLINK or
-                                                            TextStyle.CHARACTER_ATTRIBUTE_INVERSE
-                                                if (!reverse) setOrClear = false
-                                            }
-
-                                            // Bold.
-                                            1 -> bits = TextStyle.CHARACTER_ATTRIBUTE_BOLD
-                                            // Underline.
-                                            4 -> bits = TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
-                                            // Blink.
-                                            5 -> bits = TextStyle.CHARACTER_ATTRIBUTE_BLINK
-                                            // Negative image.
-                                            7 -> bits = TextStyle.CHARACTER_ATTRIBUTE_INVERSE
-                                            // No bold.
-                                            22 -> {
-                                                bits = TextStyle.CHARACTER_ATTRIBUTE_BOLD
-                                                setOrClear = false
-                                            }
-                                            // No underline.
-                                            24 -> {
-                                                bits = TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
-                                                setOrClear = false
-                                            }
-                                            // No blink.
-                                            25 -> {
-                                                bits = TextStyle.CHARACTER_ATTRIBUTE_BLINK
-                                                setOrClear = false
-                                            }
-                                            // Positive image.
-                                            27 -> {
-                                                bits = TextStyle.CHARACTER_ATTRIBUTE_INVERSE
-                                                setOrClear = false
-                                            }
-                                        }
-
-                                        if (reverse && !setOrClear) {
-                                            // Reverse attributes in rectangular area ignores non-(1,4,5,7) bits.
-                                        } else {
-                                            screen.setOrClearEffect(
-                                                bits,
-                                                setOrClear,
-                                                reverse,
-                                                isDecsetInternalBitSet(
-                                                    DECSET_BIT_RECTANGULAR_CHANGEATTRIBUTE
-                                                ),
-                                                effectiveLeftMargin,
-                                                effectiveRightMargin,
-                                                top,
-                                                left,
-                                                bottom,
-                                                right
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    // Do nothing.
-                                }
-                            }
-
-                            else -> unknownSequence(b)
-                        }
-                    }
-
-                    ESC_CSI_DOUBLE_QUOTE -> {
-                        if (b == 'q'.code) {
-                            // http://www.vt100.net/docs/vt510-rm/DECSCA
-                            val arg = getArg0(0)
-                            when (arg) {
-                                0, 2 -> {
-                                    // DECSED and DECSEL can erase characters.
-                                    effect =
-                                        effect and TextStyle.CHARACTER_ATTRIBUTE_PROTECTED.inv()
-                                }
-
-                                1 -> {
-                                    // DECSED and DECSEL cannot erase characters.
-                                    effect = effect or TextStyle.CHARACTER_ATTRIBUTE_PROTECTED
-                                }
-
-                                else -> unknownSequence(b)
-                            }
-                        } else {
-                            unknownSequence(b)
-                        }
-                    }
-
-                    ESC_CSI_SINGLE_QUOTE -> {
-                        when (b) {
-                            '}'.code -> { // Insert Ps Column(s) (default = 1) (DECIC), VT420 and up.
-                                val columnsAfterCursor = rightMargin - cursorColumn
-                                val columnsToInsert = minOf(getArg0(1), columnsAfterCursor)
-                                val columnsToMove = columnsAfterCursor - columnsToInsert
-                                screen.blockCopy(
-                                    sx = cursorColumn,
-                                    sy = 0,
-                                    w = columnsToMove,
-                                    h = rows,
-                                    dx = cursorColumn + columnsToInsert,
-                                    dy = 0
-                                )
-                                blockClear(cursorColumn, 0, columnsToInsert, rows)
-                            }
-
-                            '~'.code -> { // Delete Ps Column(s) (default = 1) (DECDC), VT420 and up.
-                                val columnsAfterCursor = rightMargin - cursorColumn
-                                val columnsToDelete = minOf(getArg0(1), columnsAfterCursor)
-                                val columnsToMove = columnsAfterCursor - columnsToDelete
-                                screen.blockCopy(
-                                    sx = cursorColumn + columnsToDelete,
-                                    sy = 0,
-                                    w = columnsToMove,
-                                    h = rows,
-                                    dx = cursorColumn,
-                                    dy = 0
-                                )
-                            }
-
-                            else -> unknownSequence(b)
-                        }
-                    }
+                    ESC_CSI_DOLLAR -> doCsiDollar(b)
+                    ESC_CSI_DOUBLE_QUOTE -> doCsiDoubleQuote(b)
+                    ESC_CSI_SINGLE_QUOTE -> doCsiSingleQuote(b)
+                    ESC_CSI_QUESTIONMARK_ARG_DOLLAR -> doCsiQuestionMarkArgDollar(b)
+                    ESC_CSI_ARGS_SPACE -> doCsiArgsSpace(b)
+                    ESC_CSI_ARGS_ASTERIX -> doCsiArgsAsterix(b)
 
                     ESC_PERCENT -> Unit
 
                     ESC_OSC -> doOsc(b)
                     ESC_OSC_ESC -> doOscEsc(b)
                     ESC_P -> doDeviceControl(b)
-
-                    ESC_CSI_QUESTIONMARK_ARG_DOLLAR -> {
-                        if (b == 'p'.code) {
-                            // Request DEC private mode (DECRQM).
-                            val mode = getArg0(0)
-                            val value = if (mode == 47 || mode == 1047 || mode == 1049) {
-                                // This state is carried by mScreen pointer.
-                                if (screen === altBuffer) 1 else 2
-                            } else {
-                                val internalBit =
-                                    mapDecSetBitToInternalBit(mode)
-                                if (internalBit != -1) {
-                                    if (isDecsetInternalBitSet(internalBit)) 1 else 2
-                                } else {
-                                    Logger.logError(
-                                        client,
-                                        LOG_TAG,
-                                        "Got DECRQM for unrecognized private DEC mode=$mode"
-                                    )
-                                    0 // 0=not recognized, 3=permanently set, 4=permanently reset
-                                }
-                            }
-
-                            session.write($$"\u001B[?$$mode;$$value$y")
-                        } else {
-                            unknownSequence(b)
-                        }
-                    }
-
-                    ESC_CSI_ARGS_SPACE -> {
-                        val arg = getArg0(0)
-                        when (b) {
-                            'q'.code -> { // "${CSI}${STYLE} q" - set cursor style (http://www.vt100.net/docs/vt510-rm/DECSCUSR).
-                                cursorStyle = when (arg) {
-                                    // Blinking block, Blinking block, Steady block.
-                                    0, 1, 2 -> CursorStyle.Block
-                                    // Blinking underline, Steady underline.
-                                    3, 4 -> CursorStyle.Underline
-                                    5, // Blinking bar (xterm addition).
-                                    6 -> { // Steady bar (xterm addition).
-                                        CursorStyle.Bar
-                                    }
-
-                                    else -> cursorStyle
-                                }
-                            }
-
-                            't'.code, 'u'.code -> Unit // Set margin-bell volume - ignore.
-                            else -> unknownSequence(b)
-                        }
-                    }
-
-                    ESC_CSI_ARGS_ASTERIX -> {
-                        val extent = getArg0(0)
-                        if (b == 'x'.code && extent in 0..2) {
-                            // Select attribute change extent (DECSACE - http://www.vt100.net/docs/vt510-rm/DECSACE).
-                            setDecsetInternalBit(
-                                DECSET_BIT_RECTANGULAR_CHANGEATTRIBUTE,
-                                extent == 2
-                            )
-                        } else {
-                            unknownSequence(b)
-                        }
-                    }
 
                     else -> unknownSequence(b)
                 }
@@ -911,127 +519,384 @@ class TerminalEmulator(
         }
     }
 
+    /** Bell (BEL, ^G, \a). If in an OSC sequence, BEL may terminate a string; otherwise signal bell. */
+    private suspend fun doBell(b: Int) {
+        if (escapeState == ESC_OSC) {
+            doOsc(b)
+        } else {
+            session.onBell()
+        }
+    }
+
+    /** Backspace (BS, ^H). */
+    private fun doBackspace() {
+        if (leftMargin == cursorColumn) {
+            // Jump to previous line if it was auto-wrapped.
+            val previousRow = cursorRow - 1
+            if (previousRow >= 0 && screen.getLineWrap(previousRow)) {
+                screen.clearLineWrap(previousRow)
+                setCursorRowColumn(previousRow, rightMargin - 1)
+            }
+        } else {
+            setCursorColumn(cursorColumn - 1)
+        }
+    }
+
+    /** CAN, SUB: cancel an in-progress escape sequence. */
+    private fun doCancelOrSubstitute() {
+        if (escapeState != ESC_NONE) {
+            // FIXME: What is this??
+            escapeState = ESC_NONE
+            emitCodePoint(127)
+        }
+    }
+
+    /** ESC: starts an escape sequence unless we're parsing a string. */
+    private suspend fun doEscapeKey(b: Int) {
+        if (escapeState == ESC_P) {
+            // XXX: Ignore escape when reading device control sequence, since it may be part of string terminator.
+            return
+        } else if (escapeState != ESC_OSC) {
+            startEscapeSequence()
+        } else {
+            doOsc(b)
+        }
+    }
+
+    /** ESC [ ! -- Soft terminal reset (DECSTR). */
+    private fun doCsiExclamation(b: Int) {
+        if (b == 'p'.code) { // http://vt100.net/docs/vt510-rm/DECSTR
+            reset()
+        } else {
+            unknownSequence(b)
+        }
+    }
+
+    /** ESC [ $ -- Rectangular-area operations (DECCRA, DECSERA, DECFRA, DECERA, DECCARA, DECRARA). */
+    private suspend fun doCsiDollar(b: Int) {
+        val originMode = isDecsetInternalBitSet(DECSET_BIT_ORIGIN_MODE)
+        val effectiveTopMargin = if (originMode) topMargin else 0
+        val effectiveBottomMargin = if (originMode) bottomMargin else rows
+        val effectiveLeftMargin = if (originMode) leftMargin else 0
+        val effectiveRightMargin = if (originMode) rightMargin else columns
+        val margins = RectAreaMargins(
+            effectiveTopMargin,
+            effectiveBottomMargin,
+            effectiveLeftMargin,
+            effectiveRightMargin
+        )
+
+        when (b) {
+            'v'.code -> doDecCopyRectArea(margins)
+            '{'.code, 'x'.code, 'z'.code -> doDecEraseRectArea(b, margins)
+            'r'.code, 't'.code -> doDecChangeAttributeRectArea(b, margins)
+            else -> unknownSequence(b)
+        }
+    }
+
+    /** DECCRA -- Copy rectangular area. */
+    private fun doDecCopyRectArea(margins: RectAreaMargins) {
+        val topSource =
+            minOf(getArg(0, 1, true) - 1 + margins.top, rows)
+        val leftSource =
+            minOf(getArg(1, 1, true) - 1 + margins.left, columns)
+        // Inclusive, so do not subtract one:
+        val bottomSource =
+            minOf(maxOf(getArg(2, rows, true) + margins.top, topSource), rows)
+        val rightSource =
+            minOf(maxOf(getArg(3, columns, true) + margins.left, leftSource), columns)
+
+        val destinationTop =
+            minOf(getArg(5, 1, true) - 1 + margins.top, rows)
+        val destinationLeft =
+            minOf(getArg(6, 1, true) - 1 + margins.left, columns)
+
+        val heightToCopy =
+            minOf(rows - destinationTop, bottomSource - topSource)
+        val widthToCopy =
+            minOf(columns - destinationLeft, rightSource - leftSource)
+
+        screen.blockCopy(
+            leftSource,
+            topSource,
+            widthToCopy,
+            heightToCopy,
+            destinationLeft,
+            destinationTop
+        )
+    }
+
+    /** DECSERA/DECFRA/DECERA -- Erase or fill rectangular area. */
+    private fun doDecEraseRectArea(b: Int, margins: RectAreaMargins) {
+        val erase = b != 'x'.code
+        val selective = b == '{'.code
+        // Only DECSERA keeps visual attributes, DECERA does not:
+        val keepVisualAttributes = erase && selective
+        var argIndex = 0
+        val fillChar = if (erase) ' '.code else getArg(argIndex++, -1, true)
+        // "Pch can be any value from 32 to 126 or from 160 to 255. If Pch is not in this range, then the
+        // terminal ignores the DECFRA command":
+        if ((fillChar in 32..126) || (fillChar in 160..255)) {
+            // "If the value of Pt, Pl, Pb, or Pr exceeds the width or height of the active page, the value
+            // is treated as the width or height of that page."
+            val top =
+                minOf(getArg(argIndex++, 1, true) + margins.top, margins.bottom + 1)
+            val left =
+                minOf(getArg(argIndex++, 1, true) + margins.left, margins.right + 1)
+            val bottom =
+                minOf(getArg(argIndex++, rows, true) + margins.top, margins.bottom)
+            val right =
+                minOf(getArg(argIndex, columns, true) + margins.left, margins.right)
+
+            for (row in top - 1 until bottom) {
+                for (col in left - 1 until right) {
+                    if (!selective || (TextStyle.decodeEffect(
+                            screen.getStyleAt(row, col)
+                        ) and TextStyle.CHARACTER_ATTRIBUTE_PROTECTED) == 0
+                    ) {
+                        screen.setChar(
+                            column = col,
+                            row = row,
+                            codePoint = fillChar,
+                            style = if (keepVisualAttributes) {
+                                screen.getStyleAt(row, col)
+                            } else {
+                                style
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /** DECCARA/DECRARA -- Change or reverse attributes in a rectangular area. */
+    private fun doDecChangeAttributeRectArea(b: Int, margins: RectAreaMargins) {
+        val reverse = b == 't'.code
+        val top =
+            minOf(getArg(0, 1, true) - 1, margins.bottom) + margins.top
+        val left =
+            minOf(getArg(1, 1, true) - 1, margins.right) + margins.left
+        val bottom =
+            minOf(getArg(2, rows, true) + 1, margins.bottom - 1) + margins.top
+        val right =
+            minOf(getArg(3, columns, true) + 1, margins.right - 1) + margins.left
+
+        if (argIndex < 4) return
+
+        if (argIndex >= args.size) argIndex = args.size - 1
+        for (i in 4..argIndex) {
+            val (bits, setOrClear) = decodeRectAreaAttribute(getArg(i, 0, false), reverse)
+            if (reverse && !setOrClear) {
+                // Reverse attributes in rectangular area ignores non-(1,4,5,7) bits.
+            } else {
+                screen.setOrClearEffect(
+                    bits,
+                    setOrClear,
+                    reverse,
+                    isDecsetInternalBitSet(DECSET_BIT_RECTANGULAR_CHANGEATTRIBUTE),
+                    margins.left,
+                    margins.right,
+                    top,
+                    left,
+                    bottom,
+                    right
+                )
+            }
+        }
+    }
+
+    private data class RectAreaMargins(
+        val top: Int,
+        val bottom: Int,
+        val left: Int,
+        val right: Int
+    )
+
+    /** Decode a single DECCARA/DECRARA attribute argument into (bits, setOrClear). */
+    private fun decodeRectAreaAttribute(arg: Int, reverse: Boolean): RectAreaAttribute {
+        var bits = 0
+        var setOrClear = true // True if setting, false if clearing.
+        when (arg) {
+            0 -> { // Attributes off (no bold, no underline, no blink, positive image).
+                bits =
+                    TextStyle.CHARACTER_ATTRIBUTE_BOLD or
+                            TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE or
+                            TextStyle.CHARACTER_ATTRIBUTE_BLINK or
+                            TextStyle.CHARACTER_ATTRIBUTE_INVERSE
+                if (!reverse) setOrClear = false
+            }
+
+            // Bold.
+            1 -> bits = TextStyle.CHARACTER_ATTRIBUTE_BOLD
+            // Underline.
+            4 -> bits = TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
+            // Blink.
+            5 -> bits = TextStyle.CHARACTER_ATTRIBUTE_BLINK
+            // Negative image.
+            7 -> bits = TextStyle.CHARACTER_ATTRIBUTE_INVERSE
+            // No bold.
+            22 -> {
+                bits = TextStyle.CHARACTER_ATTRIBUTE_BOLD
+                setOrClear = false
+            }
+            // No underline.
+            24 -> {
+                bits = TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
+                setOrClear = false
+            }
+            // No blink.
+            25 -> {
+                bits = TextStyle.CHARACTER_ATTRIBUTE_BLINK
+                setOrClear = false
+            }
+            // Positive image.
+            27 -> {
+                bits = TextStyle.CHARACTER_ATTRIBUTE_INVERSE
+                setOrClear = false
+            }
+        }
+        return RectAreaAttribute(bits, setOrClear)
+    }
+
+    private data class RectAreaAttribute(val bits: Int, val setOrClear: Boolean)
+
+    /** ESC [ " -- Select character attributes (DECSCA). */
+    private fun doCsiDoubleQuote(b: Int) {
+        if (b != 'q'.code) {
+            unknownSequence(b)
+            return
+        }
+        when (val arg = getArg0(0)) {
+            0, 2 -> {
+                // DECSED and DECSEL can erase characters.
+                effect = effect and TextStyle.CHARACTER_ATTRIBUTE_PROTECTED.inv()
+            }
+
+            1 -> {
+                // DECSED and DECSEL cannot erase characters.
+                effect = effect or TextStyle.CHARACTER_ATTRIBUTE_PROTECTED
+            }
+
+            else -> unknownSequence(b)
+        }
+    }
+
+    /** ESC [ ' -- Insert/delete column(s) (DECIC/DECDC). */
+    private fun doCsiSingleQuote(b: Int) {
+        when (b) {
+            '}'.code -> { // Insert Ps Column(s) (default = 1) (DECIC), VT420 and up.
+                val columnsAfterCursor = rightMargin - cursorColumn
+                val columnsToInsert = minOf(getArg0(1), columnsAfterCursor)
+                val columnsToMove = columnsAfterCursor - columnsToInsert
+                screen.blockCopy(
+                    sx = cursorColumn,
+                    sy = 0,
+                    w = columnsToMove,
+                    h = rows,
+                    dx = cursorColumn + columnsToInsert,
+                    dy = 0
+                )
+                blockClear(cursorColumn, 0, columnsToInsert, rows)
+            }
+
+            '~'.code -> { // Delete Ps Column(s) (default = 1) (DECDC), VT420 and up.
+                val columnsAfterCursor = rightMargin - cursorColumn
+                val columnsToDelete = minOf(getArg0(1), columnsAfterCursor)
+                val columnsToMove = columnsAfterCursor - columnsToDelete
+                screen.blockCopy(
+                    sx = cursorColumn + columnsToDelete,
+                    sy = 0,
+                    w = columnsToMove,
+                    h = rows,
+                    dx = cursorColumn,
+                    dy = 0
+                )
+            }
+
+            else -> unknownSequence(b)
+        }
+    }
+
+    /** ESC [ ? ... $ -- Request DEC private mode (DECRQM). */
+    private suspend fun doCsiQuestionMarkArgDollar(b: Int) {
+        if (b != 'p'.code) {
+            unknownSequence(b)
+            return
+        }
+        val mode = getArg0(0)
+        val value = if (mode == 47 || mode == 1047 || mode == 1049) {
+            // This state is carried by mScreen pointer.
+            if (screen === altBuffer) 1 else 2
+        } else {
+            val internalBit = mapDecSetBitToInternalBit(mode)
+            if (internalBit != -1) {
+                if (isDecsetInternalBitSet(internalBit)) 1 else 2
+            } else {
+                Logger.logError(
+                    client,
+                    LOG_TAG,
+                    "Got DECRQM for unrecognized private DEC mode=$mode"
+                )
+                0 // 0=not recognized, 3=permanently set, 4=permanently reset
+            }
+        }
+
+        session.write($$"\u001B[?$$mode;$$value$y")
+    }
+
+    /** ESC [ ... <space> -- Set cursor style (DECSCUSR). */
+    private fun doCsiArgsSpace(b: Int) {
+        val arg = getArg0(0)
+        when (b) {
+            'q'.code -> { // "${CSI}${STYLE} q" - set cursor style (http://www.vt100.net/docs/vt510-rm/DECSCUSR).
+                cursorStyle = when (arg) {
+                    // Blinking block, Blinking block, Steady block.
+                    0, 1, 2 -> CursorStyle.Block
+                    // Blinking underline, Steady underline.
+                    3, 4 -> CursorStyle.Underline
+                    5, // Blinking bar (xterm addition).
+                    6 -> { // Steady bar (xterm addition).
+                        CursorStyle.Bar
+                    }
+
+                    else -> cursorStyle
+                }
+            }
+
+            't'.code, 'u'.code -> Unit // Set margin-bell volume - ignore.
+            else -> unknownSequence(b)
+        }
+    }
+
+    /** ESC [ ... * -- Select attribute change extent (DECSACE). */
+    private fun doCsiArgsAsterix(b: Int) {
+        val extent = getArg0(0)
+        if (b == 'x'.code && extent in 0..2) {
+            // Select attribute change extent (DECSACE - http://www.vt100.net/docs/vt510-rm/DECSACE).
+            setDecsetInternalBit(DECSET_BIT_RECTANGULAR_CHANGEATTRIBUTE, extent == 2)
+        } else {
+            unknownSequence(b)
+        }
+    }
+
     /** When in [ESC_P] ("device control") sequence. */
     private suspend fun doDeviceControl(b: Int) {
         when (b) {
             '\\'.code -> { // End of ESC \ string Terminator
                 val dcs = oscOrDeviceControlArgs.toString()
 
-                // DCS $ q P t ST. Request Status String (DECRQSS)
-                if (dcs.startsWith($$"$q")) {
-                    if (dcs == $$"$q\"p") {
-                        // DECSCL, conformance level, http://www.vt100.net/docs/vt510-rm/DECSCL:
-                        val csiString = "64;1\"p"
-                        session.write($$"\u001BP1$r$$csiString\u001B\\")
-                    } else {
-                        finishSequenceAndLogError("Unrecognized DECRQSS string: '$dcs'")
-                    }
-                } else if (dcs.startsWith("+q")) {
-                    // Request Termcap/Terminfo String. The string following the "q" is a list of names encoded in
-                    // hexadecimal (2 digits per character) separated by ; which correspond to termcap or terminfo key
-                    // names.
-                    // Two special features are also recognized, which are not key names: Co for termcap colors (or colors
-                    // for terminfo colors), and TN for termcap name (or name for terminfo name).
-                    // xterm responds with DCS 1 + r P t ST for valid requests, adding to P t an = , and the value of the
-                    // corresponding string that xterm would send, or DCS 0 + r P t ST for invalid requests. The strings are
-                    // encoded in hexadecimal (2 digits per character).
-                    // Example:
-                    // :kr=\EOC: ks=\E[?1h\E=: ku=\EOA: le=^H:mb=\E[5m:md=\E[1m:\
-                    // where
-                    // kd=down-arrow key
-                    // kl=left-arrow key
-                    // kr=right-arrow key
-                    // ku=up-arrow key
-                    // #2=key_shome, "shifted home"
-                    // #4=key_sleft, "shift arrow left"
-                    // %i=key_sright, "shift arrow right"
-                    // *7=key_send, "shifted end"
-                    // k1=F1 function key
-
-                    // Example: Request for ku is "ESC P + q 6 b 7 5 ESC \", where 6b7d=ku in hexadecimal.
-                    // Xterm response in normal cursor mode:
-                    // "<27> P 1 + r 6 b 7 5 = 1 B 5 B 4 1" where 0x1B 0x5B 0x41 = 27 91 65 = ESC [ A
-                    // Xterm response in application cursor mode:
-                    // "<27> P 1 + r 6 b 7 5 = 1 B 5 B 4 1" where 0x1B 0x4F 0x41 = 27 91 65 = ESC 0 A
-
-                    // #4 is "shift arrow left":
-                    // *** Device Control (DCS) for '#4'- 'ESC P + q 23 34 ESC \'
-                    // Response: <27> P 1 + r 2 3 3 4 = 1 B 5 B 3 1 3 B 3 2 4 4 <27> \
-                    // where 0x1B 0x5B 0x31 0x3B 0x32 0x44 = ESC [ 1 ; 2 D
-                    // which we find in: TermKeyListener.java: KEY_MAP.put(KEYMOD_SHIFT | KEYCODE_DPAD_LEFT, "\033[1;2D");
-
-                    // See http://h30097.www3.hp.com/docs/base_doc/DOCUMENTATION/V40G_HTML/MAN/MAN4/0178____.HTM for what to
-                    // respond, as well as http://www.freebsd.org/cgi/man.cgi?query=termcap&sektion=5#CAPABILITIES for
-                    // the meaning of e.g. "ku", "kd", "kr", "kl"
-                    val parts = dcs.substring(2).split(";")
-                    for (part in parts) {
-                        if (part.length % 2 != 0) {
+                when {
+                    dcs.startsWith($$"$q") -> doDecRqss(dcs)
+                    dcs.startsWith("+q") -> doTermcapRequest(dcs)
+                    else -> {
+                        if (LOG_ESCAPE_SEQUENCES) {
                             Logger.logError(
                                 client,
                                 LOG_TAG,
-                                "Invalid device termcap/terminfo name of odd length: $part"
-                            )
-                            continue
-                        }
-
-                        val transBuffer = StringBuilder()
-                        var i = 0
-                        while (i < part.length) {
-                            val hex = part.substring(i, i + 2)
-                            try {
-                                transBuffer.append(hex.toInt(16).toChar())
-                            } catch (e: NumberFormatException) {
-                                Logger.logStackTraceWithMessage(
-                                    client,
-                                    LOG_TAG,
-                                    "Invalid device termcap/terminfo encoded name \"$part\"",
-                                    e
-                                )
-                            }
-                            i += 2
-                        }
-
-                        val trans = transBuffer.toString()
-                        val responseValue = when (trans) {
-                            "Co", "colors" -> "256" // Number of colors.
-                            "TN", "name" -> "xterm"
-                            else -> KeyHandler.getCodeFromTermcap(
-                                trans,
-                                isDecsetInternalBitSet(DECSET_BIT_APPLICATION_CURSOR_KEYS),
-                                isDecsetInternalBitSet(DECSET_BIT_APPLICATION_KEYPAD)
+                                "Unrecognized device control string: $dcs"
                             )
                         }
-
-                        if (responseValue == null) {
-                            when (trans) {
-                                "%1", // Help key - ignore
-                                "&8"  // Undo key - ignore.
-                                    -> Unit
-
-                                else -> Logger.logWarn(
-                                    client,
-                                    LOG_TAG,
-                                    "Unhandled termcap/terminfo name: '$trans'"
-                                )
-                            }
-                            // Respond with invalid request:
-                            session.write("\u001BP0+r$part\u001B\\")
-                        } else {
-                            val hexEncoded = buildString {
-                                for (ch in responseValue) {
-                                    append(ch.code.toString(16).uppercase().padStart(2, '0'))
-                                }
-                            }
-                            session.write("\u001BP1+r$part=$hexEncoded\u001B\\")
-                        }
-                    }
-                } else {
-                    if (LOG_ESCAPE_SEQUENCES) {
-                        Logger.logError(
-                            client,
-                            LOG_TAG,
-                            "Unrecognized device control string: $dcs"
-                        )
                     }
                 }
 
@@ -1048,6 +913,99 @@ class TerminalEmulator(
                     continueSequence(escapeState)
                 }
             }
+        }
+    }
+
+    /** DCS $ q ... -- Request Status String (DECRQSS). */
+    private suspend fun doDecRqss(dcs: String) {
+        if (dcs == $$"$q\"p") {
+            // DECSCL, conformance level, http://www.vt100.net/docs/vt510-rm/DECSCL:
+            val csiString = "64;1\"p"
+            session.write($$"\u001BP1$r$$csiString\u001B\\")
+        } else {
+            finishSequenceAndLogError("Unrecognized DECRQSS string: '$dcs'")
+        }
+    }
+
+    /** DCS + q ... -- Request Termcap/Terminfo String. */
+    private suspend fun doTermcapRequest(dcs: String) {
+        // The string following the "q" is a list of names encoded in hexadecimal (2 digits per character) separated by
+        // ; which correspond to termcap or terminfo key names.
+        // Two special features are also recognized, which are not key names: Co for termcap colors (or colors
+        // for terminfo colors), and TN for termcap name (or name for terminfo name).
+        // xterm responds with DCS 1 + r P t ST for valid requests, adding to P t an = , and the value of the
+        // corresponding string that xterm would send, or DCS 0 + r P t ST for invalid requests. The strings are
+        // encoded in hexadecimal (2 digits per character).
+        val parts = dcs.substring(2).split(";")
+        for (part in parts) {
+            if (part.length % 2 != 0) {
+                Logger.logError(
+                    client,
+                    LOG_TAG,
+                    "Invalid device termcap/terminfo name of odd length: $part"
+                )
+                continue
+            }
+
+            val trans = decodeHexTermcapName(part) ?: continue
+            val responseValue = termcapResponseValue(trans)
+
+            if (responseValue == null) {
+                when (trans) {
+                    "%1", // Help key - ignore
+                    "&8"  // Undo key - ignore.
+                        -> Unit
+
+                    else -> Logger.logWarn(
+                        client,
+                        LOG_TAG,
+                        "Unhandled termcap/terminfo name: '$trans'"
+                    )
+                }
+                // Respond with invalid request:
+                session.write("\u001BP0+r$part\u001B\\")
+            } else {
+                val hexEncoded = buildString {
+                    for (ch in responseValue) {
+                        append(ch.code.toString(16).uppercase().padStart(2, '0'))
+                    }
+                }
+                session.write("\u001BP1+r$part=$hexEncoded\u001B\\")
+            }
+        }
+    }
+
+    /** Decode a hex-encoded termcap/terminfo name (`6b75` -> `ku`). */
+    private fun decodeHexTermcapName(part: String): String? {
+        val transBuffer = StringBuilder()
+        var i = 0
+        while (i < part.length) {
+            val hex = part.substring(i, i + 2)
+            try {
+                transBuffer.append(hex.toInt(16).toChar())
+            } catch (e: NumberFormatException) {
+                Logger.logStackTraceWithMessage(
+                    client,
+                    LOG_TAG,
+                    "Invalid device termcap/terminfo encoded name \"$part\"",
+                    e
+                )
+            }
+            i += 2
+        }
+        return transBuffer.toString()
+    }
+
+    /** Resolve a decoded termcap/terminfo name to its response value, or null if unhandled. */
+    private fun termcapResponseValue(trans: String): String? {
+        return when (trans) {
+            "Co", "colors" -> "256" // Number of colors.
+            "TN", "name" -> "xterm"
+            else -> KeyHandler.getCodeFromTermcap(
+                trans,
+                isDecsetInternalBitSet(DECSET_BIT_APPLICATION_CURSOR_KEYS),
+                isDecsetInternalBitSet(DECSET_BIT_APPLICATION_KEYPAD)
+            )
         }
     }
 
@@ -1127,55 +1085,7 @@ class TerminalEmulator(
         when (b) {
             'J'.code, // Selective erase in display (DECSED) - http://www.vt100.net/docs/vt510-rm/DECSED.
             'K'.code  // Selective erase in line (DECSEL) - http://vt100.net/docs/vt510-rm/DECSEL.
-                -> {
-                aboutToAutoWrap = false
-
-                val fillChar = ' '.code
-                var startCol: Int = -1
-                var startRow: Int = -1
-                var endCol: Int = -1
-                var endRow: Int = -1
-                val justRow = b == 'K'.code
-
-                when (getArg0(0)) {
-                    0 -> { // Erase from the active position to the end, inclusive (default).
-                        startCol = cursorColumn
-                        startRow = cursorRow
-                        endCol = columns
-                        endRow = if (justRow) cursorRow + 1 else rows
-                    }
-
-                    1 -> { // Erase from start to the active position, inclusive.
-                        startCol = 0
-                        startRow = if (justRow) cursorRow else 0
-                        endCol = cursorColumn + 1
-                        endRow = cursorRow + 1
-                    }
-
-                    2 -> { // Erase all of the display/line.
-                        startCol = 0
-                        startRow = if (justRow) cursorRow else 0
-                        endCol = columns
-                        endRow = if (justRow) cursorRow + 1 else rows
-                    }
-
-                    else -> unknownSequence(b)
-                }
-
-                for (row in startRow until endRow) {
-                    for (col in startCol until endCol) {
-                        if ((TextStyle.decodeEffect(
-                                screen.getStyleAt(
-                                    externalRow = row,
-                                    column = col
-                                )
-                            ) and TextStyle.CHARACTER_ATTRIBUTE_PROTECTED) == 0
-                        ) {
-                            screen.setChar(col, row, fillChar, style)
-                        }
-                    }
-                }
-            }
+                -> doCsiSelectiveErase(b)
 
             'h'.code, 'l'.code -> {
                 if (argIndex >= args.size) argIndex = args.size - 1
@@ -1231,6 +1141,57 @@ class TerminalEmulator(
         }
     }
 
+    /** Selective erase in display/line (DECSED/DECSEL). */
+    private fun doCsiSelectiveErase(b: Int) {
+        aboutToAutoWrap = false
+
+        val fillChar = ' '.code
+        var startCol: Int = -1
+        var startRow: Int = -1
+        var endCol: Int = -1
+        var endRow: Int = -1
+        val justRow = b == 'K'.code
+
+        when (getArg0(0)) {
+            0 -> { // Erase from the active position to the end, inclusive (default).
+                startCol = cursorColumn
+                startRow = cursorRow
+                endCol = columns
+                endRow = if (justRow) cursorRow + 1 else rows
+            }
+
+            1 -> { // Erase from start to the active position, inclusive.
+                startCol = 0
+                startRow = if (justRow) cursorRow else 0
+                endCol = cursorColumn + 1
+                endRow = cursorRow + 1
+            }
+
+            2 -> { // Erase all of the display/line.
+                startCol = 0
+                startRow = if (justRow) cursorRow else 0
+                endCol = columns
+                endRow = if (justRow) cursorRow + 1 else rows
+            }
+
+            else -> unknownSequence(b)
+        }
+
+        for (row in startRow until endRow) {
+            for (col in startCol until endCol) {
+                if ((TextStyle.decodeEffect(
+                        screen.getStyleAt(
+                            externalRow = row,
+                            column = col
+                        )
+                    ) and TextStyle.CHARACTER_ATTRIBUTE_PROTECTED) == 0
+                ) {
+                    screen.setChar(col, row, fillChar, style)
+                }
+            }
+        }
+    }
+
     fun doDecSetOrReset(setting: Boolean, externalBit: Int) {
         val internalBit = mapDecSetBitToInternalBit(externalBit)
         if (internalBit != -1) {
@@ -1240,22 +1201,8 @@ class TerminalEmulator(
         when (externalBit) {
             1 -> {} // Application Cursor Keys (DECCKM).
 
-            // Set: 132 column mode (. Reset: 80 column mode. ANSI name: DECCOLM.
-            3 -> {
-                // We don't actually set/reset 132 cols, but we do want the side effects
-                // (FIXME: Should only do this if the 95 DECSET bit (DECNCSM) is set, and if changing value?):
-                // Sets the left, right, top and bottom scrolling margins to their default positions, which is important for
-                // the "reset" utility to really reset the terminal:
-                leftMargin = 0
-                topMargin = 0
-                bottomMargin = rows
-                rightMargin = columns
-                // "DECCOLM resets vertical split screen mode (DECLRMM) to unavailable":
-                setDecsetInternalBit(DECSET_BIT_LEFTRIGHT_MARGIN_MODE, false)
-                // "Erases all data in page memory":
-                blockClear(0, 0, columns, rows)
-                setCursorRowColumn(0, 0)
-            }
+            // Set: 132 column mode. Reset: 80 column mode. ANSI name: DECCOLM.
+            3 -> doDecSetColumnMode()
 
             4 -> {} // DECSCLM-Scrolling Mode. Ignore.
             5 -> {} // Reverse video. No action.
@@ -1298,41 +1245,61 @@ class TerminalEmulator(
             // Set: Save cursor as in DECSC. Reset: Restore cursor as in DECRC.
             1048 -> if (setting) saveCursor() else restoreCursor()
 
-            47, 1047, 1049 -> {
-                // Set: Save cursor as in DECSC and use Alternate Screen Buffer, clearing it first.
-                // Reset: Use Normal Screen Buffer and restore cursor as in DECRC.
-                val newScreen = if (setting) altBuffer else mainBuffer
-                if (newScreen !== screen) {
-                    val resized = !(newScreen.columns == columns && newScreen.screenRows == rows)
-                    if (setting) saveCursor()
-                    screen = newScreen
-                    if (!setting) {
-                        val col = savedStateMain.savedCursorColumn
-                        val row = savedStateMain.savedCursorRow
-                        restoreCursor()
-                        if (resized) {
-                            // Restore cursor position _not_ clipped to current screen (let resizeScreen() handle that):
-                            cursorColumn = col
-                            cursorRow = row
-                        }
-                    }
-
-                    // Check if buffer size needs to be updated:
-                    if (resized) resizeScreen()
-
-                    // Clear new screen if alt buffer:
-                    if (newScreen === altBuffer) {
-                        newScreen.blockSet(
-                            sx = 0, sy = 0,
-                            w = columns, h = rows,
-                            value = ' '.code, style = style
-                        )
-                    }
-                }
-            }
+            47, 1047, 1049 -> doDecSetAlternateBuffer(setting)
 
             2004 -> {} // Bracketed paste mode - setting bit is enough.
             else -> unknownParameter(externalBit)
+        }
+    }
+
+    /** DECCOLM side effects: reset margins, clear the screen and home the cursor. */
+    private fun doDecSetColumnMode() {
+        // We don't actually set/reset 132 cols, but we do want the side effects
+        // (FIXME: Should only do this if the 95 DECSET bit (DECNCSM) is set, and if changing value?):
+        // Sets the left, right, top and bottom scrolling margins to their default positions, which is important for
+        // the "reset" utility to really reset the terminal:
+        leftMargin = 0
+        topMargin = 0
+        bottomMargin = rows
+        rightMargin = columns
+        // "DECCOLM resets vertical split screen mode (DECLRMM) to unavailable":
+        setDecsetInternalBit(DECSET_BIT_LEFTRIGHT_MARGIN_MODE, false)
+        // "Erases all data in page memory":
+        blockClear(0, 0, columns, rows)
+        setCursorRowColumn(0, 0)
+    }
+
+    /** DECSWAP/DECSET 47/1047/1049: switch between the main and alternate screen buffer. */
+    private fun doDecSetAlternateBuffer(setting: Boolean) {
+        // Set: Save cursor as in DECSC and use Alternate Screen Buffer, clearing it first.
+        // Reset: Use Normal Screen Buffer and restore cursor as in DECRC.
+        val newScreen = if (setting) altBuffer else mainBuffer
+        if (newScreen !== screen) {
+            val resized = !(newScreen.columns == columns && newScreen.screenRows == rows)
+            if (setting) saveCursor()
+            screen = newScreen
+            if (!setting) {
+                val col = savedStateMain.savedCursorColumn
+                val row = savedStateMain.savedCursorRow
+                restoreCursor()
+                if (resized) {
+                    // Restore cursor position _not_ clipped to current screen (let resizeScreen() handle that):
+                    cursorColumn = col
+                    cursorRow = row
+                }
+            }
+
+            // Check if buffer size needs to be updated:
+            if (resized) resizeScreen()
+
+            // Clear new screen if alt buffer:
+            if (newScreen === altBuffer) {
+                newScreen.blockSet(
+                    sx = 0, sy = 0,
+                    w = columns, h = rows,
+                    value = ' '.code, style = style
+                )
+            }
         }
     }
 
@@ -1460,56 +1427,12 @@ class TerminalEmulator(
             '#'.code -> continueSequence(ESC_POUND)
             '('.code -> continueSequence(ESC_SELECT_LEFT_PAREN)
             ')'.code -> continueSequence(ESC_SELECT_RIGHT_PAREN)
-            '6'.code -> { // Back index (http://www.vt100.net/docs/vt510-rm/DECBI). Move left, insert blank column if start.
-                if (cursorColumn > leftMargin) {
-                    cursorColumn--
-                } else {
-                    val rows = bottomMargin - topMargin
-                    screen.blockCopy(
-                        sx = leftMargin,
-                        sy = topMargin,
-                        w = rightMargin - leftMargin - 1,
-                        h = rows,
-                        dx = leftMargin + 1,
-                        dy = topMargin
-                    )
-                    screen.blockSet(
-                        sx = leftMargin,
-                        sy = topMargin,
-                        w = 1,
-                        h = rows,
-                        value = ' '.code,
-                        style = TextStyle.encode(foreColor, backColor, 0)
-                    )
-                }
-            }
+            '6'.code -> doEscBackIndex()
             // DECSC save cursor - http://www.vt100.net/docs/vt510-rm/DECSC
             '7'.code -> saveCursor()
             // DECRC restore cursor - http://www.vt100.net/docs/vt510-rm/DECRC
             '8'.code -> restoreCursor()
-            '9'.code -> { // Forward Index (http://www.vt100.net/docs/vt510-rm/DECFI). Move right, insert blank column if end.
-                if (cursorColumn < rightMargin - 1) {
-                    cursorColumn++
-                } else {
-                    val rows = bottomMargin - topMargin
-                    screen.blockCopy(
-                        sx = leftMargin + 1,
-                        sy = topMargin,
-                        w = rightMargin - leftMargin - 1,
-                        h = rows,
-                        dx = leftMargin,
-                        dy = topMargin
-                    )
-                    screen.blockSet(
-                        sx = rightMargin - 1,
-                        sy = topMargin,
-                        w = 1,
-                        h = rows,
-                        value = ' '.code,
-                        style = TextStyle.encode(foreColor, backColor, 0)
-                    )
-                }
-            }
+            '9'.code -> doEscForwardIndex()
 
             'c'.code -> { // RIS - Reset to Initial State (http://vt100.net/docs/vt510-rm/RIS).
                 reset()
@@ -1528,23 +1451,7 @@ class TerminalEmulator(
             'F'.code -> setCursorRowColumn(0, bottomMargin - 1)
             // Tab set
             'H'.code -> tabStop[cursorColumn] = true
-            'M'.code -> { // "${ESC}M" - reverse index (RI).
-                // http://www.vt100.net/docs/vt100-ug/chapter3.html: "Move the active position to the same horizontal
-                // position on the preceding line. If the active position is at the top margin, a scroll down is performed".
-                if (cursorRow <= topMargin) {
-                    screen.blockCopy(
-                        sx = leftMargin,
-                        sy = topMargin,
-                        w = rightMargin - leftMargin,
-                        h = bottomMargin - (topMargin + 1),
-                        dx = leftMargin,
-                        dy = topMargin + 1
-                    )
-                    blockClear(leftMargin, topMargin, rightMargin - leftMargin)
-                } else {
-                    cursorRow--
-                }
-            }
+            'M'.code -> doEscReverseIndex()
 
             'N'.code, // SS2, ignore.
             'O'.code, // SS3, ignore.
@@ -1569,6 +1476,73 @@ class TerminalEmulator(
             // APC - Application Program Command.
             '_'.code -> continueSequence(ESC_APC)
             else -> unknownSequence(b)
+        }
+    }
+
+    /** Back index (DECBI). Move left, insert blank column if at the start of the left margin. */
+    private fun doEscBackIndex() {
+        if (cursorColumn > leftMargin) {
+            cursorColumn--
+        } else {
+            val rows = bottomMargin - topMargin
+            screen.blockCopy(
+                sx = leftMargin,
+                sy = topMargin,
+                w = rightMargin - leftMargin - 1,
+                h = rows,
+                dx = leftMargin + 1,
+                dy = topMargin
+            )
+            screen.blockSet(
+                sx = leftMargin,
+                sy = topMargin,
+                w = 1,
+                h = rows,
+                value = ' '.code,
+                style = TextStyle.encode(foreColor, backColor, 0)
+            )
+        }
+    }
+
+    /** Forward index (DECFI). Move right, insert blank column if at the end of the right margin. */
+    private fun doEscForwardIndex() {
+        if (cursorColumn < rightMargin - 1) {
+            cursorColumn++
+        } else {
+            val rows = bottomMargin - topMargin
+            screen.blockCopy(
+                sx = leftMargin + 1,
+                sy = topMargin,
+                w = rightMargin - leftMargin - 1,
+                h = rows,
+                dx = leftMargin,
+                dy = topMargin
+            )
+            screen.blockSet(
+                sx = rightMargin - 1,
+                sy = topMargin,
+                w = 1,
+                h = rows,
+                value = ' '.code,
+                style = TextStyle.encode(foreColor, backColor, 0)
+            )
+        }
+    }
+
+    /** Reverse index (RI): "${ESC}M" - http://www.vt100.net/docs/vt100-ug/chapter3.html. */
+    private fun doEscReverseIndex() {
+        if (cursorRow <= topMargin) {
+            screen.blockCopy(
+                sx = leftMargin,
+                sy = topMargin,
+                w = rightMargin - leftMargin,
+                h = bottomMargin - (topMargin + 1),
+                dx = leftMargin,
+                dy = topMargin + 1
+            )
+            blockClear(leftMargin, topMargin, rightMargin - leftMargin)
+        } else {
+            cursorRow--
         }
     }
 
@@ -1611,320 +1585,323 @@ class TerminalEmulator(
             '$'.code -> continueSequence(ESC_CSI_DOLLAR)
             '*'.code -> continueSequence(ESC_CSI_ARGS_ASTERIX)
 
-            '@'.code -> {
-                // "CSI{n}@" - Insert ${n} space characters (ICH) - http://www.vt100.net/docs/vt510-rm/ICH.
-                aboutToAutoWrap = false
-                val columnsAfterCursor = columns - cursorColumn
-                val spacesToInsert = minOf(getArg0(1), columnsAfterCursor)
-                val charsToMove = columnsAfterCursor - spacesToInsert
-                screen.blockCopy(
-                    sx = cursorColumn, sy = cursorRow,
-                    w = charsToMove, h = 1,
-                    dx = cursorColumn + spacesToInsert, dy = cursorRow
-                )
-                blockClear(cursorColumn, cursorRow, spacesToInsert)
-            }
-
-            // "CSI${n}A" - Cursor up (CUU) ${n} rows.
+            '@'.code -> doCsiInsertChars()
             'A'.code -> setCursorRow(maxOf(0, cursorRow - getArg0(1)))
-            // "CSI${n}B" - Cursor down (CUD) ${n} rows.
             'B'.code -> setCursorRow(minOf(rows - 1, cursorRow + getArg0(1)))
-
-            'C'.code, // "CSI${n}C" - Cursor forward (CUF).
-            'a'.code -> { // "CSI${n}a" - Horizontal position relative (HPR). From ISO-6428/ECMA-48.
-                setCursorColumn(minOf(rightMargin - 1, cursorColumn + getArg0(1)))
-            }
-
-            // "CSI${n}D" - Cursor backward (CUB) ${n} columns.
+            'C'.code, 'a'.code -> doCsiCursorForward()
             'D'.code -> setCursorColumn(maxOf(leftMargin, cursorColumn - getArg0(1)))
-            // "CSI{n}E - Cursor Next Line (CNL). From ISO-6428/ECMA-48.
             'E'.code -> setCursorPosition(0, cursorRow + getArg0(1))
-            // "CSI{n}F - Cursor Previous Line (CPL). From ISO-6428/ECMA-48.
             'F'.code -> setCursorPosition(0, cursorRow - getArg0(1))
-            // "CSI${n}G" - Cursor horizontal absolute (CHA) to column ${n}.
             'G'.code -> setCursorColumn(minOf(maxOf(1, getArg0(1)), columns) - 1)
-            'H'.code, // "${CSI}${ROW};${COLUMN}H" - Cursor position (CUP).
-            'f'.code -> { // "${CSI}${ROW};${COLUMN}f" - Horizontal and Vertical Position (HVP).
-                setCursorPosition(getArg1(1) - 1, getArg0(1) - 1)
-            }
-            // Cursor Horizontal Forward Tabulation (CHT). Move the active position n tabs forward.
+            'H'.code, 'f'.code -> setCursorPosition(getArg1(1) - 1, getArg0(1) - 1)
             'I'.code -> setCursorColumn(nextTabStop(getArg0(1)))
-            // "${CSI}${0,1,2,3}J" - Erase in Display (ED)
-            'J'.code -> {
-                // ED ignores the scrolling margins.
-                when (getArg0(0)) {
-                    0 -> { // Erase from the active position to the end of the screen, inclusive (default).
-                        blockClear(cursorColumn, cursorRow, columns - cursorColumn)
-                        blockClear(0, cursorRow + 1, columns, rows - (cursorRow + 1))
-                    }
-
-                    1 -> { // Erase from start of the screen to the active position, inclusive.
-                        blockClear(0, 0, columns, cursorRow)
-                        blockClear(0, cursorRow, cursorColumn + 1)
-                    }
-
-                    // Erase all of the display - all lines are erased, changed to single-width, and the cursor does not move..
-                    2 -> blockClear(0, 0, columns, rows)
-
-                    // Delete all lines saved in the scrollback buffer (xterm etc)
-                    3 -> mainBuffer.clearTranscript()
-
-                    else -> {
-                        unknownSequence(b)
-                        return
-                    }
-                }
-                aboutToAutoWrap = false
-            }
-
-            // "CSI{n}K" - Erase in line (EL).
-            'K'.code -> {
-                when (getArg0(0)) {
-                    // Erase from the cursor to the end of the line, inclusive (default)
-                    0 -> blockClear(cursorColumn, cursorRow, columns - cursorColumn)
-                    // Erase from the start of the screen to the cursor, inclusive.
-                    1 -> blockClear(0, cursorRow, cursorColumn + 1)
-                    // Erase all of the line.
-                    2 -> blockClear(0, cursorRow, columns)
-                    else -> {
-                        unknownSequence(b)
-                        return
-                    }
-                }
-                aboutToAutoWrap = false
-            }
-
-            // "${CSI}{N}L" - insert ${N} lines (IL).
-            'L'.code -> {
-                val linesAfterCursor = bottomMargin - cursorRow
-                val linesToInsert = minOf(getArg0(1), linesAfterCursor)
-                val linesToMove = linesAfterCursor - linesToInsert
-                screen.blockCopy(
-                    sx = 0, sy = cursorRow,
-                    w = columns, h = linesToMove,
-                    dx = 0, dy = cursorRow + linesToInsert
-                )
-                blockClear(0, cursorRow, columns, linesToInsert)
-            }
-
-            // "${CSI}${N}M" - delete N lines (DL).
-            'M'.code -> {
-                aboutToAutoWrap = false
-                val linesAfterCursor = bottomMargin - cursorRow
-                val linesToDelete = minOf(getArg0(1), linesAfterCursor)
-                val linesToMove = linesAfterCursor - linesToDelete
-                screen.blockCopy(
-                    sx = 0, sy = cursorRow + linesToDelete,
-                    w = columns, h = linesToMove,
-                    dx = 0, dy = cursorRow
-                )
-                blockClear(0, cursorRow + linesToMove, columns, linesToDelete)
-            }
-
-            // "${CSI}{N}P" - delete ${N} characters (DCH).
-            'P'.code -> {
-                // http://www.vt100.net/docs/vt510-rm/DCH: "If ${N} is greater than the number of characters between the
-                // cursor and the right margin, then DCH only deletes the remaining characters.
-                // As characters are deleted, the remaining characters between the cursor and right margin move to the left.
-                // Character attributes move with the characters. The terminal adds blank spaces with no visual character
-                // attributes at the right margin. DCH has no effect outside the scrolling margins."
-                aboutToAutoWrap = false
-                val cellsAfterCursor = columns - cursorColumn
-                val cellsToDelete = minOf(getArg0(1), cellsAfterCursor)
-                val cellsToMove = cellsAfterCursor - cellsToDelete
-                screen.blockCopy(
-                    cursorColumn + cellsToDelete, cursorRow,
-                    cellsToMove, 1,
-                    cursorColumn, cursorRow
-                )
-                blockClear(cursorColumn + cellsToMove, cursorRow, cellsToDelete)
-            }
-
-            // "${CSI}${N}S" - scroll up ${N} lines (default = 1) (SU).
+            'J'.code -> doCsiEraseInDisplay(b)
+            'K'.code -> doCsiEraseInLine(b)
+            'L'.code -> doCsiInsertLines()
+            'M'.code -> doCsiDeleteLines()
+            'P'.code -> doCsiDeleteChars()
             'S'.code -> repeat(getArg0(1)) { scrollDownOneLine() }
+            'T'.code -> doCsiScrollDown(b)
+            'X'.code -> doCsiEraseChars()
+            'Z'.code -> doCsiBackwardTab()
 
-            'T'.code -> {
-                if (argIndex == 0) {
-                    // "${CSI}${N}T" - Scroll down N lines (default = 1) (SD).
-                    // http://vt100.net/docs/vt510-rm/SD: "N is the number of lines to move the user window up in page
-                    // memory. N new lines appear at the top of the display. N old lines disappear at the bottom of the
-                    // display. You cannot pan past the top margin of the current page".
-                    val linesBetween = bottomMargin - topMargin
-                    val linesToScroll = minOf(linesBetween, getArg0(1))
-                    screen.blockCopy(
-                        leftMargin, topMargin,
-                        rightMargin - leftMargin,
-                        linesBetween - linesToScroll,
-                        leftMargin, topMargin + linesToScroll
-                    )
-                    blockClear(leftMargin, topMargin, rightMargin - leftMargin, linesToScroll)
-                } else {
-                    // "${CSI}${func};${startx};${starty};${firstrow};${lastrow}T" - initiate highlight mouse tracking.
-                    unimplementedSequence(b)
-                }
-            }
-
-            // "${CSI}${N}X" - Erase ${N:=1} character(s) (ECH). FIXME: Clears character attributes?
-            'X'.code -> {
-                aboutToAutoWrap = false
-                screen.blockSet(
-                    sx = cursorColumn,
-                    sy = cursorRow,
-                    w = minOf(getArg0(1), columns - cursorColumn),
-                    h = 1,
-                    value = ' '.code,
-                    style = style
-                )
-            }
-
-            // Cursor Backward Tabulation (CBT). Move the active position n tabs backward.
-            'Z'.code -> {
-                var tabs = getArg0(1)
-                var newCol = leftMargin
-                for (i in cursorColumn - 1 downTo 0) {
-                    if (tabStop[i] && --tabs == 0) {
-                        newCol = maxOf(i, leftMargin)
-                        break
-                    }
-                }
-                cursorColumn = newCol
-            }
             // Esc [ ? -- start of a private parameter byte
             '?'.code -> continueSequence(ESC_CSI_QUESTIONMARK)
             // "Esc [ >" -- start of a private parameter byte
             '>'.code -> continueSequence(ESC_CSI_BIGGERTHAN)
             '<'.code, // "Esc [ <" -- start of a private parameter byte
-            '='.code -> { // "Esc [ =" -- start of a private parameter byte
-                continueSequence(ESC_CSI_UNSUPPORTED_PARAMETER_BYTE)
-            }
-            // Horizontal position absolute (HPA - http://www.vt100.net/docs/vt510-rm/HPA).
+            '='.code -> continueSequence(ESC_CSI_UNSUPPORTED_PARAMETER_BYTE)
+
             '`'.code -> setCursorColumnRespectingOriginMode(getArg0(1) - 1)
-            // Repeat the preceding graphic character Ps times (REP).
-            'b'.code -> {
-                if (lastEmittedCodePoint != -1) {
-                    repeat(getArg0(1)) { emitCodePoint(lastEmittedCodePoint) }
-                }
-            }
-
-            'c'.code -> {
-                // Primary Device Attributes (http://www.vt100.net/docs/vt510-rm/DA1) if argument is missing or zero.
-                // The important part that may still be used by some (tmux stores this value but does not currently use it)
-                // is the first response parameter identifying the terminal service class, where we send 64 for "vt420".
-                // This is followed by a list of attributes which is probably unused by applications. Send like xterm.
-                if (getArg0(0) == 0) {
-                    session.write("\u001B[?64;1;2;6;9;15;18;21;22c")
-                }
-            }
-            // ESC [ Pn d - Vert Position Absolute
+            'b'.code -> doCsiRepeatChar()
+            'c'.code -> doCsiPrimaryDeviceAttributes()
             'd'.code -> setCursorRow(minOf(maxOf(1, getArg0(1)), rows) - 1)
-            // Vertical Position Relative (VPR). From ISO-6429 (ECMA-48).
             'e'.code -> setCursorPosition(cursorColumn, cursorRow + getArg0(1))
-            // 'f'.code -> {} // "${CSI}${ROW};${COLUMN}f" - Horizontal and Vertical Position (HVP). Grouped with case 'H'.
-
-            // Clear tab stop
-            'g'.code -> {
-                when (getArg0(0)) {
-                    0 -> tabStop[cursorColumn] = false
-                    3 -> for (i in 0 until columns) tabStop[i] = false
-                }
-            }
-            // Set Mode
+            'g'.code -> doCsiClearTabStop()
             'h'.code -> doSetMode(true)
-            // Reset Mode
             'l'.code -> doSetMode(false)
-            // Esc [ Pn m - character attributes. (can have up to 16 numerical arguments)
             'm'.code -> selectGraphicRendition()
-            // Esc [ Pn n - ECMA-48 Status Report Commands
-            'n'.code -> {
-                // sendDeviceAttributes()
-                when (getArg0(0)) {
-                    // Device status report (DSR):
-                    5 -> {
-                        // Answer is ESC [ 0 n (Terminal OK).
-                        session.write(
-                            byteArrayOf(
-                                27,
-                                '['.code.toByte(),
-                                '0'.code.toByte(),
-                                'n'.code.toByte()
-                            )
-                        )
-                    }
-                    // Cursor position report (CPR):
-                    6 -> {
-                        // Answer is ESC [ y ; x R, where x,y is
-                        // the cursor location.
-                        session.write("\u001B[${cursorRow + 1};${cursorColumn + 1}R")
-                    }
-                }
-            }
-            // "CSI${top};${bottom}r" - set top and bottom Margins (DECSTBM).
-            'r'.code -> {
-                // https://vt100.net/docs/vt510-rm/DECSTBM.html
-                // The top margin defaults to 1, the bottom margin defaults to mRows.
-                // The escape sequence numbers top 1..23, but we number top 0..22.
-                // The escape sequence numbers bottom 2..24, and so do we (because we use a zero based numbering
-                // scheme, but we store the first line below the bottom-most scrolling line.
-                // As a result, we adjust the top line by -1, but we leave the bottom line alone.
-                // Also require that top + 2 <= bottom.
-                topMargin = maxOf(0, minOf(getArg0(1) - 1, rows - 2))
-                bottomMargin = maxOf(topMargin + 2, minOf(getArg1(rows), rows))
-
-                // DECSTBM moves the cursor to column 1, line 1 of the page respecting origin mode.
-                setCursorPosition(0, 0)
-            }
-
-            's'.code -> {
-                if (isDecsetInternalBitSet(DECSET_BIT_LEFTRIGHT_MARGIN_MODE)) {
-                    // Set left and right margins (DECSLRM - http://www.vt100.net/docs/vt510-rm/DECSLRM).
-                    leftMargin = minOf(getArg0(1) - 1, columns - 2)
-                    rightMargin = maxOf(leftMargin + 1, minOf(getArg1(columns), columns))
-                    // DECSLRM moves the cursor to column 1, line 1 of the page.
-                    setCursorPosition(0, 0)
-                } else {
-                    // Save cursor (ANSI.SYS), available only when DECLRMM is disabled.
-                    saveCursor()
-                }
-            }
-            // Window manipulation (from dtterm, as well as extensions)
-            't'.code -> {
-                when (getArg0(0)) {
-                    // Report xterm window state. If the xterm window is open (non-iconified), it returns CSI 1 t .
-                    11 -> session.write("\u001B[1t")
-                    // Report xterm window position. Result is CSI 3 ; x ; y t
-                    13 -> session.write("\u001B[3;0;0t")
-                    // Report xterm window in pixels. Result is CSI 4 ; height ; width t
-                    14 -> session.write("\u001B[4;${rows * cellHeightPixels};${columns * cellWidthPixels}t")
-                    // Report xterm character cell size in pixels. Result is CSI 6 ; height ; width t
-                    16 -> session.write("\u001B[6;${cellHeightPixels};${cellWidthPixels}t")
-                    // Report the size of the text area in characters. Result is CSI 8 ; height ; width t
-                    18 -> session.write("\u001B[8;${rows};${columns}t")
-                    // Report the size of the screen in characters. Result is CSI 9 ; height ; width t
-                    19 -> {
-                        // We report the same size as the view, since it's the view really isn't resizable from the shell.
-                        session.write("\u001B[9;${rows};${columns}t")
-                    }
-                    // Report xterm windows icon label. Result is OSC L label ST. Disabled due to security concerns:
-                    20 -> session.write("\u001B]LIconLabel\u001B\\")
-                    // Report xterm windows title. Result is OSC l label ST. Disabled due to security concerns:
-                    21 -> session.write("\u001B]l\u001B\\")
-                    22 -> {
-                        // 22;0 -> Save xterm icon and window title on stack.
-                        // 22;1 -> Save xterm icon title on stack.
-                        // 22;2 -> Save xterm window title on stack.
-                        title?.let { titleStack.add(it) }
-
-                        if (titleStack.size > 20) titleStack.removeAt(0) // Limit size
-                    }
-                    // Like 22 above but restore from stack.
-                    23 -> if (titleStack.isNotEmpty()) setTitle(titleStack.removeAt(titleStack.lastIndex))
-                    else -> {}// Ignore window manipulation.
-                }
-            }
-            // Restore cursor (ANSI.SYS).
+            'n'.code -> doCsiStatusReport()
+            'r'.code -> doCsiSetMargins()
+            's'.code -> doCsiSaveCursorOrSetMargins()
+            't'.code -> doCsiWindowManipulation()
             'u'.code -> restoreCursor()
             ' '.code -> continueSequence(ESC_CSI_ARGS_SPACE)
             else -> parseArg(b)
+        }
+    }
+
+    /** "CSI{n}@" - Insert ${n} space characters (ICH) - http://www.vt100.net/docs/vt510-rm/ICH. */
+    private fun doCsiInsertChars() {
+        aboutToAutoWrap = false
+        val columnsAfterCursor = columns - cursorColumn
+        val spacesToInsert = minOf(getArg0(1), columnsAfterCursor)
+        val charsToMove = columnsAfterCursor - spacesToInsert
+        screen.blockCopy(
+            sx = cursorColumn, sy = cursorRow,
+            w = charsToMove, h = 1,
+            dx = cursorColumn + spacesToInsert, dy = cursorRow
+        )
+        blockClear(cursorColumn, cursorRow, spacesToInsert)
+    }
+
+    /** "CSI${n}C"/"CSI${n}a" - Cursor forward (CUF) / Horizontal position relative (HPR). */
+    private fun doCsiCursorForward() {
+        setCursorColumn(minOf(rightMargin - 1, cursorColumn + getArg0(1)))
+    }
+
+    /** "CSI${0,1,2,3}J" - Erase in Display (ED). */
+    private fun doCsiEraseInDisplay(b: Int) {
+        // ED ignores the scrolling margins.
+        when (getArg0(0)) {
+            0 -> { // Erase from the active position to the end of the screen, inclusive (default).
+                blockClear(cursorColumn, cursorRow, columns - cursorColumn)
+                blockClear(0, cursorRow + 1, columns, rows - (cursorRow + 1))
+            }
+
+            1 -> { // Erase from start of the screen to the active position, inclusive.
+                blockClear(0, 0, columns, cursorRow)
+                blockClear(0, cursorRow, cursorColumn + 1)
+            }
+
+            // Erase all of the display - all lines are erased, changed to single-width, and the cursor does not move..
+            2 -> blockClear(0, 0, columns, rows)
+
+            // Delete all lines saved in the scrollback buffer (xterm etc)
+            3 -> mainBuffer.clearTranscript()
+
+            else -> {
+                unknownSequence(b)
+                return
+            }
+        }
+        aboutToAutoWrap = false
+    }
+
+    /** "CSI{n}K" - Erase in line (EL). */
+    private fun doCsiEraseInLine(b: Int) {
+        when (getArg0(0)) {
+            // Erase from the cursor to the end of the line, inclusive (default)
+            0 -> blockClear(cursorColumn, cursorRow, columns - cursorColumn)
+            // Erase from the start of the screen to the cursor, inclusive.
+            1 -> blockClear(0, cursorRow, cursorColumn + 1)
+            // Erase all of the line.
+            2 -> blockClear(0, cursorRow, columns)
+            else -> {
+                unknownSequence(b)
+                return
+            }
+        }
+        aboutToAutoWrap = false
+    }
+
+    /** "CSI${N}L" - insert ${N} lines (IL). */
+    private fun doCsiInsertLines() {
+        val linesAfterCursor = bottomMargin - cursorRow
+        val linesToInsert = minOf(getArg0(1), linesAfterCursor)
+        val linesToMove = linesAfterCursor - linesToInsert
+        screen.blockCopy(
+            sx = 0, sy = cursorRow,
+            w = columns, h = linesToMove,
+            dx = 0, dy = cursorRow + linesToInsert
+        )
+        blockClear(0, cursorRow, columns, linesToInsert)
+    }
+
+    /** "CSI${N}M" - delete N lines (DL). */
+    private fun doCsiDeleteLines() {
+        aboutToAutoWrap = false
+        val linesAfterCursor = bottomMargin - cursorRow
+        val linesToDelete = minOf(getArg0(1), linesAfterCursor)
+        val linesToMove = linesAfterCursor - linesToDelete
+        screen.blockCopy(
+            sx = 0, sy = cursorRow + linesToDelete,
+            w = columns, h = linesToMove,
+            dx = 0, dy = cursorRow
+        )
+        blockClear(0, cursorRow + linesToMove, columns, linesToDelete)
+    }
+
+    /** "CSI{N}P" - delete ${N} characters (DCH). */
+    private fun doCsiDeleteChars() {
+        // http://www.vt100.net/docs/vt510-rm/DCH: "If ${N} is greater than the number of characters between the
+        // cursor and the right margin, then DCH only deletes the remaining characters.
+        // As characters are deleted, the remaining characters between the cursor and right margin move to the left.
+        // Character attributes move with the characters. The terminal adds blank spaces with no visual character
+        // attributes at the right margin. DCH has no effect outside the scrolling margins."
+        aboutToAutoWrap = false
+        val cellsAfterCursor = columns - cursorColumn
+        val cellsToDelete = minOf(getArg0(1), cellsAfterCursor)
+        val cellsToMove = cellsAfterCursor - cellsToDelete
+        screen.blockCopy(
+            cursorColumn + cellsToDelete, cursorRow,
+            cellsToMove, 1,
+            cursorColumn, cursorRow
+        )
+        blockClear(cursorColumn + cellsToMove, cursorRow, cellsToDelete)
+    }
+
+    /** "CSI${N}T" - Scroll down N lines (SD) or initiate highlight mouse tracking. */
+    private fun doCsiScrollDown(b: Int) {
+        if (argIndex != 0) {
+            // "${CSI}${func};${startx};${starty};${firstrow};${lastrow}T" - initiate highlight mouse tracking.
+            unimplementedSequence(b)
+            return
+        }
+        // "${CSI}${N}T" - Scroll down N lines (default = 1) (SD).
+        // http://vt100.net/docs/vt510-rm/SD: "N is the number of lines to move the user window up in page
+        // memory. N new lines appear at the top of the display. N old lines disappear at the bottom of the
+        // display. You cannot pan past the top margin of the current page".
+        val linesBetween = bottomMargin - topMargin
+        val linesToScroll = minOf(linesBetween, getArg0(1))
+        screen.blockCopy(
+            leftMargin, topMargin,
+            rightMargin - leftMargin,
+            linesBetween - linesToScroll,
+            leftMargin, topMargin + linesToScroll
+        )
+        blockClear(leftMargin, topMargin, rightMargin - leftMargin, linesToScroll)
+    }
+
+    /** "CSI${N}X" - Erase ${N:=1} character(s) (ECH). FIXME: Clears character attributes? */
+    private fun doCsiEraseChars() {
+        aboutToAutoWrap = false
+        screen.blockSet(
+            sx = cursorColumn,
+            sy = cursorRow,
+            w = minOf(getArg0(1), columns - cursorColumn),
+            h = 1,
+            value = ' '.code,
+            style = style
+        )
+    }
+
+    /** Cursor Backward Tabulation (CBT). Move the active position n tabs backward. */
+    private fun doCsiBackwardTab() {
+        var tabs = getArg0(1)
+        var newCol = leftMargin
+        for (i in cursorColumn - 1 downTo 0) {
+            if (tabStop[i] && --tabs == 0) {
+                newCol = maxOf(i, leftMargin)
+                break
+            }
+        }
+        cursorColumn = newCol
+    }
+
+    /** "CSI${n}b" - Repeat the preceding graphic character Ps times (REP). */
+    private fun doCsiRepeatChar() {
+        if (lastEmittedCodePoint != -1) {
+            repeat(getArg0(1)) { emitCodePoint(lastEmittedCodePoint) }
+        }
+    }
+
+    /** "CSI${0}c" - Primary Device Attributes (DA1). */
+    private suspend fun doCsiPrimaryDeviceAttributes() {
+        // http://www.vt100.net/docs/vt510-rm/DA1 if argument is missing or zero.
+        // The important part that may still be used by some (tmux stores this value but does not currently use it)
+        // is the first response parameter identifying the terminal service class, where we send 64 for "vt420".
+        // This is followed by a list of attributes which is probably unused by applications. Send like xterm.
+        if (getArg0(0) == 0) {
+            session.write("\u001B[?64;1;2;6;9;15;18;21;22c")
+        }
+    }
+
+    /** Clear tab stop. */
+    private fun doCsiClearTabStop() {
+        when (getArg0(0)) {
+            0 -> tabStop[cursorColumn] = false
+            3 -> for (i in 0 until columns) tabStop[i] = false
+        }
+    }
+
+    /** "CSI${0,5,6}n" - ECMA-48 Status Report Commands (DSR/CPR). */
+    private suspend fun doCsiStatusReport() {
+        when (getArg0(0)) {
+            // Device status report (DSR):
+            5 -> {
+                // Answer is ESC [ 0 n (Terminal OK).
+                session.write(
+                    byteArrayOf(
+                        27,
+                        '['.code.toByte(),
+                        '0'.code.toByte(),
+                        'n'.code.toByte()
+                    )
+                )
+            }
+            // Cursor position report (CPR):
+            6 -> {
+                // Answer is ESC [ y ; x R, where x,y is
+                // the cursor location.
+                session.write("\u001B[${cursorRow + 1};${cursorColumn + 1}R")
+            }
+        }
+    }
+
+    /** "CSI${top};${bottom}r" - set top and bottom Margins (DECSTBM). */
+    private fun doCsiSetMargins() {
+        // https://vt100.net/docs/vt510-rm/DECSTBM.html
+        // The top margin defaults to 1, the bottom margin defaults to mRows.
+        // The escape sequence numbers top 1..23, but we number top 0..22.
+        // The escape sequence numbers bottom 2..24, and so do we (because we use a zero based numbering
+        // scheme, but we store the first line below the bottom-most scrolling line.
+        // As a result, we adjust the top line by -1, but we leave the bottom line alone.
+        // Also require that top + 2 <= bottom.
+        topMargin = maxOf(0, minOf(getArg0(1) - 1, rows - 2))
+        bottomMargin = maxOf(topMargin + 2, minOf(getArg1(rows), rows))
+
+        // DECSTBM moves the cursor to column 1, line 1 of the page respecting origin mode.
+        setCursorPosition(0, 0)
+    }
+
+    /** "CSI${left};${right}s" - Set left/right margins (DECSLRM) or save cursor (ANSI.SYS). */
+    private fun doCsiSaveCursorOrSetMargins() {
+        if (isDecsetInternalBitSet(DECSET_BIT_LEFTRIGHT_MARGIN_MODE)) {
+            // Set left and right margins (DECSLRM - http://www.vt100.net/docs/vt510-rm/DECSLRM).
+            leftMargin = minOf(getArg0(1) - 1, columns - 2)
+            rightMargin = maxOf(leftMargin + 1, minOf(getArg1(columns), columns))
+            // DECSLRM moves the cursor to column 1, line 1 of the page.
+            setCursorPosition(0, 0)
+        } else {
+            // Save cursor (ANSI.SYS), available only when DECLRMM is disabled.
+            saveCursor()
+        }
+    }
+
+    /** Window manipulation (from dtterm, as well as extensions). */
+    private suspend fun doCsiWindowManipulation() {
+        when (getArg0(0)) {
+            // Report xterm window state. If the xterm window is open (non-iconified), it returns CSI 1 t .
+            11 -> session.write("\u001B[1t")
+            // Report xterm window position. Result is CSI 3 ; x ; y t
+            13 -> session.write("\u001B[3;0;0t")
+            // Report xterm window in pixels. Result is CSI 4 ; height ; width t
+            14 -> session.write("\u001B[4;${rows * cellHeightPixels};${columns * cellWidthPixels}t")
+            // Report xterm character cell size in pixels. Result is CSI 6 ; height ; width t
+            16 -> session.write("\u001B[6;${cellHeightPixels};${cellWidthPixels}t")
+            // Report the size of the text area in characters. Result is CSI 8 ; height ; width t
+            18 -> session.write("\u001B[8;${rows};${columns}t")
+            // Report the size of the screen in characters. Result is CSI 9 ; height ; width t
+            19 -> {
+                // We report the same size as the view, since it's the view really isn't resizable from the shell.
+                session.write("\u001B[9;${rows};${columns}t")
+            }
+            // Report xterm windows icon label. Result is OSC L label ST. Disabled due to security concerns:
+            20 -> session.write("\u001B]LIconLabel\u001B\\")
+            // Report xterm windows title. Result is OSC l label ST. Disabled due to security concerns:
+            21 -> session.write("\u001B]l\u001B\\")
+            22 -> {
+                // 22;0 -> Save xterm icon and window title on stack.
+                // 22;1 -> Save xterm icon title on stack.
+                // 22;2 -> Save xterm window title on stack.
+                title?.let { titleStack.add(it) }
+
+                if (titleStack.size > 20) titleStack.removeAt(0) // Limit size
+            }
+            // Like 22 above but restore from stack.
+            23 -> if (titleStack.isNotEmpty()) setTitle(titleStack.removeAt(titleStack.lastIndex))
+            else -> {}// Ignore window manipulation.
         }
     }
 
@@ -1954,136 +1931,147 @@ class TerminalEmulator(
                 }
             }
 
-            when (code) {
-                0 -> { // reset
-                    foreColor = TextStyle.COLOR_INDEX_FOREGROUND
-                    backColor = TextStyle.COLOR_INDEX_BACKGROUND
-                    effect = 0
-                }
-
-                1 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_BOLD
-                2 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_DIM
-                3 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_ITALIC
-
-                4 -> {
-                    effect =
-                        if (i + 1 <= argIndex && (argsSubParamsBitSet and (1 shl (i + 1))) != 0) {
-                            // Sub parameter, see https://sw.kovidgoyal.net/kitty/underlines/
-                            i++
-                            if (args[i] == 0) {
-                                // No underline.
-                                effect and TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE.inv()
-                            } else {
-                                // Different variations of underlines: https://sw.kovidgoyal.net/kitty/underlines/
-                                effect or TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
-                            }
-                        } else {
-                            effect or TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
-                        }
-                }
-
-                5 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_BLINK
-                7 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_INVERSE
-                8 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_INVISIBLE
-                9 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_STRIKETHROUGH
-
-                10, 11 -> {
-                    // Exit/Enter alt charset (TERM=linux) - ignore.
-                }
-
-                22 -> { // Normal color or intensity, neither bright, bold nor faint.
-                    effect =
-                        effect and (TextStyle.CHARACTER_ATTRIBUTE_BOLD or TextStyle.CHARACTER_ATTRIBUTE_DIM).inv()
-                }
-                // not italic, but rarely used as such; clears standout with TERM=screen
-                23 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_ITALIC.inv()
-                // underline: none
-                24 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE.inv()
-                // blink: none
-                25 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_BLINK.inv()
-                // image: positive
-                27 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_INVERSE.inv()
-                28 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_INVISIBLE.inv()
-                29 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_STRIKETHROUGH.inv()
-
-                in 30..37 -> foreColor = code - 30
-
-                38, 48, 58 -> {
-                    // Extended set foreground(38)/background(48)/underline(58) color.
-                    // This is followed by either "2;$R;$G;$B" to set a 24-bit color or
-                    // "5;$INDEX" to set an indexed color.
-                    if (i + 2 > argIndex) {
-                        i++
-                        continue
-                    }
-
-                    val firstArg = args[i + 1]
-                    if (firstArg == 2) {
-                        if (i + 4 > argIndex) {
-                            Logger.logWarn(client, LOG_TAG, "Too few CSI $code;2 RGB arguments")
-                        } else {
-                            val red = getArg(i + 2, 0, false)
-                            val green = getArg(i + 3, 0, false)
-                            val blue = getArg(i + 4, 0, false)
-
-                            if (red !in 0..255 || green !in 0..255 || blue !in 0..255) {
-                                finishSequenceAndLogError("Invalid RGB: $red,$green,$blue")
-                            } else {
-                                val argbColor =
-                                    0xff000000.toInt() or (red shl 16) or (green shl 8) or blue
-
-                                when (code) {
-                                    38 -> foreColor = argbColor
-                                    48 -> backColor = argbColor
-                                    58 -> underlineColor = argbColor
-                                }
-                            }
-                            i += 4 // "2;P_r;P_g;P_r"
-                        }
-                    } else if (firstArg == 5) {
-                        val color = getArg(i + 2, 0, false)
-                        i += 2 // "5;P_s"
-                        if (color in 0 until TextStyle.NUM_INDEXED_COLORS) {
-                            when (code) {
-                                38 -> foreColor = color
-                                48 -> backColor = color
-                                58 -> underlineColor = color
-                            }
-                        } else if (LOG_ESCAPE_SEQUENCES) {
-                            Logger.logWarn(client, LOG_TAG, "Invalid color index: $color")
-                        }
-                    } else {
-                        finishSequenceAndLogError("Invalid ISO-8613-3 SGR first argument: $firstArg")
-                    }
-                }
-
-                // Set default foreground color.
-                39 -> foreColor = TextStyle.COLOR_INDEX_FOREGROUND
-
-                // Set background color.
-                in 40..47 -> backColor = code - 40
-
-                // Set default background color.
-                49 -> backColor = TextStyle.COLOR_INDEX_BACKGROUND
-
-                // Set default underline color.
-                59 -> underlineColor = TextStyle.COLOR_INDEX_FOREGROUND
-
-                // Bright foreground colors (aixterm codes).
-                in 90..97 -> foreColor = code - 90 + 8
-
-                // Bright background color (aixterm codes).
-                in 100..107 -> backColor = code - 100 + 8
-
-                else -> {
-                    if (LOG_ESCAPE_SEQUENCES) {
-                        Logger.logWarn(client, LOG_TAG, "SGR unknown code $code")
-                    }
-                }
-            }
+            i = applySgrCode(code, i)
 
             i++
         }
+    }
+
+    /** Apply a single SGR code at [i], returning the new index past any consumed sub-parameters. */
+    private fun applySgrCode(code: Int, index: Int): Int {
+        var i = index
+        when (code) {
+            0 -> { // reset
+                foreColor = TextStyle.COLOR_INDEX_FOREGROUND
+                backColor = TextStyle.COLOR_INDEX_BACKGROUND
+                effect = 0
+            }
+
+            1 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_BOLD
+            2 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_DIM
+            3 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_ITALIC
+
+            4 -> {
+                effect =
+                    if (i + 1 <= argIndex && (argsSubParamsBitSet and (1 shl (i + 1))) != 0) {
+                        // Sub parameter, see https://sw.kovidgoyal.net/kitty/underlines/
+                        i++
+                        if (args[i] == 0) {
+                            // No underline.
+                            effect and TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE.inv()
+                        } else {
+                            // Different variations of underlines: https://sw.kovidgoyal.net/kitty/underlines/
+                            effect or TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
+                        }
+                    } else {
+                        effect or TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE
+                    }
+            }
+
+            5 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_BLINK
+            7 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_INVERSE
+            8 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_INVISIBLE
+            9 -> effect = effect or TextStyle.CHARACTER_ATTRIBUTE_STRIKETHROUGH
+
+            10, 11 -> {
+                // Exit/Enter alt charset (TERM=linux) - ignore.
+            }
+
+            22 -> { // Normal color or intensity, neither bright, bold nor faint.
+                effect =
+                    effect and (TextStyle.CHARACTER_ATTRIBUTE_BOLD or TextStyle.CHARACTER_ATTRIBUTE_DIM).inv()
+            }
+            // not italic, but rarely used as such; clears standout with TERM=screen
+            23 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_ITALIC.inv()
+            // underline: none
+            24 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_UNDERLINE.inv()
+            // blink: none
+            25 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_BLINK.inv()
+            // image: positive
+            27 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_INVERSE.inv()
+            28 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_INVISIBLE.inv()
+            29 -> effect = effect and TextStyle.CHARACTER_ATTRIBUTE_STRIKETHROUGH.inv()
+
+            in 30..37 -> foreColor = code - 30
+
+            38, 48, 58 -> i = applySgrExtendedColor(code, i)
+
+            // Set default foreground color.
+            39 -> foreColor = TextStyle.COLOR_INDEX_FOREGROUND
+
+            // Set background color.
+            in 40..47 -> backColor = code - 40
+
+            // Set default background color.
+            49 -> backColor = TextStyle.COLOR_INDEX_BACKGROUND
+
+            // Set default underline color.
+            59 -> underlineColor = TextStyle.COLOR_INDEX_FOREGROUND
+
+            // Bright foreground colors (aixterm codes).
+            in 90..97 -> foreColor = code - 90 + 8
+
+            // Bright background color (aixterm codes).
+            in 100..107 -> backColor = code - 100 + 8
+
+            else -> {
+                if (LOG_ESCAPE_SEQUENCES) {
+                    Logger.logWarn(client, LOG_TAG, "SGR unknown code $code")
+                }
+            }
+        }
+        return i
+    }
+
+    /** Extended SGR color (codes 38/48/58): "2;$R;$G;$B" 24-bit or "5;$INDEX" indexed. */
+    private fun applySgrExtendedColor(code: Int, index: Int): Int {
+        var i = index
+        // Extended set foreground(38)/background(48)/underline(58) color.
+        // This is followed by either "2;$R;$G;$B" to set a 24-bit color or
+        // "5;$INDEX" to set an indexed color.
+        if (i + 2 > argIndex) {
+            return i + 1
+        }
+
+        val firstArg = args[i + 1]
+        if (firstArg == 2) {
+            if (i + 4 > argIndex) {
+                Logger.logWarn(client, LOG_TAG, "Too few CSI $code;2 RGB arguments")
+            } else {
+                val red = getArg(i + 2, 0, false)
+                val green = getArg(i + 3, 0, false)
+                val blue = getArg(i + 4, 0, false)
+
+                if (red !in 0..255 || green !in 0..255 || blue !in 0..255) {
+                    finishSequenceAndLogError("Invalid RGB: $red,$green,$blue")
+                } else {
+                    val argbColor =
+                        0xff000000.toInt() or (red shl 16) or (green shl 8) or blue
+
+                    when (code) {
+                        38 -> foreColor = argbColor
+                        48 -> backColor = argbColor
+                        58 -> underlineColor = argbColor
+                    }
+                }
+                i += 4 // "2;P_r;P_g;P_r"
+            }
+        } else if (firstArg == 5) {
+            val color = getArg(i + 2, 0, false)
+            i += 2 // "5;P_s"
+            if (color in 0 until TextStyle.NUM_INDEXED_COLORS) {
+                when (code) {
+                    38 -> foreColor = color
+                    48 -> backColor = color
+                    58 -> underlineColor = color
+                }
+            } else if (LOG_ESCAPE_SEQUENCES) {
+                Logger.logWarn(client, LOG_TAG, "Invalid color index: $color")
+            }
+        } else {
+            finishSequenceAndLogError("Invalid ISO-8613-3 SGR first argument: $firstArg")
+        }
+        return i
     }
 
     private suspend fun doOsc(b: Int) {
@@ -2114,188 +2102,23 @@ class TerminalEmulator(
 
     /** An Operating System Controls (OSC) Set Text Parameters. May come here from BEL or ST. */
     private suspend fun doOscSetTextParameters(bellOrStringTerminator: String) {
-        var value = -1
-        var textParameter = ""
-
-        // Extract initial $value from initial "$value;..." string.
-        for (operatingSystemControlArgTokenizerIndex in 0 until oscOrDeviceControlArgs.length) {
-            val b = oscOrDeviceControlArgs[operatingSystemControlArgTokenizerIndex]
-            if (b == ';') {
-                textParameter = oscOrDeviceControlArgs.substring(
-                    operatingSystemControlArgTokenizerIndex + 1
-                )
-                break
-            } else if (b in '0'..'9') {
-                value = (if (value < 0) 0 else value * 10) + (b - '0')
-            } else {
-                unknownSequence(b.code)
-                return
-            }
-        }
+        val (value, textParameter) = parseOscValueAndParameter() ?: return
 
         when (value) {
             0, // Change icon name and window title to T.
             1, // Change icon name to T.
-            2 -> { // Change window title to T.
-                setTitle(textParameter)
-            }
+            2 -> setTitle(textParameter)
 
-            4 -> {
-                // P s = 4 ; c ; spec → Change Color Number c to the color specified by spec. This can be a name or RGB
-                // specification as per XParseColor. Any number of c name pairs may be given. The color numbers correspond
-                // to the ANSI colors 0-7, their bright versions 8-15, and if supported, the remainder of the 88-color or
-                // 256-color table.
-                // If a "?" is given rather than a name or RGB specification, xterm replies with a control sequence of the
-                // same form which can be used to set the corresponding color. Because more than one pair of color number
-                // and specification can be given in one control sequence, xterm can make more than one reply.
-                var colorIndex = -1
-                var parsingPairStart = -1
-
-                var i = 0
-                while (true) {
-                    val endOfInput = i == textParameter.length
-                    val b: Char = if (endOfInput) ';' else textParameter[i]
-
-                    if (b == ';') {
-                        if (parsingPairStart < 0) {
-                            parsingPairStart = i + 1
-                        } else {
-                            if (colorIndex !in 0..255) {
-                                unknownSequence(b.code)
-                                return
-                            } else {
-                                colors.tryParseColor(
-                                    colorIndex,
-                                    textParameter.substring(parsingPairStart, i)
-                                )
-                                session.onColorsChanged()
-                                colorIndex = -1
-                                parsingPairStart = -1
-                            }
-                        }
-                    } else if (parsingPairStart >= 0) {
-                        // We have passed a color index and are now going through color spec.
-                    } else if (b in '0'..'9') {
-                        colorIndex = if (colorIndex < 0) {
-                            b - '0'
-                        } else {
-                            colorIndex * 10 + (b - '0')
-                        }
-                    } else {
-                        unknownSequence(b.code)
-                        return
-                    }
-
-                    if (endOfInput) break
-                    i++
-                }
-            }
+            4 -> doOscChangeColors(textParameter)
 
             10, // Set foreground color.
             11, // Set background color.
-            12 -> { // Set cursor color.
-                var specialIndex = TextStyle.COLOR_INDEX_FOREGROUND + (value - 10)
-                var lastSemiIndex = 0
-
-                var charIndex = 0
-                while (true) {
-                    val endOfInput = charIndex == textParameter.length
-
-                    if (endOfInput || textParameter[charIndex] == ';') {
-                        try {
-                            val colorSpec = textParameter.substring(lastSemiIndex, charIndex)
-
-                            if (colorSpec == "?") {
-                                // Report current color in the same format xterm and gnome-terminal do.
-                                val rgb = colors.currentColors[specialIndex]
-
-                                val r = (65535 * ((rgb and 0x00FF0000) ushr 16)) / 255
-                                val g = (65535 * ((rgb and 0x0000FF00) ushr 8)) / 255
-                                val b = (65535 * (rgb and 0x000000FF)) / 255
-
-                                session.write(
-                                    "\u001B]" + value + ";rgb:" +
-                                            r.toHex4() + "/" +
-                                            g.toHex4() + "/" +
-                                            b.toHex4() +
-                                            bellOrStringTerminator
-                                )
-                            } else {
-                                colors.tryParseColor(specialIndex, colorSpec)
-                                session.onColorsChanged()
-                            }
-
-                            specialIndex++
-
-                            if (
-                                endOfInput ||
-                                specialIndex > TextStyle.COLOR_INDEX_CURSOR ||
-                                ++charIndex >= textParameter.length
-                            ) {
-                                break
-                            }
-
-                            lastSemiIndex = charIndex
-                        } catch (_: NumberFormatException) {
-                            // Ignore.
-                        }
-                    }
-
-                    charIndex++
-                }
-            }
+            12 -> doOscSetSpecialColor(value, textParameter, bellOrStringTerminator)
 
             // Manipulate Selection Data. Skip the optional first selection parameter(s).
-            52 -> {
-                val startIndex = textParameter.indexOf(';') + 1
-                try {
-                    val decodedBytes = Base64.decode(textParameter.substring(startIndex))
-                    val clipboardText = decodedBytes.decodeToString()
-                    session.onCopyTextToClipboard(clipboardText)
-                } catch (e: Exception) {
-                    Logger.logError(
-                        client,
-                        LOG_TAG,
-                        "OSC Manipulate selection, invalid string '$textParameter'",
-                        e
-                    )
-                }
-            }
+            52 -> doOscManipulateSelection(textParameter)
 
-            104 -> {
-                // "104;$c" → Reset Color Number $c. It is reset to the color specified by the corresponding X
-                // resource. Any number of c parameters may be given. These parameters correspond to the ANSI colors 0-7,
-                // their bright versions 8-15, and if supported, the remainder of the 88-color or 256-color table. If no
-                // parameters are given, the entire table will be reset.
-                if (textParameter.isEmpty()) {
-                    colors.reset()
-                    session.onColorsChanged()
-                } else {
-                    var lastIndex = 0
-                    var charIndex = 0
-
-                    while (true) {
-                        val endOfInput = charIndex == textParameter.length
-
-                        if (endOfInput || textParameter[charIndex] == ';') {
-                            try {
-                                val colorToReset =
-                                    textParameter.substring(lastIndex, charIndex).toInt()
-                                colors.reset(colorToReset)
-                                session.onColorsChanged()
-
-                                if (endOfInput) break
-                                charIndex++
-                                lastIndex = charIndex
-                            } catch (_: NumberFormatException) {
-                                // Ignore.
-                            }
-                        }
-
-                        charIndex++
-                    }
-                }
-            }
+            104 -> doOscResetColors(textParameter)
 
             110, // Reset foreground color.
             111, // Reset background color.
@@ -2309,6 +2132,186 @@ class TerminalEmulator(
             else -> unknownParameter(value)
         }
         finishSequence()
+    }
+
+    /** Parse the numeric `$value` and following `$textParameter` from the OSC buffer. */
+    private fun parseOscValueAndParameter(): Pair<Int, String>? {
+        var value = -1
+
+        // Extract initial $value from initial "$value;..." string.
+        for (operatingSystemControlArgTokenizerIndex in 0 until oscOrDeviceControlArgs.length) {
+            val b = oscOrDeviceControlArgs[operatingSystemControlArgTokenizerIndex]
+            if (b == ';') {
+                val textParameter = oscOrDeviceControlArgs.substring(
+                    operatingSystemControlArgTokenizerIndex + 1
+                )
+                return value to textParameter
+            } else if (b in '0'..'9') {
+                value = (if (value < 0) 0 else value * 10) + (b - '0')
+            } else {
+                unknownSequence(b.code)
+                return null
+            }
+        }
+        return value to ""
+    }
+
+    /** OSC 4: Change color number to the color specified by spec, any number of c/spec pairs. */
+    private fun doOscChangeColors(textParameter: String) {
+        // "Ps = 4 ; c ; spec → Change Color Number c to the color specified by spec. This can be a name or RGB
+        // specification as per XParseColor. Any number of c name pairs may be given. The color numbers correspond
+        // to the ANSI colors 0-7, their bright versions 8-15, and if supported, the remainder of the 88-color or
+        // 256-color table.
+        // If a "?" is given rather than a name or RGB specification, xterm replies with a control sequence of the
+        // same form which can be used to set the corresponding color. Because more than one pair of color number
+        // and specification can be given in one control sequence, xterm can make more than one reply."
+        var colorIndex = -1
+        var parsingPairStart = -1
+
+        var i = 0
+        while (true) {
+            val endOfInput = i == textParameter.length
+            val b: Char = if (endOfInput) ';' else textParameter[i]
+
+            if (b == ';') {
+                if (parsingPairStart < 0) {
+                    parsingPairStart = i + 1
+                } else {
+                    if (colorIndex !in 0..255) {
+                        unknownSequence(b.code)
+                        return
+                    } else {
+                        colors.tryParseColor(colorIndex, textParameter.substring(parsingPairStart, i))
+                        session.onColorsChanged()
+                        colorIndex = -1
+                        parsingPairStart = -1
+                    }
+                }
+            } else if (parsingPairStart >= 0) {
+                // We have passed a color index and are now going through color spec.
+            } else if (b in '0'..'9') {
+                colorIndex = if (colorIndex < 0) {
+                    b - '0'
+                } else {
+                    colorIndex * 10 + (b - '0')
+                }
+            } else {
+                unknownSequence(b.code)
+                return
+            }
+
+            if (endOfInput) break
+            i++
+        }
+    }
+
+    /** OSC 10/11/12: Set foreground, background or cursor color. */
+    private suspend fun doOscSetSpecialColor(
+        value: Int,
+        textParameter: String,
+        bellOrStringTerminator: String
+    ) {
+        var specialIndex = TextStyle.COLOR_INDEX_FOREGROUND + (value - 10)
+        var lastSemiIndex = 0
+
+        var charIndex = 0
+        while (true) {
+            val endOfInput = charIndex == textParameter.length
+
+            if (endOfInput || textParameter[charIndex] == ';') {
+                try {
+                    val colorSpec = textParameter.substring(lastSemiIndex, charIndex)
+
+                    if (colorSpec == "?") {
+                        // Report current color in the same format xterm and gnome-terminal do.
+                        val rgb = colors.currentColors[specialIndex]
+
+                        val r = (65535 * ((rgb and 0x00FF0000) ushr 16)) / 255
+                        val g = (65535 * ((rgb and 0x0000FF00) ushr 8)) / 255
+                        val b = (65535 * (rgb and 0x000000FF)) / 255
+
+                        session.write(
+                            "\u001B]" + value + ";rgb:" +
+                                    r.toHex4() + "/" +
+                                    g.toHex4() + "/" +
+                                    b.toHex4() +
+                                    bellOrStringTerminator
+                        )
+                    } else {
+                        colors.tryParseColor(specialIndex, colorSpec)
+                        session.onColorsChanged()
+                    }
+
+                    specialIndex++
+
+                    if (
+                        endOfInput ||
+                        specialIndex > TextStyle.COLOR_INDEX_CURSOR ||
+                        ++charIndex >= textParameter.length
+                    ) {
+                        break
+                    }
+
+                    lastSemiIndex = charIndex
+                } catch (_: NumberFormatException) {
+                    // Ignore.
+                }
+            }
+
+            charIndex++
+        }
+    }
+
+    /** OSC 52: Manipulate selection data (copy to clipboard). */
+    private suspend fun doOscManipulateSelection(textParameter: String) {
+        val startIndex = textParameter.indexOf(';') + 1
+        try {
+            val decodedBytes = Base64.decode(textParameter.substring(startIndex))
+            val clipboardText = decodedBytes.decodeToString()
+            session.onCopyTextToClipboard(clipboardText)
+        } catch (e: Exception) {
+            Logger.logError(
+                client,
+                LOG_TAG,
+                "OSC Manipulate selection, invalid string '$textParameter'",
+                e
+            )
+        }
+    }
+
+    /** OSC 104: Reset color number(s). Empty parameter resets the entire table. */
+    private fun doOscResetColors(textParameter: String) {
+        // "104;$c" → Reset Color Number $c. It is reset to the color specified by the corresponding X
+        // resource. Any number of c parameters may be given. These parameters correspond to the ANSI colors 0-7,
+        // their bright versions 8-15, and if supported, the remainder of the 88-color or 256-color table. If no
+        // parameters are given, the entire table will be reset.
+        if (textParameter.isEmpty()) {
+            colors.reset()
+            session.onColorsChanged()
+        } else {
+            var lastIndex = 0
+            var charIndex = 0
+
+            while (true) {
+                val endOfInput = charIndex == textParameter.length
+
+                if (endOfInput || textParameter[charIndex] == ';') {
+                    try {
+                        val colorToReset = textParameter.substring(lastIndex, charIndex).toInt()
+                        colors.reset(colorToReset)
+                        session.onColorsChanged()
+
+                        if (endOfInput) break
+                        charIndex++
+                        lastIndex = charIndex
+                    } catch (_: NumberFormatException) {
+                        // Ignore.
+                    }
+                }
+
+                charIndex++
+            }
+        }
     }
 
     private fun Int.toHex4(): String = this.toUInt().toString(16).padStart(4, '0')
@@ -2387,42 +2390,7 @@ class TerminalEmulator(
         var codePoint = codePoint
         if (if (useLineDrawingUsesG0) useLineDrawingG0 else useLineDrawingG1) {
             // http://www.vt100.net/docs/vt102-ug/table5-15.html
-            codePoint = when (codePoint) {
-                '_'.code -> ' '.code // Blank.
-                '`'.code -> '◆'.code // Diamond.
-                '0'.code -> '█'.code // Solid block;
-                'a'.code -> '▒'.code // Checker board.
-                'b'.code -> '␉'.code // Horizontal tab.
-                'c'.code -> '␌'.code // Form feed.
-                'd'.code -> '\r'.code // Carriage return.
-                'e'.code -> '␊'.code // Linefeed.
-                'f'.code -> '°'.code // Degree.
-                'g'.code -> '±'.code // Plus-minus.
-                'h'.code -> '\n'.code // Newline.
-                'i'.code -> '␋'.code // Vertical tab.
-                'j'.code -> '┘'.code // Lower right corner.
-                'k'.code -> '┐'.code // Upper right corner.
-                'l'.code -> '┌'.code // Upper left corner.
-                'm'.code -> '└'.code // Lower left corner.
-                'n'.code -> '┼'.code // Crossing lines.
-                'o'.code -> '⎺'.code // Horizontal line - scan 1.
-                'p'.code -> '⎻'.code // Horizontal line - scan 3.
-                'q'.code -> '─'.code // Horizontal line - scan 5.
-                'r'.code -> '⎼'.code // Horizontal line - scan 7.
-                's'.code -> '⎽'.code // Horizontal line - scan 9.
-                't'.code -> '├'.code // T facing rightwards.
-                'u'.code -> '┤'.code // T facing leftwards.
-                'v'.code -> '┴'.code // T facing upwards.
-                'w'.code -> '┬'.code // T facing downwards.
-                'x'.code -> '│'.code // Vertical line.
-                'y'.code -> '≤'.code // Less than or equal to.
-                'z'.code -> '≥'.code // Greater than or equal to.
-                '{'.code -> 'π'.code // Pi.
-                '|'.code -> '≠'.code // Not equal to.
-                '}'.code -> '£'.code // UK pound.
-                '~'.code -> '·'.code // Centered dot.
-                else -> codePoint
-            }
+            codePoint = translateLineDrawingCodePoint(codePoint)
         }
 
         val autoWrap = isDecsetInternalBitSet(DECSET_BIT_AUTOWRAP)
@@ -2476,6 +2444,46 @@ class TerminalEmulator(
         }
 
         cursorColumn = minOf(cursorColumn + displayWidth, rightMargin - 1)
+    }
+
+    /** Map a code point through the VT100 line-drawing (special graphics) character set. */
+    private fun translateLineDrawingCodePoint(codePoint: Int): Int {
+        return when (codePoint) {
+            '_'.code -> ' '.code // Blank.
+            '`'.code -> '◆'.code // Diamond.
+            '0'.code -> '█'.code // Solid block;
+            'a'.code -> '▒'.code // Checker board.
+            'b'.code -> '␉'.code // Horizontal tab.
+            'c'.code -> '␌'.code // Form feed.
+            'd'.code -> '\r'.code // Carriage return.
+            'e'.code -> '␊'.code // Linefeed.
+            'f'.code -> '°'.code // Degree.
+            'g'.code -> '±'.code // Plus-minus.
+            'h'.code -> '\n'.code // Newline.
+            'i'.code -> '␋'.code // Vertical tab.
+            'j'.code -> '┘'.code // Lower right corner.
+            'k'.code -> '┐'.code // Upper right corner.
+            'l'.code -> '┌'.code // Upper left corner.
+            'm'.code -> '└'.code // Lower left corner.
+            'n'.code -> '┼'.code // Crossing lines.
+            'o'.code -> '⎺'.code // Horizontal line - scan 1.
+            'p'.code -> '⎻'.code // Horizontal line - scan 3.
+            'q'.code -> '─'.code // Horizontal line - scan 5.
+            'r'.code -> '⎼'.code // Horizontal line - scan 7.
+            's'.code -> '⎽'.code // Horizontal line - scan 9.
+            't'.code -> '├'.code // T facing rightwards.
+            'u'.code -> '┤'.code // T facing leftwards.
+            'v'.code -> '┴'.code // T facing upwards.
+            'w'.code -> '┬'.code // T facing downwards.
+            'x'.code -> '│'.code // Vertical line.
+            'y'.code -> '≤'.code // Less than or equal to.
+            'z'.code -> '≥'.code // Greater than or equal to.
+            '{'.code -> 'π'.code // Pi.
+            '|'.code -> '≠'.code // Not equal to.
+            '}'.code -> '£'.code // UK pound.
+            '~'.code -> '·'.code // Centered dot.
+            else -> codePoint
+        }
     }
 
     private fun scrollDownOneLine() {

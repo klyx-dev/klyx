@@ -1,5 +1,6 @@
 package com.klyx.presentation.screen.settings
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -54,14 +56,17 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.blankj.utilcode.util.ClipboardUtils
+import com.klyx.api.data.log.LogEntry
 import com.klyx.api.data.log.LogLevel
 import com.klyx.api.ui.LocalToastHostState
+import com.klyx.api.ui.ToastHostState
 import com.klyx.app.icons.ContentCopy
 import com.klyx.app.icons.DeleteSweep
 import com.klyx.presentation.components.LogEntryItem
 import com.klyx.presentation.components.toColor
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.viewmodel.LogViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 import java.io.File
@@ -127,51 +132,12 @@ fun LogScreen(viewModel: LogViewModel = koinViewModel()) {
                     }
                 },
                 actions = {
-                    IconButton(onClick = {
-                        val logs = viewModel.getFormattedLogs()
-                        if (logs.isBlank()) {
-                            scope.launch { toastHostState.showToast("No logs to copy") }
-                            return@IconButton
-                        }
-                        ClipboardUtils.copyText(logs)
-                        scope.launch { toastHostState.showToast("Logs copied to clipboard") }
-                    }) {
-                        Icon(
-                            imageVector = Icons.Rounded.ContentCopy,
-                            contentDescription = "Copy logs"
-                        )
-                    }
-                    IconButton(onClick = {
-                        val logs = viewModel.getFormattedLogs()
-                        if (logs.isBlank()) {
-                            scope.launch { toastHostState.showToast("No logs to share") }
-                            return@IconButton
-                        }
-                        val file = File(context.cacheDir, "klyx_logs.txt")
-                        file.writeText(logs)
-                        val uri = FileProvider.getUriForFile(
-                            context,
-                            "${context.packageName}.provider",
-                            file
-                        )
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share Logs"))
-                    }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Share,
-                            contentDescription = "Share logs"
-                        )
-                    }
-                    IconButton(onClick = { viewModel.clearLogs() }) {
-                        Icon(
-                            imageVector = Icons.Rounded.DeleteSweep,
-                            contentDescription = "Clear logs"
-                        )
-                    }
+                    LogTopBarActions(
+                        viewModel = viewModel,
+                        scope = scope,
+                        context = context,
+                        toastHostState = toastHostState
+                    )
                 }
             )
         }
@@ -190,27 +156,96 @@ fun LogScreen(viewModel: LogViewModel = koinViewModel()) {
 
             HorizontalDivider()
 
-            if (filteredEntries.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (filterLevel != null || filterText.isNotBlank()) "No matching logs" else "No logs yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 4.dp)
-                ) {
-                    items(filteredEntries, key = { "${it.timestamp}_${it.hashCode()}" }) { entry ->
-                        LogEntryItem(entry = entry, timeFormat = timeFormat)
-                    }
-                }
+            LogList(
+                entries = filteredEntries,
+                listState = listState,
+                timeFormat = timeFormat,
+                hasActiveFilter = filterLevel != null || filterText.isNotBlank()
+            )
+        }
+    }
+}
+
+@Composable
+private fun LogTopBarActions(
+    viewModel: LogViewModel,
+    scope: CoroutineScope,
+    context: Context,
+    toastHostState: ToastHostState,
+) {
+    IconButton(onClick = {
+        val logs = viewModel.getFormattedLogs()
+        if (logs.isBlank()) {
+            scope.launch { toastHostState.showToast("No logs to copy") }
+            return@IconButton
+        }
+        ClipboardUtils.copyText(logs)
+        scope.launch { toastHostState.showToast("Logs copied to clipboard") }
+    }) {
+        Icon(
+            imageVector = Icons.Rounded.ContentCopy,
+            contentDescription = "Copy logs"
+        )
+    }
+    IconButton(onClick = {
+        val logs = viewModel.getFormattedLogs()
+        if (logs.isBlank()) {
+            scope.launch { toastHostState.showToast("No logs to share") }
+            return@IconButton
+        }
+        val file = File(context.cacheDir, "klyx_logs.txt")
+        file.writeText(logs)
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.provider",
+            file
+        )
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(Intent.createChooser(intent, "Share Logs"))
+    }) {
+        Icon(
+            imageVector = Icons.Rounded.Share,
+            contentDescription = "Share logs"
+        )
+    }
+    IconButton(onClick = { viewModel.clearLogs() }) {
+        Icon(
+            imageVector = Icons.Rounded.DeleteSweep,
+            contentDescription = "Clear logs"
+        )
+    }
+}
+
+@Composable
+private fun LogList(
+    entries: List<LogEntry>,
+    listState: LazyListState,
+    timeFormat: SimpleDateFormat,
+    hasActiveFilter: Boolean,
+) {
+    if (entries.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (hasActiveFilter) "No matching logs" else "No logs yet",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    } else {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(vertical = 4.dp)
+        ) {
+            items(entries, key = { "${it.timestamp}_${it.hashCode()}" }) { entry ->
+                LogEntryItem(entry = entry, timeFormat = timeFormat)
             }
         }
     }

@@ -392,17 +392,7 @@ private fun LanguageClient.registerServerRequestHandlers() {
             handleVoidRequest(id, params, ::refreshTextDocumentContent)
         }
         handleRequest("workspace/configuration") { id, params ->
-            try {
-                val params = params ?: return@handleRequest invalidParams(id, params)
-                val result = configuration(json.decodeFromJsonElement(params))
-                createResponse(id, json.encodeToJsonElement(result))
-            } catch (e: Throwable) {
-                errorResponse(
-                    id,
-                    ErrorCodes.InternalError,
-                    "Internal error: $e"
-                )
-            }
+            handleParamsRequest(id, params, ::configuration)
         }
         handleRequest("workspace/workspaceFolders") { id, _ ->
             val result = try {
@@ -417,47 +407,34 @@ private fun LanguageClient.registerServerRequestHandlers() {
             createResponse(id, json.encodeToJsonElement(result))
         }
         handleRequest("workspace/applyEdit") { id, params ->
-            val params = params ?: return@handleRequest invalidParams(id, params)
-            val result = try {
-                applyEdit(json.decodeFromJsonElement(params))
-            } catch (e: Throwable) {
-                return@handleRequest errorResponse(
-                    id,
-                    ErrorCodes.InternalError,
-                    "Internal error: $e"
-                )
-            }
-            createResponse(id, json.encodeToJsonElement(result))
+            handleParamsRequest(id, params, ::applyEdit)
         }
         handleRequest("window/showMessageRequest") { id, params ->
-            val params = params ?: return@handleRequest invalidParams(id, params)
-            val result = try {
-                showMessageRequest(json.decodeFromJsonElement(params))
-            } catch (e: Throwable) {
-                return@handleRequest errorResponse(
-                    id,
-                    ErrorCodes.InternalError,
-                    "Internal error: $e"
-                )
-            }
-            createResponse(id, json.encodeToJsonElement(result))
+            handleParamsRequest(id, params, ::showMessageRequest)
         }
         handleRequest("window/showDocument") { id, params ->
-            val params = params ?: return@handleRequest invalidParams(id, params)
-            val result = try {
-                showDocument(json.decodeFromJsonElement(params))
-            } catch (e: Throwable) {
-                return@handleRequest errorResponse(
-                    id,
-                    ErrorCodes.InternalError,
-                    "Internal error: $e"
-                )
-            }
-            createResponse(id, json.encodeToJsonElement(result))
+            handleParamsRequest(id, params, ::showDocument)
         }
         handleRequest("window/workDoneProgress/create") { id, params ->
             handleVoidRequest(id, params, ::createProgress)
         }
+    }
+}
+
+private suspend inline fun <reified P, reified R> JsonRpcConnection.handleParamsRequest(
+    id: RequestId,
+    params: JsonElement?,
+    action: suspend (P) -> R,
+): ResponseMessage {
+    if (params == null) return invalidParams(id, params)
+    return try {
+        createResponse(id, json.encodeToJsonElement(action(json.decodeFromJsonElement(params))))
+    } catch (e: Throwable) {
+        errorResponse(
+            id,
+            ErrorCodes.InternalError,
+            "Internal error: $e"
+        )
     }
 }
 

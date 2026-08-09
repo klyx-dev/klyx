@@ -326,111 +326,130 @@ private fun TerminalSetup(
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                AnimatedVisibility(visible = !isOnline && !uiState.isInstalling && uiState.error == null) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                        ) {
-                            CircularWavyProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                            Spacer(Modifier.width(12.dp))
-                            Text(
-                                text = "Waiting for network connection...",
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontFamily = JetBrainsMonoFontFamily
-                            )
-                        }
-                    }
+                OfflineIndicator(visible = !isOnline && !uiState.isInstalling && uiState.error == null)
+
+                InstallationProgress(visible = uiState.isInstalling, uiState = uiState)
+
+                InstallationError(
+                    visible = uiState.error != null,
+                    error = uiState.error,
+                    onRetry = viewModel::startInstallation
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OfflineIndicator(visible: Boolean) {
+    AnimatedVisibility(visible = visible) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                CircularWavyProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(
+                    text = "Waiting for network connection...",
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontFamily = JetBrainsMonoFontFamily
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstallationProgress(visible: Boolean, uiState: TerminalUiState) {
+    AnimatedVisibility(visible = visible) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            val animatedProgress by animateFloatAsState(
+                targetValue = uiState.progress,
+                animationSpec = tween<Float>(durationMillis = 300).orSnap(),
+                label = "setup_progress"
+            )
+
+            Text(
+                text = uiState.currentStep,
+                style = MaterialTheme.typography.bodyMedium,
+                fontFamily = JetBrainsMonoFontFamily,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                modifier = Modifier.basicMarquee()
+            )
+
+            LinearWavyProgressIndicator(
+                progress = { animatedProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(CircleShape),
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+            )
+
+            if (uiState.progressText.isNotEmpty()) {
+                Text(
+                    text = uiState.progressText,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontFamily = JetBrainsMonoFontFamily,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.align(Alignment.End)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InstallationError(visible: Boolean, error: String?, onRetry: () -> Unit) {
+    AnimatedVisibility(visible = visible) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Text(
+                        text = error ?: "Unknown error",
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = JetBrainsMonoFontFamily
+                    )
                 }
+            }
 
-                AnimatedVisibility(visible = uiState.isInstalling) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        val animatedProgress by animateFloatAsState(
-                            targetValue = uiState.progress,
-                            animationSpec = tween<Float>(durationMillis = 300).orSnap(),
-                            label = "setup_progress"
-                        )
-
-                        Text(
-                            text = uiState.currentStep,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = JetBrainsMonoFontFamily,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            modifier = Modifier.basicMarquee()
-                        )
-
-                        LinearWavyProgressIndicator(
-                            progress = { animatedProgress },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(CircleShape),
-                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                        )
-
-                        if (uiState.progressText.isNotEmpty()) {
-                            Text(
-                                text = uiState.progressText,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontFamily = JetBrainsMonoFontFamily,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.align(Alignment.End)
-                            )
-                        }
-                    }
-                }
-
-                AnimatedVisibility(visible = uiState.error != null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.errorContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Warning,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
-                                )
-                                Text(
-                                    text = uiState.error ?: "Unknown error",
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontFamily = JetBrainsMonoFontFamily
-                                )
-                            }
-                        }
-
-                        Button(
-                            onClick = { viewModel.startInstallation() },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.error,
-                                contentColor = MaterialTheme.colorScheme.onError
-                            )
-                        ) {
-                            Text("Retry Installation", fontFamily = GoogleSansRounded, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Text("Retry Installation", fontFamily = GoogleSansRounded, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -446,49 +465,7 @@ private fun TerminalEmulator(
     applyTerminalTheme()
 
     if (!isServiceBound) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Surface(
-                shape = AbsoluteSmoothCornerShape(24.dp, 60),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                modifier = Modifier.padding(32.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = KlyxIcons.Klyx,
-                            contentDescription = null,
-                            modifier = Modifier.size(32.dp),
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                    }
-
-                    Text(
-                        text = "Binding Terminal Service",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontFamily = JetBrainsMonoFontFamily,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    CircularWavyProgressIndicator(
-                        modifier = Modifier.size(36.dp),
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
+        TerminalServiceBindingIndicator()
         return
     }
 
@@ -581,15 +558,67 @@ private fun TerminalEmulator(
             }
         }
     } else {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+        TerminalSessionLoading()
+    }
+}
+
+@Composable
+private fun TerminalServiceBindingIndicator() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = AbsoluteSmoothCornerShape(24.dp, 60),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.padding(32.dp)
         ) {
-            Text("Creating session...", fontFamily = JetBrainsMonoFontFamily)
-            Spacer(Modifier.height(16.dp))
-            CircularWavyProgressIndicator()
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = KlyxIcons.Klyx,
+                        contentDescription = null,
+                        modifier = Modifier.size(32.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                Text(
+                    text = "Binding Terminal Service",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontFamily = JetBrainsMonoFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                CircularWavyProgressIndicator(
+                    modifier = Modifier.size(36.dp),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun TerminalSessionLoading() {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Creating session...", fontFamily = JetBrainsMonoFontFamily)
+        Spacer(Modifier.height(16.dp))
+        CircularWavyProgressIndicator()
     }
 }
 

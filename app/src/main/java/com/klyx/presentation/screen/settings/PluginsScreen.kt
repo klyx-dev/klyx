@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -68,6 +69,7 @@ import com.klyx.app.icons.Archive
 import com.klyx.app.icons.Download
 import com.klyx.app.icons.Update
 import com.klyx.event.UiEvent
+import com.klyx.plugin.PluginUiState
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.ExpressiveMenuItem
 import com.klyx.presentation.components.InstallationLogCard
@@ -77,6 +79,7 @@ import com.klyx.presentation.navigation.PluginDetailPayload
 import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.screen.settings.components.SettingsSubsectionHeader
 import com.klyx.presentation.viewmodel.PluginInstallState
+import com.klyx.presentation.viewmodel.PluginStoreUiState
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
 import com.klyx.presentation.viewmodel.StorePlugin
 import kotlinx.coroutines.launch
@@ -201,133 +204,152 @@ fun PluginsScreen() {
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val installedIds = pluginUiState.plugins.map { it.descriptor.id }.toSet()
-            val installed = pluginUiState.plugins
-            val store = storeUiState.storePlugins.filterNot { it.id in installedIds }
+            pluginList(
+                pluginUiState = pluginUiState,
+                storeUiState = storeUiState,
+                onUnload = { id -> viewModel.unloadPlugin(id) },
+                onInstallStorePlugin = { plugin, onComplete ->
+                    storeViewModel.installPlugin(plugin) {
+                        viewModel.refresh()
+                        onComplete()
+                    }
+                },
+                onOpenInstalledDetail = { info ->
+                    val payload = PluginDetailPayload(
+                        id = info.descriptor.id,
+                        name = info.descriptor.name,
+                        version = info.descriptor.version,
+                        description = info.descriptor.description,
+                        author = info.descriptor.author?.name ?: "Unknown",
+                        isInstalled = true,
+                        iconUrl = info.iconPath,
+                        sourceUri = viewModel.localBundleSource(info.descriptor.id)?.toString()
+                    )
+                    navigator.navigateTo(SettingsScreen.PluginDetail(payload))
+                },
+                onOpenStoreDetail = { plugin ->
+                    val payload = PluginDetailPayload(
+                        id = plugin.id,
+                        name = plugin.name,
+                        version = plugin.version,
+                        description = plugin.description,
+                        author = plugin.author,
+                        isInstalled = false,
+                        iconUrl = plugin.iconUrl,
+                        downloadCount = plugin.downloadCount
+                    )
+                    navigator.navigateTo(SettingsScreen.PluginDetail(payload))
+                }
+            )
+        }
+    }
+}
 
-            if (pluginUiState.loadingState != null) {
-                item(key = "loading-bundle") {
+/** All items shown in the plugins [LazyColumn]. */
+private fun LazyListScope.pluginList(
+    pluginUiState: PluginUiState,
+    storeUiState: PluginStoreUiState,
+    onUnload: (String) -> Unit,
+    onInstallStorePlugin: (StorePlugin, () -> Unit) -> Unit,
+    onOpenInstalledDetail: (PluginInfo) -> Unit,
+    onOpenStoreDetail: (StorePlugin) -> Unit
+) {
+    val installedIds = pluginUiState.plugins.map { it.descriptor.id }.toSet()
+    val installed = pluginUiState.plugins
+    val store = storeUiState.storePlugins.filterNot { it.id in installedIds }
+
+    if (pluginUiState.loadingState != null) {
+        item(key = "loading-bundle") {
+            InstallationLogCard(
+                title = "Installing Local Bundle",
+                logs = pluginUiState.loadingState?.logs ?: emptyList()
+            )
+        }
+    }
+
+    if (installed.isEmpty() && store.isEmpty() && !storeUiState.storeLoading) {
+        item(key = "empty") {
+            Spacer(modifier = Modifier.height(64.dp))
+            Text(
+                text = "No plugins available.\nInstall a local bundle via the option menu.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+
+    if (installed.isNotEmpty()) {
+        item(key = "header-installed") {
+            SettingsSubsectionHeader(title = "Installed")
+        }
+        items(installed, key = { "installed:${it.descriptor.id}" }) { info ->
+            val storePlugin = storeUiState.storePlugins.find { it.id == info.descriptor.id }
+            var operationRunning by remember { mutableStateOf(false) }
+
+            InstalledPluginCard(
+                plugin = info,
+                storeVersion = storePlugin?.version,
+                runningState = operationRunning,
+                onUnload = {
+                    operationRunning = true
+                    onUnload(info.descriptor.id)
+                },
+                onUpdate = {
+                    if (storePlugin != null) {
+                        operationRunning = true
+                        onInstallStorePlugin(storePlugin) {
+                            operationRunning = false
+                        }
+                    }
+                },
+                onDetail = { onOpenInstalledDetail(info) }
+            )
+        }
+    }
+
+    if (store.isNotEmpty()) {
+        item(key = "header-store") {
+            SettingsSubsectionHeader(title = "Store")
+        }
+        items(store, key = { "store:${it.id}" }) { plugin ->
+            val installState = storeUiState.installState
+            val isInstalling = installState?.plugin?.id == plugin.id
+
+            StorePluginCard(
+                plugin = plugin,
+                installState = installState.takeIf { isInstalling },
+                onInstall = { onInstallStorePlugin(plugin) {} },
+                onDetail = { onOpenStoreDetail(plugin) }
+            )
+
+            AnimatedVisibility(
+                visible = isInstalling,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                if (installState != null) {
                     InstallationLogCard(
-                        title = "Installing Local Bundle",
-                        logs = pluginUiState.loadingState?.logs ?: emptyList()
+                        title = "Installing ${plugin.name}",
+                        logs = installState.logs
                     )
                 }
             }
+        }
+    }
 
-            if (installed.isEmpty() && store.isEmpty() && !storeUiState.storeLoading) {
-                item(key = "empty") {
-                    Spacer(modifier = Modifier.height(64.dp))
-                    Text(
-                        text = "No plugins available.\nInstall a local bundle via the option menu.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-
-            if (installed.isNotEmpty()) {
-                item(key = "header-installed") {
-                    SettingsSubsectionHeader(title = "Installed")
-                }
-                items(installed, key = { "installed:${it.descriptor.id}" }) { info ->
-                    val storePlugin = storeUiState.storePlugins.find { it.id == info.descriptor.id }
-                    var operationRunning by remember { mutableStateOf(false) }
-
-                    InstalledPluginCard(
-                        plugin = info,
-                        storeVersion = storePlugin?.version,
-                        runningState = operationRunning,
-                        onUnload = {
-                            operationRunning = true
-                            viewModel.unloadPlugin(info.descriptor.id)
-                        },
-                        onUpdate = {
-                            if (storePlugin != null) {
-                                operationRunning = true
-                                storeViewModel.installPlugin(storePlugin) {
-                                    viewModel.refresh()
-                                    operationRunning = false
-                                }
-                            }
-                        },
-                        onDetail = {
-                            val payload = PluginDetailPayload(
-                                id = info.descriptor.id,
-                                name = info.descriptor.name,
-                                version = info.descriptor.version,
-                                description = info.descriptor.description,
-                                author = info.descriptor.author?.name ?: "Unknown",
-                                isInstalled = true,
-                                iconUrl = info.iconPath,
-                                sourceUri = viewModel.localBundleSource(info.descriptor.id)?.toString()
-                            )
-                            navigator.navigateTo(SettingsScreen.PluginDetail(payload))
-                        }
-                    )
-                }
-            }
-
-            if (store.isNotEmpty()) {
-                item(key = "header-store") {
-                    SettingsSubsectionHeader(title = "Store")
-                }
-                items(store, key = { "store:${it.id}" }) { plugin ->
-                    val installState = storeUiState.installState
-                    val isInstalling = installState?.plugin?.id == plugin.id
-
-                    StorePluginCard(
-                        plugin = plugin,
-                        installState = installState.takeIf { isInstalling },
-                        onInstall = {
-                            storeViewModel.installPlugin(plugin) {
-                                viewModel.refresh()
-                            }
-                        },
-                        onDetail = {
-                            val payload = PluginDetailPayload(
-                                id = plugin.id,
-                                name = plugin.name,
-                                version = plugin.version,
-                                description = plugin.description,
-                                author = plugin.author,
-                                isInstalled = false,
-                                iconUrl = plugin.iconUrl,
-                                downloadCount = plugin.downloadCount
-                            )
-                            navigator.navigateTo(SettingsScreen.PluginDetail(payload))
-                        }
-                    )
-
-                    AnimatedVisibility(
-                        visible = isInstalling,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        if (installState != null) {
-                            InstallationLogCard(
-                                title = "Installing ${plugin.name}",
-                                logs = installState.logs
-                            )
-                        }
-                    }
-                }
-            }
-
-            if (storeUiState.storeLoading) {
-                item(key = "loading") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(strokeWidth = 3.dp)
-                    }
-                }
+    if (storeUiState.storeLoading) {
+        item(key = "loading") {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(strokeWidth = 3.dp)
             }
         }
     }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -97,6 +99,7 @@ import com.klyx.app.icons.Storage
 import com.klyx.data.file.resolveName
 import com.klyx.presentation.components.filetree.iconForFile
 import com.klyx.presentation.components.subcomponents.AutoSizeText
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -157,46 +160,7 @@ fun FileActionBottomSheet(
                 contentAlignment = Alignment.TopCenter
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(80.dp),
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(80.dp)
-                                    .clip(cornerShape)
-                                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                val icon = iconForFile(file)
-
-                                Image(
-                                    painter = icon.painter,
-                                    contentDescription = "File Icon",
-                                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
-                                    modifier = Modifier.size(32.dp),
-                                    contentScale = ContentScale.Fit
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight(),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                AutoSizeText(
-                                    text = file.resolveName(),
-                                    modifier = Modifier.padding(end = 4.dp),
-                                    fontWeight = FontWeight.Light,
-                                )
-                            }
-                        }
-                    }
+                    FileActionSheetHeader(file = file, cornerShape = cornerShape)
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -217,113 +181,180 @@ fun FileActionBottomSheet(
                             verticalAlignment = Alignment.Top
                         ) { page ->
                             when (page) {
-                                0 -> { // Options / Actions
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        if (file.isDirectory) {
-                                            directoryActions(
-                                                file = file,
-                                                isProject = isProject,
-                                                cornerShape = cornerShape,
-                                                onAction = onDirectoryAction
-                                            )
-                                        } else {
-                                            fileActions(file, cornerShape, onFileAction)
-                                        }
+                                0 -> FileActionsPage(
+                                    file = file,
+                                    isProject = isProject,
+                                    cornerShape = cornerShape,
+                                    onFileAction = onFileAction,
+                                    onDirectoryAction = onDirectoryAction
+                                )
 
-                                        item {
-                                            Spacer(Modifier.height(77.dp))
-                                        }
-                                    }
-                                }
-
-                                1 -> { // Details / Info
-                                    LazyColumn(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        item {
-                                            InfoItems(file)
-                                        }
-                                        item {
-                                            Spacer(Modifier.height(80.dp))
-                                        }
-                                    }
-                                }
+                                1 -> FileDetailsPage(file = file)
                             }
                         }
                     }
                 }
 
                 // Bottom Tab Bar
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .padding(5.dp),
-                    containerColor = Color.Transparent,
-                    divider = {},
-                    indicator = {}
-                ) {
-                    AnimatedTab(
-                        index = 0,
-                        selectedIndex = pagerState.currentPage,
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(0)
-                            }
-                        },
-                        transformOrigin = TransformOrigin(0f, 0.5f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.Menu,
-                                contentDescription = "Options",
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                "OPTIONS",
-                                fontFamily = GoogleSansRounded,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
-                    }
+                FileActionSheetTabBar(pagerState = pagerState, scope = scope)
+            }
+        }
+    }
+}
 
-                    AnimatedTab(
-                        index = 1,
-                        selectedIndex = pagerState.currentPage,
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(1)
-                            }
-                        },
-                        transformOrigin = TransformOrigin(1f, 0.5f)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Rounded.Info,
-                                contentDescription = "Details",
-                                modifier = Modifier.padding(horizontal = 4.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                "INFO",
-                                fontFamily = GoogleSansRounded,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+@Composable
+private fun FileActionSheetHeader(file: KxFile, cornerShape: Shape) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(cornerShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center
+            ) {
+                val icon = iconForFile(file)
+
+                Image(
+                    painter = icon.painter,
+                    contentDescription = "File Icon",
+                    colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
+                    modifier = Modifier.size(32.dp),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                AutoSizeText(
+                    text = file.resolveName(),
+                    modifier = Modifier.padding(end = 4.dp),
+                    fontWeight = FontWeight.Light,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileActionsPage(
+    file: KxFile,
+    isProject: Boolean,
+    cornerShape: AbsoluteSmoothCornerShape,
+    onFileAction: (FileAction) -> Unit,
+    onDirectoryAction: (DirectoryAction) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        if (file.isDirectory) {
+            directoryActions(
+                file = file,
+                isProject = isProject,
+                cornerShape = cornerShape,
+                onAction = onDirectoryAction
+            )
+        } else {
+            fileActions(file, cornerShape, onFileAction)
+        }
+
+        item {
+            Spacer(Modifier.height(77.dp))
+        }
+    }
+}
+
+@Composable
+private fun FileDetailsPage(file: KxFile) {
+    LazyColumn(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        item {
+            InfoItems(file)
+        }
+        item {
+            Spacer(Modifier.height(80.dp))
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.FileActionSheetTabBar(pagerState: PagerState, scope: CoroutineScope) {
+    PrimaryTabRow(
+        selectedTabIndex = pagerState.currentPage,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(5.dp),
+        containerColor = Color.Transparent,
+        divider = {},
+        indicator = {}
+    ) {
+        AnimatedTab(
+            index = 0,
+            selectedIndex = pagerState.currentPage,
+            onClick = {
+                scope.launch {
+                    pagerState.animateScrollToPage(0)
                 }
+            },
+            transformOrigin = TransformOrigin(0f, 0.5f)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Menu,
+                    contentDescription = "Options",
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "OPTIONS",
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+
+        AnimatedTab(
+            index = 1,
+            selectedIndex = pagerState.currentPage,
+            onClick = {
+                scope.launch {
+                    pagerState.animateScrollToPage(1)
+                }
+            },
+            transformOrigin = TransformOrigin(1f, 0.5f)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.Info,
+                    contentDescription = "Details",
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    "INFO",
+                    fontFamily = GoogleSansRounded,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

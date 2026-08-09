@@ -1,7 +1,9 @@
 package com.klyx.presentation.screen
 
 import android.content.ClipData
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -123,6 +125,7 @@ import com.klyx.api.data.runner.FileRunRequest
 import com.klyx.api.data.runner.FileRunnerRegistry
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.ScreenRegistry
+import com.klyx.api.ui.ToastHostState
 import com.klyx.api.ui.ToolbarAction
 import com.klyx.api.ui.ToolbarCategory
 import com.klyx.api.ui.ToolbarRegistry
@@ -409,64 +412,16 @@ fun HomeScreen(
         }
     )
 
-    if (showShareDialog && activeTab is WorkspaceTab.TextFile) {
-        val tab = activeTab as WorkspaceTab.TextFile
-        val editorState = registry[tab.id]
-        val hasSelection = editorState?.cursor?.isSelected ?: false
-
-        ShareDialog(
-            fileName = tab.title,
-            hasSelection = hasSelection,
-            onDismiss = { showShareDialog = false },
-            onShareSelection = {
-                showShareDialog = false
-                val cursor = editorState?.cursor
-                val text = editorState?.text
-
-                if (cursor != null && text != null && hasSelection) {
-                    val start = minOf(cursor.left, cursor.right)
-                    val end = maxOf(cursor.left, cursor.right)
-                    val selectedText = text.substring(start, end)
-
-                    shareText(selectedText)
-                } else {
-                    scope.launch {
-                        toastHostState.showFailureToast("No text selected to share")
-                    }
-                }
-            },
-            onShareFileText = {
-                scope.launch(Dispatchers.IO) {
-                    val wholeText = context.contentResolver.openInputStream(
-                        (activeTab as WorkspaceTab.TextFile).file.uri
-                    )?.bufferedReader()?.readText() ?: ""
-                    withContext(Dispatchers.Main.immediate) {
-                        shareText(wholeText)
-                    }
-                }
-                showShareDialog = false
-            },
-            onShareFile = {
-                showShareDialog = false
-                (activeTab as WorkspaceTab.TextFile).file.share()
-            }
+    if (showShareDialog) {
+        ShareDialogs(
+            activeTab = activeTab,
+            registry = registry,
+            context = context,
+            scope = scope,
+            toastHostState = toastHostState,
+            onDismiss = { showShareDialog = false }
         )
     }
-
-    if (showShareDialog && activeTab is WorkspaceTab.ImageFile) {
-        val tab = (activeTab as WorkspaceTab.ImageFile)
-
-        ImageShareDialog(
-            fileName = tab.title,
-            imageUri = tab.uri,
-            onDismiss = { showShareDialog = false },
-            onShare = {
-                showShareDialog = false
-                tab.uri.share()
-            }
-        )
-    }
-
     editorUiState.pendingCloseTabId?.let { tabId ->
         val tab = openTabs.find { it.id == tabId } as? WorkspaceTab.TextFile
         if (tab != null) {
@@ -486,152 +441,18 @@ fun HomeScreen(
     var nodeToCreateFolder by remember { mutableStateOf<FileNode?>(null) }
 
     selectedNodeForAction?.let { node ->
-        val sheetState = rememberBottomSheetState(
-            initialValue = Hidden,
-            enabledValues = setOf(Hidden, Expanded)
-        )
-
-        val dismiss: () -> Unit = {
-            scope.launch { sheetState.hide() }.invokeOnCompletion {
-                if (!sheetState.isVisible) {
-                    selectedNodeForAction = null
-                }
-            }
-        }
-
-        FileActionBottomSheet(
-            file = node.file,
+        FileNodeActionSheet(
+            node = node,
             isProject = fileTreeViewModel.isRootNode(node),
-            sheetState = sheetState,
+            fileTreeViewModel = fileTreeViewModel,
+            editorViewModel = editorViewModel,
+            scope = scope,
+            clipboard = clipboard,
             onDismissRequest = { selectedNodeForAction = null },
-            onFileAction = { action ->
-                when (action) {
-                    is Copy -> {
-                        fileTreeViewModel.copyNode(node)
-                        scope.launch {
-                            clipboard.setClipEntry(
-                                ClipData.newRawUri("file", action.file.shareableUri)
-                                    .toClipEntry()
-                            )
-                        }
-                        dismiss()
-                    }
-
-                    is Cut -> {
-                        fileTreeViewModel.cutNode(node)
-                        scope.launch {
-                            clipboard.setClipEntry(
-                                ClipData.newRawUri("file", action.file.shareableUri)
-                                    .toClipEntry()
-                            )
-                        }
-                        dismiss()
-                    }
-
-                    is CopyPath -> {
-                        scope.launch {
-                            copyPath(action.file, clipboard)
-                            dismiss()
-                        }
-                    }
-
-                    is Delete -> {
-                        nodeToDelete = node
-                        dismiss()
-                    }
-
-                    is Rename -> {
-                        nodeToRename = node
-                        dismiss()
-                    }
-
-                    is OpenWith -> action.file.openWith()
-                    is Share -> action.file.share()
-
-                    is Paste -> {
-                        fileTreeViewModel
-                            .visibleNodes
-                            .value
-                            .firstNotNullOfOrNull {
-                                if (it.node.uri == action.destination.uri) {
-                                    it.node
-                                } else {
-                                    null
-                                }
-                            }?.let { parentNode ->
-                                scope.launch {
-                                    val clipUri =
-                                        clipboard.getClipEntry()?.clipData?.getItemAt(0)?.uri
-                                    fileTreeViewModel.pasteNode(
-                                        targetParent = parentNode,
-                                        clipboardUri = clipUri,
-                                        onMoveCompleted = editorViewModel::handleFileRenamed
-                                    )
-                                }
-                            }
-                        dismiss()
-                    }
-                }
-            },
-            onDirectoryAction = { action ->
-                when (action) {
-                    is CloseProject -> {
-                        fileTreeViewModel.removeRootNode(action.file)
-                        dismiss()
-                    }
-
-                    is CopyPath -> {
-                        scope.launch {
-                            copyPath(action.file, clipboard)
-                            dismiss()
-                        }
-                    }
-
-                    is Delete -> {
-                        nodeToDelete = node
-                        dismiss()
-                    }
-
-                    is Rename -> {
-                        nodeToRename = node
-                        dismiss()
-                    }
-
-                    is NewFile -> {
-                        nodeToCreateFile = node
-                        dismiss()
-                    }
-
-                    is NewDirectory -> {
-                        nodeToCreateFolder = node
-                        dismiss()
-                    }
-
-                    is Paste -> {
-                        fileTreeViewModel
-                            .visibleNodes
-                            .value
-                            .firstNotNullOfOrNull {
-                                if (it.node.uri == action.destination.uri) {
-                                    it.node
-                                } else {
-                                    null
-                                }
-                            }?.let { parentNode ->
-                                scope.launch {
-                                    val clipUri =
-                                        clipboard.getClipEntry()?.clipData?.getItemAt(0)?.uri
-                                    fileTreeViewModel.pasteNode(
-                                        targetParent = parentNode,
-                                        clipboardUri = clipUri,
-                                        onMoveCompleted = editorViewModel::handleFileRenamed
-                                    )
-                                }
-                            }
-                        dismiss()
-                    }
-                }
-            }
+            onDeleteNode = { nodeToDelete = it },
+            onRenameNode = { nodeToRename = it },
+            onCreateFile = { nodeToCreateFile = it },
+            onCreateFolder = { nodeToCreateFolder = it },
         )
     }
 
@@ -724,6 +545,243 @@ fun HomeScreen(
 
 private suspend fun copyPath(file: KxFile, clipboard: Clipboard) {
     clipboard.setClipEntry(ClipData.newPlainText("klyx", (file.uri.path ?: file.uri.toString())).toClipEntry())
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FileNodeActionSheet(
+    node: FileNode,
+    isProject: Boolean,
+    fileTreeViewModel: FileTreeViewModel,
+    editorViewModel: EditorViewModel,
+    scope: CoroutineScope,
+    clipboard: Clipboard,
+    onDismissRequest: () -> Unit,
+    onDeleteNode: (FileNode) -> Unit,
+    onRenameNode: (FileNode) -> Unit,
+    onCreateFile: (FileNode) -> Unit,
+    onCreateFolder: (FileNode) -> Unit,
+) {
+    val sheetState = rememberBottomSheetState(
+        initialValue = Hidden,
+        enabledValues = setOf(Hidden, Expanded)
+    )
+
+    val dismiss: () -> Unit = {
+        scope.launch { sheetState.hide() }.invokeOnCompletion {
+            if (!sheetState.isVisible) {
+                onDismissRequest()
+            }
+        }
+    }
+
+    FileActionBottomSheet(
+        file = node.file,
+        isProject = isProject,
+        sheetState = sheetState,
+        onDismissRequest = onDismissRequest,
+        onFileAction = { action ->
+            when (action) {
+                is Copy -> {
+                    fileTreeViewModel.copyNode(node)
+                    scope.launch {
+                        clipboard.setClipEntry(
+                            ClipData.newRawUri("file", action.file.shareableUri)
+                                .toClipEntry()
+                        )
+                    }
+                    dismiss()
+                }
+
+                is Cut -> {
+                    fileTreeViewModel.cutNode(node)
+                    scope.launch {
+                        clipboard.setClipEntry(
+                            ClipData.newRawUri("file", action.file.shareableUri)
+                                .toClipEntry()
+                        )
+                    }
+                    dismiss()
+                }
+
+                is CopyPath -> {
+                    scope.launch {
+                        copyPath(action.file, clipboard)
+                        dismiss()
+                    }
+                }
+
+                is Delete -> {
+                    onDeleteNode(node)
+                    dismiss()
+                }
+
+                is Rename -> {
+                    onRenameNode(node)
+                    dismiss()
+                }
+
+                is OpenWith -> action.file.openWith()
+                is Share -> action.file.share()
+
+                is Paste -> {
+                    pasteFromClipboard(
+                        destinationUri = action.destination.uri,
+                        fileTreeViewModel = fileTreeViewModel,
+                        editorViewModel = editorViewModel,
+                        clipboard = clipboard,
+                        scope = scope
+                    )
+                    dismiss()
+                }
+            }
+        },
+        onDirectoryAction = { action ->
+            when (action) {
+                is CloseProject -> {
+                    fileTreeViewModel.removeRootNode(action.file)
+                    dismiss()
+                }
+
+                is CopyPath -> {
+                    scope.launch {
+                        copyPath(action.file, clipboard)
+                        dismiss()
+                    }
+                }
+
+                is Delete -> {
+                    onDeleteNode(node)
+                    dismiss()
+                }
+
+                is Rename -> {
+                    onRenameNode(node)
+                    dismiss()
+                }
+
+                is NewFile -> {
+                    onCreateFile(node)
+                    dismiss()
+                }
+
+                is NewDirectory -> {
+                    onCreateFolder(node)
+                    dismiss()
+                }
+
+                is Paste -> {
+                    pasteFromClipboard(
+                        destinationUri = action.destination.uri,
+                        fileTreeViewModel = fileTreeViewModel,
+                        editorViewModel = editorViewModel,
+                        clipboard = clipboard,
+                        scope = scope
+                    )
+                    dismiss()
+                }
+            }
+        }
+    )
+}
+
+private fun pasteFromClipboard(
+    destinationUri: Uri,
+    fileTreeViewModel: FileTreeViewModel,
+    editorViewModel: EditorViewModel,
+    clipboard: Clipboard,
+    scope: CoroutineScope,
+) {
+    fileTreeViewModel
+        .visibleNodes
+        .value
+        .firstNotNullOfOrNull {
+            if (it.node.uri == destinationUri) {
+                it.node
+            } else {
+                null
+            }
+        }?.let { parentNode ->
+            scope.launch {
+                val clipUri =
+                    clipboard.getClipEntry()?.clipData?.getItemAt(0)?.uri
+                fileTreeViewModel.pasteNode(
+                    targetParent = parentNode,
+                    clipboardUri = clipUri,
+                    onMoveCompleted = editorViewModel::handleFileRenamed
+                )
+            }
+        }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShareDialogs(
+    activeTab: WorkspaceTab?,
+    registry: EditorStateRegistry,
+    context: Context,
+    scope: CoroutineScope,
+    toastHostState: ToastHostState,
+    onDismiss: () -> Unit,
+) {
+    when (val tab = activeTab) {
+        is WorkspaceTab.TextFile -> {
+            val editorState = registry[tab.id]
+            val hasSelection = editorState?.cursor?.isSelected ?: false
+
+            ShareDialog(
+                fileName = tab.title,
+                hasSelection = hasSelection,
+                onDismiss = onDismiss,
+                onShareSelection = {
+                    onDismiss()
+                    val cursor = editorState?.cursor
+                    val text = editorState?.text
+
+                    if (cursor != null && text != null && hasSelection) {
+                        val start = minOf(cursor.left, cursor.right)
+                        val end = maxOf(cursor.left, cursor.right)
+                        val selectedText = text.substring(start, end)
+
+                        shareText(selectedText)
+                    } else {
+                        scope.launch {
+                            toastHostState.showFailureToast("No text selected to share")
+                        }
+                    }
+                },
+                onShareFileText = {
+                    scope.launch(Dispatchers.IO) {
+                        val wholeText = context.contentResolver.openInputStream(
+                            tab.file.uri
+                        )?.bufferedReader()?.readText() ?: ""
+                        withContext(Dispatchers.Main.immediate) {
+                            shareText(wholeText)
+                        }
+                    }
+                    onDismiss()
+                },
+                onShareFile = {
+                    onDismiss()
+                    tab.file.share()
+                }
+            )
+        }
+
+        is WorkspaceTab.ImageFile -> {
+            ImageShareDialog(
+                fileName = tab.title,
+                imageUri = tab.uri,
+                onDismiss = onDismiss,
+                onShare = {
+                    onDismiss()
+                    tab.uri.share()
+                }
+            )
+        }
+
+        else -> Unit
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -921,14 +979,7 @@ private fun MainMenu(
                 modifier = Modifier.widthIn(min = 180.dp)
             ) {
                 if (activeTab is WorkspaceTab.TextFile || activeTab is WorkspaceTab.ImageFile) {
-                    Text(
-                        text = "Current File",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontFamily = GoogleSansRounded,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
+                    MenuSectionHeader("Current File")
 
                     if (activeTab is WorkspaceTab.TextFile) {
                         ExpressiveMenuItem(
@@ -950,16 +1001,10 @@ private fun MainMenu(
                         }
                     )
 
-                    currentFileActions.forEach { action ->
-                        ExpressiveMenuItem(
-                            text = action.label,
-                            icon = action.icon,
-                            onClick = {
-                                showMenu = false
-                                action.onClick()
-                            }
-                        )
-                    }
+                    MenuActionItems(
+                        actions = currentFileActions,
+                        onDismiss = { showMenu = false }
+                    )
 
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 4.dp, horizontal = 16.dp),
@@ -967,14 +1012,7 @@ private fun MainMenu(
                     )
                 }
 
-                Text(
-                    text = "Workspace",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontFamily = GoogleSansRounded,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+                MenuSectionHeader("Workspace")
 
                 ExpressiveMenuItem(
                     text = "Terminal",
@@ -994,16 +1032,10 @@ private fun MainMenu(
                     }
                 )
 
-                workspaceActions.forEach { action ->
-                    ExpressiveMenuItem(
-                        text = action.label,
-                        icon = action.icon,
-                        onClick = {
-                            showMenu = false
-                            action.onClick()
-                        }
-                    )
-                }
+                MenuActionItems(
+                    actions = workspaceActions,
+                    onDismiss = { showMenu = false }
+                )
 
                 if (hasCustomOrPlugins) {
                     HorizontalDivider(
@@ -1013,25 +1045,11 @@ private fun MainMenu(
                 }
 
                 customCategories.forEach { category ->
-                    Text(
-                        text = category.name,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontFamily = GoogleSansRounded,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    MenuSectionHeader(category.name)
+                    MenuActionItems(
+                        actions = byCategory[category]!!.sortedBy { it.priority },
+                        onDismiss = { showMenu = false }
                     )
-
-                    byCategory[category]!!.sortedBy { it.priority }.forEach { action ->
-                        ExpressiveMenuItem(
-                            text = action.label,
-                            icon = action.icon,
-                            onClick = {
-                                showMenu = false
-                                action.onClick()
-                            }
-                        )
-                    }
                 }
 
                 if (pluginsActions.isNotEmpty()) {
@@ -1042,28 +1060,41 @@ private fun MainMenu(
                         )
                     }
 
-                    Text(
-                        text = "Plugins",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontFamily = GoogleSansRounded,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
+                    MenuSectionHeader("Plugins")
 
-                    pluginsActions.forEach { action ->
-                        ExpressiveMenuItem(
-                            text = action.label,
-                            icon = action.icon,
-                            onClick = {
-                                showMenu = false
-                                action.onClick()
-                            }
-                        )
-                    }
+                    MenuActionItems(
+                        actions = pluginsActions,
+                        onDismiss = { showMenu = false }
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MenuSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+        fontFamily = GoogleSansRounded,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+    )
+}
+
+@Composable
+private fun MenuActionItems(actions: List<ToolbarAction>, onDismiss: () -> Unit) {
+    actions.forEach { action ->
+        ExpressiveMenuItem(
+            text = action.label,
+            icon = action.icon,
+            onClick = {
+                onDismiss()
+                action.onClick()
+            }
+        )
     }
 }
 

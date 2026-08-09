@@ -94,6 +94,7 @@ import com.klyx.presentation.screen.settings.components.SettingsSubsectionHeader
 import com.klyx.presentation.screen.settings.components.SliderSettingsItem
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import java.util.Locale
@@ -173,405 +174,518 @@ fun EditorSettings() {
                 ),
         ) {
             stickyHeader {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 6.dp, bottom = 12.dp, end = 6.dp, top = 8.dp)
-                ) {
-                    Column {
-                        SettingsSubsectionHeader("Preview")
-
-                        CodeEditorDemo(
-                            fontSize = localFontSize.sp,
-                            fontFamily = localFontFamily,
-                            indicatorWaveWidth = localWaveWidth,
-                            indicatorWaveLength = localWaveLength,
-                            indicatorWaveAmplitude = localWaveAmplitude,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(4.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                        )
-                    }
-                }
+                EditorPreviewHeader(
+                    localFontSize = localFontSize,
+                    localFontFamily = localFontFamily,
+                    localWaveWidth = localWaveWidth,
+                    localWaveLength = localWaveLength,
+                    localWaveAmplitude = localWaveAmplitude
+                )
             }
 
             item {
-                SettingsSubsection("Common") {
-                    FontFamilySettingItem(
-                        currentFontFamily = localFontFamily,
-                        customFontUri = settings.customFontUri,
-                        onClearCustomFont = {
-                            scope.launch {
-                                updateEditorSettings { copy(customFontUri = null) }
-                            }
-                        },
-                        onCustomFontPicked = { uriString ->
-                            scope.launch {
-                                updateEditorSettings { copy(customFontUri = uriString) }
-                            }
-                        }
-                    )
+                CommonSettingsSection(
+                    settings = settings,
+                    update = ::update,
+                    localFontSize = localFontSize,
+                    onLocalFontSizeChange = { localFontSize = it },
+                    localFontFamily = localFontFamily,
+                    customFontUri = settings.customFontUri,
+                    scope = scope
+                )
+            }
 
-                    SliderSettingsItem(
-                        label = "Font Size",
-                        value = localFontSize,
-                        onValueChange = { localFontSize = it },
-                        valueRange = 10f..32f,
-                        // (32 - 10) / 1 step - 1 = 21 steps
-                        steps = 21,
-                        onValueChangeFinished = {
-                            if (localFontSize != settings.fontSize) {
-                                update { copy(fontSize = localFontSize) }
-                            }
-                        },
-                        valueText = { "${it.roundToInt()}sp" }
-                    )
+            item { EditingSettingsSection(settings = settings, update = ::update) }
 
-                    SegmentedSettingsItem(
-                        label = "Tab Size",
-                        options = persistentListOf(2, 4, 8),
-                        currentValue = settings.tabSize,
-                        onValueChange = { update { copy(tabSize = it) } },
-                        valueText = { "$it Spaces" }
-                    )
+            item { KeyboardInputSettingsSection(settings = settings, update = ::update) }
 
-                    SwitchSettingItem(
-                        title = "Word Wrap",
-                        subtitle = "Wrap long lines to the next visual row",
-                        checked = settings.wordWrap,
-                        onCheckedChange = { update { copy(wordWrap = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.FormatLineSpacing, null) }
-                    )
-                }
+            item {
+                IndicatorsVisualsSettingsSection(
+                    settings = settings,
+                    update = ::update,
+                    localWaveLength = localWaveLength,
+                    onLocalWaveLengthChange = { localWaveLength = it },
+                    localWaveWidth = localWaveWidth,
+                    onLocalWaveWidthChange = { localWaveWidth = it },
+                    localWaveAmplitude = localWaveAmplitude,
+                    onLocalWaveAmplitudeChange = { localWaveAmplitude = it }
+                )
             }
 
             item {
-                SettingsSubsection("Editing") {
-                    SwitchSettingItem(
-                        title = "Pin Line Numbers",
-                        subtitle = "Keep line numbers visible when scrolling horizontally",
-                        checked = settings.pinLineNumbers,
-                        onCheckedChange = {
-                            update { copy(pinLineNumbers = it) }
-                        },
-                        leadingIcon = { Icon(Icons.Rounded.FormatListNumbered, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Delete Empty Lines Fast",
-                        subtitle = "Delete the entire line instantly if it contains only whitespace",
-                        checked = settings.deleteEmptyLineFast,
-                        onCheckedChange = { update { copy(deleteEmptyLineFast = it) } },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Backspace, null) }
-                    )
-
-                    SelectorItem(
-                        label = "Delete Multiple Spaces",
-                        description = "How many leading spaces to delete at once when pressing backspace",
-                        options = persistentListOf(-1, 1, 2, 4, 8),
-                        selected = settings.deleteMultiSpaces,
-                        optionLabel = { value ->
-                            when (value) {
-                                -1 -> "Follow Tab Size"
-                                1 -> "1 Space"
-                                else -> "$value Spaces"
-                            }
-                        },
-                        onSelectionChanged = { update { copy(deleteMultiSpaces = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.SpaceBar, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Symbol Pair Auto-Completion",
-                        subtitle = "Automatically insert closing brackets and quotes",
-                        checked = settings.symbolPairAutoCompletion,
-                        onCheckedChange = { update { copy(symbolPairAutoCompletion = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.DataArray, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Auto Indent",
-                        subtitle = "Copy the leading indentation to the new line when pressing enter",
-                        checked = settings.autoIndent,
-                        onCheckedChange = { update { copy(autoIndent = it) } },
-                        leadingIcon = {
-                            Icon(
-                                Icons.AutoMirrored.Rounded.FormatIndentIncrease,
-                                null
-                            )
-                        }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Format on Paste",
-                        subtitle = "Automatically format code blocks when pasted",
-                        checked = settings.formatPastedText,
-                        onCheckedChange = { update { copy(formatPastedText = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.ContentPaste, null) }
-                    )
-                }
+                MouseScrollingSettingsSection(
+                    settings = settings,
+                    update = ::update,
+                    localFastScroll = localFastScroll,
+                    onLocalFastScrollChange = { localFastScroll = it },
+                    localWheelFactor = localWheelFactor,
+                    onLocalWheelFactorChange = { localWheelFactor = it }
+                )
             }
 
             item {
-                SettingsSubsection("Keyboard & Input") {
-                    SwitchSettingItem(
-                        title = "Disable Keyboard Suggestions",
-                        subtitle = "Force the IME to hide autocorrect suggestions (May cause keyboard restarts)",
-                        checked = settings.disallowSuggestions,
-                        onCheckedChange = { update { copy(disallowSuggestions = it) } },
-                        leadingIcon = {
-                            Icon(
-                                painterResource(R.drawable.keyboard_off_24px),
-                                null
-                            )
-                        }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Enhanced Home and End",
-                        subtitle = "Jumps to the first non-whitespace character before jumping to line start",
-                        checked = settings.enhancedHomeAndEnd,
-                        onCheckedChange = { update { copy(enhancedHomeAndEnd = it) } },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardTab, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Reselect on Long Press",
-                        subtitle = "Select new words under finger even if text is already highlighted",
-                        checked = settings.reselectOnLongPress,
-                        onCheckedChange = { update { copy(reselectOnLongPress = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.TouchApp, null) }
-                    )
-                }
+                StickyScrollSettingsSection(
+                    settings = settings,
+                    update = ::update,
+                    localStickyMax = localStickyMax,
+                    onLocalStickyMaxChange = { localStickyMax = it }
+                )
             }
 
-            item {
-                SettingsSubsection("Indicators & Visuals") {
-                    SwitchSettingItem(
-                        title = "Round Text Background",
-                        subtitle = "Use squircle edges for text selection and highlights",
-                        checked = settings.enableRoundTextBackground,
-                        onCheckedChange = { update { copy(enableRoundTextBackground = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.RoundedCorner, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Highlight Matching Delimiters",
-                        subtitle = "Highlight the corresponding opening/closing bracket",
-                        checked = settings.highlightMatchingDelimiters,
-                        onCheckedChange = { update { copy(highlightMatchingDelimiters = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.DataObject, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Bold Matching Delimiters",
-                        subtitle = "Apply bold styling to matching brackets",
-                        checked = settings.boldMatchingDelimiters,
-                        onCheckedChange = { update { copy(boldMatchingDelimiters = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.FormatBold, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Inlay Hints",
-                        subtitle = "Display parameter names and type hints directly in the code",
-                        checked = settings.inlayHints,
-                        onCheckedChange = { update { copy(inlayHints = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
-                    )
-
-                    SliderSettingsItem(
-                        label = "Error Wave Length",
-                        value = localWaveLength,
-                        onValueChange = { localWaveLength = it },
-                        valueRange = 5f..30f,
-                        steps = 24,
-                        onValueChangeFinished = {
-                            if (localWaveLength != settings.indicatorWaveLength) {
-                                update { copy(indicatorWaveLength = localWaveLength) }
-                            }
-                        },
-                        valueText = { "${it.roundToInt()}dp" }
-                    )
-
-                    SliderSettingsItem(
-                        label = "Error Wave Width",
-                        value = localWaveWidth,
-                        onValueChange = { localWaveWidth = it },
-                        valueRange = 0.5f..5f,
-                        steps = 8,
-                        onValueChangeFinished = {
-                            if (localWaveWidth != settings.indicatorWaveWidth) {
-                                update { copy(indicatorWaveWidth = localWaveWidth) }
-                            }
-                        },
-                        valueText = { String.format(Locale.ROOT, "%.1f", it) }
-                    )
-
-                    SliderSettingsItem(
-                        label = "Error Wave Amplitude",
-                        value = localWaveAmplitude,
-                        onValueChange = { localWaveAmplitude = it },
-                        valueRange = 1f..10f,
-                        steps = 8,
-                        onValueChangeFinished = {
-                            if (localWaveAmplitude != settings.indicatorWaveAmplitude) {
-                                update { copy(indicatorWaveAmplitude = localWaveAmplitude) }
-                            }
-                        },
-                        valueText = { "${it.roundToInt()}dp" }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection("Mouse & Scrolling") {
-                    SelectorItem(
-                        label = "Mouse Mode",
-                        description = "Behavior of editor windows and selection handles with a mouse",
-                        options = persistentListOf(
-                            MouseMode.Auto,
-                            MouseMode.Always,
-                            MouseMode.Never
-                        ),
-                        selected = settings.mouseMode,
-                        optionLabel = { it.name },
-                        optionDescription = { mode ->
-                            when (mode) {
-                                MouseMode.Auto -> "Enable mouse mode if a mouse is currently hovering"
-                                MouseMode.Always -> "Force mouse handles permanently (Good for Desktop)"
-                                MouseMode.Never -> "Strictly touch interface"
-                                else -> null
-                            }
-                        },
-                        onSelectionChanged = { update { copy(mouseMode = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.Mouse, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Always Show Scrollbars",
-                        subtitle = "Keep scrollbars visible when in Mouse Mode",
-                        checked = settings.mouseModeAlwaysShowScrollbars,
-                        onCheckedChange = { update { copy(mouseModeAlwaysShowScrollbars = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.UnfoldMore, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Mouse Context Menu",
-                        subtitle = "Show native right-click context menus",
-                        checked = settings.mouseContextMenu,
-                        onCheckedChange = { update { copy(mouseContextMenu = it) } },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.MenuOpen, null) }
-                    )
-
-                    SliderSettingsItem(
-                        label = "Fast Scroll Sensitivity",
-                        value = localFastScroll,
-                        onValueChange = { localFastScroll = it },
-                        valueRange = 1f..10f,
-                        steps = 8,
-                        onValueChangeFinished = {
-                            if (localFastScroll != settings.fastScrollSensitivity) {
-                                update { copy(fastScrollSensitivity = localFastScroll) }
-                            }
-                        },
-                        valueText = { "${it.roundToInt()}x" }
-                    )
-
-                    SliderSettingsItem(
-                        label = "Mouse Wheel Factor",
-                        value = localWheelFactor,
-                        onValueChange = { localWheelFactor = it },
-                        valueRange = 0.5f..5f,
-                        steps = 8,
-                        onValueChangeFinished = {
-                            if (localWheelFactor != settings.mouseWheelScrollFactor) {
-                                update { copy(mouseWheelScrollFactor = localWheelFactor) }
-                            }
-                        },
-                        valueText = { String.format(Locale.ROOT, "%.1fx", it) }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection("Sticky Scroll") {
-                    SwitchSettingItem(
-                        title = "Enable Sticky Scroll",
-                        subtitle = "Pin class and method headers to the top while scrolling",
-                        checked = settings.stickyScroll,
-                        onCheckedChange = { update { copy(stickyScroll = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.PushPin, null) }
-                    )
-
-                    AnimatedVisibility(
-                        visible = settings.stickyScroll,
-                        enter = expandVertically(
-                            animationSpec = spring(
-                                dampingRatio = 0.8f,
-                                stiffness = 400f
-                            )
-                        ) + fadeIn(animationSpec = spring(stiffness = 400f)),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = 500f)) + fadeOut(
-                            animationSpec = spring(stiffness = 500f)
-                        )
-                    ) {
-                        SliderSettingsItem(
-                            label = "Max Sticky Lines",
-                            value = localStickyMax,
-                            onValueChange = { localStickyMax = it },
-                            valueRange = 1f..10f,
-                            steps = 8,
-                            onValueChangeFinished = {
-                                if (localStickyMax.roundToInt() != settings.stickyScrollMaxLines) {
-                                    update { copy(stickyScrollMaxLines = localStickyMax.roundToInt()) }
-                                }
-                            },
-                            valueText = { "${it.roundToInt()}" }
-                        )
-                    }
-
-
-                    SwitchSettingItem(
-                        title = "Prefer Inner Scope",
-                        subtitle = "Push out top stuck lines to show nested inner scopes if max lines are exceeded",
-                        checked = settings.stickyScrollPreferInnerScope,
-                        onCheckedChange = { update { copy(stickyScrollPreferInnerScope = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.FilterCenterFocus, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Auto Collapse",
-                        subtitle = "Hide stuck lines temporarily when selecting text behind them",
-                        checked = settings.stickyScrollAutoCollapse,
-                        onCheckedChange = { update { copy(stickyScrollAutoCollapse = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.UnfoldLess, null) }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection("Advanced") {
-                    SwitchSettingItem(
-                        title = "Select Completion on Enter",
-                        subtitle = "Accept the first autocomplete suggestion using the Enter key on software keyboards",
-                        checked = settings.selectCompletionItemOnEnterForSoftKbd,
-                        onCheckedChange = { update { copy(selectCompletionItemOnEnterForSoftKbd = it) } },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardReturn, null) }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Use ICU Library",
-                        subtitle = "Use the advanced ICU library for calculating word boundaries on double-tap",
-                        checked = settings.useICULibToSelectWords,
-                        onCheckedChange = { update { copy(useICULibToSelectWords = it) } },
-                        leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
-                    )
-                }
-            }
+            item { AdvancedSettingsSection(settings = settings, update = ::update) }
         }
+    }
+}
+
+@Composable
+private fun EditorPreviewHeader(
+    localFontSize: Float,
+    localFontFamily: FontFamily,
+    localWaveWidth: Float,
+    localWaveLength: Float,
+    localWaveAmplitude: Float
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 6.dp, bottom = 12.dp, end = 6.dp, top = 8.dp)
+    ) {
+        Column {
+            SettingsSubsectionHeader("Preview")
+
+            CodeEditorDemo(
+                fontSize = localFontSize.sp,
+                fontFamily = localFontFamily,
+                indicatorWaveWidth = localWaveWidth,
+                indicatorWaveLength = localWaveLength,
+                indicatorWaveAmplitude = localWaveAmplitude,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp)
+                    .clip(RoundedCornerShape(10.dp))
+            )
+        }
+    }
+}
+
+@Composable
+private fun CommonSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit,
+    localFontSize: Float,
+    onLocalFontSizeChange: (Float) -> Unit,
+    localFontFamily: FontFamily,
+    customFontUri: String?,
+    scope: CoroutineScope
+) {
+    SettingsSubsection("Common") {
+        FontFamilySettingItem(
+            currentFontFamily = localFontFamily,
+            customFontUri = customFontUri,
+            onClearCustomFont = {
+                scope.launch {
+                    updateEditorSettings { copy(customFontUri = null) }
+                }
+            },
+            onCustomFontPicked = { uriString ->
+                scope.launch {
+                    updateEditorSettings { copy(customFontUri = uriString) }
+                }
+            }
+        )
+
+        SliderSettingsItem(
+            label = "Font Size",
+            value = localFontSize,
+            onValueChange = onLocalFontSizeChange,
+            valueRange = 10f..32f,
+            // (32 - 10) / 1 step - 1 = 21 steps
+            steps = 21,
+            onValueChangeFinished = {
+                if (localFontSize != settings.fontSize) {
+                    update { copy(fontSize = localFontSize) }
+                }
+            },
+            valueText = { "${it.roundToInt()}sp" }
+        )
+
+        SegmentedSettingsItem(
+            label = "Tab Size",
+            options = persistentListOf(2, 4, 8),
+            currentValue = settings.tabSize,
+            onValueChange = { update { copy(tabSize = it) } },
+            valueText = { "$it Spaces" }
+        )
+
+        SwitchSettingItem(
+            title = "Word Wrap",
+            subtitle = "Wrap long lines to the next visual row",
+            checked = settings.wordWrap,
+            onCheckedChange = { update { copy(wordWrap = it) } },
+            leadingIcon = { Icon(Icons.Rounded.FormatLineSpacing, null) }
+        )
+    }
+}
+
+@Composable
+private fun EditingSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit
+) {
+    SettingsSubsection("Editing") {
+        SwitchSettingItem(
+            title = "Pin Line Numbers",
+            subtitle = "Keep line numbers visible when scrolling horizontally",
+            checked = settings.pinLineNumbers,
+            onCheckedChange = {
+                update { copy(pinLineNumbers = it) }
+            },
+            leadingIcon = { Icon(Icons.Rounded.FormatListNumbered, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Delete Empty Lines Fast",
+            subtitle = "Delete the entire line instantly if it contains only whitespace",
+            checked = settings.deleteEmptyLineFast,
+            onCheckedChange = { update { copy(deleteEmptyLineFast = it) } },
+            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Backspace, null) }
+        )
+
+        SelectorItem(
+            label = "Delete Multiple Spaces",
+            description = "How many leading spaces to delete at once when pressing backspace",
+            options = persistentListOf(-1, 1, 2, 4, 8),
+            selected = settings.deleteMultiSpaces,
+            optionLabel = { value ->
+                when (value) {
+                    -1 -> "Follow Tab Size"
+                    1 -> "1 Space"
+                    else -> "$value Spaces"
+                }
+            },
+            onSelectionChanged = { update { copy(deleteMultiSpaces = it) } },
+            leadingIcon = { Icon(Icons.Rounded.SpaceBar, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Symbol Pair Auto-Completion",
+            subtitle = "Automatically insert closing brackets and quotes",
+            checked = settings.symbolPairAutoCompletion,
+            onCheckedChange = { update { copy(symbolPairAutoCompletion = it) } },
+            leadingIcon = { Icon(Icons.Rounded.DataArray, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Auto Indent",
+            subtitle = "Copy the leading indentation to the new line when pressing enter",
+            checked = settings.autoIndent,
+            onCheckedChange = { update { copy(autoIndent = it) } },
+            leadingIcon = {
+                Icon(
+                    Icons.AutoMirrored.Rounded.FormatIndentIncrease,
+                    null
+                )
+            }
+        )
+
+        SwitchSettingItem(
+            title = "Format on Paste",
+            subtitle = "Automatically format code blocks when pasted",
+            checked = settings.formatPastedText,
+            onCheckedChange = { update { copy(formatPastedText = it) } },
+            leadingIcon = { Icon(Icons.Rounded.ContentPaste, null) }
+        )
+    }
+}
+
+@Composable
+private fun KeyboardInputSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit
+) {
+    SettingsSubsection("Keyboard & Input") {
+        SwitchSettingItem(
+            title = "Disable Keyboard Suggestions",
+            subtitle = "Force the IME to hide autocorrect suggestions (May cause keyboard restarts)",
+            checked = settings.disallowSuggestions,
+            onCheckedChange = { update { copy(disallowSuggestions = it) } },
+            leadingIcon = {
+                Icon(
+                    painterResource(R.drawable.keyboard_off_24px),
+                    null
+                )
+            }
+        )
+
+        SwitchSettingItem(
+            title = "Enhanced Home and End",
+            subtitle = "Jumps to the first non-whitespace character before jumping to line start",
+            checked = settings.enhancedHomeAndEnd,
+            onCheckedChange = { update { copy(enhancedHomeAndEnd = it) } },
+            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardTab, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Reselect on Long Press",
+            subtitle = "Select new words under finger even if text is already highlighted",
+            checked = settings.reselectOnLongPress,
+            onCheckedChange = { update { copy(reselectOnLongPress = it) } },
+            leadingIcon = { Icon(Icons.Rounded.TouchApp, null) }
+        )
+    }
+}
+
+@Composable
+private fun IndicatorsVisualsSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit,
+    localWaveLength: Float,
+    onLocalWaveLengthChange: (Float) -> Unit,
+    localWaveWidth: Float,
+    onLocalWaveWidthChange: (Float) -> Unit,
+    localWaveAmplitude: Float,
+    onLocalWaveAmplitudeChange: (Float) -> Unit
+) {
+    SettingsSubsection("Indicators & Visuals") {
+        SwitchSettingItem(
+            title = "Round Text Background",
+            subtitle = "Use squircle edges for text selection and highlights",
+            checked = settings.enableRoundTextBackground,
+            onCheckedChange = { update { copy(enableRoundTextBackground = it) } },
+            leadingIcon = { Icon(Icons.Rounded.RoundedCorner, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Highlight Matching Delimiters",
+            subtitle = "Highlight the corresponding opening/closing bracket",
+            checked = settings.highlightMatchingDelimiters,
+            onCheckedChange = { update { copy(highlightMatchingDelimiters = it) } },
+            leadingIcon = { Icon(Icons.Rounded.DataObject, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Bold Matching Delimiters",
+            subtitle = "Apply bold styling to matching brackets",
+            checked = settings.boldMatchingDelimiters,
+            onCheckedChange = { update { copy(boldMatchingDelimiters = it) } },
+            leadingIcon = { Icon(Icons.Rounded.FormatBold, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Inlay Hints",
+            subtitle = "Display parameter names and type hints directly in the code",
+            checked = settings.inlayHints,
+            onCheckedChange = { update { copy(inlayHints = it) } },
+            leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
+        )
+
+        SliderSettingsItem(
+            label = "Error Wave Length",
+            value = localWaveLength,
+            onValueChange = onLocalWaveLengthChange,
+            valueRange = 5f..30f,
+            steps = 24,
+            onValueChangeFinished = {
+                if (localWaveLength != settings.indicatorWaveLength) {
+                    update { copy(indicatorWaveLength = localWaveLength) }
+                }
+            },
+            valueText = { "${it.roundToInt()}dp" }
+        )
+
+        SliderSettingsItem(
+            label = "Error Wave Width",
+            value = localWaveWidth,
+            onValueChange = onLocalWaveWidthChange,
+            valueRange = 0.5f..5f,
+            steps = 8,
+            onValueChangeFinished = {
+                if (localWaveWidth != settings.indicatorWaveWidth) {
+                    update { copy(indicatorWaveWidth = localWaveWidth) }
+                }
+            },
+            valueText = { String.format(Locale.ROOT, "%.1f", it) }
+        )
+
+        SliderSettingsItem(
+            label = "Error Wave Amplitude",
+            value = localWaveAmplitude,
+            onValueChange = onLocalWaveAmplitudeChange,
+            valueRange = 1f..10f,
+            steps = 8,
+            onValueChangeFinished = {
+                if (localWaveAmplitude != settings.indicatorWaveAmplitude) {
+                    update { copy(indicatorWaveAmplitude = localWaveAmplitude) }
+                }
+            },
+            valueText = { "${it.roundToInt()}dp" }
+        )
+    }
+}
+
+@Composable
+private fun MouseScrollingSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit,
+    localFastScroll: Float,
+    onLocalFastScrollChange: (Float) -> Unit,
+    localWheelFactor: Float,
+    onLocalWheelFactorChange: (Float) -> Unit
+) {
+    SettingsSubsection("Mouse & Scrolling") {
+        SelectorItem(
+            label = "Mouse Mode",
+            description = "Behavior of editor windows and selection handles with a mouse",
+            options = persistentListOf(
+                MouseMode.Auto,
+                MouseMode.Always,
+                MouseMode.Never
+            ),
+            selected = settings.mouseMode,
+            optionLabel = { it.name },
+            optionDescription = { mode ->
+                when (mode) {
+                    MouseMode.Auto -> "Enable mouse mode if a mouse is currently hovering"
+                    MouseMode.Always -> "Force mouse handles permanently (Good for Desktop)"
+                    MouseMode.Never -> "Strictly touch interface"
+                    else -> null
+                }
+            },
+            onSelectionChanged = { update { copy(mouseMode = it) } },
+            leadingIcon = { Icon(Icons.Rounded.Mouse, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Always Show Scrollbars",
+            subtitle = "Keep scrollbars visible when in Mouse Mode",
+            checked = settings.mouseModeAlwaysShowScrollbars,
+            onCheckedChange = { update { copy(mouseModeAlwaysShowScrollbars = it) } },
+            leadingIcon = { Icon(Icons.Rounded.UnfoldMore, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Mouse Context Menu",
+            subtitle = "Show native right-click context menus",
+            checked = settings.mouseContextMenu,
+            onCheckedChange = { update { copy(mouseContextMenu = it) } },
+            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.MenuOpen, null) }
+        )
+
+        SliderSettingsItem(
+            label = "Fast Scroll Sensitivity",
+            value = localFastScroll,
+            onValueChange = onLocalFastScrollChange,
+            valueRange = 1f..10f,
+            steps = 8,
+            onValueChangeFinished = {
+                if (localFastScroll != settings.fastScrollSensitivity) {
+                    update { copy(fastScrollSensitivity = localFastScroll) }
+                }
+            },
+            valueText = { "${it.roundToInt()}x" }
+        )
+
+        SliderSettingsItem(
+            label = "Mouse Wheel Factor",
+            value = localWheelFactor,
+            onValueChange = onLocalWheelFactorChange,
+            valueRange = 0.5f..5f,
+            steps = 8,
+            onValueChangeFinished = {
+                if (localWheelFactor != settings.mouseWheelScrollFactor) {
+                    update { copy(mouseWheelScrollFactor = localWheelFactor) }
+                }
+            },
+            valueText = { String.format(Locale.ROOT, "%.1fx", it) }
+        )
+    }
+}
+
+@Composable
+private fun StickyScrollSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit,
+    localStickyMax: Float,
+    onLocalStickyMaxChange: (Float) -> Unit
+) {
+    SettingsSubsection("Sticky Scroll") {
+        SwitchSettingItem(
+            title = "Enable Sticky Scroll",
+            subtitle = "Pin class and method headers to the top while scrolling",
+            checked = settings.stickyScroll,
+            onCheckedChange = { update { copy(stickyScroll = it) } },
+            leadingIcon = { Icon(Icons.Rounded.PushPin, null) }
+        )
+
+        AnimatedVisibility(
+            visible = settings.stickyScroll,
+            enter = expandVertically(
+                animationSpec = spring(
+                    dampingRatio = 0.8f,
+                    stiffness = 400f
+                )
+            ) + fadeIn(animationSpec = spring(stiffness = 400f)),
+            exit = shrinkVertically(animationSpec = spring(stiffness = 500f)) + fadeOut(
+                animationSpec = spring(stiffness = 500f)
+            )
+        ) {
+            SliderSettingsItem(
+                label = "Max Sticky Lines",
+                value = localStickyMax,
+                onValueChange = onLocalStickyMaxChange,
+                valueRange = 1f..10f,
+                steps = 8,
+                onValueChangeFinished = {
+                    if (localStickyMax.roundToInt() != settings.stickyScrollMaxLines) {
+                        update { copy(stickyScrollMaxLines = localStickyMax.roundToInt()) }
+                    }
+                },
+                valueText = { "${it.roundToInt()}" }
+            )
+        }
+
+
+        SwitchSettingItem(
+            title = "Prefer Inner Scope",
+            subtitle = "Push out top stuck lines to show nested inner scopes if max lines are exceeded",
+            checked = settings.stickyScrollPreferInnerScope,
+            onCheckedChange = { update { copy(stickyScrollPreferInnerScope = it) } },
+            leadingIcon = { Icon(Icons.Rounded.FilterCenterFocus, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Auto Collapse",
+            subtitle = "Hide stuck lines temporarily when selecting text behind them",
+            checked = settings.stickyScrollAutoCollapse,
+            onCheckedChange = { update { copy(stickyScrollAutoCollapse = it) } },
+            leadingIcon = { Icon(Icons.Rounded.UnfoldLess, null) }
+        )
+    }
+}
+
+@Composable
+private fun AdvancedSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit
+) {
+    SettingsSubsection("Advanced") {
+        SwitchSettingItem(
+            title = "Select Completion on Enter",
+            subtitle = "Accept the first autocomplete suggestion using the Enter key on software keyboards",
+            checked = settings.selectCompletionItemOnEnterForSoftKbd,
+            onCheckedChange = { update { copy(selectCompletionItemOnEnterForSoftKbd = it) } },
+            leadingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardReturn, null) }
+        )
+
+        SwitchSettingItem(
+            title = "Use ICU Library",
+            subtitle = "Use the advanced ICU library for calculating word boundaries on double-tap",
+            checked = settings.useICULibToSelectWords,
+            onCheckedChange = { update { copy(useICULibToSelectWords = it) } },
+            leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
+        )
     }
 }
 

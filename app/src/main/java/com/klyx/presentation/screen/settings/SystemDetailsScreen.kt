@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Info
@@ -47,6 +48,7 @@ import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.viewmodel.DiagnosticsViewModel
+import com.klyx.presentation.viewmodel.DiagnosticsState
 import com.klyx.ui.util.ImageVectorOrPainter
 import com.klyx.ui.util.asImageVectorOrPainter
 import kotlinx.collections.immutable.ImmutableList
@@ -104,63 +106,67 @@ fun SystemDetailsScreen(viewModel: DiagnosticsViewModel = koinViewModel()) {
                 DeviceInfoSection(deviceInfo = state.deviceInfo)
             }
 
-            state.displayCapabilities?.let { display ->
-                item {
-                    CapabilitySection(
-                        title = "Display & Rendering",
-                        icon = painterResource(R.drawable.mobile_2_24px).asImageVectorOrPainter
-                    ) {
-                        InfoRow("Max Refresh Rate", "${display.refreshRate} Hz")
-                        InfoRow("OpenGL Version", display.glEsVersion)
-                        InfoRow("Supports Vulkan", if (display.supportsVulkan) "Yes" else "No")
-                        InfoRow("Supports HDR", if (display.supportsHdr) "Yes" else "No")
-                        InfoRow("Wide Color Gamut", if (display.wideColorGamut) "Yes" else "No")
-                    }
-                }
-            }
+            capabilitySections(state)
+        }
+    }
+}
 
-            state.runtimeCapabilities?.let { runtime ->
-                item {
-                    CapabilitySection(
-                        title = "Runtime & Memory",
-                        icon = Icons.Rounded.Memory.asImageVectorOrPainter
-                    ) {
-                        InfoRow("Total Memory", "${runtime.totalMemoryMb} MB")
-                        InfoRow("Low RAM Device", if (runtime.lowRamDevice) "Yes" else "No")
-                        InfoRow("Large Heap", if (runtime.lowRamDevice) "Yes" else "No")
-                        InfoRow("Runtime", runtime.runtimeAbi)
-                    }
-                }
+private fun LazyListScope.capabilitySections(state: DiagnosticsState) {
+    state.displayCapabilities?.let { display ->
+        item {
+            CapabilitySection(
+                title = "Display & Rendering",
+                icon = painterResource(R.drawable.mobile_2_24px).asImageVectorOrPainter
+            ) {
+                InfoRow("Max Refresh Rate", "${display.refreshRate} Hz")
+                InfoRow("OpenGL Version", display.glEsVersion)
+                InfoRow("Supports Vulkan", if (display.supportsVulkan) "Yes" else "No")
+                InfoRow("Supports HDR", if (display.supportsHdr) "Yes" else "No")
+                InfoRow("Wide Color Gamut", if (display.wideColorGamut) "Yes" else "No")
             }
+        }
+    }
 
-            state.storageCapabilities?.let { storage ->
-                item {
-                    CapabilitySection(
-                        title = "Storage",
-                        icon = Icons.Rounded.Storage.asImageVectorOrPainter
-                    ) {
-                        InfoRow("Available Space", "${storage.freeStorageGb} GB")
-                        InfoRow(
-                            "Max Recommended File Size",
-                            "${storage.maxRecommendedFileSizeMb} MB"
-                        )
-                        InfoRow(
-                            "Supports External Storage",
-                            if (storage.supportsExternalStorage) "Yes" else "No"
-                        )
-                    }
-                }
+    state.runtimeCapabilities?.let { runtime ->
+        item {
+            CapabilitySection(
+                title = "Runtime & Memory",
+                icon = Icons.Rounded.Memory.asImageVectorOrPainter
+            ) {
+                InfoRow("Total Memory", "${runtime.totalMemoryMb} MB")
+                InfoRow("Low RAM Device", if (runtime.lowRamDevice) "Yes" else "No")
+                InfoRow("Large Heap", if (runtime.lowRamDevice) "Yes" else "No")
+                InfoRow("Runtime", runtime.runtimeAbi)
             }
+        }
+    }
 
-            state.editorInfo?.let { editorInfo ->
-                item {
-                    CapabilitySection("Editor Info", KlyxIcons.Klyx.asImageVectorOrPainter) {
-                        InfoRow("Sora Editor Version", editorInfo.editorVersion)
-                        InfoRow("Compose Version", editorInfo.composeVersion)
-                        InfoRow("TreeSitter Version", editorInfo.treeSitterVersion)
-                        //InfoRow("Rendering Backend", editorInfo.renderingBackend)
-                    }
-                }
+    state.storageCapabilities?.let { storage ->
+        item {
+            CapabilitySection(
+                title = "Storage",
+                icon = Icons.Rounded.Storage.asImageVectorOrPainter
+            ) {
+                InfoRow("Available Space", "${storage.freeStorageGb} GB")
+                InfoRow(
+                    "Max Recommended File Size",
+                    "${storage.maxRecommendedFileSizeMb} MB"
+                )
+                InfoRow(
+                    "Supports External Storage",
+                    if (storage.supportsExternalStorage) "Yes" else "No"
+                )
+            }
+        }
+    }
+
+    state.editorInfo?.let { editorInfo ->
+        item {
+            CapabilitySection("Editor Info", KlyxIcons.Klyx.asImageVectorOrPainter) {
+                InfoRow("Sora Editor Version", editorInfo.editorVersion)
+                InfoRow("Compose Version", editorInfo.composeVersion)
+                InfoRow("TreeSitter Version", editorInfo.treeSitterVersion)
+                //InfoRow("Rendering Backend", editorInfo.renderingBackend)
             }
         }
     }

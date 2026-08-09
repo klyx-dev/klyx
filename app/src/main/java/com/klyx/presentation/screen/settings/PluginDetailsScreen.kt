@@ -78,6 +78,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import android.net.Uri
+import com.klyx.api.data.log.LogEntry
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
 import com.klyx.api.plugin.PluginDescriptor
@@ -100,6 +102,7 @@ import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.UiEvent
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginManager
+import com.klyx.plugin.PluginUiState
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.InstallationLogCard
 import com.klyx.presentation.components.LogEntryItem
@@ -108,6 +111,7 @@ import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginDetailPayload
 import com.klyx.presentation.navigation.PluginSettingsPayload
 import com.klyx.presentation.navigation.SettingsScreen
+import com.klyx.presentation.viewmodel.PluginStoreUiState
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
 import com.klyx.presentation.viewmodel.StorePlugin
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
@@ -296,153 +300,28 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
             }
 
             item {
-                if (isPluginActuallyInstalled) {
-                    val uninstalling = pluginUiState.isUnloading
-                    Button(
-                        onClick = { pluginViewModel.unloadPlugin(payload.id) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 44.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                            contentColor = MaterialTheme.colorScheme.onErrorContainer
-                        )
-                    ) {
-                        if (uninstalling) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.onErrorContainer
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Uninstalling...", style = MaterialTheme.typography.labelLarge)
-                        } else {
-                            Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("Uninstall", style = MaterialTheme.typography.labelLarge)
+                PluginInstallButton(
+                    payload = payload,
+                    isPluginActuallyInstalled = isPluginActuallyInstalled,
+                    pluginUiState = pluginUiState,
+                    storeUiState = storeUiState,
+                    onUninstall = { pluginViewModel.unloadPlugin(payload.id) },
+                    onBundleSourceExists = { uri -> pluginViewModel.bundleSourceExists(uri) },
+                    onInstallFromBundle = {
+                        reinstalling = true
+                        pluginViewModel.loadPluginBundle(it) {
+                            reinstalling = false
                         }
-                    }
-                } else {
-                    val installState = storeUiState.installState
-                    val isThisInstalling = installState?.plugin?.id == payload.id
-                    val installing by remember { derivedStateOf { storeUiState.installState != null } }
-
-                    Column {
-                        Button(
-                            onClick = {
-                                val localSource = payload.sourceUri?.takeIf { it.isNotBlank() }
-                                if (localSource != null) {
-                                    val uri = localSource.toUri()
-                                    if (pluginViewModel.bundleSourceExists(uri)) {
-                                        reinstalling = true
-                                        pluginViewModel.loadPluginBundle(uri) {
-                                            reinstalling = false
-                                        }
-                                    } else {
-                                        navigator.navigateBack()
-                                    }
-                                } else {
-                                    storeViewModel.installPlugin(
-                                        plugin = StorePlugin(
-                                            id = payload.id,
-                                            name = payload.name,
-                                            description = payload.description,
-                                            author = payload.author,
-                                            version = payload.version,
-                                            minAppVersion = "",
-                                            maxAppVersion = null,
-                                            downloadCount = payload.downloadCount,
-                                            iconUrl = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
-                                            downloadUrl = "$API/dl/${payload.id}/${payload.version}"
-                                        )
-                                    ) {
-                                        pluginViewModel.refresh()
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .heightIn(min = 44.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            enabled = (!installing && !reinstalling) || isThisInstalling || reinstalling
-                        ) {
-                            when {
-                                isThisInstalling -> {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = installState.message ?: "Installing...",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-
-                                reinstalling -> {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "Installing...",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-
-                                else -> {
-                                    Icon(
-                                        Icons.Rounded.Download,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        if (installing) "Another task running" else "Install",
-                                        style = MaterialTheme.typography.labelLarge
-                                    )
-                                }
-                            }
+                    },
+                    onInstallFromStore = {
+                        storeViewModel.installPlugin(it) {
+                            pluginViewModel.refresh()
                         }
-
-                        AnimatedVisibility(
-                            visible = isThisInstalling,
-                            enter = fadeIn() + expandVertically(),
-                            exit = fadeOut() + shrinkVertically()
-                        ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (installState != null) {
-                                    if (installState.message != null) {
-                                        Text(
-                                            text = installState.message,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = 4.dp)
-                                        )
-                                    }
-                                    if (installState.progress > 0f) {
-                                        LinearProgressIndicator(
-                                            progress = { installState.progress.coerceIn(0f, 1f) },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            color = MaterialTheme.colorScheme.primary,
-                                            trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
-                                        )
-                                    }
-                                }
-                                if (installState != null) {
-                                    InstallationLogCard(
-                                        title = "Installation Logs",
-                                        logs = installState.logs
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                    },
+                    onNavigateBack = { navigator.navigateBack() },
+                    reinstalling = reinstalling,
+                    onReinstallingChange = { reinstalling = it }
+                )
             }
 
             if (loadingFiles) {
@@ -457,42 +336,16 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                     }
                 }
             } else {
-                val availableTabs = buildList {
-                    add("Details")
-                    if (!changelog.isNullOrBlank()) add("Changelog")
-                    if (pluginLogs.isNotEmpty()) add("Logs")
+                item {
+                    PluginDetailsTabs(
+                        selectedTab = selectedTab,
+                        onTabSelected = { selectedTab = it },
+                        pluginLogs = pluginLogs,
+                        changelog = changelog
+                    )
                 }
 
-                if (availableTabs.size > 1) {
-                    item {
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column {
-                                PrimaryTabRow(
-                                    selectedTabIndex = selectedTab.coerceIn(0, availableTabs.size - 1),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(4.dp),
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                                    divider = { }
-                                ) {
-                                    availableTabs.forEachIndexed { index, title ->
-                                        Tab(
-                                            selected = selectedTab == index,
-                                            onClick = { selectedTab = index },
-                                            text = { Text(title, fontWeight = FontWeight.Bold) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                val currentTabTitle = availableTabs.getOrNull(selectedTab)
+                val currentTabTitle = availableTabs(changelog, pluginLogs).getOrNull(selectedTab)
 
                 when (currentTabTitle) {
                     "Logs" -> {
@@ -529,6 +382,208 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
             descriptor = descriptor,
             onDismiss = { showAboutSheet = false }
         )
+    }
+}
+
+/** The tab titles shown for a plugin, based on which content is available. */
+private fun availableTabs(changelog: String?, pluginLogs: List<LogEntry>) = buildList {
+    add("Details")
+    if (!changelog.isNullOrBlank()) add("Changelog")
+    if (pluginLogs.isNotEmpty()) add("Logs")
+}
+
+@Composable
+private fun PluginInstallButton(
+    payload: PluginDetailPayload,
+    isPluginActuallyInstalled: Boolean,
+    pluginUiState: PluginUiState,
+    storeUiState: PluginStoreUiState,
+    onUninstall: () -> Unit,
+    onBundleSourceExists: (Uri) -> Boolean,
+    onInstallFromBundle: (Uri) -> Unit,
+    onInstallFromStore: (StorePlugin) -> Unit,
+    onNavigateBack: () -> Unit,
+    reinstalling: Boolean,
+    onReinstallingChange: (Boolean) -> Unit
+) {
+    if (isPluginActuallyInstalled) {
+        val uninstalling = pluginUiState.isUnloading
+        Button(
+            onClick = onUninstall,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 44.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer,
+                contentColor = MaterialTheme.colorScheme.onErrorContainer
+            )
+        ) {
+            if (uninstalling) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Uninstalling...", style = MaterialTheme.typography.labelLarge)
+            } else {
+                Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Uninstall", style = MaterialTheme.typography.labelLarge)
+            }
+        }
+    } else {
+        val installState = storeUiState.installState
+        val isThisInstalling = installState?.plugin?.id == payload.id
+        val installing by remember { derivedStateOf { storeUiState.installState != null } }
+
+        Column {
+            Button(
+                onClick = {
+                    val localSource = payload.sourceUri?.takeIf { it.isNotBlank() }
+                    if (localSource != null) {
+                        val uri = localSource.toUri()
+                        if (onBundleSourceExists(uri)) {
+                            onReinstallingChange(true)
+                            onInstallFromBundle(uri)
+                        } else {
+                            onNavigateBack()
+                        }
+                    } else {
+                        onInstallFromStore(
+                            StorePlugin(
+                                id = payload.id,
+                                name = payload.name,
+                                description = payload.description,
+                                author = payload.author,
+                                version = payload.version,
+                                minAppVersion = "",
+                                maxAppVersion = null,
+                                downloadCount = payload.downloadCount,
+                                iconUrl = payload.iconUrl ?: "$CDN/${payload.id}/icon.png",
+                                downloadUrl = "$API/dl/${payload.id}/${payload.version}"
+                            )
+                        )
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 44.dp),
+                shape = RoundedCornerShape(16.dp),
+                enabled = (!installing && !reinstalling) || isThisInstalling || reinstalling
+            ) {
+                when {
+                    isThisInstalling -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = installState.message ?: "Installing...",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    reinstalling -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Installing...",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+
+                    else -> {
+                        Icon(
+                            Icons.Rounded.Download,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            if (installing) "Another task running" else "Install",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isThisInstalling,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (installState != null) {
+                        if (installState.message != null) {
+                            Text(
+                                text = installState.message,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                        }
+                        if (installState.progress > 0f) {
+                            LinearProgressIndicator(
+                                progress = { installState.progress.coerceIn(0f, 1f) },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                            )
+                        }
+                    }
+                    if (installState != null) {
+                        InstallationLogCard(
+                            title = "Installation Logs",
+                            logs = installState.logs
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PluginDetailsTabs(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    pluginLogs: List<LogEntry>,
+    changelog: String?
+) {
+    val tabs = availableTabs(changelog, pluginLogs)
+    if (tabs.size > 1) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column {
+                PrimaryTabRow(
+                    selectedTabIndex = selectedTab.coerceIn(0, tabs.size - 1),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                    divider = { }
+                ) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(
+                            selected = selectedTab == index,
+                            onClick = { onTabSelected(index) },
+                            text = { Text(title, fontWeight = FontWeight.Bold) }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

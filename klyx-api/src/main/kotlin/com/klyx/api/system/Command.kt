@@ -646,14 +646,13 @@ class Pipeline internal constructor(
         try {
             for ((i, cmd) in commands.withIndex()) {
                 val isFirst = i == 0
-                val isLast = i == commands.lastIndex
                 val process = createProcess(
                     program = cmd.program,
                     args = cmd.args,
                     env = cmd.env,
                     cwd = cmd.cwd,
                     stdin = if (isFirst) cmd.stdinSource else Stdin.Pipe,
-                    stdout = if (isLast) Stdio.Capture else Stdio.Capture,
+                    stdout = Stdio.Capture,
                     stderr = cmd.stderrDest,
                 )
                 processes.add(process)

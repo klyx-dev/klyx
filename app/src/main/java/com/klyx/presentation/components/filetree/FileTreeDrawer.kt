@@ -95,6 +95,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.documentfile.provider.DocumentFile
@@ -111,6 +112,7 @@ import com.klyx.app.icons.FolderSpecial
 import com.klyx.app.icons.Smartphone
 import com.klyx.data.file.resolveName
 import com.klyx.data.fs.SftpFileSystem
+import com.klyx.presentation.viewmodel.FileTreeUiState
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
@@ -184,89 +186,16 @@ fun FileTreeDrawer(
         gesturesEnabled = gesturesEnabled,
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet(
+            FileTreeDrawerSheet(
                 drawerState = drawerState,
-                modifier = Modifier.width(drawerWidth),
-                drawerContentColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            ) {
-                val isOpening = drawerState.targetValue == DrawerValue.Open
-                val isFullyClosed =
-                    drawerState.currentValue == DrawerValue.Closed && drawerState.targetValue == DrawerValue.Closed
-
-                if (uiState.rootNodes.isEmpty()) {
-                    EmptyState(
-                        isOpening = isOpening,
-                        isFullyClosed = isFullyClosed,
-                        onOpenProjectClick = { showLocationPicker = true }
-                    )
-                } else {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Surface(
-                                onClick = { showLocationPicker = true },
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                                        .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Add,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.add_folder),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = { showSearchSheet = true },
-                                shape = RoundedCornerShape(10.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainer,
-                                modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                            ) {
-                                Box(
-                                    modifier = Modifier.size(42.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Search,
-                                        contentDescription = "Search",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        FileTree(
-                            viewModel = viewModel,
-                            onNodeClick = onFileClick,
-                            onNodeLongClick = onFileLongClick,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
-                }
-            }
+                drawerWidth = drawerWidth,
+                uiState = uiState,
+                onAddFolderClick = { showLocationPicker = true },
+                onSearchClick = { showSearchSheet = true },
+                viewModel = viewModel,
+                onNodeClick = onFileClick,
+                onNodeLongClick = onFileLongClick
+            )
         },
         content = {
             Box(
@@ -374,6 +303,114 @@ fun FileTreeDrawer(
                 dismiss()
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FileTreeDrawerSheet(
+    drawerState: DrawerState,
+    drawerWidth: Dp,
+    uiState: FileTreeUiState,
+    onAddFolderClick: () -> Unit,
+    onSearchClick: () -> Unit,
+    viewModel: FileTreeViewModel,
+    onNodeClick: (node: FileNode, rootNode: FileNode) -> Unit,
+    onNodeLongClick: (node: FileNode, rootNode: FileNode) -> Unit,
+) {
+    ModalDrawerSheet(
+        drawerState = drawerState,
+        modifier = Modifier.width(drawerWidth),
+        drawerContentColor = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        val isOpening = drawerState.targetValue == DrawerValue.Open
+        val isFullyClosed =
+            drawerState.currentValue == DrawerValue.Closed && drawerState.targetValue == DrawerValue.Closed
+
+        if (uiState.rootNodes.isEmpty()) {
+            EmptyState(
+                isOpening = isOpening,
+                isFullyClosed = isFullyClosed,
+                onOpenProjectClick = onAddFolderClick
+            )
+        } else {
+            Column(modifier = Modifier.fillMaxSize()) {
+                DrawerActionBar(
+                    onAddFolderClick = onAddFolderClick,
+                    onSearchClick = onSearchClick
+                )
+
+                FileTree(
+                    viewModel = viewModel,
+                    onNodeClick = onNodeClick,
+                    onNodeLongClick = onNodeLongClick,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerActionBar(
+    onAddFolderClick: () -> Unit,
+    onSearchClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Surface(
+            onClick = onAddFolderClick,
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            shape = RoundedCornerShape(10.dp),
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(10.dp))
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = stringResource(R.string.add_folder),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Surface(
+            onClick = onSearchClick,
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier.clip(RoundedCornerShape(10.dp))
+        ) {
+            Box(
+                modifier = Modifier.size(42.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = "Search",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
     }
 }
 

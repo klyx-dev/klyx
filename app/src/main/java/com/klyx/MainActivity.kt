@@ -1,6 +1,7 @@
 package com.klyx
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,6 +11,7 @@ import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -29,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +65,7 @@ import com.klyx.api.ui.ScreenRegistration
 import com.klyx.api.ui.ScreenRegistry
 import com.klyx.api.ui.showFailureToast
 import com.klyx.api.ui.toastHostState
+import com.klyx.core.App
 import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
@@ -72,6 +76,7 @@ import com.klyx.presentation.components.dialogs.AllFilesAccessDialog
 import com.klyx.presentation.components.dialogs.CrashReportDialog
 import com.klyx.presentation.components.dialogs.LegacyStorageAccessDialog
 import com.klyx.presentation.components.dialogs.NotificationPermissionDialog
+import com.klyx.presentation.navigation.Navigator as PresentationNavigator
 import com.klyx.presentation.navigation.Screen
 import com.klyx.presentation.navigation.SettingsScreen
 import com.klyx.presentation.navigation.rememberNavigator
@@ -134,72 +139,12 @@ class MainActivity : ComposeActivity() {
 
     @Composable
     override fun BoxScope.Content() {
-        val lifecycleOwner = LocalLifecycleOwner.current
         val reduceMotion = LocalReduceMotion.current
 
         val crashData = pendingCrashData
         var showCrashDialog by remember(crashData) { mutableStateOf(crashData != null) }
 
-        fun hasLegacyStoragePermissions(): Boolean {
-            val read = ContextCompat.checkSelfPermission(
-                this@MainActivity,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-            val write = ContextCompat.checkSelfPermission(
-                this@MainActivity,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE
-            ) == PackageManager.PERMISSION_GRANTED
-            return read && write
-        }
-
-        var hasStoragePermission by remember {
-            mutableStateOf(
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    Environment.isExternalStorageManager()
-                } else {
-                    hasLegacyStoragePermissions()
-                }
-            )
-        }
-
-        val legacyPermissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            val readGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: false
-            val writeGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: false
-            hasStoragePermission = readGranted && writeGranted
-        }
-
-        fun hasNotificationPermission(): Boolean {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
-            return ContextCompat.checkSelfPermission(
-                this@MainActivity,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        }
-
-        var showNotificationDialog by remember { mutableStateOf(!hasNotificationPermission()) }
-
-        val notificationPermissionLauncher = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.RequestPermission()
-        ) { _ ->
-            showNotificationDialog = false
-        }
-
-        DisposableEffect(lifecycleOwner) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME) {
-                    hasStoragePermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        Environment.isExternalStorageManager()
-                    } else {
-                        hasLegacyStoragePermissions()
-                    }
-                }
-            }
-
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-        }
+        val permissions = rememberRuntimePermissions(this@MainActivity)
 
         // When the activity is (re)created directly from the terminal notification,
         // seed the back stack with Terminal on top so it renders instantly without
@@ -219,51 +164,9 @@ class MainActivity : ComposeActivity() {
 
         // Auto-unregister transient screens (opened via Navigator.openScreen) when their
         // navigation entry is popped, so they don't leak composables or stale data.
-        val screenRegistry = app.global<ScreenRegistry>()
-        LaunchedEffect(navigator) {
-            var previous = navigator.mapNotNull { (it as? Screen.Custom)?.id }
-            snapshotFlow { navigator.mapNotNull { (it as? Screen.Custom)?.id } }
-                .collect { current ->
-                    previous.forEach { id ->
-                        if (id !in current) {
-                            screenRegistry.unregisterTransient(id)
-                        }
-                    }
-                    previous = current
-                }
-        }
+        rememberTransientScreenCleanup(navigator, screenRegistry = app.global())
 
-        LaunchedEffect(navigator) {
-            app.setGlobal<Navigator>(object : Navigator {
-                override fun navigateTo(destination: NavDestination) {
-                    val screen: Screen = when (destination) {
-                        is NavDestination.Home -> Screen.Home
-                        is NavDestination.Settings -> Screen.Settings
-                        is NavDestination.Terminal -> Screen.Terminal
-                        is NavDestination.Custom -> {
-                            when (destination.id) {
-                                SpecialScreens.Home -> Screen.Home
-                                SpecialScreens.Settings -> Screen.Settings
-                                SpecialScreens.Terminal -> Screen.Terminal
-                                else -> Screen.Custom(destination.id)
-                            }
-                        }
-                    }
-                    navigator.navigateTo(screen)
-                }
-
-                override fun navigateBack() {
-                    navigator.navigateBack()
-                }
-
-                override fun openScreen(screenId: ScreenId, content: Content): ScreenRegistration {
-                    val registry = app.global<ScreenRegistry>()
-                    registry.setTransient(screenId, content)
-                    navigator.navigateTo(Screen.Custom(screenId))
-                    return ScreenRegistration { registry.unregisterTransient(screenId) }
-                }
-            })
-        }
+        rememberGlobalNavigator(navigator, app = app)
 
         val navigateToTerminal by pendingTerminalNav.collectAsStateWithLifecycle()
 
@@ -283,44 +186,11 @@ class MainActivity : ComposeActivity() {
             predictivePopTransitionSpec = { popTransitionSpec(reduceMotion) }
         )
 
-        if (!hasStoragePermission) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                AllFilesAccessDialog(
-                    onDismiss = { finish() },
-                    onConfirm = {
-                        val intent =
-                            Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
-                                data = "package:${packageName}".toUri()
-                            }
-                        startActivity(intent)
-                    }
-                )
-            } else {
-                // Android 10 and below
-                LegacyStorageAccessDialog(
-                    onDismiss = { finish() },
-                    onConfirm = {
-                        legacyPermissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.READ_EXTERNAL_STORAGE,
-                                Manifest.permission.WRITE_EXTERNAL_STORAGE
-                            )
-                        )
-                    }
-                )
-            }
-        } else if (showNotificationDialog) {
-            NotificationPermissionDialog(
-                onDismiss = { showNotificationDialog = false },
-                onConfirm = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        showNotificationDialog = false
-                    }
-                }
-            )
-        }
+        runtimePermissionDialogs(
+            permissions = permissions,
+            context = this@MainActivity,
+            onFinish = { finish() }
+        )
 
         if (showCrashDialog && crashData != null) {
             CrashReportDialog(
@@ -479,6 +349,183 @@ class MainActivity : ComposeActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleIntent(intent)
+    }
+}
+
+private fun hasLegacyStoragePermissions(context: Context): Boolean {
+    val read = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    ) == PackageManager.PERMISSION_GRANTED
+    val write = ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.WRITE_EXTERNAL_STORAGE
+    ) == PackageManager.PERMISSION_GRANTED
+    return read && write
+}
+
+private fun hasStorageAccess(context: Context): Boolean =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        Environment.isExternalStorageManager()
+    } else {
+        hasLegacyStoragePermissions(context)
+    }
+
+private fun hasNotificationPermission(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+    return ContextCompat.checkSelfPermission(
+        context,
+        Manifest.permission.POST_NOTIFICATIONS
+    ) == PackageManager.PERMISSION_GRANTED
+}
+
+private class RuntimePermissionState(
+    val hasStoragePermission: MutableState<Boolean>,
+    val showNotificationDialog: MutableState<Boolean>,
+    val legacyPermissionLauncher: ManagedActivityResultLauncher<Array<String>, Map<String, Boolean>>,
+    val notificationPermissionLauncher: ManagedActivityResultLauncher<String, Boolean>,
+)
+
+@Composable
+private fun rememberRuntimePermissions(context: Context): RuntimePermissionState {
+    val hasStoragePermission = remember { mutableStateOf(hasStorageAccess(context)) }
+
+    val legacyPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val readGranted = permissions[Manifest.permission.READ_EXTERNAL_STORAGE] ?: false
+        val writeGranted = permissions[Manifest.permission.WRITE_EXTERNAL_STORAGE] ?: false
+        hasStoragePermission.value = readGranted && writeGranted
+    }
+
+    val showNotificationDialog = remember { mutableStateOf(!hasNotificationPermission(context)) }
+
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        showNotificationDialog.value = false
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasStoragePermission.value = hasStorageAccess(context)
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    return RuntimePermissionState(
+        hasStoragePermission = hasStoragePermission,
+        showNotificationDialog = showNotificationDialog,
+        legacyPermissionLauncher = legacyPermissionLauncher,
+        notificationPermissionLauncher = notificationPermissionLauncher,
+    )
+}
+
+@Composable
+private fun runtimePermissionDialogs(
+    permissions: RuntimePermissionState,
+    context: Context,
+    onFinish: () -> Unit,
+) {
+    if (!permissions.hasStoragePermission.value) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            AllFilesAccessDialog(
+                onDismiss = onFinish,
+                onConfirm = {
+                    val intent =
+                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
+                            data = "package:${context.packageName}".toUri()
+                        }
+                    context.startActivity(intent)
+                }
+            )
+        } else {
+            // Android 10 and below
+            LegacyStorageAccessDialog(
+                onDismiss = onFinish,
+                onConfirm = {
+                    permissions.legacyPermissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                        )
+                    )
+                }
+            )
+        }
+    } else if (permissions.showNotificationDialog.value) {
+        NotificationPermissionDialog(
+            onDismiss = { permissions.showNotificationDialog.value = false },
+            onConfirm = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissions.notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    permissions.showNotificationDialog.value = false
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun rememberTransientScreenCleanup(
+    navigator: PresentationNavigator,
+    screenRegistry: ScreenRegistry,
+) {
+    LaunchedEffect(navigator) {
+        var previous = navigator.mapNotNull { (it as? Screen.Custom)?.id }
+        snapshotFlow { navigator.mapNotNull { (it as? Screen.Custom)?.id } }
+            .collect { current ->
+                previous.forEach { id ->
+                    if (id !in current) {
+                        screenRegistry.unregisterTransient(id)
+                    }
+                }
+                previous = current
+            }
+    }
+}
+
+@Composable
+private fun rememberGlobalNavigator(
+    navigator: PresentationNavigator,
+    app: App,
+) {
+    LaunchedEffect(navigator) {
+        app.setGlobal<Navigator>(object : Navigator {
+            override fun navigateTo(destination: NavDestination) {
+                val screen: Screen = when (destination) {
+                    is NavDestination.Home -> Screen.Home
+                    is NavDestination.Settings -> Screen.Settings
+                    is NavDestination.Terminal -> Screen.Terminal
+                    is NavDestination.Custom -> {
+                        when (destination.id) {
+                            SpecialScreens.Home -> Screen.Home
+                            SpecialScreens.Settings -> Screen.Settings
+                            SpecialScreens.Terminal -> Screen.Terminal
+                            else -> Screen.Custom(destination.id)
+                        }
+                    }
+                }
+                navigator.navigateTo(screen)
+            }
+
+            override fun navigateBack() {
+                navigator.navigateBack()
+            }
+
+            override fun openScreen(screenId: ScreenId, content: Content): ScreenRegistration {
+                val registry = app.global<ScreenRegistry>()
+                registry.setTransient(screenId, content)
+                navigator.navigateTo(Screen.Custom(screenId))
+                return ScreenRegistration { registry.unregisterTransient(screenId) }
+            }
+        })
     }
 }
 

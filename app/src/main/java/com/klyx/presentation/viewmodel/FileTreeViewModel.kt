@@ -223,22 +223,7 @@ class FileTreeViewModel(
                             recentProjectRepository.removeProject(sourceNode.uri)
                             recentProjectRepository.addProject(newUri, sourceNode.name, isNodeExpanded(sourceNode))
                         }
-                        _uiState.update {
-                            it.copy(
-                                childrenNodeCache = it.childrenNodeCache.let { cache ->
-                                    val updated = cache.mapValues { (_, children) ->
-                                        children.filter { child -> child != sourceNode }
-                                            .toImmutableList()
-                                    }.toMutableMap()
-                                    updated.remove(sourceNode)
-                                    updated.toImmutableMap()
-                                },
-                                rootNodes = (it.rootNodes - sourceNode).toImmutableList(),
-                                expandedNodes = (it.expandedNodes - sourceNode).toImmutableSet(),
-                                loadingNodes = (it.loadingNodes - sourceNode).toImmutableSet(),
-                                selectedNode = if (it.selectedNode == sourceNode) null else it.selectedNode
-                            )
-                        }
+                        removeMovedNodeFromState(sourceNode)
                     }
                     result
                 }
@@ -542,6 +527,26 @@ class FileTreeViewModel(
                 parent = parent,
                 force = true,
                 onFailure = { t -> Log.e(TAG, "Failed to reload children for ${parent.uri}", t) }
+            )
+        }
+    }
+
+    /** Purges a moved node from the tree cache, root nodes, and selection state. */
+    private fun removeMovedNodeFromState(sourceNode: FileNode) {
+        _uiState.update {
+            it.copy(
+                childrenNodeCache = it.childrenNodeCache.let { cache ->
+                    val updated = cache.mapValues { (_, children) ->
+                        children.filter { child -> child != sourceNode }
+                            .toImmutableList()
+                    }.toMutableMap()
+                    updated.remove(sourceNode)
+                    updated.toImmutableMap()
+                },
+                rootNodes = (it.rootNodes - sourceNode).toImmutableList(),
+                expandedNodes = (it.expandedNodes - sourceNode).toImmutableSet(),
+                loadingNodes = (it.loadingNodes - sourceNode).toImmutableSet(),
+                selectedNode = if (it.selectedNode == sourceNode) null else it.selectedNode
             )
         }
     }

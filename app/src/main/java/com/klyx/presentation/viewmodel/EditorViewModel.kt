@@ -315,57 +315,7 @@ class EditorViewModel(
             try {
                 val file = fileSystem.wrapUri(uri)
                 val category = fileSystem.determineFileCategory(uri)
-
-                val tab: WorkspaceTab? = when (category) {
-                    FileCategory.TEXT -> {
-                        val txt = withContext(Dispatchers.IO) {
-                            fileSystem.inputStream(uri).bufferedReader().use { it.readText() }
-                        }
-                        val newTab = WorkspaceTab.TextFile(
-                            file = file,
-                            projectUri = projectUri
-                        )
-                        editorStateRegistry.setBaselineText(newTab.id, txt)
-                        newTab
-                    }
-
-                    FileCategory.IMAGE -> {
-                        WorkspaceTab.ImageFile(
-                            uri = file.uri,
-                            title = file.name,
-                            projectUri = projectUri
-                        )
-                    }
-
-                    FileCategory.BINARY_UNSUPPORTED -> {
-                        // Ask registered plugin openers before falling back to the alert.
-                        val request = FileOpenRequest(
-                            uri = uri,
-                            fileName = file.name,
-                            extension = file.extension.lowercase(),
-                            mimeType = fileSystem.mimeType(uri),
-                            projectUri = projectUri
-                        )
-                        fileOpenerRegistry.open(request) ?: run {
-                            _uiState.update {
-                                it.copy(
-                                    unsupportedFileAlert = UnsupportedFileAlert(
-                                        file = file,
-                                        projectUri = projectUri
-                                    )
-                                )
-                            }
-                            recentFileRepository.removeFile(file)
-                            null
-                        }
-                    }
-
-                    FileCategory.ERROR -> {
-                        recentFileRepository.removeFile(file)
-                        sendEvent(EditorEvent.ShowError("Failed to read file: ${file.name}"))
-                        null
-                    }
-                }
+                val tab = createTabForCategory(file = file, uri = uri, category = category, projectUri = projectUri)
 
                 if (tab != null) {
                     openTab(tab)
@@ -382,6 +332,63 @@ class EditorViewModel(
             } catch (e: Exception) {
                 sendEvent(EditorEvent.ShowError("An unexpected error occurred: ${e.localizedMessage}"))
             }
+        }
+    }
+
+    /** Builds the [WorkspaceTab] for [uri] based on its [FileCategory], or null to open nothing. */
+    private suspend fun createTabForCategory(
+        file: KxFile,
+        uri: Uri,
+        category: FileCategory,
+        projectUri: Uri?,
+    ): WorkspaceTab? = when (category) {
+        FileCategory.TEXT -> {
+            val txt = withContext(Dispatchers.IO) {
+                fileSystem.inputStream(uri).bufferedReader().use { it.readText() }
+            }
+            val newTab = WorkspaceTab.TextFile(
+                file = file,
+                projectUri = projectUri
+            )
+            editorStateRegistry.setBaselineText(newTab.id, txt)
+            newTab
+        }
+
+        FileCategory.IMAGE -> {
+            WorkspaceTab.ImageFile(
+                uri = file.uri,
+                title = file.name,
+                projectUri = projectUri
+            )
+        }
+
+        FileCategory.BINARY_UNSUPPORTED -> {
+            // Ask registered plugin openers before falling back to the alert.
+            val request = FileOpenRequest(
+                uri = uri,
+                fileName = file.name,
+                extension = file.extension.lowercase(),
+                mimeType = fileSystem.mimeType(uri),
+                projectUri = projectUri
+            )
+            fileOpenerRegistry.open(request) ?: run {
+                _uiState.update {
+                    it.copy(
+                        unsupportedFileAlert = UnsupportedFileAlert(
+                            file = file,
+                            projectUri = projectUri
+                        )
+                    )
+                }
+                recentFileRepository.removeFile(file)
+                null
+            }
+        }
+
+        FileCategory.ERROR -> {
+            recentFileRepository.removeFile(file)
+            sendEvent(EditorEvent.ShowError("Failed to read file: ${file.name}"))
+            null
         }
     }
 
@@ -417,47 +424,17 @@ class EditorViewModel(
 
                     val updatedTabs = state.openTabs.mutate { mutableTabs ->
                         for (i in mutableTabs.indices) {
-                            when (val tab = mutableTabs[i]) {
-                                is WorkspaceTab.TextFile -> {
-                                    if (tab.file.uri == oldUri) {
-                                        val updatedTab = tab.copy(
-                                            file = newFile,
-                                            title = newFile.name,
-                                            projectUri = tab.projectUri,
-                                            id = newFile.uri.toString()
-                                        )
+                            val updated = renameTabUri(
+                                tab = mutableTabs[i],
+                                oldUri = oldUri,
+                                newUri = newUri,
+                                newFile = newFile
+                            ) ?: continue
 
-                                        if (state.activeTabId == tab.id) {
-                                            newActiveTabId = updatedTab.id
-                                        }
-
-                                        editorStateRegistry.getBaselineText(tab.id)?.let { baseline ->
-                                            editorStateRegistry.setBaselineText(updatedTab.id, baseline)
-                                        }
-
-                                        mutableTabs[i] = updatedTab
-                                    }
-                                }
-
-                                is WorkspaceTab.ImageFile -> {
-                                    if (tab.uri == oldUri) {
-                                        val updatedTab = tab.copy(
-                                            uri = newUri,
-                                            title = newFile.name,
-                                            id = newUri.toString(),
-                                            projectUri = tab.projectUri
-                                        )
-
-                                        if (state.activeTabId == tab.id) {
-                                            newActiveTabId = updatedTab.id
-                                        }
-                                        mutableTabs[i] = updatedTab
-                                    }
-                                }
-
-                                is WorkspaceTab.Welcome -> {}
-                                is WorkspaceTab.Custom -> {}
+                            if (state.activeTabId == mutableTabs[i].id) {
+                                newActiveTabId = updated.id
                             }
+                            mutableTabs[i] = updated
                         }
                     }
 
@@ -471,7 +448,6 @@ class EditorViewModel(
             }
         }
     }
-
     fun handleFileDeleted(deletedUri: Uri) {
         val tabIdToClose = _uiState.value.openTabs.find { tab ->
             when (tab) {
@@ -482,6 +458,42 @@ class EditorViewModel(
         }?.id
 
         tabIdToClose?.let { closeTab(it) }
+    }
+
+    /** Returns [tab] with its [oldUri] replaced by [newUri], or null if [tab] isn't affected. */
+    private fun renameTabUri(
+        tab: WorkspaceTab,
+        oldUri: Uri,
+        newUri: Uri,
+        newFile: KxFile,
+    ): WorkspaceTab? = when (tab) {
+        is WorkspaceTab.TextFile -> {
+            if (tab.file.uri != oldUri) return null
+            val updatedTab = tab.copy(
+                file = newFile,
+                title = newFile.name,
+                projectUri = tab.projectUri,
+                id = newFile.uri.toString()
+            )
+
+            editorStateRegistry.getBaselineText(tab.id)?.let { baseline ->
+                editorStateRegistry.setBaselineText(updatedTab.id, baseline)
+            }
+            updatedTab
+        }
+
+        is WorkspaceTab.ImageFile -> {
+            if (tab.uri != oldUri) return null
+            tab.copy(
+                uri = newUri,
+                title = newFile.name,
+                id = newUri.toString(),
+                projectUri = tab.projectUri
+            )
+        }
+
+        is WorkspaceTab.Welcome -> null
+        is WorkspaceTab.Custom -> null
     }
 
     fun handleEditorActions(action: EditorAction) {

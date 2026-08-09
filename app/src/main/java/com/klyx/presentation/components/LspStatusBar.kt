@@ -83,66 +83,80 @@ fun LspStatusBar(store: LspActivityStore, modifier: Modifier = Modifier) {
     }
 
     if (expanded) {
-        ModalBottomSheet(
-            onDismissRequest = { expanded = false },
-            sheetState = rememberBottomSheetState(Hidden, setOf(Hidden, Expanded))
-        ) {
-            Text("Language Server", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(20.dp))
-            if (servers.isEmpty()) {
-                Text(
-                    "No language servers are currently running.",
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            } else {
-                Text(
-                    "Running servers",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-                servers.forEach { server ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 8.dp)
-                    ) {
-                        Text(server.name + (server.version?.let { " $it" } ?: ""),
-                            style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            "${server.languageId} · ${server.workspace ?: "No workspace"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            server.capabilities.ifEmpty { listOf("No optional capabilities advertised") }
-                                .joinToString(" · "),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(top = 3.dp)
-                        )
-                    }
-                }
-                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-            }
+        LspActivitySheet(
+            onDismiss = { expanded = false },
+            entries = entries,
+            servers = servers
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LspActivitySheet(
+    onDismiss: () -> Unit,
+    entries: List<LspActivityStore.Entry>,
+    servers: List<LspActivityStore.Server>,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberBottomSheetState(Hidden, setOf(Hidden, Expanded))
+    ) {
+        Text("Language Server", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(20.dp))
+        if (servers.isEmpty()) {
             Text(
-                "Activity log",
+                "No language servers are currently running.",
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+            )
+        } else {
+            Text(
+                "Running servers",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
             )
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 560.dp)
-                    .padding(horizontal = 20.dp)
-            ) {
-                items(entries.asReversed()) { entry ->
+            servers.forEach { server ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp)
+                ) {
+                    Text(server.name + (server.version?.let { " $it" } ?: ""),
+                        style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "[${entry.server}] ${entry.message}",
-                        color = entry.severity.color(),
-                        fontFamily = FontFamily.Monospace,
+                        "${server.languageId} · ${server.workspace ?: "No workspace"}",
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(vertical = 6.dp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        server.capabilities.ifEmpty { listOf("No optional capabilities advertised") }
+                            .joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(top = 3.dp)
                     )
                 }
+            }
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        }
+        Text(
+            "Activity log",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+        )
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 560.dp)
+                .padding(horizontal = 20.dp)
+        ) {
+            items(entries.asReversed()) { entry ->
+                Text(
+                    "[${entry.server}] ${entry.message}",
+                    color = entry.severity.color(),
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
             }
         }
     }

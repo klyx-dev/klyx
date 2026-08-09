@@ -69,8 +69,11 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.CoroutineScope
+import android.content.Context
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.preferences.LocalAppSettings
+import com.klyx.api.data.preferences.TerminalSettings as TerminalSettingsPrefs
 import com.klyx.api.terminal.rootFs
 import com.klyx.api.ui.LocalToastHostState
 import com.klyx.api.ui.theme.GoogleSansRounded
@@ -277,390 +280,471 @@ fun TerminalSettings() {
                 bottom = 16.dp
             )
         ) {
+            item { SoundSettingsSection(settings = settings, scope = scope) }
+            item { TextSettingsSection(settings = settings, scope = scope) }
+            item { SessionSettingsSection(settings = settings, scope = scope) }
+            item { DisplaySettingsSection(settings = settings, scope = scope) }
+            item { KeyboardSettingsSection(settings = settings, scope = scope) }
             item {
-                SettingsSubsection(title = "Sound") {
-                    SwitchSettingItem(
-                        title = "Bell Sound",
-                        subtitle = "Play a sound when the terminal bell (BEL) is received.",
-                        checked = settings.bellEnabled,
-                        onCheckedChange = { enabled ->
-                            scope.launch {
-                                updateTerminalSettings { copy(bellEnabled = enabled) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (settings.bellEnabled) Icons.Rounded.Notifications
-                                else Icons.Rounded.NotificationsOff,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-
-                    AnimatedVisibility(
-                        visible = settings.bellEnabled,
-                        enter = expandVertically(
-                            animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
-                        ) + fadeIn(animationSpec = spring(stiffness = 400f)),
-                        exit = shrinkVertically(animationSpec = spring(stiffness = 500f)) + fadeOut(
-                            animationSpec = spring(stiffness = 500f)
-                        )
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            SliderSettingsItem(
-                                label = "Bell Volume",
-                                value = settings.bellVolume,
-                                valueRange = 0f..1f,
-                                steps = (0f..1f).sliderSteps(increment = 0.1f),
-                                onValueChange = { volume ->
-                                    scope.launch {
-                                        updateTerminalSettings { copy(bellVolume = volume) }
-                                    }
-                                },
-                                valueText = { "${(it * 100).toInt()}%" }
-                            )
-
-                            SelectorItem(
-                                label = "Bell Sound Type",
-                                description = "Choose the tone played for the terminal bell.",
-                                options = BellSoundType.entries.toImmutableList(),
-                                selected = settings.bellSoundType,
-                                optionLabel = { type ->
-                                    when (type) {
-                                        BellSoundType.Gentle -> "Gentle"
-                                        BellSoundType.System -> "System"
-                                        BellSoundType.VisualOnly -> "Visual Only"
-                                    }
-                                },
-                                optionDescription = { type ->
-                                    when (type) {
-                                        BellSoundType.Gentle -> "A soft acknowledgment tone"
-                                        BellSoundType.System -> "The traditional alert beep"
-                                        BellSoundType.VisualOnly -> "No sound, visual feedback only"
-                                    }
-                                },
-                                onSelectionChanged = { selectedType ->
-                                    scope.launch {
-                                        updateTerminalSettings { copy(bellSoundType = selectedType) }
-                                    }
-                                },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.secondary
-                                    )
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
-                SettingsSubsection(title = "Text") {
-                    SliderSettingsItem(
-                        label = "Font Size",
-                        value = settings.fontSize,
-                        valueRange = 8f..30f,
-                        steps = (8f..30f).sliderSteps(1f),
-                        onValueChange = { size ->
-                            scope.launch {
-                                updateTerminalSettings { copy(fontSize = size) }
-                            }
-                        },
-                        valueText = { "${it.toInt()}sp" }
-                    )
-
-                    SwitchSettingItem(
-                        title = "Cursor Blinking",
-                        subtitle = "Make the terminal cursor blink.",
-                        checked = settings.cursorBlink,
-                        onCheckedChange = { blink ->
-                            scope.launch {
-                                updateTerminalSettings { copy(cursorBlink = blink) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.FlashOn,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-
-                    SelectorItem(
-                        label = "Cursor Style",
-                        description = "Choose the shape of the terminal cursor.",
-                        options = CursorStyle.availableStyles().toImmutableList(),
-                        selected = settings.cursorStyle,
-                        optionLabel = { style ->
-                            when (style) {
-                                CursorStyle.Block -> "Block"
-                                CursorStyle.Underline -> "Underline"
-                                CursorStyle.Bar -> "Bar"
-                                else -> "Unknown"
-                            }
-                        },
-                        optionDescription = { style ->
-                            when (style) {
-                                CursorStyle.Block -> "A solid rectangle after the character"
-                                CursorStyle.Underline -> "A horizontal line below the character"
-                                CursorStyle.Bar -> "A thin vertical line after the character"
-                                else -> null
-                            }
-                        },
-                        onSelectionChanged = { selectedStyle ->
-                            scope.launch {
-                                updateTerminalSettings { copy(cursorStyle = selectedStyle) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.TextFormat,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection(title = "Session") {
-                    SwitchSettingItem(
-                        title = "Show MOTD",
-                        subtitle = "Display the message of the day when a new terminal session is created.",
-                        checked = settings.showMotd,
-                        onCheckedChange = { showMotd ->
-                            scope.launch {
-                                updateTerminalSettings { copy(showMotd = showMotd) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection(title = "Display") {
-                    SliderSettingsItem(
-                        label = "Scrollback Lines",
-                        value = settings.scrollbackLines.toFloat(),
-                        valueRange = 100f..50000f,
-                        steps = 0,
-                        onValueChange = { lines ->
-                            scope.launch {
-                                updateTerminalSettings { copy(scrollbackLines = lines.toInt()) }
-                            }
-                        },
-                        valueText = { "${it.toInt()}" }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection(title = "Keyboard") {
-                    SelectorItem(
-                        label = "Extra Keys Style",
-                        description = "Choose the layout of the extra keys toolbar.",
-                        options = ExtraKeyStyle.entries.toImmutableList(),
-                        selected = settings.extraKeysStyle,
-                        optionLabel = { style ->
-                            when (style) {
-                                ExtraKeyStyle.ArrowsOnly -> "Arrows Only"
-                                ExtraKeyStyle.ArrowsAll -> "Arrows All"
-                                ExtraKeyStyle.All -> "All"
-                                ExtraKeyStyle.None -> "None"
-                                ExtraKeyStyle.Default -> "Default"
-                            }
-                        },
-                        optionDescription = { style ->
-                            when (style) {
-                                ExtraKeyStyle.ArrowsOnly -> "Only arrow keys"
-                                ExtraKeyStyle.ArrowsAll -> "Extended arrow keys"
-                                ExtraKeyStyle.All -> "Full ISO keyboard layout"
-                                ExtraKeyStyle.None -> "No extra keys"
-                                ExtraKeyStyle.Default -> "Default layout"
-                            }
-                        },
-                        onSelectionChanged = { selectedStyle ->
-                            scope.launch {
-                                updateTerminalSettings { copy(extraKeysStyle = selectedStyle) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.Keyboard,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-                }
-            }
-
-            item {
-                SettingsSubsection(title = "Bootstrap") {
-                    VersionInfoCard(
-                        label = "Installed Version",
-                        value = installedVersion ?: "Not installed",
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Rounded.CheckCircle,
-                                contentDescription = null,
-                                tint = if (installedVersion != null) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-
-                    if (latestVersion != null) {
-                        VersionInfoCard(
-                            label = "Latest Version",
-                            value = latestVersion!!,
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Rounded.CloudDownload,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.tertiary
-                                )
-                            }
-                        )
-                    }
-
-                    if (installedVersion == null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surfaceContainer,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Opening the terminal screen will automatically download and install the latest bootstrap.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(12.dp)
-                            )
-                        }
-                    }
-
-                    if (isUpdating) {
-                        BootstrapUpdateProgressDialog(
-                            step = updateStep,
-                            progress = updateProgress,
-                            progressText = updateProgressText
-                        )
-                    }
-
-                    isChecking.BootstrappingRow {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            LoadingIndicator(modifier = Modifier.size(24.dp))
-
-                            Text(
-                                text = "Checking for updates...",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    if (checkError != null) {
-                        ErrorBootstrapCard(
-                            error = checkError!!,
-                            onRetry = {
-                                isChecking = true
-                                checkError = null
-                                scope.launch {
-                                    try {
-                                        installedVersion = terminalInstaller.installedVersion()
-                                        latestVersion = BootstrapUpdateChecker.latestVersion()
-                                    } catch (e: Exception) {
-                                        checkError = e.message ?: "Unknown error"
-                                    } finally {
-                                        isChecking = false
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    if (isUpdateAvailable) {
-                        UpdateAvailableBootstrapCard(
-                            from = installedVersion ?: "?",
-                            to = latestVersion ?: "?",
-                            onClick = { showUpdateDialog = true }
-                        )
-                    }
-
-                    if (isInvalidAndHasLatest) {
-                        InvalidBootstrapVersionCard(
-                            version = installedVersion ?: "?",
-                            onClick = { showReinstallDialog = true }
-                        )
-                    }
-
-                    if (latestVersion != null && installedVersion != null && latestVersion == installedVersion) {
-                        UpToDateBootstrapCard()
-                    }
-
-                    if (!isChecking && !isUpdating && checkError == null && !isUpdateAvailable && !isInvalidAndHasLatest && !(latestVersion != null && installedVersion != null && latestVersion == installedVersion)) {
-                        CheckForUpdatesBootstrapCard(
-                            onCheck = {
-                                isChecking = true
-                                checkError = null
-                                scope.launch {
-                                    try {
-                                        installedVersion = terminalInstaller.installedVersion()
-                                        latestVersion = BootstrapUpdateChecker.latestVersion()
-                                    } catch (e: Exception) {
-                                        checkError = e.message ?: "Unknown error"
-                                    } finally {
-                                        isChecking = false
-                                    }
-                                }
-                            }
-                        )
-                    }
-
-                    var safExposed by remember { mutableStateOf(settings.exposeTerminalHomeViaSaf) }
-                    LaunchedEffect(settings.exposeTerminalHomeViaSaf) {
-                        safExposed = settings.exposeTerminalHomeViaSaf
-                    }
-
-                    SwitchSettingItem(
-                        title = "Expose Terminal Home via SAF",
-                        subtitle = "Allow file managers to access the terminal home directory through the Storage Access Framework.",
-                        checked = safExposed,
-                        onCheckedChange = { enabled ->
-                            safExposed = enabled
-                            SafExposureState.enabled = enabled
-                            TerminalDocumentsProvider.notifyRootsChanged(context)
-                            scope.launch {
-                                updateTerminalSettings { copy(exposeTerminalHomeViaSaf = enabled) }
-                            }
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Rounded.FolderOpen,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.secondary
-                            )
-                        }
-                    )
-                }
+                BootstrapSettingsSection(
+                    settings = settings,
+                    scope = scope,
+                    context = context,
+                    terminalInstaller = terminalInstaller,
+                    installedVersion = installedVersion,
+                    latestVersion = latestVersion,
+                    isChecking = isChecking,
+                    checkError = checkError,
+                    isUpdating = isUpdating,
+                    updateStep = updateStep,
+                    updateProgress = updateProgress,
+                    updateProgressText = updateProgressText,
+                    isUpdateAvailable = isUpdateAvailable,
+                    isInvalidAndHasLatest = isInvalidAndHasLatest,
+                    onInstalledVersionChange = { installedVersion = it },
+                    onLatestVersionChange = { latestVersion = it },
+                    onCheckingChange = { isChecking = it },
+                    onCheckErrorChange = { checkError = it },
+                    onShowUpdateDialog = { showUpdateDialog = it },
+                    onShowReinstallDialog = { showReinstallDialog = it },
+                    onUpdatingChange = { isUpdating = it },
+                    onUpdateStepChange = { updateStep = it },
+                    onUpdateProgressChange = { updateProgress = it },
+                    onUpdateProgressTextChange = { updateProgressText = it }
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun SoundSettingsSection(
+    settings: TerminalSettingsPrefs,
+    scope: CoroutineScope
+) {
+    SettingsSubsection(title = "Sound") {
+        SwitchSettingItem(
+            title = "Bell Sound",
+            subtitle = "Play a sound when the terminal bell (BEL) is received.",
+            checked = settings.bellEnabled,
+            onCheckedChange = { enabled ->
+                scope.launch {
+                    updateTerminalSettings { copy(bellEnabled = enabled) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = if (settings.bellEnabled) Icons.Rounded.Notifications
+                    else Icons.Rounded.NotificationsOff,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+
+        AnimatedVisibility(
+            visible = settings.bellEnabled,
+            enter = expandVertically(
+                animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)
+            ) + fadeIn(animationSpec = spring(stiffness = 400f)),
+            exit = shrinkVertically(animationSpec = spring(stiffness = 500f)) + fadeOut(
+                animationSpec = spring(stiffness = 500f)
+            )
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                SliderSettingsItem(
+                    label = "Bell Volume",
+                    value = settings.bellVolume,
+                    valueRange = 0f..1f,
+                    steps = (0f..1f).sliderSteps(increment = 0.1f),
+                    onValueChange = { volume ->
+                        scope.launch {
+                            updateTerminalSettings { copy(bellVolume = volume) }
+                        }
+                    },
+                    valueText = { "${(it * 100).toInt()}%" }
+                )
+
+                SelectorItem(
+                    label = "Bell Sound Type",
+                    description = "Choose the tone played for the terminal bell.",
+                    options = BellSoundType.entries.toImmutableList(),
+                    selected = settings.bellSoundType,
+                    optionLabel = { type ->
+                        when (type) {
+                            BellSoundType.Gentle -> "Gentle"
+                            BellSoundType.System -> "System"
+                            BellSoundType.VisualOnly -> "Visual Only"
+                        }
+                    },
+                    optionDescription = { type ->
+                        when (type) {
+                            BellSoundType.Gentle -> "A soft acknowledgment tone"
+                            BellSoundType.System -> "The traditional alert beep"
+                            BellSoundType.VisualOnly -> "No sound, visual feedback only"
+                        }
+                    },
+                    onSelectionChanged = { selectedType ->
+                        scope.launch {
+                            updateTerminalSettings { copy(bellSoundType = selectedType) }
+                        }
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.VolumeUp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TextSettingsSection(
+    settings: TerminalSettingsPrefs,
+    scope: CoroutineScope
+) {
+    SettingsSubsection(title = "Text") {
+        SliderSettingsItem(
+            label = "Font Size",
+            value = settings.fontSize,
+            valueRange = 8f..30f,
+            steps = (8f..30f).sliderSteps(1f),
+            onValueChange = { size ->
+                scope.launch {
+                    updateTerminalSettings { copy(fontSize = size) }
+                }
+            },
+            valueText = { "${it.toInt()}sp" }
+        )
+
+        SwitchSettingItem(
+            title = "Cursor Blinking",
+            subtitle = "Make the terminal cursor blink.",
+            checked = settings.cursorBlink,
+            onCheckedChange = { blink ->
+                scope.launch {
+                    updateTerminalSettings { copy(cursorBlink = blink) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.FlashOn,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+
+        SelectorItem(
+            label = "Cursor Style",
+            description = "Choose the shape of the terminal cursor.",
+            options = CursorStyle.availableStyles().toImmutableList(),
+            selected = settings.cursorStyle,
+            optionLabel = { style ->
+                when (style) {
+                    CursorStyle.Block -> "Block"
+                    CursorStyle.Underline -> "Underline"
+                    CursorStyle.Bar -> "Bar"
+                    else -> "Unknown"
+                }
+            },
+            optionDescription = { style ->
+                when (style) {
+                    CursorStyle.Block -> "A solid rectangle after the character"
+                    CursorStyle.Underline -> "A horizontal line below the character"
+                    CursorStyle.Bar -> "A thin vertical line after the character"
+                    else -> null
+                }
+            },
+            onSelectionChanged = { selectedStyle ->
+                scope.launch {
+                    updateTerminalSettings { copy(cursorStyle = selectedStyle) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.TextFormat,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun SessionSettingsSection(
+    settings: TerminalSettingsPrefs,
+    scope: CoroutineScope
+) {
+    SettingsSubsection(title = "Session") {
+        SwitchSettingItem(
+            title = "Show MOTD",
+            subtitle = "Display the message of the day when a new terminal session is created.",
+            checked = settings.showMotd,
+            onCheckedChange = { showMotd ->
+                scope.launch {
+                    updateTerminalSettings { copy(showMotd = showMotd) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+    }
+}
+
+@Composable
+private fun DisplaySettingsSection(
+    settings: TerminalSettingsPrefs,
+    scope: CoroutineScope
+) {
+    SettingsSubsection(title = "Display") {
+        SliderSettingsItem(
+            label = "Scrollback Lines",
+            value = settings.scrollbackLines.toFloat(),
+            valueRange = 100f..50000f,
+            steps = 0,
+            onValueChange = { lines ->
+                scope.launch {
+                    updateTerminalSettings { copy(scrollbackLines = lines.toInt()) }
+                }
+            },
+            valueText = { "${it.toInt()}" }
+        )
+    }
+}
+
+@Composable
+private fun KeyboardSettingsSection(
+    settings: TerminalSettingsPrefs,
+    scope: CoroutineScope
+) {
+    SettingsSubsection(title = "Keyboard") {
+        SelectorItem(
+            label = "Extra Keys Style",
+            description = "Choose the layout of the extra keys toolbar.",
+            options = ExtraKeyStyle.entries.toImmutableList(),
+            selected = settings.extraKeysStyle,
+            optionLabel = { style ->
+                when (style) {
+                    ExtraKeyStyle.ArrowsOnly -> "Arrows Only"
+                    ExtraKeyStyle.ArrowsAll -> "Arrows All"
+                    ExtraKeyStyle.All -> "All"
+                    ExtraKeyStyle.None -> "None"
+                    ExtraKeyStyle.Default -> "Default"
+                }
+            },
+            optionDescription = { style ->
+                when (style) {
+                    ExtraKeyStyle.ArrowsOnly -> "Only arrow keys"
+                    ExtraKeyStyle.ArrowsAll -> "Extended arrow keys"
+                    ExtraKeyStyle.All -> "Full ISO keyboard layout"
+                    ExtraKeyStyle.None -> "No extra keys"
+                    ExtraKeyStyle.Default -> "Default layout"
+                }
+            },
+            onSelectionChanged = { selectedStyle ->
+                scope.launch {
+                    updateTerminalSettings { copy(extraKeysStyle = selectedStyle) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Keyboard,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun BootstrapSettingsSection(
+    settings: TerminalSettingsPrefs,
+    scope: CoroutineScope,
+    context: Context,
+    terminalInstaller: TerminalInstaller,
+    installedVersion: String?,
+    latestVersion: String?,
+    isChecking: Boolean,
+    checkError: String?,
+    isUpdating: Boolean,
+    updateStep: String,
+    updateProgress: Float,
+    updateProgressText: String,
+    isUpdateAvailable: Boolean,
+    isInvalidAndHasLatest: Boolean,
+    onInstalledVersionChange: (String?) -> Unit,
+    onLatestVersionChange: (String?) -> Unit,
+    onCheckingChange: (Boolean) -> Unit,
+    onCheckErrorChange: (String?) -> Unit,
+    onShowUpdateDialog: (Boolean) -> Unit,
+    onShowReinstallDialog: (Boolean) -> Unit,
+    onUpdatingChange: (Boolean) -> Unit,
+    onUpdateStepChange: (String) -> Unit,
+    onUpdateProgressChange: (Float) -> Unit,
+    onUpdateProgressTextChange: (String) -> Unit
+) {
+    SettingsSubsection(title = "Bootstrap") {
+        VersionInfoCard(
+            label = "Installed Version",
+            value = installedVersion ?: "Not installed",
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = if (installedVersion != null) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        )
+
+        if (latestVersion != null) {
+            VersionInfoCard(
+                label = "Latest Version",
+                value = latestVersion!!,
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.CloudDownload,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+            )
+        }
+
+        if (installedVersion == null) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Opening the terminal screen will automatically download and install the latest bootstrap.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        if (isUpdating) {
+            BootstrapUpdateProgressDialog(
+                step = updateStep,
+                progress = updateProgress,
+                progressText = updateProgressText
+            )
+        }
+
+        isChecking.BootstrappingRow {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                LoadingIndicator(modifier = Modifier.size(24.dp))
+
+                Text(
+                    text = "Checking for updates...",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        if (checkError != null) {
+            ErrorBootstrapCard(
+                error = checkError!!,
+                onRetry = {
+                    onCheckingChange(true)
+                    onCheckErrorChange(null)
+                    scope.launch {
+                        try {
+                            onInstalledVersionChange(terminalInstaller.installedVersion())
+                            onLatestVersionChange(BootstrapUpdateChecker.latestVersion())
+                        } catch (e: Exception) {
+                            onCheckErrorChange(e.message ?: "Unknown error")
+                        } finally {
+                            onCheckingChange(false)
+                        }
+                    }
+                }
+            )
+        }
+
+        if (isUpdateAvailable) {
+            UpdateAvailableBootstrapCard(
+                from = installedVersion ?: "?",
+                to = latestVersion ?: "?",
+                onClick = { onShowUpdateDialog(true) }
+            )
+        }
+
+        if (isInvalidAndHasLatest) {
+            InvalidBootstrapVersionCard(
+                version = installedVersion ?: "?",
+                onClick = { onShowReinstallDialog(true) }
+            )
+        }
+
+        if (latestVersion != null && installedVersion != null && latestVersion == installedVersion) {
+            UpToDateBootstrapCard()
+        }
+
+        if (!isChecking && !isUpdating && checkError == null && !isUpdateAvailable && !isInvalidAndHasLatest && !(latestVersion != null && installedVersion != null && latestVersion == installedVersion)) {
+            CheckForUpdatesBootstrapCard(
+                onCheck = {
+                    onCheckingChange(true)
+                    onCheckErrorChange(null)
+                    scope.launch {
+                        try {
+                            onInstalledVersionChange(terminalInstaller.installedVersion())
+                            onLatestVersionChange(BootstrapUpdateChecker.latestVersion())
+                        } catch (e: Exception) {
+                            onCheckErrorChange(e.message ?: "Unknown error")
+                        } finally {
+                            onCheckingChange(false)
+                        }
+                    }
+                }
+            )
+        }
+
+        var safExposed by remember { mutableStateOf(settings.exposeTerminalHomeViaSaf) }
+        LaunchedEffect(settings.exposeTerminalHomeViaSaf) {
+            safExposed = settings.exposeTerminalHomeViaSaf
+        }
+
+        SwitchSettingItem(
+            title = "Expose Terminal Home via SAF",
+            subtitle = "Allow file managers to access the terminal home directory through the Storage Access Framework.",
+            checked = safExposed,
+            onCheckedChange = { enabled ->
+                safExposed = enabled
+                SafExposureState.enabled = enabled
+                TerminalDocumentsProvider.notifyRootsChanged(context)
+                scope.launch {
+                    updateTerminalSettings { copy(exposeTerminalHomeViaSaf = enabled) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.FolderOpen,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
     }
 }
 

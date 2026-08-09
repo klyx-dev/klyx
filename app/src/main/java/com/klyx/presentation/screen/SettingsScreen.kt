@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -85,69 +86,42 @@ fun SettingsScreen() {
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.Editor,
-                    shape = FirstItemShape,
-                    onClick = { navigator.navigateTo(SettingsScreen.Editor) }
-                )
-            }
-
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.FileTree,
-                    onClick = { navigator.navigateTo(SettingsScreen.FileTree) }
-                )
-            }
-
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.Appearance,
-                    onClick = { navigator.navigateTo(SettingsScreen.Appearance) }
-                )
-            }
-
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.Terminal,
-                    onClick = { navigator.navigateTo(SettingsScreen.Terminal) }
-                )
-            }
-
-            //if (BuildConfig.DEBUG) {
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.DeveloperOptions,
-                    onClick = { navigator.navigateTo(SettingsScreen.DeveloperOptions) }
-                )
-            }
-            //}
-
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.Plugins,
-                    onClick = { navigator.navigateTo(SettingsScreen.Plugins) }
-                )
-            }
-
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.SystemDiagnostics,
-                    onClick = { navigator.navigateTo(SettingsScreen.SystemDiagnostics) }
-                )
-            }
-
-            item {
-                SettingsCategoryItem(
-                    category = SettingsCategory.About,
-                    shape = LastItemShape,
-                    onClick = { navigator.navigateTo(SettingsScreen.About) }
-                )
-            }
-
-            item { Spacer(modifier = Modifier.height(2.dp)) }
+            settingsCategoryItems(
+                onNavigate = { navigator.navigateTo(it) }
+            )
         }
     }
+}
+
+/** The settings categories to display, in order, with their destination and edge shape. */
+private val settingsCategories = listOf(
+    SettingsCategory.Editor to SettingsScreen.Editor,
+    SettingsCategory.FileTree to SettingsScreen.FileTree,
+    SettingsCategory.Appearance to SettingsScreen.Appearance,
+    SettingsCategory.Terminal to SettingsScreen.Terminal,
+    SettingsCategory.DeveloperOptions to SettingsScreen.DeveloperOptions,
+    SettingsCategory.Plugins to SettingsScreen.Plugins,
+    SettingsCategory.SystemDiagnostics to SettingsScreen.SystemDiagnostics,
+    SettingsCategory.About to SettingsScreen.About
+)
+
+/** Render all [settingsCategories] as [LazyColumn] items with first/last edge shapes. */
+private fun LazyListScope.settingsCategoryItems(onNavigate: (SettingsScreen) -> Unit) {
+    settingsCategories.forEachIndexed { index, (category, destination) ->
+        item {
+            SettingsCategoryItem(
+                category = category,
+                shape = when (index) {
+                    0 -> FirstItemShape
+                    settingsCategories.lastIndex -> LastItemShape
+                    else -> MiddleItemShape
+                },
+                onClick = { onNavigate(destination) }
+            )
+        }
+    }
+
+    item { Spacer(modifier = Modifier.height(2.dp)) }
 }
 
 private data class CategoryColors(val container: Color, val onContainer: Color)
