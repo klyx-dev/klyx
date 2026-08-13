@@ -4,6 +4,10 @@ import com.android.build.api.dsl.CommonExtension
 import com.android.build.gradle.AppPlugin
 import com.android.build.gradle.LibraryPlugin
 import com.klyx.compiler.plugin.BuildConfig.KLYX_API_LIBRARY_COORDINATES
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import org.gradle.api.GradleException
 import org.gradle.api.JavaVersion
 import org.gradle.api.Project
@@ -18,10 +22,6 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlinx.serialization.gradle.SerializationGradleSubplugin
 import java.io.File
 import java.util.concurrent.TimeUnit
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 
 @Suppress("unused")
 class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
@@ -40,39 +40,43 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         extension.outputDirectory.convention(target.layout.buildDirectory.dir("klyx"))
         extension.autoPushToDevice.convention(false)
 
-        if (extension.library.get()) {
-            pluginManager.apply(LibraryPlugin::class.java)
-        } else {
-            pluginManager.apply(AppPlugin::class.java)
+        target.afterEvaluate {
+            if (extension.library.get()) {
+                pluginManager.apply(LibraryPlugin::class.java)
+            } else {
+                pluginManager.apply(AppPlugin::class.java)
+            }
+
+            if (extension.compose.get()) {
+                pluginManager.apply(ComposeCompilerGradleSubplugin::class.java)
+            }
         }
 
         fun Project.configureAndroidPlugin() {
             configureAndroid(this)
 
-            if (extension.compose.get()) {
-                extensions.configure(CommonExtension::class.java) { android ->
-                    android.buildFeatures.compose = true
+            target.afterEvaluate {
+                if (extension.compose.get()) {
+                    extensions.configure(CommonExtension::class.java) { android ->
+                        android.buildFeatures.compose = true
+                    }
                 }
             }
-        }
-
-        if (extension.compose.get()) {
-            pluginManager.apply(ComposeCompilerGradleSubplugin::class.java)
         }
 
         val bundleDebug = target.tasks.register("klyxBundleDebug", Tar::class.java) { task ->
             task.group = "klyx"
             task.description = "Packages the debug variant into a valid .klyx distribution archive."
-            task.dependsOn("assembleDebug")
-            task.dependsOn("compileDebugKotlin")
+            task.dependsOn(target.provider { target.tasks.named("assembleDebug") })
+            task.dependsOn(target.provider { target.tasks.named("compileDebugKotlin") })
             setupBaseTarProperties(task, extension)
         }
 
         val bundleRelease = target.tasks.register("klyxBundleRelease", Tar::class.java) { task ->
             task.group = "klyx"
             task.description = "Packages the release variant into a valid .klyx distribution archive."
-            task.dependsOn("assembleRelease")
-            task.dependsOn("compileReleaseKotlin")
+            task.dependsOn(target.provider { target.tasks.named("assembleRelease") })
+            task.dependsOn(target.provider { target.tasks.named("compileReleaseKotlin") })
             setupBaseTarProperties(task, extension)
         }
 
@@ -112,16 +116,21 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         }
 
         target.plugins.withType(AppPlugin::class.java) { target.configureAndroidPlugin() }
+        target.plugins.withType(LibraryPlugin::class.java) { target.configureAndroidPlugin() }
 
-        val rootFiles = target.rootProject.projectDir.listFiles() ?: emptyArray()
-        if (!extension.readme.isPresent) {
-            rootFiles.firstOrNull { it.name.equals("readme.md", ignoreCase = true) }
-                ?.let { extension.readme.set(it) }
-        }
-        if (!extension.changelog.isPresent) {
-            rootFiles.firstOrNull { it.name.equals("changelog.md", ignoreCase = true) }
-                ?.let { extension.changelog.set(it) }
-        }
+        val projectDir = target.rootProject.layout.projectDirectory
+        extension.readme.convention(
+            target.provider {
+                listOf("readme.md", "README.md", "Readme.md").map { projectDir.file(it) }
+                    .firstOrNull { it.asFile.exists() }
+            }
+        )
+        extension.changelog.convention(
+            target.provider {
+                listOf("changelog.md", "CHANGELOG.md", "Changelog.md").map { projectDir.file(it) }
+                    .firstOrNull { it.asFile.exists() }
+            }
+        )
 
         listOf(bundleDebug, bundleRelease).forEach { taskProvider ->
             taskProvider.configure { task ->
@@ -135,30 +144,37 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
                         )
                     }
                 }
+
                 task.from(target.provider { pluginJson.get().asFile })
 
                 val iconTarget = target.provider {
                     val jsonFile = pluginJson.get().asFile
+                    if (!jsonFile.exists()) return@provider null
+
                     val iconPath = readDescriptorIcon(jsonFile) ?: return@provider null
                     val projectRoot = target.rootProject.projectDir
                     val iconFile = projectRoot.resolve(iconPath)
                     val isInsideProject = iconFile.canonicalPath.startsWith(projectRoot.canonicalPath + File.separator)
+
                     if (iconPath.isBlank() || !iconFile.isFile || !isInsideProject) null else iconFile to iconPath
                 }
+
                 task.from(iconTarget.map { listOfNotNull(it?.first) }) { copy ->
-                    val iconPath = iconTarget.get()?.second ?: return@from
-                    val dir = iconPath.substringBeforeLast('/', "")
-                    if (dir != iconPath) copy.into(dir)
+                    copy.eachFile { fileDetails ->
+                        val iconPath = iconTarget.orNull?.second ?: return@eachFile
+                        val dir = iconPath.substringBeforeLast('/', "")
+                        if (dir.isNotEmpty() && dir != iconPath) {
+                            fileDetails.path = "$dir/${fileDetails.name}"
+                        }
+                    }
                 }
 
-                val readmeFile = extension.readme.orNull?.asFile
-                if (readmeFile != null && readmeFile.exists()) {
-                    task.from(readmeFile) { copy -> copy.rename { "readme.md" } }
+                task.from(extension.readme.map { listOfNotNull(it.asFile.takeIf { f -> f.exists() }) }) { copy ->
+                    copy.rename { "readme.md" }
                 }
 
-                val changelogFile = extension.changelog.orNull?.asFile
-                if (changelogFile != null && changelogFile.exists()) {
-                    task.from(changelogFile) { copy -> copy.rename { "changelog.md" } }
+                task.from(extension.changelog.map { listOfNotNull(it.asFile.takeIf { f -> f.exists() }) }) { copy ->
+                    copy.rename { "changelog.md" }
                 }
 
                 extension.extraFiles.files.forEach { file ->
@@ -172,8 +188,6 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
                 }
             }
         }
-
-        target.plugins.withType(LibraryPlugin::class.java) { target.configureAndroidPlugin() }
     }
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
@@ -196,10 +210,10 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         }
 
         return project.provider {
-            val extension = project.extensions.getByType(KlyxPluginExtension::class.java)
             val descriptorIcon = project.rootProject.projectDir.listFiles()?.firstOrNull {
                 it.name.lowercase() == "icon.png" || it.name.lowercase() == "icon.jpg"
             }?.name.orEmpty()
+
             listOf(
                 SubpluginOption(
                     key = "descriptorOutputDir",
@@ -247,9 +261,6 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         task.destinationDirectory.set(extension.outputDirectory)
     }
 
-    /**
-     * Reads the `icon` field from the generated plugin.json, or null if absent/unreadable.
-     */
     private fun readDescriptorIcon(jsonFile: File): String? = try {
         Json.parseToJsonElement(jsonFile.readText())
             .jsonObject["icon"]
