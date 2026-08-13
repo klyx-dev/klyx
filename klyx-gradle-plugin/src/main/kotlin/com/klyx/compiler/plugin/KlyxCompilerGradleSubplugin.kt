@@ -40,16 +40,14 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
         extension.outputDirectory.convention(target.layout.buildDirectory.dir("klyx"))
         extension.autoPushToDevice.convention(false)
 
-        target.afterEvaluate {
-            if (extension.library.get()) {
-                pluginManager.apply(LibraryPlugin::class.java)
-            } else {
-                pluginManager.apply(AppPlugin::class.java)
-            }
+        if (extension.library.get()) {
+            pluginManager.apply(LibraryPlugin::class.java)
+        } else {
+            pluginManager.apply(AppPlugin::class.java)
+        }
 
-            if (extension.compose.get()) {
-                pluginManager.apply(ComposeCompilerGradleSubplugin::class.java)
-            }
+        if (extension.compose.get()) {
+            pluginManager.apply(ComposeCompilerGradleSubplugin::class.java)
         }
 
         fun Project.configureAndroidPlugin() {
@@ -149,19 +147,23 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
 
                 val iconTarget = target.provider {
                     val jsonFile = pluginJson.get().asFile
-                    if (!jsonFile.exists()) return@provider null
+                    if (!jsonFile.exists()) return@provider emptyList<Pair<File, String>>()
 
-                    val iconPath = readDescriptorIcon(jsonFile) ?: return@provider null
+                    val iconPath = readDescriptorIcon(jsonFile) ?: return@provider emptyList()
                     val projectRoot = target.rootProject.projectDir
                     val iconFile = projectRoot.resolve(iconPath)
                     val isInsideProject = iconFile.canonicalPath.startsWith(projectRoot.canonicalPath + File.separator)
 
-                    if (iconPath.isBlank() || !iconFile.isFile || !isInsideProject) null else iconFile to iconPath
+                    if (iconPath.isBlank() || !iconFile.isFile || !isInsideProject) {
+                        emptyList()
+                    } else {
+                        listOf(iconFile to iconPath)
+                    }
                 }
 
-                task.from(iconTarget.map { listOfNotNull(it?.first) }) { copy ->
+                task.from(iconTarget.map { list -> list.map { it.first } }) { copy ->
                     copy.eachFile { fileDetails ->
-                        val iconPath = iconTarget.orNull?.second ?: return@eachFile
+                        val iconPath = iconTarget.get().firstOrNull()?.second ?: return@eachFile
                         val dir = iconPath.substringBeforeLast('/', "")
                         if (dir.isNotEmpty() && dir != iconPath) {
                             fileDetails.path = "$dir/${fileDetails.name}"
@@ -169,11 +171,11 @@ class KlyxCompilerGradleSubplugin : KotlinCompilerPluginSupportPlugin {
                     }
                 }
 
-                task.from(extension.readme.map { listOfNotNull(it.asFile.takeIf { f -> f.exists() }) }) { copy ->
+                task.from(extension.readme.map { listOf(it.asFile) }.orElse(emptyList())) { copy ->
                     copy.rename { "readme.md" }
                 }
 
-                task.from(extension.changelog.map { listOfNotNull(it.asFile.takeIf { f -> f.exists() }) }) { copy ->
+                task.from(extension.changelog.map { listOf(it.asFile) }.orElse(emptyList())) { copy ->
                     copy.rename { "changelog.md" }
                 }
 
