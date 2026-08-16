@@ -60,10 +60,23 @@ internal class KlyxLspClient(
     private val scope: CoroutineScope,
     private val serverId: String,
     private val aggregator: DiagnosticsAggregator,
-    private val activityStore: LspActivityStore
+    private val activityStore: LspActivityStore,
+    private val serverName: String = serverId,
+    private val onRefreshInlayHints: () -> Unit = {}
 ) : LanguageClient {
 
     private val registeredUris = ConcurrentHashMap.newKeySet<String>()
+
+    // Once a server is stopped/restarted/crashed the underlying process can keep
+    // emitting notifications (rust-analyzer flushes queued window/logMessage traces for
+    // a while). Gate every inbound callback so a disposed client never pushes anything
+    // into the activity/verbose log again.
+    @Volatile
+    private var disposed = false
+
+    fun dispose() {
+        disposed = true
+    }
 
     fun registerEditor(uri: String, state: CodeEditorState) {
         registeredUris.add(uri)
@@ -82,6 +95,7 @@ internal class KlyxLspClient(
     }
 
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
+        if (disposed) return
         publish(params.uri, params.diagnostics)
     }
 
@@ -122,22 +136,26 @@ internal class KlyxLspClient(
     }
 
     override suspend fun showMessage(params: ShowMessageParams) {
+        if (disposed) return
         activityStore.log(serverId, params.message, params.type.toSeverity())
-        Log.i("LspClient", "Show Message: ${params.message}")
+        //Log.i("LspClient", "Show Message: ${params.message}")
     }
 
     override suspend fun showMessageRequest(params: ShowMessageRequestParams): MessageActionItem? {
-        Log.i("LspClient", "Show Message Request: ${params.message}")
+        //Log.i("LspClient", "Show Message Request: ${params.message}")
         return null
     }
 
     override suspend fun logMessage(params: LogMessageParams) {
+        if (disposed) return
         activityStore.log(serverId, params.message, params.type.toSeverity())
-        Log.i("LspClient", "Log Message: ${params.message}")
+        //Log.i("LspClient", "Log Message: ${params.message}")
     }
 
     override suspend fun notifyProgress(params: ProgressParams) {
+        if (disposed) return
         activityStore.progress(serverId, params)
+        //Log.i("LspClient", "Progress: $params")
     }
 
     override suspend fun telemetryEvent(params: OneOf<LSPObject, LSPArray>) {
@@ -185,7 +203,8 @@ internal class KlyxLspClient(
     }
 
     override suspend fun refreshInlayHints() {
-        // No-op
+        if (disposed) return
+        onRefreshInlayHints()
     }
 
     override suspend fun refreshInlineValues() {
@@ -200,6 +219,6 @@ internal class KlyxLspClient(
 private fun MessageType.toSeverity() = when (this) {
     MessageType.Error -> LspActivityStore.Severity.Error
     MessageType.Warning -> LspActivityStore.Severity.Warning
-    MessageType.Debug -> LspActivityStore.Severity.Debug
+    MessageType.Debug, MessageType.Log -> LspActivityStore.Severity.Debug
     else -> LspActivityStore.Severity.Info
 }

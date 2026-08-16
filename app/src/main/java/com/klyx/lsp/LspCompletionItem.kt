@@ -49,11 +49,16 @@ class LspCompletionItem(
 
         val actualPrefix = prefixLength.coerceAtMost(column)
 
-        val startLine = replaceStartLine?.coerceIn(0, text.lineCount - 1) ?: line
-        val endLine = replaceEndLine?.coerceIn(0, text.lineCount - 1) ?: line
-        val startColumn = (replaceStartColumn ?: (column - actualPrefix))
+        var startLine = replaceStartLine?.coerceIn(0, text.lineCount - 1) ?: line
+        var endLine = replaceEndLine?.coerceIn(0, text.lineCount - 1) ?: line
+        var startColumn = (replaceStartColumn ?: (column - actualPrefix))
             .coerceIn(0, text.getColumnCount(startLine))
-        val endColumn = (replaceEndColumn ?: column).coerceIn(0, text.getColumnCount(endLine))
+        var endColumn = (replaceEndColumn ?: column).coerceIn(0, text.getColumnCount(endLine))
+
+        if (startLine > endLine || (startLine == endLine && startColumn > endColumn)) {
+            val tmpLine = startLine; startLine = endLine; endLine = tmpLine
+            val tmpCol = startColumn; startColumn = endColumn; endColumn = tmpCol
+        }
 
         if (startLine == endLine && startColumn == endColumn) {
             text.insert(startLine, startColumn, commitText)

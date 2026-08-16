@@ -1,6 +1,8 @@
 package com.klyx.lsp.internal
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.PolymorphicKind
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.StructureKind
@@ -44,6 +46,7 @@ internal fun <T> tryDeserialize(
     }
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 internal fun isExactMatch(element: JsonElement, descriptor: SerialDescriptor): Boolean {
     return when (element) {
         is JsonPrimitive if element.isString -> descriptor.kind == PrimitiveKind.STRING
@@ -55,7 +58,15 @@ internal fun isExactMatch(element: JsonElement, descriptor: SerialDescriptor): B
                     descriptor.kind == PrimitiveKind.FLOAT ||
                     descriptor.kind == PrimitiveKind.BOOLEAN
 
-        is JsonObject -> descriptor.kind == StructureKind.CLASS || descriptor.kind == StructureKind.OBJECT
+        // A polymorphic (sealed/open) type is serialized from a JSON object too. Its
+        // descriptor kind is PolymorphicKind, not StructureKind.CLASS, so without this a
+        // OneOf<PolymorphicType, LSPAny> would always fall through to the permissive LSPAny
+        // branch (this is exactly what silently dropped every $/progress notification).
+        is JsonObject -> descriptor.kind == StructureKind.CLASS ||
+                descriptor.kind == StructureKind.OBJECT ||
+                descriptor.kind == PolymorphicKind.SEALED ||
+                descriptor.kind == PolymorphicKind.OPEN
+
         is JsonArray -> descriptor.kind == StructureKind.LIST
         else -> false
     }

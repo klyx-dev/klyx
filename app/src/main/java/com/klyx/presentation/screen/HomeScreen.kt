@@ -1548,7 +1548,7 @@ private fun TextFileEditor(
                 }
             }
 
-            LspStatusBar(lspActivityStore)
+            LspStatusBar(lspActivityStore, lspManager)
 
             AnimatedVisibility(
                 visible = isAccessoryBarVisible,

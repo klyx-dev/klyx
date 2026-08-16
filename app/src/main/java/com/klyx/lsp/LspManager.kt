@@ -59,6 +59,8 @@ class LspManager(
         val server: LanguageServer,
         val client: KlyxLspClient,
         val capabilities: ServerCapabilities,
+        val provider: LanguageServerProvider,
+        val projectUri: Uri?,
         @Volatile var isDead: Boolean = false
     )
 
@@ -67,6 +69,12 @@ class LspManager(
     private val diagnosticsAggregator = DiagnosticsAggregator()
 
     private val activeServers = ConcurrentHashMap<ServerKey, ServerInstance>()
+
+    // Enough to bring a stopped/crashed server back without needing an open editor to
+    // rediscover its provider. Keeps the server startable from the status bar.
+    private data class DormantServer(val provider: LanguageServerProvider, val projectUri: Uri?)
+
+    private val stoppedServers = ConcurrentHashMap<ServerKey, DormantServer>()
 
     // Per-key lock, not one global lock, so independent servers can spin up concurrently.
     private val serverMutexes = ConcurrentHashMap<ServerKey, Mutex>()
@@ -158,6 +166,8 @@ class LspManager(
                     val lspLang = LspLanguage(this@LspManager, baseLanguage, tabId, documentUri)
                     editorState.editorLanguage = lspLang
 
+                    requestInlayHint(tabId, editorState, editorState.cursor.leftLine)
+
                     lspLang.scope.launch {
                         var version = 0
                         editorState.content
@@ -229,7 +239,14 @@ class LspManager(
     ): ServerInstance {
         return activeServers[key]?.takeIf { !it.isDead } ?: mutexFor(key).withLock {
             activeServers[key]?.takeIf { !it.isDead } ?: run {
-                val client = KlyxLspClient(scope, key.toString(), diagnosticsAggregator, activityStore)
+                val client = KlyxLspClient(
+                    scope,
+                    key.toString(),
+                    diagnosticsAggregator,
+                    activityStore,
+                    key.providerId,
+                    onRefreshInlayHints = { refreshInlayHintsForServer(key) }
+                )
                 val server = provider.startServer(client)
 
                 val initParams = createInitializeParams(projectUri?.toFile())
@@ -237,16 +254,18 @@ class LspManager(
                 val initializeResult = server.initialize(initParams)
                 server.initialized(InitializedParams)
 
-                val newInstance = ServerInstance(server, client, initializeResult.capabilities)
+                val newInstance = ServerInstance(server, client, initializeResult.capabilities, provider, projectUri)
                 activeServers[key] = newInstance
                 activityStore.registerServer(
                     id = key.toString(),
+                    displayName = key.toString(),
+                    fallbackName = key.providerId,
                     languageId = key.languageId,
                     workspace = key.projectUri,
                     info = initializeResult.serverInfo,
                     capabilities = initializeResult.capabilities
                 )
-                activityStore.log(key.providerId, "Connected ${initializeResult.serverInfo?.name ?: "language server"}")
+                activityStore.log(key.toString(), "Connected ${initializeResult.serverInfo?.name ?: "language server"}")
 
                 // Re-open all editors that are already registered for this exact
                 // (project, language, provider) key.
@@ -340,7 +359,7 @@ class LspManager(
                     else -> {
                         Log.w("LspManager", "LSP ${e.message}")
                         activityStore.log(
-                            key.providerId,
+                            key.toString(),
                             e.message,
                             LspActivityStore.Severity.Warning
                         )
@@ -353,11 +372,96 @@ class LspManager(
         }
 
         e.printStackTrace()
-        activityStore.log(key.providerId, e.message ?: "Language server disconnected", LspActivityStore.Severity.Error)
+        activityStore.log(key.toString(), e.message ?: "Language server disconnected", LspActivityStore.Severity.Error)
         instance.isDead = true
+        instance.client.dispose()
         instance.client.clearContributedDiagnostics()
         activeServers.remove(key, instance)
-        activityStore.unregisterServer(key.toString())
+        // Keep it listed as stopped rather than removing it, so the user can start it back up.
+        stoppedServers[key] = DormantServer(instance.provider, instance.projectUri)
+        activityStore.setServerRunning(key.toString(), false)
+    }
+
+    /**
+     * Gracefully shuts a running server down but keeps it listed as *stopped* so the user can
+     * bring it back with [startServer] or [restartServer]. Editors stay open in the meantime.
+     */
+    fun stopServer(id: String) {
+        val key = activeServers.keys.firstOrNull { it.toString() == id } ?: return
+        val instance = activeServers[key] ?: return
+        val name = activityStore.serverName(key.toString()) ?: key.providerId
+        scope.launch {
+            mutexFor(key).withLock {
+                activityStore.log(key.toString(), "Stopping $name\u2026")
+                // Remember how to bring it back, then keep it listed as stopped.
+                stoppedServers[key] = DormantServer(instance.provider, instance.projectUri)
+                disposeInstance(key, instance)
+                activityStore.setServerRunning(key.toString(), false)
+                activityStore.log(key.toString(), "$name stopped")
+            }
+        }
+    }
+
+    /** Starts a previously stopped (or crashed) server, re-opening its editors. */
+    fun startServer(id: String) {
+        val key = stoppedServers.keys.firstOrNull { it.toString() == id } ?: return
+        val dormant = stoppedServers[key] ?: return
+        scope.launch(Dispatchers.IO) {
+            activityStore.log(key.toString(), "Starting language server\u2026")
+            runCatching { ensureServerInstance(key, dormant.provider, dormant.projectUri) }
+                .onSuccess { stoppedServers.remove(key) }
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
+                    activityStore.log(
+                        key.toString(),
+                        error.message ?: "Failed to start language server",
+                        LspActivityStore.Severity.Error
+                    )
+                }
+        }
+    }
+
+    /** Shuts a server down and immediately starts a fresh instance, re-opening its editors. */
+    fun restartServer(id: String) {
+        val key = activeServers.keys.firstOrNull { it.toString() == id } ?: return
+        val instance = activeServers[key] ?: return
+        val provider = instance.provider
+        val projectUri = instance.projectUri
+        scope.launch(Dispatchers.IO) {
+            mutexFor(key).withLock {
+                activityStore.log(key.toString(), "Restarting language server\u2026")
+                disposeInstance(key, instance)
+            }
+            runCatching { ensureServerInstance(key, provider, projectUri) }
+                .onSuccess { stoppedServers.remove(key) }
+                .onFailure { error ->
+                    if (error is CancellationException) throw error
+                    activityStore.log(
+                        key.toString(),
+                        error.message ?: "Failed to restart language server",
+                        LspActivityStore.Severity.Error
+                    )
+                }
+        }
+    }
+
+    /**
+     * Shuts a running instance down and detaches it from editors. Intentionally does NOT
+     * remove the server from the activity UI. callers decide whether it should linger as a
+     * stopped/restartable entry (stop/restart/crash) or be re-registered as running.
+     */
+    private suspend fun disposeInstance(key: ServerKey, instance: ServerInstance) {
+        instance.isDead = true
+        instance.client.dispose()
+        val _ = runCatching {
+            withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) { instance.server.shutdown() }
+        }
+        val _ = runCatching {
+            withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) { instance.server.exit() }
+        }
+        instance.client.clearContributedDiagnostics()
+        activityStore.clearProgress(key.toString())
+        activeServers.remove(key, instance)
     }
 
     private fun getOrCreateInlayHintFlow(tabId: String, editorState: CodeEditorState): MutableSharedFlow<Int> {
@@ -378,6 +482,16 @@ class LspManager(
 
     private fun requestInlayHint(tabId: String, editorState: CodeEditorState, line: Int) {
         getOrCreateInlayHintFlow(tabId, editorState).tryEmit(line)
+    }
+
+    private fun refreshInlayHintsForServer(key: ServerKey) {
+        editorServerKeys.forEach { (tabId, keysForTab) ->
+            if (key !in keysForTab) return@forEach
+            val state = editorStates[tabId] ?: return@forEach
+            // Invalidate the cache so an identical-to-last result still gets applied.
+            cachedInlayHints.remove(tabId)
+            requestInlayHint(tabId, state, state.cursor.leftLine)
+        }
     }
 
     private suspend fun requestInlayHintsWindowed(
