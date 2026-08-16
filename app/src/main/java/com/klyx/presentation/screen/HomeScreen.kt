@@ -195,6 +195,8 @@ import io.github.rosemoe.sora.compose.ExperimentalEditorApi
 import io.github.rosemoe.sora.compose.content
 import io.github.rosemoe.sora.event.ContentChangeEvent
 import io.github.rosemoe.sora.event.TextSizeChangeEvent
+import io.github.rosemoe.sora.graphics.inlayHint.ColorInlayHintRenderer
+import io.github.rosemoe.sora.graphics.inlayHint.TextInlayHintRenderer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
@@ -1456,6 +1458,10 @@ private fun TextFileEditor(
             val baseline = registry.getBaselineText(tab.id) ?: ""
             CodeEditorState(context, scope).also {
                 it.setText(baseline)
+                it.registerInlayHintRenderers(
+                    TextInlayHintRenderer.DefaultInstance,
+                    ColorInlayHintRenderer.DefaultInstance
+                )
                 registry.register(tab.id, it)
             }
         }

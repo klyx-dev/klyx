@@ -1,15 +1,19 @@
 package com.klyx.presentation.screen.settings
 
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,11 +34,11 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
@@ -44,6 +49,7 @@ import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue.Expanded
@@ -72,16 +78,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import android.net.Uri
-import com.klyx.api.data.log.LogEntry
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.data.log.LogEntry
 import com.klyx.api.plugin.PluginDescriptor
 import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.api.service.Logger
@@ -94,6 +105,7 @@ import com.klyx.app.icons.BugReport
 import com.klyx.app.icons.ChevronRight
 import com.klyx.app.icons.Code
 import com.klyx.app.icons.Download
+import com.klyx.app.icons.ErrorOutline
 import com.klyx.app.icons.Link
 import com.klyx.app.icons.Mail
 import com.klyx.app.icons.Public
@@ -158,21 +170,30 @@ private suspend fun fetchTextContent(id: String, fileName: String): String? =
 private suspend fun fetchPluginDescriptor(id: String): PluginDescriptor? =
     withContext(Dispatchers.IO) {
         val pluginDir = Paths.pluginsDir.resolve(id)
+
         val localJson = pluginDir.resolve("plugin.json")
         if (localJson.exists()) {
-            runCatching {
+            val local = runCatching {
                 pluginJson.decodeFromString<PluginDescriptor>(localJson.readText())
             }.getOrNull()
-        } else {
-            try {
-                fetchBody("$CDN/$id/plugin.json")
-            } catch (_: Exception) {
-                null
-            }
+            if (local != null) return@withContext local
         }
+
+        for (fileName in listOf("metadata.json", "plugin.json")) {
+            val fetched = runCatching {
+                fetchBody<PluginDescriptor?>("$CDN/$id/$fileName")
+            }.getOrNull()
+            if (fetched != null) return@withContext fetched
+        }
+        null
     }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, UnsafeGlobalAccess::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalFoundationApi::class,
+    UnsafeGlobalAccess::class
+)
 @Composable
 fun PluginDetailsScreen(payload: PluginDetailPayload) {
     val navigator = LocalNavigator.current
@@ -188,14 +209,23 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
     var readme by remember { mutableStateOf<String?>(null) }
     var changelog by remember { mutableStateOf<String?>(null) }
     var loadingFiles by remember { mutableStateOf(true) }
+    var loadError by remember { mutableStateOf(false) }
+    var reloadKey by remember { mutableIntStateOf(0) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var showAboutSheet by remember { mutableStateOf(false) }
     var reinstalling by remember { mutableStateOf(false) }
 
-    LaunchedEffect(payload.id) {
-        descriptor = fetchPluginDescriptor(payload.id)
-        readme = fetchTextContent(payload.id, "readme.md")
-        changelog = fetchTextContent(payload.id, "changelog.md")
+    LaunchedEffect(payload.id, reloadKey) {
+        loadingFiles = true
+        loadError = false
+        val fetchedDescriptor = fetchPluginDescriptor(payload.id)
+        val fetchedReadme = fetchTextContent(payload.id, "readme.md")
+        val fetchedChangelog = fetchTextContent(payload.id, "changelog.md")
+        descriptor = fetchedDescriptor
+        readme = fetchedReadme
+        changelog = fetchedChangelog
+
+        loadError = fetchedDescriptor == null && fetchedReadme == null && fetchedChangelog == null
         loadingFiles = false
     }
 
@@ -282,6 +312,42 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                     }
                 }
             )
+        },
+        bottomBar = {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                tonalElevation = 3.dp,
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    PluginInstallButton(
+                        payload = payload,
+                        isPluginActuallyInstalled = isPluginActuallyInstalled,
+                        pluginUiState = pluginUiState,
+                        storeUiState = storeUiState,
+                        onUninstall = { pluginViewModel.unloadPlugin(payload.id) },
+                        onBundleSourceExists = { uri -> pluginViewModel.bundleSourceExists(uri) },
+                        onInstallFromBundle = {
+                            reinstalling = true
+                            pluginViewModel.loadPluginBundle(it) {
+                                reinstalling = false
+                            }
+                        },
+                        onInstallFromStore = {
+                            storeViewModel.installPlugin(it) {
+                                pluginViewModel.refresh()
+                            }
+                        },
+                        onNavigateBack = { navigator.navigateBack() },
+                        reinstalling = reinstalling,
+                        onReinstallingChange = { reinstalling = it }
+                    )
+                }
+            }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -299,76 +365,56 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                 )
             }
 
-            item {
-                PluginInstallButton(
-                    payload = payload,
-                    isPluginActuallyInstalled = isPluginActuallyInstalled,
-                    pluginUiState = pluginUiState,
-                    storeUiState = storeUiState,
-                    onUninstall = { pluginViewModel.unloadPlugin(payload.id) },
-                    onBundleSourceExists = { uri -> pluginViewModel.bundleSourceExists(uri) },
-                    onInstallFromBundle = {
-                        reinstalling = true
-                        pluginViewModel.loadPluginBundle(it) {
-                            reinstalling = false
-                        }
-                    },
-                    onInstallFromStore = {
-                        storeViewModel.installPlugin(it) {
-                            pluginViewModel.refresh()
-                        }
-                    },
-                    onNavigateBack = { navigator.navigateBack() },
-                    reinstalling = reinstalling,
-                    onReinstallingChange = { reinstalling = it }
-                )
-            }
+            when {
+                loadingFiles -> item { PluginDetailsSkeleton() }
 
-            if (loadingFiles) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        ContainedLoadingIndicator()
-                    }
-                }
-            } else {
-                item {
-                    PluginDetailsTabs(
-                        selectedTab = selectedTab,
-                        onTabSelected = { selectedTab = it },
-                        pluginLogs = pluginLogs,
-                        changelog = changelog
-                    )
+                loadError -> item {
+                    PluginLoadError(onRetry = { reloadKey++ })
                 }
 
-                val currentTabTitle = availableTabs(changelog, pluginLogs).getOrNull(selectedTab)
-
-                when (currentTabTitle) {
-                    "Logs" -> {
-                        items(pluginLogs.reversed(), key = { "${it.timestamp}_${it.hashCode()}" }) { entry ->
-                            LogEntryItem(entry = entry, timeFormat = logTimeFormat)
+                else -> {
+                    val tabs = availableTabs(changelog, pluginLogs)
+                    if (tabs.size > 1) {
+                        stickyHeader {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surface)
+                                    .padding(vertical = 4.dp)
+                            ) {
+                                PluginDetailsTabs(
+                                    selectedTab = selectedTab,
+                                    onTabSelected = { selectedTab = it },
+                                    pluginLogs = pluginLogs,
+                                    changelog = changelog
+                                )
+                            }
                         }
                     }
 
-                    "Changelog" -> {
-                        item {
-                            PluginMarkdownContent(
-                                content = changelog,
-                                emptyText = "No changelog provided for this plugin."
-                            )
+                    when (tabs.getOrNull(selectedTab)) {
+                        "Logs" -> {
+                            items(pluginLogs.reversed(), key = { "${it.timestamp}_${it.hashCode()}" }) { entry ->
+                                LogEntryItem(entry = entry, timeFormat = logTimeFormat)
+                            }
                         }
-                    }
 
-                    else -> {
-                        item {
-                            PluginMarkdownContent(
-                                content = readme,
-                                emptyText = "No details provided for this plugin."
-                            )
+                        "Changelog" -> {
+                            item {
+                                PluginMarkdownContent(
+                                    content = changelog,
+                                    emptyText = "No changelog provided for this plugin."
+                                )
+                            }
+                        }
+
+                        else -> {
+                            item {
+                                PluginMarkdownContent(
+                                    content = readme,
+                                    emptyText = "No details provided for this plugin."
+                                )
+                            }
                         }
                     }
                 }
@@ -390,6 +436,73 @@ private fun availableTabs(changelog: String?, pluginLogs: List<LogEntry>) = buil
     add("Details")
     if (!changelog.isNullOrBlank()) add("Changelog")
     if (pluginLogs.isNotEmpty()) add("Logs")
+}
+
+@Composable
+private fun SkeletonBar(
+    modifier: Modifier = Modifier,
+    height: Dp = 16.dp,
+) {
+    Box(
+        modifier = modifier
+            .height(height)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+    )
+}
+
+@Composable
+private fun PluginDetailsSkeleton() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        SkeletonBar(modifier = Modifier.fillMaxWidth(0.5f), height = 22.dp)
+        SkeletonBar(modifier = Modifier.fillMaxWidth())
+        SkeletonBar(modifier = Modifier.fillMaxWidth())
+        SkeletonBar(modifier = Modifier.fillMaxWidth(0.85f))
+        Spacer(modifier = Modifier.height(4.dp))
+        SkeletonBar(modifier = Modifier.fillMaxWidth(0.4f), height = 22.dp)
+        SkeletonBar(modifier = Modifier.fillMaxWidth())
+        SkeletonBar(modifier = Modifier.fillMaxWidth(0.7f))
+    }
+}
+
+@Composable
+private fun PluginLoadError(onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.ErrorOutline,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(40.dp)
+        )
+        Text(
+            text = "Couldn't load plugin details",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = "Check your connection and try again.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(14.dp)) {
+            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Retry")
+        }
+    }
 }
 
 @Composable
@@ -653,6 +766,7 @@ private fun PluginMarkdownContent(
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PluginHeroCard(
     payload: PluginDetailPayload,
@@ -734,7 +848,7 @@ private fun PluginHeroCard(
                                 )
                                 if (!github.isNullOrBlank()) {
                                     Text(
-                                        text = " @$github",
+                                        text = " @${githubHandle(github)}",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.primary,
@@ -755,64 +869,39 @@ private fun PluginHeroCard(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                Row(
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                    ) {
-                        Text(
-                            text = "v${payload.version}",
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    HeroChip(
+                        text = "v${payload.version}",
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+
+                    if (payload.downloadCount > 0) {
+                        HeroChip(
+                            text = "${payload.downloadCount}",
+                            icon = Icons.Rounded.Download,
                         )
                     }
 
-                    if (payload.downloadCount > 0) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Download,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(14.dp),
-                                )
-                                Text(
-                                    text = "${payload.downloadCount}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                        }
+                    val minAppVersion = descriptor?.minAppVersion
+                    if (!minAppVersion.isNullOrBlank()) {
+                        HeroChip(text = "Requires v$minAppVersion")
                     }
 
                     val license = descriptor?.license
                     if (!license.isNullOrBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        ) {
-                            Text(
-                                text = license,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                        HeroChip(text = license)
+                    }
+
+                    val permissionCount = descriptor?.permissions?.size ?: 0
+                    if (permissionCount > 0) {
+                        HeroChip(
+                            text = if (permissionCount == 1) "1 permission" else "$permissionCount permissions",
+                        )
                     }
                 }
 
@@ -829,7 +918,43 @@ private fun PluginHeroCard(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HeroChip(
+    text: String,
+    icon: ImageVector? = null,
+    containerColor: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    contentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = containerColor,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun PluginAboutSheet(
     payload: PluginDetailPayload,
@@ -920,7 +1045,7 @@ private fun PluginAboutSheet(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        AuthorAvatar(name = authorName)
+                        AuthorAvatar(name = authorName, github = github)
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
@@ -955,7 +1080,7 @@ private fun PluginAboutSheet(
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Text(
-                                        text = "@$github",
+                                        text = githubHandle(github),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -1074,6 +1199,34 @@ private fun PluginAboutSheet(
                     }
                 }
             }
+
+            val permissions = descriptor?.permissions.orEmpty()
+            if (permissions.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = "Permissions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 4.dp),
+                    )
+                    Surface(
+                        shape = AbsoluteSmoothCornerShape(22.dp, 60),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        FlowRow(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            permissions.forEach { permission ->
+                                HeroChip(text = permission)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1082,6 +1235,7 @@ private fun PluginAboutSheet(
 private fun AuthorAvatar(
     name: String,
     modifier: Modifier = Modifier.size(56.dp),
+    github: String? = null,
 ) {
     val initials = remember(name) {
         name.trim()
@@ -1092,6 +1246,9 @@ private fun AuthorAvatar(
             .joinToString("")
             .ifBlank { "?" }
     }
+
+    val context = LocalContext.current
+    val avatarUrl = remember(github) { github?.takeIf { it.isNotBlank() }?.let { githubAvatarUrl(it) } }
 
     Box(
         modifier = modifier
@@ -1112,6 +1269,19 @@ private fun AuthorAvatar(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
+        if (avatarUrl != null) {
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(avatarUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = "Author avatar",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape),
+            )
+        }
     }
 }
 
@@ -1242,4 +1412,17 @@ private fun PluginStatTile(
 }
 
 private fun githubUrl(github: String): String =
-    if (github.startsWith("http")) github else "https://github.com/$github"
+    if (github.trim().startsWith("http")) github.trim() else "https://github.com/${githubHandle(github)}"
+
+private fun githubHandle(github: String): String {
+    val trimmed = github.trim().removePrefix("@")
+    if (!trimmed.startsWith("http")) return trimmed.trimEnd('/')
+    return trimmed
+        .substringAfter("github.com/", "")
+        .substringBefore('/')
+        .substringBefore('?')
+        .ifBlank { trimmed }
+}
+
+private fun githubAvatarUrl(github: String): String =
+    "https://github.com/${githubHandle(github)}.png?size=200"
