@@ -263,7 +263,8 @@ class LspManager(
                     diagnosticsAggregator,
                     activityStore,
                     key.providerId,
-                    onRefreshInlayHints = { refreshInlayHintsForServer(key) }
+                    onRefreshInlayHints = { refreshInlayHintsForServer(key) },
+                    onRefreshDiagnostics = { refreshDiagnosticsForServer(key) }
                 )
                 val server = provider.startServer(client)
 
@@ -516,6 +517,20 @@ class LspManager(
             // Invalidate the cache so an identical-to-last result still gets applied.
             cachedInlayHints.remove(tabId)
             requestInlayHint(tabId, state, state.cursor.leftLine)
+        }
+    }
+
+    /** Re-pulls diagnostics for every document served by [key]. Invoked when the
+     * server requests a refresh (workspace/diagnostic/refresh), i.e. when its
+     * analysis has advanced and new diagnostics are available. */
+    private fun refreshDiagnosticsForServer(key: ServerKey) {
+        val instance = activeServers[key]?.takeIf { !it.isDead } ?: return
+        editorServerKeys.forEach { (tabId, keysForTab) ->
+            if (key !in keysForTab) return@forEach
+            val uri = editorUris[tabId] ?: return@forEach
+            scope.launch {
+                runCatching { instance.client.pullDiagnostics(instance.server, uri) }
+            }
         }
     }
 

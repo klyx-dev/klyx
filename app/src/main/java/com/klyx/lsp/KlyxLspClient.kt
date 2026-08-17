@@ -2,6 +2,7 @@ package com.klyx.lsp
 
 import android.util.Log
 import com.klyx.lsp.server.LanguageClient
+import com.klyx.lsp.server.LanguageServer
 import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
@@ -62,10 +63,12 @@ internal class KlyxLspClient(
     private val aggregator: DiagnosticsAggregator,
     private val activityStore: LspActivityStore,
     private val serverName: String = serverId,
-    private val onRefreshInlayHints: () -> Unit = {}
+    private val onRefreshInlayHints: () -> Unit = {},
+    private val onRefreshDiagnostics: () -> Unit = {}
 ) : LanguageClient {
 
     private val registeredUris = ConcurrentHashMap.newKeySet<String>()
+    private val diagnosticResultIds = ConcurrentHashMap<String, String?>()
 
     // The single source of truth for open state on this connection: a URI is in
     // this set exactly while didOpen was sent and no didClose has followed.
@@ -113,6 +116,33 @@ internal class KlyxLspClient(
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
         if (disposed) return
         publish(params.uri, params.diagnostics)
+    }
+
+    /**
+     * Pulls diagnostics for [uri] via the `textDocument/diagnostic` request.
+     * Some servers gate pushed diagnostics behind a completed workspace load
+     * but still answer pull requests from analysis done so far.
+     */
+    suspend fun pullDiagnostics(server: LanguageServer, uri: String) {
+        if (disposed) return
+        if (aggregator.editorFor(uri) == null) return
+        val previous = diagnosticResultIds[uri]
+        val report = try {
+            server.textDocument.diagnostic(
+                DocumentDiagnosticParams(
+                    textDocument = TextDocumentIdentifier(uri),
+                    identifier = null,
+                    previousResultId = previous
+                )
+            )
+        } catch (e: Exception) {
+            Log.w("LspClient", "diagnostic pull failed for $uri from $serverId: ${e.message}")
+            return
+        }
+        val full = report.full ?: return
+        diagnosticResultIds[uri] = full.resultId
+        publish(uri, full.items)
+        Log.d("LspClient", "Pulled ${full.items.size} diagnostics for $uri from $serverId")
     }
 
     private suspend fun publish(uri: String, diagnostics: List<Diagnostic>) {
@@ -211,7 +241,8 @@ internal class KlyxLspClient(
     }
 
     override suspend fun refreshDiagnostics() {
-        // No-op
+        if (disposed) return
+        onRefreshDiagnostics()
     }
 
     override suspend fun refreshFoldingRanges() {

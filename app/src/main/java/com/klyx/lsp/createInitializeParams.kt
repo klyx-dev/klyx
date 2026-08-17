@@ -9,6 +9,8 @@ import com.klyx.lsp.capabilities.CodeActionLiteralSupportCapabilities
 import com.klyx.lsp.capabilities.CompletionCapabilities
 import com.klyx.lsp.capabilities.CompletionItemCapabilities
 import com.klyx.lsp.capabilities.DefinitionCapabilities
+import com.klyx.lsp.capabilities.DiagnosticClientCapabilities
+import com.klyx.lsp.capabilities.DiagnosticWorkspaceClientCapabilities
 import com.klyx.lsp.capabilities.DidChangeConfigurationCapabilities
 import com.klyx.lsp.capabilities.DidChangeWatchedFilesCapabilities
 import com.klyx.lsp.capabilities.DocumentSymbolCapabilities
@@ -107,7 +109,11 @@ internal fun createInitializeParams(
                     relatedInformation = true,
                     versionSupport = true
                 ),
-                inlayHint = InlayHintClientCapabilities(dynamicRegistration = true)
+                inlayHint = InlayHintClientCapabilities(dynamicRegistration = true),
+                diagnostic = DiagnosticClientCapabilities(
+                    relatedDocumentSupport = true,
+                    relatedInformation = true
+                )
             ),
             workspace = WorkspaceClientCapabilities(
                 applyEdit = true,
@@ -126,7 +132,8 @@ internal fun createInitializeParams(
                     dynamicRegistration = true,
                     symbolKind = SymbolKindCapabilities(valueSet = SymbolKind.entries)
                 ),
-                executeCommand = ExecuteCommandCapabilities(dynamicRegistration = true)
+                executeCommand = ExecuteCommandCapabilities(dynamicRegistration = true),
+                diagnostics = DiagnosticWorkspaceClientCapabilities(refreshSupport = true)
             ),
             window = WindowClientCapabilities(
                 showMessage = ShowMessageRequestCapabilities(
