@@ -140,10 +140,10 @@ internal fun createInitializeParams(
     ).apply {
         if (project != null) {
             @Suppress("DEPRECATION")
-            rootUri = project.toURI().toString()
+            rootUri = project.toLspUri()
             workspaceFolders = listOf(
                 WorkspaceFolder(
-                    uri = project.toURI().toString(),
+                    uri = project.toLspUri(),
                     name = project.name
                 )
             )
