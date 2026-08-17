@@ -110,7 +110,19 @@ class LspManager(
         }
 
         val keys = providers.map { ServerKey(projectUri?.toString(), file.languageId, it.id) }
-        val documentUri = file.uri.toString()
+
+        // Language servers run inside the terminal rootfs and only accept file://
+        // URIs pointing at paths visible there. Translate the tab's (possibly
+        // content://) URI once and use the result for all LSP traffic.
+        val lspUris = resolveLspUris(file)
+        val documentUri = lspUris.serverUri
+        if (documentUri == null) {
+            Log.w("LspManager", "No resolvable real path for ${file.uri}; LSP disabled for this file")
+            activityStore.log(file.name, "LSP disabled: no real path for ${file.uri}")
+            withContext(Dispatchers.Main) { editorState.editorLanguage = baseLanguage }
+            return
+        }
+        Log.d("LspManager", "Tab $tabId ${file.name}: ${file.uri} -> $documentUri")
 
         withContext(Dispatchers.IO) {
             try {
@@ -124,7 +136,7 @@ class LspManager(
                     providers.zip(keys).map { (reg, key) ->
                         async {
                             key to runCatching {
-                                ensureServerInstance(key, reg.provider, projectUri)
+                                ensureServerInstance(key, reg.provider, projectUri, file)
                             }.getOrNull()
                         }
                     }.awaitAll()
@@ -235,7 +247,8 @@ class LspManager(
     private suspend fun ensureServerInstance(
         key: ServerKey,
         provider: LanguageServerProvider,
-        projectUri: Uri?
+        projectUri: Uri?,
+        file: KxFile? = null
     ): ServerInstance {
         return activeServers[key]?.takeIf { !it.isDead } ?: mutexFor(key).withLock {
             activeServers[key]?.takeIf { !it.isDead } ?: run {
@@ -249,7 +262,12 @@ class LspManager(
                 )
                 val server = provider.startServer(client)
 
-                val initParams = createInitializeParams(projectUri?.toFile())
+                // The workspace root is usually a content:// SAF URI with no file
+                // path; resolve it to the guest-visible project root, falling back
+                // to walking up from the opened file.
+                val root = resolveProjectRoot(projectUri, file)
+                Log.d("LspManager", "Server ${key.providerId}: workspace root = ${root?.absolutePath}")
+                val initParams = createInitializeParams(root)
 
                 val initializeResult = server.initialize(initParams)
                 server.initialized(InitializedParams)
