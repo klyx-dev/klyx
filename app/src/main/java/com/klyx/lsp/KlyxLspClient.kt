@@ -3,6 +3,7 @@ package com.klyx.lsp
 import android.util.Log
 import com.klyx.lsp.server.LanguageClient
 import com.klyx.lsp.server.LanguageServer
+import com.klyx.lsp.server.ResponseErrorException
 import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
@@ -13,10 +14,15 @@ import io.github.rosemoe.sora.lang.diagnostic.DiagnosticDetail
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticRegion
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer
 import io.github.rosemoe.sora.text.Content
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.util.concurrent.ConcurrentHashMap
 
 internal class DiagnosticsAggregator {
@@ -66,6 +72,11 @@ internal class KlyxLspClient(
     private val onRefreshInlayHints: () -> Unit = {},
     private val onRefreshDiagnostics: () -> Unit = {}
 ) : LanguageClient {
+
+    companion object {
+        private const val PULL_RETRY_DELAY_MS = 400L
+        private const val PULL_MAX_ATTEMPTS = 10
+    }
 
     private val registeredUris = ConcurrentHashMap.newKeySet<String>()
     private val diagnosticResultIds = ConcurrentHashMap<String, String?>()
@@ -127,22 +138,50 @@ internal class KlyxLspClient(
         if (disposed) return
         if (aggregator.editorFor(uri) == null) return
         val previous = diagnosticResultIds[uri]
-        val report = try {
-            server.textDocument.diagnostic(
-                DocumentDiagnosticParams(
-                    textDocument = TextDocumentIdentifier(uri),
-                    identifier = null,
-                    previousResultId = previous
+        var attempts = 0
+        while (true) {
+            attempts++
+            val report = try {
+                server.textDocument.diagnostic(
+                    DocumentDiagnosticParams(
+                        textDocument = TextDocumentIdentifier(uri),
+                        identifier = null,
+                        previousResultId = previous
+                    )
                 )
-            )
-        } catch (e: Exception) {
-            Log.w("LspClient", "diagnostic pull failed for $uri from $serverId: ${e.message}")
+            } catch (e: ResponseErrorException) {
+                // A ServerCancelled (-32802) response with retriggerRequest=true
+                // means "still busy, resend this request once ready", not a real
+                // failure. Retry with a short delay instead of giving up.
+                val retrigger = e.code == ErrorCodes.ServerCancelled &&
+                    ((e.data as? JsonObject)
+                        ?.let { runCatching { Json.decodeFromJsonElement<DiagnosticServerCancellationData>(it) }.getOrNull() }
+                        ?.retriggerRequest
+                        ?: false)
+                if (!retrigger) {
+                    Log.w("LspClient", "diagnostic pull failed for $uri from $serverId: ${e.message}")
+                    return
+                }
+                if (attempts >= PULL_MAX_ATTEMPTS) {
+                    Log.d("LspClient", "diagnostic pull for $uri from $serverId still cancelled after $attempts attempts")
+                    return
+                }
+                Log.d("LspClient", "diagnostics not ready yet for $uri (attempt $attempts/$PULL_MAX_ATTEMPTS), retrying")
+                delay(PULL_RETRY_DELAY_MS)
+                if (disposed || aggregator.editorFor(uri) == null) return
+                continue
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("LspClient", "diagnostic pull failed for $uri from $serverId: ${e.message}")
+                return
+            }
+            val full = report.full ?: return
+            diagnosticResultIds[uri] = full.resultId
+            publish(uri, full.items)
+            Log.d("LspClient", "Pulled ${full.items.size} diagnostics for $uri from $serverId")
             return
         }
-        val full = report.full ?: return
-        diagnosticResultIds[uri] = full.resultId
-        publish(uri, full.items)
-        Log.d("LspClient", "Pulled ${full.items.size} diagnostics for $uri from $serverId")
     }
 
     private suspend fun publish(uri: String, diagnostics: List<Diagnostic>) {
