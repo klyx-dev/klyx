@@ -67,6 +67,13 @@ internal class KlyxLspClient(
 
     private val registeredUris = ConcurrentHashMap.newKeySet<String>()
 
+    // The single source of truth for open state on this connection: a URI is in
+    // this set exactly while didOpen was sent and no didClose has followed.
+    // LspManager consults it before every didOpen so a document is never opened
+    // twice on one connection — not on editor re-registration, retries, or
+    // reconnects. Servers are free to reject the second open.
+    private val didOpenedUris = ConcurrentHashMap.newKeySet<String>()
+
     // Once a server is stopped/restarted/crashed the underlying process can keep
     // emitting notifications (rust-analyzer flushes queued window/logMessage traces for
     // a while). Gate every inbound callback so a disposed client never pushes anything
@@ -86,6 +93,15 @@ internal class KlyxLspClient(
     fun unregisterEditor(uri: String) {
         registeredUris.remove(uri)
         aggregator.removeSource(uri, serverId)
+        didOpenedUris.remove(uri)
+    }
+
+    /** True when [uri] is currently open on this server (didOpen sent, no didClose since). */
+    fun isOpen(uri: String): Boolean = didOpenedUris.contains(uri)
+
+    /** Marks [uri] as open on this server. Call right before sending didOpen. */
+    fun markOpened(uri: String) {
+        didOpenedUris.add(uri)
     }
 
     /** Called when this server is marked dead so its stale diagnostics don't linger
