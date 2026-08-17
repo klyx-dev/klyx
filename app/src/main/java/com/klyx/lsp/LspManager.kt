@@ -154,6 +154,11 @@ class LspManager(
                         async {
                             instance.client.registerEditor(documentUri, editorState)
                             if (!instance.capabilities.supportsDidOpenClose()) return@async
+                            // Never open the same document twice on one connection
+                            // without an intervening didClose; servers are free to
+                            // reject the second open.
+                            if (instance.client.isOpen(documentUri)) return@async
+                            instance.client.markOpened(documentUri)
                             try {
                                 withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
                                     instance.server.textDocument.didOpen(
@@ -294,6 +299,8 @@ class LspManager(
 
                     client.registerEditor(uri, state)
                     if (!newInstance.capabilities.supportsDidOpenClose()) return@forEach
+                    if (client.isOpen(uri)) return@forEach
+                    client.markOpened(uri)
                     scope.launch(Dispatchers.IO) {
                         try {
                             withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
