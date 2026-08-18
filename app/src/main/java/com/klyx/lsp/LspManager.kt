@@ -249,7 +249,7 @@ class LspManager(
                 )
                 val server = provider.startServer(client)
 
-                val initParams = createInitializeParams(projectUri?.toFile())
+                val initParams = createInitializeParams(projectUri?.toFile(), provider.initializationOptions())
 
                 val initializeResult = server.initialize(initParams)
                 server.initialized(InitializedParams)
