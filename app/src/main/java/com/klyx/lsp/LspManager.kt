@@ -125,6 +125,12 @@ class LspManager(
                         async {
                             key to runCatching {
                                 ensureServerInstance(key, reg.provider, projectUri)
+                            }.onFailure { e ->
+                                activityStore.log(
+                                    key.toString(),
+                                    "Failed to start ${key.providerId}: ${e::class.qualifiedName}: ${e.message}",
+                                    LspActivityStore.Severity.Warning
+                                )
                             }.getOrNull()
                         }
                     }.awaitAll()
