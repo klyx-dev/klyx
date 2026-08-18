@@ -240,6 +240,11 @@ internal class KlyxLspClient(
     override suspend fun notifyProgress(params: ProgressParams) {
         if (disposed) return
         activityStore.progress(serverId, params)
+        params.value.fold({ notification ->
+            // A finished work-done progress (indexing, build, ...) means the
+            // server's analysis just advanced — ask for fresh diagnostics.
+            if (notification is WorkDoneProgressEnd) onRefreshDiagnostics()
+        }, {})
         //Log.i("LspClient", "Progress: $params")
     }
 
