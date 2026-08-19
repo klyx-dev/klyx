@@ -110,7 +110,19 @@ class LspManager(
         }
 
         val keys = providers.map { ServerKey(projectUri?.toString(), file.languageId, it.id) }
-        val documentUri = file.uri.toString()
+
+        // Language servers run inside the terminal rootfs and only accept file://
+        // URIs pointing at paths visible there. Translate the tab's (possibly
+        // content://) URI once and use the result for all LSP traffic.
+        val lspUris = resolveLspUris(file)
+        val documentUri = lspUris.serverUri
+        if (documentUri == null) {
+            Log.w("LspManager", "No resolvable real path for ${file.uri}; LSP disabled for this file")
+            activityStore.log(file.name, "LSP disabled: no real path for ${file.uri}")
+            withContext(Dispatchers.Main) { editorState.editorLanguage = baseLanguage }
+            return
+        }
+        Log.d("LspManager", "Tab $tabId ${file.name}: ${file.uri} -> $documentUri")
 
         withContext(Dispatchers.IO) {
             try {
@@ -124,7 +136,7 @@ class LspManager(
                     providers.zip(keys).map { (reg, key) ->
                         async {
                             key to runCatching {
-                                ensureServerInstance(key, reg.provider, projectUri)
+                                ensureServerInstance(key, reg.provider, projectUri, file)
                             }.getOrNull()
                         }
                     }.awaitAll()
@@ -142,6 +154,11 @@ class LspManager(
                         async {
                             instance.client.registerEditor(documentUri, editorState)
                             if (!instance.capabilities.supportsDidOpenClose()) return@async
+                            // Never open the same document twice on one connection
+                            // without an intervening didClose; servers are free to
+                            // reject the second open.
+                            if (instance.client.isOpen(documentUri)) return@async
+                            instance.client.markOpened(documentUri)
                             try {
                                 withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
                                     instance.server.textDocument.didOpen(
@@ -235,7 +252,8 @@ class LspManager(
     private suspend fun ensureServerInstance(
         key: ServerKey,
         provider: LanguageServerProvider,
-        projectUri: Uri?
+        projectUri: Uri?,
+        file: KxFile? = null
     ): ServerInstance {
         return activeServers[key]?.takeIf { !it.isDead } ?: mutexFor(key).withLock {
             activeServers[key]?.takeIf { !it.isDead } ?: run {
@@ -245,11 +263,17 @@ class LspManager(
                     diagnosticsAggregator,
                     activityStore,
                     key.providerId,
-                    onRefreshInlayHints = { refreshInlayHintsForServer(key) }
+                    onRefreshInlayHints = { refreshInlayHintsForServer(key) },
+                    onRefreshDiagnostics = { refreshDiagnosticsForServer(key) }
                 )
                 val server = provider.startServer(client)
 
-                val initParams = createInitializeParams(projectUri?.toFile(), provider.initializationOptions())
+                // The workspace root is usually a content:// SAF URI with no file
+                // path; resolve it to the guest-visible project root, falling back
+                // to walking up from the opened file.
+                val root = resolveProjectRoot(projectUri, file)
+                Log.d("LspManager", "Server ${key.providerId}: workspace root = ${root?.absolutePath}")
+                val initParams = createInitializeParams(root)
 
                 val initializeResult = server.initialize(initParams)
                 server.initialized(InitializedParams)
@@ -276,6 +300,8 @@ class LspManager(
 
                     client.registerEditor(uri, state)
                     if (!newInstance.capabilities.supportsDidOpenClose()) return@forEach
+                    if (client.isOpen(uri)) return@forEach
+                    client.markOpened(uri)
                     scope.launch(Dispatchers.IO) {
                         try {
                             withTimeoutOrNull(SERVER_CALL_TIMEOUT_MS.milliseconds) {
@@ -491,6 +517,20 @@ class LspManager(
             // Invalidate the cache so an identical-to-last result still gets applied.
             cachedInlayHints.remove(tabId)
             requestInlayHint(tabId, state, state.cursor.leftLine)
+        }
+    }
+
+    /** Re-pulls diagnostics for every document served by [key]. Invoked when the
+     * server requests a refresh (workspace/diagnostic/refresh), i.e. when its
+     * analysis has advanced and new diagnostics are available. */
+    private fun refreshDiagnosticsForServer(key: ServerKey) {
+        val instance = activeServers[key]?.takeIf { !it.isDead } ?: return
+        editorServerKeys.forEach { (tabId, keysForTab) ->
+            if (key !in keysForTab) return@forEach
+            val uri = editorUris[tabId] ?: return@forEach
+            scope.launch {
+                runCatching { instance.client.pullDiagnostics(instance.server, uri) }
+            }
         }
     }
 

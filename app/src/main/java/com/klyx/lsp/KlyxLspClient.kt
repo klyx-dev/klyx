@@ -2,6 +2,8 @@ package com.klyx.lsp
 
 import android.util.Log
 import com.klyx.lsp.server.LanguageClient
+import com.klyx.lsp.server.LanguageServer
+import com.klyx.lsp.server.ResponseErrorException
 import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
@@ -12,10 +14,15 @@ import io.github.rosemoe.sora.lang.diagnostic.DiagnosticDetail
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticRegion
 import io.github.rosemoe.sora.lang.diagnostic.DiagnosticsContainer
 import io.github.rosemoe.sora.text.Content
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import java.util.concurrent.ConcurrentHashMap
 
 internal class DiagnosticsAggregator {
@@ -62,10 +69,24 @@ internal class KlyxLspClient(
     private val aggregator: DiagnosticsAggregator,
     private val activityStore: LspActivityStore,
     private val serverName: String = serverId,
-    private val onRefreshInlayHints: () -> Unit = {}
+    private val onRefreshInlayHints: () -> Unit = {},
+    private val onRefreshDiagnostics: () -> Unit = {}
 ) : LanguageClient {
 
+    companion object {
+        private const val PULL_RETRY_DELAY_MS = 400L
+        private const val PULL_MAX_ATTEMPTS = 10
+    }
+
     private val registeredUris = ConcurrentHashMap.newKeySet<String>()
+    private val diagnosticResultIds = ConcurrentHashMap<String, String?>()
+
+    // The single source of truth for open state on this connection: a URI is in
+    // this set exactly while didOpen was sent and no didClose has followed.
+    // LspManager consults it before every didOpen so a document is never opened
+    // twice on one connection — not on editor re-registration, retries, or
+    // reconnects. Servers are free to reject the second open.
+    private val didOpenedUris = ConcurrentHashMap.newKeySet<String>()
 
     // Once a server is stopped/restarted/crashed the underlying process can keep
     // emitting notifications (rust-analyzer flushes queued window/logMessage traces for
@@ -86,6 +107,15 @@ internal class KlyxLspClient(
     fun unregisterEditor(uri: String) {
         registeredUris.remove(uri)
         aggregator.removeSource(uri, serverId)
+        didOpenedUris.remove(uri)
+    }
+
+    /** True when [uri] is currently open on this server (didOpen sent, no didClose since). */
+    fun isOpen(uri: String): Boolean = didOpenedUris.contains(uri)
+
+    /** Marks [uri] as open on this server. Call right before sending didOpen. */
+    fun markOpened(uri: String) {
+        didOpenedUris.add(uri)
     }
 
     /** Called when this server is marked dead so its stale diagnostics don't linger
@@ -97,6 +127,61 @@ internal class KlyxLspClient(
     override suspend fun publishDiagnostics(params: PublishDiagnosticsParams) {
         if (disposed) return
         publish(params.uri, params.diagnostics)
+    }
+
+    /**
+     * Pulls diagnostics for [uri] via the `textDocument/diagnostic` request.
+     * Some servers gate pushed diagnostics behind a completed workspace load
+     * but still answer pull requests from analysis done so far.
+     */
+    suspend fun pullDiagnostics(server: LanguageServer, uri: String) {
+        if (disposed) return
+        if (aggregator.editorFor(uri) == null) return
+        val previous = diagnosticResultIds[uri]
+        var attempts = 0
+        while (true) {
+            attempts++
+            val report = try {
+                server.textDocument.diagnostic(
+                    DocumentDiagnosticParams(
+                        textDocument = TextDocumentIdentifier(uri),
+                        identifier = null,
+                        previousResultId = previous
+                    )
+                )
+            } catch (e: ResponseErrorException) {
+                // A ServerCancelled (-32802) response with retriggerRequest=true
+                // means "still busy, resend this request once ready", not a real
+                // failure. Retry with a short delay instead of giving up.
+                val retrigger = e.code == ErrorCodes.ServerCancelled &&
+                    ((e.data as? JsonObject)
+                        ?.let { runCatching { Json.decodeFromJsonElement<DiagnosticServerCancellationData>(it) }.getOrNull() }
+                        ?.retriggerRequest
+                        ?: false)
+                if (!retrigger) {
+                    Log.w("LspClient", "diagnostic pull failed for $uri from $serverId: ${e.message}")
+                    return
+                }
+                if (attempts >= PULL_MAX_ATTEMPTS) {
+                    Log.d("LspClient", "diagnostic pull for $uri from $serverId still cancelled after $attempts attempts")
+                    return
+                }
+                Log.d("LspClient", "diagnostics not ready yet for $uri (attempt $attempts/$PULL_MAX_ATTEMPTS), retrying")
+                delay(PULL_RETRY_DELAY_MS)
+                if (disposed || aggregator.editorFor(uri) == null) return
+                continue
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w("LspClient", "diagnostic pull failed for $uri from $serverId: ${e.message}")
+                return
+            }
+            val full = report.full ?: return
+            diagnosticResultIds[uri] = full.resultId
+            publish(uri, full.items)
+            Log.d("LspClient", "Pulled ${full.items.size} diagnostics for $uri from $serverId")
+            return
+        }
     }
 
     private suspend fun publish(uri: String, diagnostics: List<Diagnostic>) {
@@ -155,6 +240,11 @@ internal class KlyxLspClient(
     override suspend fun notifyProgress(params: ProgressParams) {
         if (disposed) return
         activityStore.progress(serverId, params)
+        params.value.fold({ notification ->
+            // A finished work-done progress (indexing, build, ...) means the
+            // server's analysis just advanced — ask for fresh diagnostics.
+            if (notification is WorkDoneProgressEnd) onRefreshDiagnostics()
+        }, {})
         //Log.i("LspClient", "Progress: $params")
     }
 
@@ -195,7 +285,8 @@ internal class KlyxLspClient(
     }
 
     override suspend fun refreshDiagnostics() {
-        // No-op
+        if (disposed) return
+        onRefreshDiagnostics()
     }
 
     override suspend fun refreshFoldingRanges() {
