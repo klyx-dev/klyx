@@ -2,6 +2,7 @@ package com.klyx.api.lsp
 
 import com.klyx.lsp.server.LanguageClient
 import com.klyx.lsp.server.LanguageServer
+import com.klyx.lsp.types.LSPAny
 
 /**
  * Provider for a Language Server.
@@ -20,6 +21,14 @@ fun interface LanguageServerProvider {
      * @return A [LanguageServer] proxy.
      */
     suspend fun startServer(client: LanguageClient): LanguageServer
+
+    /**
+     * Optional configuration sent to the server in the `initialize` request.
+     *
+     * Plugins may override this to pass server-specific options
+     * (e.g. `rust-analyzer` settings). Defaults to `null`.
+     */
+    fun initializationOptions(): LSPAny? = null
 }
 
 /**

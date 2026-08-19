@@ -17,6 +17,13 @@
 -keep class kotlin.Pair { *; }
 -keep class kotlin.Triple { *; }
 
+# LSPAny = JsonElement: plugins are compiled against kotlinx-serialization-json
+# (compileOnly) and construct option objects at runtime from the host's classes.
+# R8 prunes unused members, so keep the whole json package - including
+# JsonObjectBuilder/JsonElementBuildersKt that only plugin code references -
+# otherwise initializationOptions() fails with NoClassDefFoundError on release.
+-keep class kotlinx.serialization.json.** { *; }
+
 -keep class io.github.treesitter.ktreesitter.** { *; }
 
 -keep class androidx.compose.** { *; }
