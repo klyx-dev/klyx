@@ -71,10 +71,12 @@ jobs:
           "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin/cmake" --version
 
       - name: Restore keystore
+        if: github.event_name != 'pull_request'
         run: |
           echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
 
       - name: Restore signing properties
+        if: github.event_name != 'pull_request'
         run: |
           echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
 
@@ -94,7 +96,7 @@ jobs:
       - name: Prepare TreeSitter bindings
         run: ./gradlew prepareTreeSitter
 
-      - name: Build Release APK
+      - name: Build APK
         env:
           CI: true
           CI_PROVIDER: github
@@ -125,7 +127,11 @@ jobs:
           ENABLE_EXPERIMENTAL: true
 
         run: |
-          ./gradlew assembleRelease
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            ./gradlew assembleDebug
+          else
+            ./gradlew assembleRelease
+          fi
 
       - name: Cleanup sensitive files
         if: always()
