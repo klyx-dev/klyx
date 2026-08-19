@@ -3,6 +3,8 @@ package com.klyx
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import com.klyx.i18n.getLocaleStrings
+import com.klyx.i18n.strings
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -245,16 +247,13 @@ class MainActivity : ComposeActivity() {
             ) {
                 if (screen is Screen.Custom) {
                     Text(
-                        text = "Screen \"${screen.id}\" is not registered.\n\n" +
-                                "If you're a plugin developer, make sure to\n" +
-                                "register the screen via screens.register()\n" +
-                                "before navigating to it.",
+                        text = strings.screenNotRegistered(screen.id.id),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
                 } else {
                     Text(
-                        text = "Oops! Something went wrong.\nThis screen isn't available right now.\n\n(${screen::class.qualifiedName})",
+                        text = strings.somethingWentWrong(screen::class.qualifiedName),
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.error
                     )
@@ -273,8 +272,7 @@ class MainActivity : ComposeActivity() {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Screen \"$id\" is not available because the plugin crashed.\n" +
-                            "Please open the Plugins settings to unload or reinstall it.",
+                    text = strings.pluginCrashed(id.id),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -312,7 +310,8 @@ class MainActivity : ComposeActivity() {
                         if (DocumentsContract.isTreeUri(path)) {
                             fileTreeViewModel.addRootNode(path)
                             lifecycleScope.launch {
-                                app.toastHostState.showToast("Project opened")
+                                val s = getLocaleStrings()
+                                app.toastHostState.showToast(s.projectOpened)
                             }
                         } else {
                             val fileExists = path.scheme != "file" || java.io.File(path.path!!).exists()
@@ -320,7 +319,8 @@ class MainActivity : ComposeActivity() {
                                 editorViewModel.openFile(path)
                             } else {
                                 lifecycleScope.launch {
-                                    app.toastHostState.showFailureToast("Invalid path: ${path.path} does not exist")
+                                    val s = getLocaleStrings()
+                                    app.toastHostState.showFailureToast(s.invalidPath(path.path ?: ""))
                                 }
                             }
                         }

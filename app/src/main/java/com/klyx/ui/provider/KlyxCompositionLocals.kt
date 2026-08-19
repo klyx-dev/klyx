@@ -28,6 +28,7 @@ import com.klyx.language.LanguageRegistryImpl
 import com.klyx.ui.ImmersiveModeHandler
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.i18n.ProvideStrings
 import com.klyx.ui.theme.KlyxThemeSurface
 import com.klyx.ui.widgets.ToastHost
 import org.koin.compose.currentKoinScope
@@ -95,9 +96,11 @@ fun KlyxCompositionLocals(content: @Composable BoxScope.() -> Unit) {
         ImmersiveModeHandler(
             isImmersiveModeEnabled = settings.appearance.immersiveMode
         ) {
-            KlyxThemeSurface {
-                content()
-                ToastHost(modifier = Modifier.fillMaxSize())
+            ProvideStrings {
+                KlyxThemeSurface {
+                    content()
+                    ToastHost(modifier = Modifier.fillMaxSize())
+                }
             }
         }
     }

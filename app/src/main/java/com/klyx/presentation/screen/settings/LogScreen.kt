@@ -1,5 +1,7 @@
 package com.klyx.presentation.screen.settings
 
+import com.klyx.i18n.strings
+import com.klyx.i18n.getLocaleStrings
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.horizontalScroll
@@ -114,7 +116,7 @@ fun LogScreen(viewModel: LogViewModel = koinViewModel()) {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("App Logs") },
+                title = { Text(strings.appLogs) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -127,7 +129,7 @@ fun LogScreen(viewModel: LogViewModel = koinViewModel()) {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 },
@@ -175,22 +177,24 @@ private fun LogTopBarActions(
 ) {
     IconButton(onClick = {
         val logs = viewModel.getFormattedLogs()
+        val s = getLocaleStrings()
         if (logs.isBlank()) {
-            scope.launch { toastHostState.showToast("No logs to copy") }
+            scope.launch { toastHostState.showToast(s.noLogsToCopy) }
             return@IconButton
         }
         ClipboardUtils.copyText(logs)
-        scope.launch { toastHostState.showToast("Logs copied to clipboard") }
+        scope.launch { toastHostState.showToast(s.logsCopiedToClipboard) }
     }) {
         Icon(
             imageVector = Icons.Rounded.ContentCopy,
-            contentDescription = "Copy logs"
+            contentDescription = strings.copyLogs
         )
     }
     IconButton(onClick = {
         val logs = viewModel.getFormattedLogs()
+        val s = getLocaleStrings()
         if (logs.isBlank()) {
-            scope.launch { toastHostState.showToast("No logs to share") }
+            scope.launch { toastHostState.showToast(s.noLogsToShare) }
             return@IconButton
         }
         val file = File(context.cacheDir, "klyx_logs.txt")
@@ -205,17 +209,17 @@ private fun LogTopBarActions(
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Share Logs"))
+        context.startActivity(Intent.createChooser(intent, s.shareLogsTitle))
     }) {
         Icon(
             imageVector = Icons.Rounded.Share,
-            contentDescription = "Share logs"
+            contentDescription = strings.shareLogs
         )
     }
     IconButton(onClick = { viewModel.clearLogs() }) {
         Icon(
             imageVector = Icons.Rounded.DeleteSweep,
-            contentDescription = "Clear logs"
+            contentDescription = strings.clearLogs
         )
     }
 }
@@ -233,7 +237,7 @@ private fun LogList(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = if (hasActiveFilter) "No matching logs" else "No logs yet",
+                text = if (hasActiveFilter) strings.noMatchingLogs else strings.noLogsYet,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -269,7 +273,7 @@ private fun FilterBar(
             FilterChip(
                 selected = filterLevel == null,
                 onClick = { onLevelSelected(null) },
-                label = { Text("All", style = MaterialTheme.typography.labelSmall) },
+                label = { Text(strings.all, style = MaterialTheme.typography.labelSmall) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
                 )
@@ -316,7 +320,7 @@ private fun FilterBar(
                     decorationBox = { innerTextField ->
                         if (filterText.isEmpty()) {
                             Text(
-                                text = "Search by tag or message...",
+                                text = strings.searchByTagOrMessage,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -328,7 +332,7 @@ private fun FilterBar(
                     IconButton(onClick = { onTextChanged("") }) {
                         Icon(
                             imageVector = Icons.Rounded.Clear,
-                            contentDescription = "Clear search",
+                            contentDescription = strings.clearSearch,
                             modifier = Modifier.size(18.dp)
                         )
                     }

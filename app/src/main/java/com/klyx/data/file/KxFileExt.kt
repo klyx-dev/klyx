@@ -1,5 +1,6 @@
 package com.klyx.data.file
 
+import com.klyx.i18n.getLocaleStrings
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
@@ -57,20 +58,23 @@ fun KxFile.openWith() = withApplicationContext {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
+        val s = getLocaleStrings()
         startActivity(
-            Intent.createChooser(intent, "Open with")
+            Intent.createChooser(intent, s.openWith)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     } catch (_: ActivityNotFoundException) {
+        val s = getLocaleStrings()
         Toast.makeText(
             applicationContext,
-            "No application found to open this file",
+            s.noAppToOpenFile,
             Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
+        val s = getLocaleStrings()
         Toast.makeText(
             applicationContext,
-            "Could not open file: ${e.localizedMessage}",
+            s.couldNotOpenFile(e.localizedMessage),
             Toast.LENGTH_LONG
         ).show()
     }
@@ -88,21 +92,24 @@ fun KxFile.share() = withApplicationContext {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
+        val s = getLocaleStrings()
         startActivity(
             Intent
-                .createChooser(intent, "Share file")
+                .createChooser(intent, s.shareFile)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
     } catch (_: ActivityNotFoundException) {
+        val s = getLocaleStrings()
         Toast.makeText(
             applicationContext,
-            "No application available for sharing",
+            s.noAppToShareFile,
             Toast.LENGTH_SHORT
         ).show()
     } catch (e: Exception) {
+        val s = getLocaleStrings()
         Toast.makeText(
             applicationContext,
-            "Could not share file: ${e.localizedMessage}",
+            s.couldNotShareFile(e.localizedMessage),
             Toast.LENGTH_LONG
         ).show()
     }
@@ -111,12 +118,13 @@ fun KxFile.share() = withApplicationContext {
 fun KxFile.resolveName(): String {
     val path = uri.path ?: return name
     val context = applicationContext()
+    val s = getLocaleStrings()
     return when (path) {
-        Environment.getExternalStorageDirectory().absolutePath -> "Internal Storage"
-        context.dataDir.absolutePath -> "App Data"
+        Environment.getExternalStorageDirectory().absolutePath -> s.internalStorage
+        context.dataDir.absolutePath -> s.appData
         context.filesDir.resolve("home").absolutePath,
         context.filesDir.resolve("home").canonicalPath,
-            -> "Terminal Home"
+            -> s.terminalHome
 
         else -> name
     }

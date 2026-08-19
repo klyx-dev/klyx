@@ -1,5 +1,7 @@
 package com.klyx.presentation.screen.settings
 
+import com.klyx.i18n.strings
+import com.klyx.i18n.getLocaleStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -76,6 +78,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.decodeFromStream
 import kotlinx.serialization.json.encodeToStream
 import org.koin.compose.koinInject
@@ -101,6 +104,7 @@ fun DeveloperOptionsScreen() {
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
+            val s = getLocaleStrings()
             try {
                 val settings = settingsRepository.settings.first()
                 withContext(Dispatchers.IO) {
@@ -109,9 +113,9 @@ fun DeveloperOptionsScreen() {
                         settingsJson.encodeToStream(settings, output)
                     }
                 }
-                toastHostState.showToast("Settings exported")
+                toastHostState.showToast(s.settingsExported)
             } catch (e: Exception) {
-                toastHostState.showToast("Export failed: ${e.message}")
+                toastHostState.showToast(s.exportFailed(e.message))
             }
         }
     }
@@ -121,6 +125,7 @@ fun DeveloperOptionsScreen() {
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
+            val s = getLocaleStrings()
             try {
                 val imported = withContext(Dispatchers.IO) {
                     val stream = context.contentResolver.openInputStream(uri)
@@ -132,14 +137,14 @@ fun DeveloperOptionsScreen() {
                 }
                 if (imported != null) {
                     settingsRepository.updateSettings { imported }
-                    toastHostState.showToast("Settings imported and applied")
+                    toastHostState.showToast(s.settingsImported)
                 } else {
-                    toastHostState.showToast("Import failed: Could not read the selected file")
+                    toastHostState.showToast(s.importFailedCouldNotRead)
                 }
-            } catch (e: kotlinx.serialization.SerializationException) {
-                toastHostState.showToast("Import failed: The selected file does not contain valid settings")
+            } catch (e: SerializationException) {
+                toastHostState.showToast(s.importFailedInvalidSettings)
             } catch (e: Exception) {
-                toastHostState.showToast("Import failed: ${e.message}")
+                toastHostState.showToast(s.exportFailed(e.message))
             }
         }
     }
@@ -150,8 +155,9 @@ fun DeveloperOptionsScreen() {
             onConfirm = {
                 showWipeDialog = false
                 scope.launch {
+                    val s = getLocaleStrings()
                     terminalInstaller.uninstall()
-                    toastHostState.showToast("Terminal environment wiped")
+                    toastHostState.showToast(s.terminalEnvWiped)
                 }
             }
         )
@@ -165,8 +171,9 @@ fun DeveloperOptionsScreen() {
             onConfirm = {
                 showAssetDialog = false
                 isInstallingAsset = true
-                assetInstallLabel = "Starting..."
+                assetInstallLabel = getLocaleStrings().starting
                 scope.launch {
+                    val s = getLocaleStrings()
                     try {
                         terminalInstaller.installFromAsset(
                             assetName = assetName,
@@ -179,9 +186,9 @@ fun DeveloperOptionsScreen() {
                                 override fun warn(message: String) {}
                             }
                         )
-                        launch { toastHostState.showToast("Bootstrap installed from assets") }
+                        launch { toastHostState.showToast(s.bootstrapInstalledFromAssets) }
                     } catch (e: Exception) {
-                        launch { toastHostState.showToast("Installation failed: ${e.message}") }
+                        launch { toastHostState.showToast(s.installationFailed(e.message)) }
                     } finally {
                         isInstallingAsset = false
                     }
@@ -200,7 +207,7 @@ fun DeveloperOptionsScreen() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Developer Options") },
+                title = { Text(strings.developerOptions) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -213,7 +220,7 @@ fun DeveloperOptionsScreen() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -249,10 +256,10 @@ private fun LazyListScope.developerOptionsList(
     onAssetInstallClick: () -> Unit
 ) {
     item {
-        SettingsSubsection("Terminal Testing") {
+        SettingsSubsection(strings.terminalTesting) {
             SettingsItem(
-                title = "Wipe Terminal Environment",
-                subtitle = "Deletes the prefix and version file to force a reinstall",
+                title = strings.wipeTerminalEnv,
+                subtitle = strings.wipeTerminalEnvDesc,
                 onClick = onWipeClick,
                 leadingIcon = {
                     Icon(
@@ -266,10 +273,10 @@ private fun LazyListScope.developerOptionsList(
     }
 
     item {
-        SettingsSubsection("Logging") {
+        SettingsSubsection(strings.logging) {
             SettingsItem(
-                title = "View App Logs",
-                subtitle = "Browse in-app logs from plugins and system services",
+                title = strings.viewAppLogs,
+                subtitle = strings.viewAppLogsDesc,
                 onClick = onLogsClick,
                 leadingIcon = {
                     Icon(
@@ -283,10 +290,10 @@ private fun LazyListScope.developerOptionsList(
     }
 
     item {
-        SettingsSubsection("Backup & Restore") {
+        SettingsSubsection(strings.backupAndRestore) {
             SettingsItem(
-                title = "Export Settings",
-                subtitle = "Save all settings (appearance, editor, terminal, file tree) to a JSON file",
+                title = strings.exportSettings,
+                subtitle = strings.exportSettingsDesc,
                 onClick = onExportClick,
                 leadingIcon = {
                     Icon(
@@ -298,8 +305,8 @@ private fun LazyListScope.developerOptionsList(
             )
 
             SettingsItem(
-                title = "Import Settings",
-                subtitle = "Restore settings from a previously exported JSON file",
+                title = strings.importSettings,
+                subtitle = strings.importSettingsDesc,
                 onClick = onImportClick,
                 leadingIcon = {
                     Icon(
@@ -314,10 +321,10 @@ private fun LazyListScope.developerOptionsList(
 
     if (BuildConfig.DEBUG) {
         item {
-            SettingsSubsection("Debug Testing") {
+            SettingsSubsection(strings.debugTesting) {
                 SettingsItem(
-                    title = "Install Bootstrap from Assets",
-                    subtitle = "Wipes and extracts bootstrap-${currentArchitecture()}.zip from APK assets",
+                    title = strings.installBootstrapFromAssets,
+                    subtitle = strings.installBootstrapFromAssetsDesc,
                     onClick = onAssetInstallClick,
                     leadingIcon = {
                         Icon(
@@ -369,7 +376,7 @@ private fun AssetBootstrapConfirmationDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Install from Assets?",
+                    text = strings.installFromAssetsQuestion,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontFamily = GoogleSansRounded,
@@ -380,7 +387,7 @@ private fun AssetBootstrapConfirmationDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "This will wipe the current terminal environment and extract $assetName from the APK assets directory.\n\nThis is intended for testing bundled bootstrap archives.",
+                    text = strings.installFromAssetsDesc(assetName),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -403,7 +410,7 @@ private fun AssetBootstrapConfirmationDialog(
                         )
                     ) {
                         Text(
-                            text = "Cancel",
+                            text = strings.cancel,
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = GoogleSansRounded,
                             fontWeight = FontWeight.SemiBold
@@ -421,7 +428,7 @@ private fun AssetBootstrapConfirmationDialog(
                         )
                     ) {
                         Text(
-                            text = "Install",
+                            text = strings.install,
                             style = MaterialTheme.typography.titleMedium,
                             fontFamily = GoogleSansRounded,
                             fontWeight = FontWeight.Bold
@@ -456,7 +463,7 @@ private fun AssetInstallProgressDialog(label: String) {
                 )
 
                 Text(
-                    text = "Installing Bootstrap",
+                    text = strings.installingBootstrap,
                     style = MaterialTheme.typography.titleMedium,
                     fontFamily = GoogleSansRounded,
                     fontWeight = FontWeight.Bold,
