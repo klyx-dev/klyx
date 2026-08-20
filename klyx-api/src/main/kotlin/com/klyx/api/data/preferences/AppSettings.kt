@@ -87,9 +87,28 @@ enum class AppTheme(val displayName: String) {
 }
 
 /**
+ * Defines the application's display language.
+ *
+ * @property displayName Human-readable name shown in settings.
+ * @property languageTag The BCP 47 language tag used to select translations, or `null` to follow the system language.
+ */
+enum class AppLanguage(val displayName: String, val languageTag: String?) {
+
+    /** Follow the system-wide language preference. */
+    System("Follow System", null),
+
+    /** English. */
+    English("English", "en"),
+
+    /** Hindi. */
+    Hindi("हिन्दी (Hindi)", "hi")
+}
+
+/**
  * Visual and theme-related settings for the application.
  *
  * @property theme The selected application theme.
+ * @property language The selected application language.
  * @property amoledDarkMode Whether to use pure black backgrounds in dark mode for OLED screens.
  * @property immersiveMode Whether to hide system bars to maximize application space.
  * @property reduceMotion Whether to disable UI animations for faster transitions.
@@ -98,6 +117,7 @@ enum class AppTheme(val displayName: String) {
 @Serializable
 data class AppearanceSettings(
     val theme: AppTheme = AppTheme.System,
+    val language: AppLanguage = AppLanguage.System,
     val amoledDarkMode: Boolean = false,
     val immersiveMode: Boolean = false,
     val reduceMotion: Boolean = false,

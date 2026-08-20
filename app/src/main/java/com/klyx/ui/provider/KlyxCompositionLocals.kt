@@ -10,6 +10,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.intl.Locale
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -29,6 +30,7 @@ import com.klyx.ui.ImmersiveModeHandler
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.i18n.ProvideStrings
+import com.klyx.i18n.rememberStrings
 import com.klyx.ui.theme.KlyxThemeSurface
 import com.klyx.ui.widgets.ToastHost
 import org.koin.compose.currentKoinScope
@@ -96,7 +98,9 @@ fun KlyxCompositionLocals(content: @Composable BoxScope.() -> Unit) {
         ImmersiveModeHandler(
             isImmersiveModeEnabled = settings.appearance.immersiveMode
         ) {
-            ProvideStrings {
+            val languageTag = settings.appearance.language.languageTag
+                ?: Locale.current.toLanguageTag()
+            ProvideStrings(rememberStrings(currentLanguageTag = languageTag)) {
                 KlyxThemeSurface {
                     content()
                     ToastHost(modifier = Modifier.fillMaxSize())

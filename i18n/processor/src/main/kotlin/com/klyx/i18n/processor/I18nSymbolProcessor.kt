@@ -99,7 +99,7 @@ internal class I18nSymbolProcessor(
                 |
                 |import androidx.compose.runtime.Composable
                 |import androidx.compose.runtime.ProvidableCompositionLocal
-                |import androidx.compose.runtime.staticCompositionLocalOf
+                |import androidx.compose.runtime.compositionLocalOf
                 |import androidx.compose.ui.text.intl.Locale
                 |import com.klyx.i18n.I18n
                 |import com.klyx.i18n.LanguageTag
@@ -112,7 +112,7 @@ internal class I18nSymbolProcessor(
                 |)
                 |
                 |$visibility val Local$fileName: ProvidableCompositionLocal<$stringsClassOutput> = 
-                |    staticCompositionLocalOf { $defaultStringsOutput }
+                |    compositionLocalOf { $defaultStringsOutput }
                 |
                 |$stringsProperty
                 |

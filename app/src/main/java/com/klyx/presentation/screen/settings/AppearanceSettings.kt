@@ -23,6 +23,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.klyx.R
+import com.klyx.api.data.preferences.AppLanguage
 import com.klyx.api.data.preferences.AppTheme
 import com.klyx.api.data.preferences.AppearanceSettings
 import com.klyx.api.data.preferences.LocalAppSettings
@@ -30,6 +31,7 @@ import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.app.icons.Animation
 import com.klyx.app.icons.Contrast
 import com.klyx.app.icons.Fullscreen
+import com.klyx.app.icons.Language
 import com.klyx.app.icons.LightMode
 import com.klyx.data.preferences.updateAppearanceSettings
 import com.klyx.presentation.navigation.LocalNavigator
@@ -115,6 +117,26 @@ private fun ApplicationThemeSection(
             leadingIcon = {
                 Icon(
                     Icons.Outlined.LightMode,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.secondary
+                )
+            }
+        )
+
+        SelectorItem(
+            label = "Language",
+            description = "Choose the display language of the app.",
+            options = AppLanguage.entries.toImmutableList(),
+            selected = settings.language,
+            optionLabel = AppLanguage::displayName,
+            onSelectionChanged = {
+                scope.launch {
+                    updateAppearanceSettings { copy(language = it) }
+                }
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Rounded.Language,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.secondary
                 )

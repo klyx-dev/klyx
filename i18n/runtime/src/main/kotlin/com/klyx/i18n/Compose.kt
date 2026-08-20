@@ -14,7 +14,7 @@ fun <T> rememberStrings(
     defaultLanguageTag: LanguageTag = "en",
     currentLanguageTag: LanguageTag = Locale.current.toLanguageTag()
 ): I18n<T> {
-    return remember(defaultLanguageTag) {
+    return remember(defaultLanguageTag, currentLanguageTag) {
         I18n(defaultLanguageTag, translations).apply {
             languageTag = currentLanguageTag
         }

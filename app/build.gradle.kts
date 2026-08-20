@@ -217,6 +217,7 @@ dependencies {
     implementation(projects.terminal)
     implementation(projects.editor)
     implementation(projects.i18n.strings)
+    implementation(projects.i18n.runtime)
 
     testImplementation(libs.junit)
     testImplementation(libs.bundles.kotest.unit)
