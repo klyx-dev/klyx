@@ -40,7 +40,7 @@ includeBuild("external/sora-editor")
 include(":app", ":terminal", ":editor", ":core", ":klyx-api")
 include(":klyx-gradle-plugin", ":klyx-compiler-plugin")
 include(":lsp:api", ":lsp:server")
-include(":i18n:processor", ":i18n:core", ":i18n:strings")
+include(":i18n:processor", ":i18n:runtime", ":i18n:strings")
 
 file("languages").listFiles()?.filter { it.isDirectory && it.name.startsWith("tree-sitter-") }?.forEach { repoDir ->
     val innerGrammars = repoDir.listFiles { f -> f.isDirectory && (f.name == "typescript" || f.name == "tsx") }

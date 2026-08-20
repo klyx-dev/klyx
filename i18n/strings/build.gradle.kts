@@ -55,7 +55,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.androidx.compose)
 
-    implementation(projects.i18n.core)
+    implementation(projects.i18n.runtime)
     ksp(projects.i18n.processor)
 
     testImplementation(libs.junit)
