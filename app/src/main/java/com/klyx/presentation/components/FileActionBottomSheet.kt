@@ -1,5 +1,7 @@
 package com.klyx.presentation.components
 
+import com.klyx.i18n.strings
+import com.klyx.i18n.getLocaleStrings
 import android.content.ClipData
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -97,6 +99,7 @@ import com.klyx.app.icons.NoteAdd
 import com.klyx.app.icons.OpenInNew
 import com.klyx.app.icons.Storage
 import com.klyx.data.file.resolveName
+import com.klyx.i18n.LocalStrings
 import com.klyx.presentation.components.filetree.iconForFile
 import com.klyx.presentation.components.subcomponents.AutoSizeText
 import kotlinx.coroutines.CoroutineScope
@@ -321,12 +324,12 @@ private fun BoxScope.FileActionSheetTabBar(pagerState: PagerState, scope: Corout
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Rounded.Menu,
-                    contentDescription = "Options",
+                    contentDescription = strings.options,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    "OPTIONS",
+                    strings.options,
                     fontFamily = GoogleSansRounded,
                     fontWeight = FontWeight.Bold,
                 )
@@ -346,12 +349,12 @@ private fun BoxScope.FileActionSheetTabBar(pagerState: PagerState, scope: Corout
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Rounded.Info,
-                    contentDescription = "Details",
+                    contentDescription = strings.info,
                     modifier = Modifier.padding(horizontal = 4.dp)
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    "INFO",
+                    strings.info,
                     fontFamily = GoogleSansRounded,
                     fontWeight = FontWeight.Bold
                 )
@@ -375,6 +378,7 @@ private fun InfoItems(
         }
     }
 
+    val s = LocalStrings.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -382,24 +386,25 @@ private fun InfoItems(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         FileInfoSegmentedListItem(
-            headline = "Name",
+            headline = s.name,
             supporting = file.resolveName(),
             icon = iconForFile(file).painter,
-            iconDescription = "File icon",
+            iconDescription = s.name,
             shape = infoSegmentItemShape,
         )
 
         FileInfoSegmentedListItem(
-            headline = "Path",
+            headline = s.path,
             supporting = file.uri.path ?: "",
             icon = painterResource(R.drawable.account_tree_24px),
-            iconDescription = "File icon",
+            iconDescription = s.path,
             shape = infoSegmentItemShape,
             onClick = { copyText(file.uri.path ?: "") },
         )
 
-        var sizeText by remember(file) {
-            mutableStateOf(if (file.isDirectory) "Calculating..." else file.size.humanBytes())
+        val calculating = s.calculating
+        var sizeText by remember(file, calculating) {
+            mutableStateOf(if (file.isDirectory) calculating else file.size.humanBytes())
         }
 
         LaunchedEffect(file) {
@@ -409,7 +414,7 @@ private fun InfoItems(
                         val sizeStr =
                             progress.bytes.humanBytes()
                         val details =
-                            "${progress.fileCount} files, ${progress.dirCount} folders"
+                            s.filesAndFolders(progress.fileCount, progress.dirCount)
 
                         sizeText =
                             if (progress.isFinished) {
@@ -422,7 +427,7 @@ private fun InfoItems(
         }
 
         FileInfoSegmentedListItem(
-            headline = "Size",
+            headline = s.size,
             supporting = sizeText,
             icon = rememberVectorPainter(Icons.Rounded.Storage),
             iconDescription = null,
@@ -430,7 +435,7 @@ private fun InfoItems(
         )
 
         FileInfoSegmentedListItem(
-            headline = "Last modified",
+            headline = s.lastModified,
             supporting = file.lastModified.milliseconds.asLocalDateTime().formatDateTime(),
             icon = rememberVectorPainter(Icons.Rounded.EditCalendar),
             iconDescription = null,
@@ -443,10 +448,10 @@ private fun InfoItems(
 
         statInfo?.let {
             FileInfoSegmentedListItem(
-                headline = "Permissions",
+                headline = s.permissions,
                 supporting = statInfo!!.permissions,
                 icon = painterResource(R.drawable.admin_panel_settings_24px),
-                iconDescription = "Permission icon",
+                iconDescription = s.permissions,
                 shape = infoSegmentItemShape,
                 onClick = { copyText(statInfo!!.permissions) }
             )
@@ -458,7 +463,7 @@ private fun InfoItems(
 
         symlinkTarget?.let { target ->
             FileInfoSegmentedListItem(
-                headline = "Symbolic link",
+                headline = s.symbolicLink,
                 supporting = "→ $target",
                 icon = rememberVectorPainter(Icons.Rounded.Link),
                 iconDescription = null,
@@ -487,9 +492,9 @@ fun LazyListScope.directoryActions(
                 shape = cornerShape,
                 onClick = { onAction(NewFile(file)) }
             ) {
-                Icon(Icons.AutoMirrored.Rounded.NoteAdd, contentDescription = "New File")
+                Icon(Icons.AutoMirrored.Rounded.NoteAdd, contentDescription = strings.newFile)
                 Spacer(Modifier.width(8.dp))
-                Text("New File", style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Text(strings.newFile, style = MaterialTheme.typography.titleMedium, maxLines = 1)
             }
 
             Button(
@@ -499,9 +504,9 @@ fun LazyListScope.directoryActions(
                 shape = cornerShape,
                 onClick = { onAction(NewDirectory(file)) }
             ) {
-                Icon(Icons.Rounded.CreateNewFolder, contentDescription = "New Folder")
+                Icon(Icons.Rounded.CreateNewFolder, contentDescription = strings.newFolder)
                 Spacer(Modifier.width(8.dp))
-                Text("New Folder", style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                Text(strings.newFolder, style = MaterialTheme.typography.titleMedium, maxLines = 1)
             }
         }
     }
@@ -517,9 +522,9 @@ fun LazyListScope.directoryActions(
                     .heightIn(min = 66.dp),
                 onClick = { onAction(Rename(file)) }
             ) {
-                Icon(Icons.Rounded.Edit, contentDescription = "Rename")
+                Icon(Icons.Rounded.Edit, contentDescription = strings.rename)
                 Spacer(Modifier.width(8.dp))
-                Text("Rename", style = MaterialTheme.typography.titleMedium)
+                Text(strings.rename, style = MaterialTheme.typography.titleMedium)
             }
 
             FilledTonalButton(
@@ -532,9 +537,9 @@ fun LazyListScope.directoryActions(
                 ),
                 onClick = { onAction(CopyPath(file)) }
             ) {
-                Icon(Icons.Rounded.CopyAll, contentDescription = "Copy Path")
+                Icon(Icons.Rounded.CopyAll, contentDescription = strings.copyPath)
                 Spacer(Modifier.width(8.dp))
-                Text("Copy Path", style = MaterialTheme.typography.titleMedium)
+                Text(strings.copyPath, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -554,9 +559,9 @@ fun LazyListScope.directoryActions(
                 ),
                 onClick = { onAction(Paste(file)) }
             ) {
-                Icon(Icons.Rounded.ContentPasteGo, contentDescription = "Paste Here")
+                Icon(Icons.Rounded.ContentPasteGo, contentDescription = strings.pasteHere)
                 Spacer(Modifier.width(8.dp))
-                Text("Paste Here", style = MaterialTheme.typography.titleMedium)
+                Text(strings.pasteHere, style = MaterialTheme.typography.titleMedium)
             }
 
             FilledTonalButton(
@@ -569,9 +574,9 @@ fun LazyListScope.directoryActions(
                 ),
                 onClick = { onAction(Delete(file)) }
             ) {
-                Icon(Icons.Rounded.DeleteForever, contentDescription = "Delete")
+                Icon(Icons.Rounded.DeleteForever, contentDescription = strings.delete)
                 Spacer(Modifier.width(8.dp))
-                Text("Delete", style = MaterialTheme.typography.titleMedium)
+                Text(strings.delete, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -590,11 +595,11 @@ fun LazyListScope.directoryActions(
             ) {
                 Icon(
                     Icons.AutoMirrored.Rounded.ExitToApp,
-                    contentDescription = "Close Project"
+                    contentDescription = strings.closeProject
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Close Project",
+                    strings.closeProject,
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -623,10 +628,10 @@ fun LazyListScope.fileActions(
                 ),
                 onClick = { onAction(OpenWith(file)) }
             ) {
-                Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = "Open with")
+                Icon(Icons.AutoMirrored.Rounded.OpenInNew, contentDescription = strings.openWith)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Open with",
+                    strings.openWith,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -643,9 +648,9 @@ fun LazyListScope.fileActions(
                 ),
                 onClick = { onAction(Rename(file)) }
             ) {
-                Icon(Icons.Rounded.Edit, contentDescription = "Rename")
+                Icon(Icons.Rounded.Edit, contentDescription = strings.rename)
                 Spacer(Modifier.width(8.dp))
-                Text("Rename", style = MaterialTheme.typography.titleMedium)
+                Text(strings.rename, style = MaterialTheme.typography.titleMedium)
             }
         }
     }
@@ -662,9 +667,9 @@ fun LazyListScope.fileActions(
                 contentPadding = PaddingValues(0.dp),
                 onClick = { onAction(Copy(file)) }
             ) {
-                Icon(Icons.Rounded.ContentCopy, contentDescription = "Copy")
+                Icon(Icons.Rounded.ContentCopy, contentDescription = strings.copy)
                 Spacer(Modifier.width(4.dp))
-                Text("Copy", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(strings.copy, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
 
             FilledTonalButton(
@@ -678,9 +683,9 @@ fun LazyListScope.fileActions(
                 contentPadding = PaddingValues(0.dp),
                 onClick = { onAction(Cut(file)) }
             ) {
-                Icon(Icons.Rounded.ContentCut, contentDescription = "Cut")
+                Icon(Icons.Rounded.ContentCut, contentDescription = strings.cut)
                 Spacer(Modifier.width(4.dp))
-                Text("Cut", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(strings.cut, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
 
             FilledTonalButton(
@@ -694,9 +699,9 @@ fun LazyListScope.fileActions(
                 contentPadding = PaddingValues(0.dp),
                 onClick = { onAction(Paste(file.parent ?: file)) }
             ) {
-                Icon(Icons.Rounded.ContentPaste, contentDescription = "Paste")
+                Icon(Icons.Rounded.ContentPaste, contentDescription = strings.paste)
                 Spacer(Modifier.width(4.dp))
-                Text("Paste", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(strings.paste, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -716,10 +721,10 @@ fun LazyListScope.fileActions(
                 ),
                 onClick = { onAction(CopyPath(file)) }
             ) {
-                Icon(Icons.Rounded.CopyAll, contentDescription = "Copy Path")
+                Icon(Icons.Rounded.CopyAll, contentDescription = strings.copyPath)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Copy Path",
+                    strings.copyPath,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -732,10 +737,10 @@ fun LazyListScope.fileActions(
                     .heightIn(min = 66.dp),
                 onClick = { onAction(Share(file)) }
             ) {
-                Icon(Icons.Rounded.Share, contentDescription = "Share")
+                Icon(Icons.Rounded.Share, contentDescription = strings.share)
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Share",
+                    strings.share,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -755,9 +760,9 @@ fun LazyListScope.fileActions(
             ),
             onClick = { onAction(Delete(file)) }
         ) {
-            Icon(Icons.Default.DeleteForever, contentDescription = "Delete")
+            Icon(Icons.Default.DeleteForever, contentDescription = strings.delete)
             Spacer(Modifier.width(8.dp))
-            Text("Delete File", style = MaterialTheme.typography.titleMedium)
+            Text(strings.deleteFile, style = MaterialTheme.typography.titleMedium)
         }
     }
 }

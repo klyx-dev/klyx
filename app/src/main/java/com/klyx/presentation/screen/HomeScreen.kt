@@ -4,6 +4,8 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.klyx.i18n.strings
+import com.klyx.i18n.getLocaleStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -266,7 +268,8 @@ fun HomeScreen(
                             )
                         )
                     }.onFailure { t ->
-                        toastHostState.showFailureToast("Failed to run ${tab.title}: ${t.localizedMessage}")
+                        val s = getLocaleStrings()
+                        toastHostState.showFailureToast(s.couldNotOpenFile(t.localizedMessage))
                     }
                 }
             }
@@ -340,7 +343,10 @@ fun HomeScreen(
                         )
                     )
                 } else {
-                    scope.launch { toastHostState.showFailureToast("Failed to create file") }
+                    scope.launch {
+                        val s = getLocaleStrings()
+                        toastHostState.showFailureToast(s.installationFailed("No active tab"))
+                    }
                 }
             }
         }
@@ -748,7 +754,8 @@ private fun ShareDialogs(
                         shareText(selectedText)
                     } else {
                         scope.launch {
-                            toastHostState.showFailureToast("No text selected to share")
+                            val s = getLocaleStrings()
+                            toastHostState.showFailureToast(s.noTextSelectedToShare)
                         }
                     }
                 },
