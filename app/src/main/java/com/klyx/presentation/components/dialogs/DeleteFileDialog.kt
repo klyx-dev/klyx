@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.app.icons.DeleteForever
+import com.klyx.i18n.strings
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -52,7 +53,7 @@ fun DeleteFileDialog(
 ) {
     val fileSystem: FileSystem = koinInject()
     val isDir = file.isDirectory
-    val typeName = if (isDir) "directory" else "file"
+    val typeName = if (isDir) strings.directory else strings.file
     var isProtected by remember { mutableStateOf(false) }
     LaunchedEffect(file) { isProtected = fileSystem.isProtectedPath(file.uri) }
 
@@ -83,7 +84,7 @@ fun DeleteFileDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Delete $typeName?",
+                    text = strings.deleteTypeQuestion(typeName),
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -93,7 +94,7 @@ fun DeleteFileDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("Are you sure you want to delete '")
+                        append(strings.deleteConfirmPrefix)
 
                         withStyle(
                             SpanStyle(
@@ -103,15 +104,10 @@ fun DeleteFileDialog(
                         ) {
                             append(file.name)
                         }
-                        append("'")
-
-                        if (isDir) {
-                            append(" and all of its contents")
-                        }
-                        append("?\n\n")
+                        append(if (isDir) strings.deleteConfirmDirSuffix else strings.deleteConfirmFileSuffix)
 
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("This cannot be undone.")
+                            append(strings.cannotBeUndone)
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -140,7 +136,7 @@ fun DeleteFileDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -154,7 +150,7 @@ fun DeleteFileDialog(
                             contentColor = MaterialTheme.colorScheme.onError
                         )
                     ) {
-                        Text("Delete", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.delete, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
@@ -180,7 +176,7 @@ fun ProtectedMessage(isDir: Boolean) {
                 tint = MaterialTheme.colorScheme.onErrorContainer
             )
             Text(
-                text = "This is a protected system ${if (isDir) "directory" else "file"} and cannot be modified.",
+                text = if (isDir) strings.protectedSystemDirectory else strings.protectedSystemFile,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onErrorContainer
             )

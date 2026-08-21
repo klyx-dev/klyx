@@ -46,6 +46,7 @@ import com.klyx.app.icons.Memory
 import com.klyx.app.icons.Storage
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
+import com.klyx.i18n.strings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.viewmodel.DiagnosticsViewModel
 import com.klyx.presentation.viewmodel.DiagnosticsState
@@ -71,7 +72,7 @@ fun SystemDetailsScreen(viewModel: DiagnosticsViewModel = koinViewModel()) {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("System Diagnostics") },
+                title = { Text(strings.systemDiagnostics) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -84,7 +85,7 @@ fun SystemDetailsScreen(viewModel: DiagnosticsViewModel = koinViewModel()) {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -115,14 +116,14 @@ private fun LazyListScope.capabilitySections(state: DiagnosticsState) {
     state.displayCapabilities?.let { display ->
         item {
             CapabilitySection(
-                title = "Display & Rendering",
+                title = strings.displayAndRendering,
                 icon = painterResource(R.drawable.mobile_2_24px).asImageVectorOrPainter
             ) {
-                InfoRow("Max Refresh Rate", "${display.refreshRate} Hz")
-                InfoRow("OpenGL Version", display.glEsVersion)
-                InfoRow("Supports Vulkan", if (display.supportsVulkan) "Yes" else "No")
-                InfoRow("Supports HDR", if (display.supportsHdr) "Yes" else "No")
-                InfoRow("Wide Color Gamut", if (display.wideColorGamut) "Yes" else "No")
+                InfoRow(strings.maxRefreshRate, "${display.refreshRate} Hz")
+                InfoRow(strings.openglVersion, display.glEsVersion)
+                InfoRow(strings.supportsVulkan, if (display.supportsVulkan) strings.yes else strings.noAnswer)
+                InfoRow(strings.supportsHdr, if (display.supportsHdr) strings.yes else strings.noAnswer)
+                InfoRow(strings.wideColorGamut, if (display.wideColorGamut) strings.yes else strings.noAnswer)
             }
         }
     }
@@ -130,13 +131,13 @@ private fun LazyListScope.capabilitySections(state: DiagnosticsState) {
     state.runtimeCapabilities?.let { runtime ->
         item {
             CapabilitySection(
-                title = "Runtime & Memory",
+                title = strings.runtimeAndMemory,
                 icon = Icons.Rounded.Memory.asImageVectorOrPainter
             ) {
-                InfoRow("Total Memory", "${runtime.totalMemoryMb} MB")
-                InfoRow("Low RAM Device", if (runtime.lowRamDevice) "Yes" else "No")
-                InfoRow("Large Heap", if (runtime.lowRamDevice) "Yes" else "No")
-                InfoRow("Runtime", runtime.runtimeAbi)
+                InfoRow(strings.totalMemory, "${runtime.totalMemoryMb} MB")
+                InfoRow(strings.lowRamDevice, if (runtime.lowRamDevice) strings.yes else strings.noAnswer)
+                InfoRow(strings.largeHeap, if (runtime.lowRamDevice) strings.yes else strings.noAnswer)
+                InfoRow(strings.runtimeLabel, runtime.runtimeAbi)
             }
         }
     }
@@ -144,17 +145,17 @@ private fun LazyListScope.capabilitySections(state: DiagnosticsState) {
     state.storageCapabilities?.let { storage ->
         item {
             CapabilitySection(
-                title = "Storage",
+                title = strings.storageSection,
                 icon = Icons.Rounded.Storage.asImageVectorOrPainter
             ) {
-                InfoRow("Available Space", "${storage.freeStorageGb} GB")
+                InfoRow(strings.availableSpace, "${storage.freeStorageGb} GB")
                 InfoRow(
-                    "Max Recommended File Size",
+                    strings.maxRecommendedFileSize,
                     "${storage.maxRecommendedFileSizeMb} MB"
                 )
                 InfoRow(
-                    "Supports External Storage",
-                    if (storage.supportsExternalStorage) "Yes" else "No"
+                    strings.supportsExternalStorage,
+                    if (storage.supportsExternalStorage) strings.yes else strings.noAnswer
                 )
             }
         }
@@ -162,10 +163,10 @@ private fun LazyListScope.capabilitySections(state: DiagnosticsState) {
 
     state.editorInfo?.let { editorInfo ->
         item {
-            CapabilitySection("Editor Info", KlyxIcons.Klyx.asImageVectorOrPainter) {
-                InfoRow("Sora Editor Version", editorInfo.editorVersion)
-                InfoRow("Compose Version", editorInfo.composeVersion)
-                InfoRow("TreeSitter Version", editorInfo.treeSitterVersion)
+            CapabilitySection(strings.editorInfoSection, KlyxIcons.Klyx.asImageVectorOrPainter) {
+                InfoRow(strings.soraEditorVersion, editorInfo.editorVersion)
+                InfoRow(strings.composeVersion, editorInfo.composeVersion)
+                InfoRow(strings.treeSitterVersion, editorInfo.treeSitterVersion)
                 //InfoRow("Rendering Backend", editorInfo.renderingBackend)
             }
         }
@@ -302,6 +303,19 @@ private fun orderedDeviceInfoEntries(deviceInfo: Map<String, String>): Immutable
     return orderedEntries.toImmutableList()
 }
 
+/** Maps canonical device-info map keys to localized display labels; unknown keys pass through unchanged. */
+@Composable
+private fun deviceInfoLabel(key: String): String = when (key) {
+    "Manufacturer" -> strings.manufacturer
+    "Model" -> strings.model
+    "Brand" -> strings.brand
+    "Device" -> strings.deviceLabel
+    "Android Version" -> strings.androidVersion
+    "SDK Version" -> strings.sdkVersion
+    "Hardware" -> strings.hardware
+    else -> key
+}
+
 @Composable
 fun DeviceInfoSection(deviceInfo: ImmutableMap<String, String>) {
     val orderedEntries = remember(deviceInfo) { orderedDeviceInfoEntries(deviceInfo) }
@@ -348,7 +362,7 @@ fun DeviceInfoSection(deviceInfo: ImmutableMap<String, String>) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(
-                        text = "Device Info",
+                        text = strings.deviceInfo,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -362,7 +376,7 @@ fun DeviceInfoSection(deviceInfo: ImmutableMap<String, String>) {
                     ) {
                         heroEntries.forEach { (label, value) ->
                             DeviceInfoHeroTile(
-                                label = label,
+                                label = deviceInfoLabel(label),
                                 value = value,
                                 modifier = Modifier.weight(1f)
                             )
@@ -379,19 +393,19 @@ fun DeviceInfoSection(deviceInfo: ImmutableMap<String, String>) {
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             DeviceInfoStatTile(
-                                label = rowEntries[0].first,
+                                label = deviceInfoLabel(rowEntries[0].first),
                                 value = rowEntries[0].second,
                                 modifier = Modifier.weight(1f)
                             )
                             DeviceInfoStatTile(
-                                label = rowEntries[1].first,
+                                label = deviceInfoLabel(rowEntries[1].first),
                                 value = rowEntries[1].second,
                                 modifier = Modifier.weight(1f)
                             )
                         }
                     } else {
                         DeviceInfoStatTile(
-                            label = rowEntries[0].first,
+                            label = deviceInfoLabel(rowEntries[0].first),
                             value = rowEntries[0].second,
                             modifier = Modifier.fillMaxWidth()
                         )

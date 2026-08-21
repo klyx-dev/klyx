@@ -21,6 +21,8 @@ import com.klyx.core.event.subscribeIn
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.GlobalEventBus
+import com.klyx.i18n.getLocaleStrings
+import com.klyx.i18n.strings.Strings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -43,6 +45,11 @@ class TerminalService : Service() {
     private val notificationManager by lazy {
         getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
+
+    private val strings: Strings
+        get() = getLocaleStrings(
+            androidx.compose.ui.text.intl.Locale(java.util.Locale.getDefault().toLanguageTag())
+        )
 
     private val binder = LocalBinder(WeakReference(this))
 
@@ -149,15 +156,15 @@ class TerminalService : Service() {
         )
 
         val wakeLockTitle =
-            if (wakeLock?.isHeld == true) "Release Wake Lock" else "Acquire Wake Lock"
+            if (wakeLock?.isHeld == true) strings.releaseWakeLock else strings.acquireWakeLock
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Terminal")
+            .setContentTitle(strings.terminal)
             .setContentText(getNotificationContentText(wakeLock?.isHeld == true))
             .setSmallIcon(R.drawable.terminal_2_24px)
             .setContentIntent(pendingTapIntent)
             .addAction(
-                NotificationCompat.Action.Builder(null, "Exit", exitPendingIntent).build()
+                NotificationCompat.Action.Builder(null, strings.exit, exitPendingIntent).build()
             )
             .addAction(
                 NotificationCompat.Action.Builder(null, wakeLockTitle, wakeLockPendingIntent)
@@ -170,10 +177,10 @@ class TerminalService : Service() {
     private fun createNotificationChannel() {
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Terminal Service",
+            strings.terminalServiceChannel,
             NotificationManager.IMPORTANCE_LOW
         ).apply {
-            description = "Notification for background Terminal sessions"
+            description = strings.terminalServiceChannelDesc
         }
         notificationManager.createNotificationChannel(channel)
     }
@@ -186,9 +193,7 @@ class TerminalService : Service() {
 
     private fun getNotificationContentText(isWakeLockHeld: Boolean): String {
         val count = sessionManager.sessions.value.size
-        val s = if (count == 1) "session" else "sessions"
-        val wakeHeld = if (isWakeLockHeld) " (wake lock held)" else ""
-        return "$count $s running$wakeHeld"
+        return strings.sessionsRunning(count) + if (isWakeLockHeld) strings.wakeLockHeldSuffix else ""
     }
 
     companion object {

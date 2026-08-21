@@ -83,7 +83,7 @@ import com.klyx.api.data.preferences.TerminalSettings
 import com.klyx.api.data.terminal.TerminalManager
 import com.klyx.api.data.terminal.TerminalSessionEntry
 import com.klyx.api.event.terminal.TerminateAllSessionEvent
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.core.event.subscribe
@@ -93,6 +93,7 @@ import com.klyx.data.terminal.KlyxExtraKeysClient
 import com.klyx.data.terminal.KlyxTerminalClient
 import com.klyx.data.terminal.KlyxTerminalTheme
 import com.klyx.event.GlobalEventBus
+import com.klyx.i18n.strings
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.navigation.LocalNavigator
@@ -176,7 +177,7 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        text = sessionTitle ?: "Terminal",
+                        text = sessionTitle ?: strings.terminal,
                         fontFamily = JetBrainsMonoFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
@@ -193,7 +194,7 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = strings.back)
                     }
                 },
                 actions = {
@@ -205,7 +206,7 @@ fun TerminalScreen(viewModel: TerminalViewModel = koinViewModel()) {
                             contentColor = MaterialTheme.colorScheme.onSurface
                         )
                     ) {
-                        Icon(Icons.Outlined.Settings, contentDescription = "Terminal Settings")
+                        Icon(Icons.Outlined.Settings, contentDescription = strings.terminalSettings)
                     }
                 }
             )
@@ -283,16 +284,16 @@ private fun TerminalSetup(
     }
 
     val headerTitle = when {
-        uiState.error != null -> "Installation Failed"
+        uiState.error != null -> strings.installationFailedTitle
         uiState.isChecking || uiState.currentStep.contains(
             "checking for updates",
             ignoreCase = true
-        ) -> "Preparing Bootstrap"
+        ) -> strings.preparingBootstrap
 
-        uiState.isInstalling && uiState.currentStep.contains("Download", ignoreCase = true) -> "Downloading Terminal"
-        uiState.isInstalling -> "Extracting Environment"
-        !isOnline -> "Network Required"
-        else -> "Terminal Setup"
+        uiState.isInstalling && uiState.currentStep.contains("Download", ignoreCase = true) -> strings.downloadingTerminal
+        uiState.isInstalling -> strings.extractingEnvironment
+        !isOnline -> strings.networkRequired
+        else -> strings.terminalSetup
     }
 
     Box(
@@ -321,7 +322,7 @@ private fun TerminalSetup(
                 Text(
                     text = headerTitle,
                     style = MaterialTheme.typography.titleLarge,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -357,7 +358,7 @@ private fun OfflineIndicator(visible: Boolean) {
                 )
                 Spacer(Modifier.width(12.dp))
                 Text(
-                    text = "Waiting for network connection...",
+                    text = strings.waitingForNetwork,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                     style = MaterialTheme.typography.labelMedium,
                     fontFamily = JetBrainsMonoFontFamily
@@ -434,7 +435,7 @@ private fun InstallationError(visible: Boolean, error: String?, onRetry: () -> U
                         tint = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Text(
-                        text = error ?: "Unknown error",
+                        text = error ?: strings.unknownError,
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodySmall,
                         fontFamily = JetBrainsMonoFontFamily
@@ -449,7 +450,7 @@ private fun InstallationError(visible: Boolean, error: String?, onRetry: () -> U
                     contentColor = MaterialTheme.colorScheme.onError
                 )
             ) {
-                Text("Retry Installation", fontFamily = GoogleSansRounded, fontWeight = FontWeight.SemiBold)
+                Text(strings.retryInstallation, fontFamily = uiFontFamily(), fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -593,7 +594,7 @@ private fun TerminalServiceBindingIndicator() {
                 }
 
                 Text(
-                    text = "Binding Terminal Service",
+                    text = strings.bindingTerminalService,
                     style = MaterialTheme.typography.titleMedium,
                     fontFamily = JetBrainsMonoFontFamily,
                     fontWeight = FontWeight.Bold,
@@ -616,7 +617,7 @@ private fun TerminalSessionLoading() {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Creating session...", fontFamily = JetBrainsMonoFontFamily)
+        Text(strings.creatingSession, fontFamily = JetBrainsMonoFontFamily)
         Spacer(Modifier.height(16.dp))
         CircularWavyProgressIndicator()
     }
@@ -723,7 +724,7 @@ private fun TerminalSessionTabs(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Add,
-                    contentDescription = "New terminal session"
+                    contentDescription = strings.newSession
                 )
             }
         }
@@ -754,21 +755,21 @@ private fun SessionChip(
     )
 
     val isRunning by entry.session.isRunning.collectAsStateWithLifecycle()
-    val title = entry.session.title?.takeIf { it.isNotBlank() } ?: "Session ${index + 1}"
+    val title = entry.session.title?.takeIf { it.isNotBlank() } ?: strings.sessionNumber(index + 1)
     val pid = entry.session.pid
     // shellPid: 0 = not yet started, >0 = running pid, -1 = finished (exitStatus valid).
     val pidText = when {
-        isRunning && pid > 0 -> "pid $pid"
+        isRunning && pid > 0 -> strings.pidLabel(pid)
         pid < 0 -> {
             val status = entry.session.exitStatus
             when {
-                status < 0 -> "killed"
-                status == 0 -> "finished"
-                else -> "exited ($status)"
+                status < 0 -> strings.statusKilled
+                status == 0 -> strings.statusFinished
+                else -> strings.statusExited(status.toString())
             }
         }
 
-        else -> "starting..."
+        else -> strings.starting
     }
 
     Surface(
@@ -813,7 +814,7 @@ private fun SessionChip(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        contentDescription = "Close session",
+                        contentDescription = strings.closeSession,
                         tint = content,
                         modifier = Modifier.size(16.dp)
                     )

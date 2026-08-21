@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.klyx.i18n.strings
 import com.klyx.lsp.LspActivityStore
 import com.klyx.lsp.LspManager
 import java.text.SimpleDateFormat
@@ -105,7 +106,7 @@ fun LspStatusBar(
         }
         Text(
             text = when {
-                !anyRunning -> "All language servers stopped"
+                !anyRunning -> strings.lspAllStopped
                 activeProgress != null -> buildString {
                     append(shortServerName(serverName(servers, activeProgress.server)))
                     append(" · ")
@@ -120,7 +121,7 @@ fun LspStatusBar(
                     append(latest.message)
                 }
 
-                else -> "No language-server activity"
+                else -> strings.lspNoActivity
             },
             color = if (!anyRunning) MaterialTheme.colorScheme.onSurfaceVariant
             else latest?.severity?.color() ?: MaterialTheme.colorScheme.onSurfaceVariant,
@@ -192,7 +193,7 @@ private fun LspActivitySheet(
         ) {
             item {
                 Text(
-                    "Language Servers",
+                    strings.lspSection,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
@@ -202,7 +203,7 @@ private fun LspActivitySheet(
             if (servers.isEmpty()) {
                 item {
                     Text(
-                        "No language servers are currently running.",
+                        strings.lspNoneRunning,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -232,13 +233,13 @@ private fun LspActivitySheet(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Activity log",
+                        strings.activityLog,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        "Verbose",
+                        strings.verbose,
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -250,8 +251,8 @@ private fun LspActivitySheet(
             if (shown.isEmpty()) {
                 item {
                     Text(
-                        if (showVerbose) "Nothing has been logged yet."
-                        else "No messages. Enable Verbose to see raw server trace.",
+                        if (showVerbose) strings.nothingLoggedYet
+                        else strings.noMessagesEnableVerbose,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -282,9 +283,9 @@ private fun ServerCard(
 ) {
     val busy = server.running && progress.isNotEmpty()
     val statusLabel = when {
-        !server.running -> "Stopped"
-        busy -> "Working"
-        else -> "Ready"
+        !server.running -> strings.statusStopped
+        busy -> strings.statusWorking
+        else -> strings.statusReady
     }
     val statusColor = when {
         !server.running -> MaterialTheme.colorScheme.onSurfaceVariant
@@ -330,7 +331,7 @@ private fun ServerCard(
             )
         }
         Text(
-            "${server.languageId} · ${server.workspace ?: "No workspace"}",
+            "${server.languageId} · ${server.workspace ?: strings.noWorkspace}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
@@ -396,7 +397,7 @@ private fun ServerCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Restart")
+                    Text(strings.restart)
                 }
                 OutlinedButton(
                     onClick = { onStop(server.id) },
@@ -408,7 +409,7 @@ private fun ServerCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Stop")
+                    Text(strings.stop)
                 }
             } else {
                 FilledTonalButton(
@@ -421,7 +422,7 @@ private fun ServerCard(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Start")
+                    Text(strings.start)
                 }
             }
         }
@@ -502,7 +503,7 @@ private fun ServerTagChip(label: String) {
 private fun CapabilitiesSection(capabilities: List<String>) {
     if (capabilities.isEmpty()) {
         Text(
-            "No optional capabilities advertised",
+            strings.noCapabilitiesAdvertised,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 10.dp)
@@ -518,7 +519,7 @@ private fun CapabilitiesSection(capabilities: List<String>) {
     Column(modifier = Modifier.padding(top = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Capabilities",
+                strings.capabilities,
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -542,7 +543,7 @@ private fun CapabilitiesSection(capabilities: List<String>) {
             if (canCollapse && !expanded) {
                 val remaining = capabilities.size - collapsedCount
                 CapabilityChip(
-                    label = "+$remaining more",
+                    label = strings.moreCount(remaining),
                     highlighted = true,
                     onClick = { expanded = true }
                 )
@@ -550,7 +551,7 @@ private fun CapabilitiesSection(capabilities: List<String>) {
         }
         if (canCollapse && expanded) {
             Text(
-                "Show less",
+                strings.showLess,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Medium,

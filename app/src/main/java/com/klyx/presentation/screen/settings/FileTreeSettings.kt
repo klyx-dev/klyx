@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.app.icons.VisibilityOff
 import com.klyx.data.preferences.updateFileTreeSettings
+import com.klyx.i18n.strings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
@@ -44,7 +45,7 @@ fun FileTreeSettingsScreen() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("File Tree") },
+                title = { Text(strings.fileTree) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -57,7 +58,7 @@ fun FileTreeSettingsScreen() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -74,10 +75,10 @@ fun FileTreeSettingsScreen() {
             )
         ) {
             item {
-                SettingsSubsection(title = "Browsing") {
+                SettingsSubsection(title = strings.browsing) {
                     SwitchSettingItem(
-                        title = "Show Hidden Files",
-                        subtitle = "Display files and folders that start with a dot (.) in the file tree",
+                        title = strings.showHiddenFiles,
+                        subtitle = strings.showHiddenFilesDesc,
                         checked = settings.showHiddenFiles,
                         onCheckedChange = { isChecked ->
                             scope.launch {

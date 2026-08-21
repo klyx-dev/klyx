@@ -58,7 +58,7 @@ import com.klyx.BuildConfig
 import com.klyx.api.data.preferences.AppSettings
 import com.klyx.api.platform.currentArchitecture
 import com.klyx.api.ui.LocalToastHostState
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.app.icons.BugReport
 import com.klyx.app.icons.DeleteSweep
 import com.klyx.app.icons.FileDownload
@@ -379,7 +379,7 @@ private fun AssetBootstrapConfirmationDialog(
                     text = strings.installFromAssetsQuestion,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
@@ -412,7 +412,7 @@ private fun AssetBootstrapConfirmationDialog(
                         Text(
                             text = strings.cancel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -430,7 +430,7 @@ private fun AssetBootstrapConfirmationDialog(
                         Text(
                             text = strings.install,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -465,7 +465,7 @@ private fun AssetInstallProgressDialog(label: String) {
                 Text(
                     text = strings.installingBootstrap,
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center

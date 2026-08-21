@@ -39,6 +39,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.app.icons.CreateNewFolder
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -87,7 +88,7 @@ fun NewFolderDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "New Folder",
+                    text = strings.newFolder,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -102,8 +103,8 @@ fun NewFolderDialog(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     singleLine = true,
-                    label = { Text("Folder name") },
-                    placeholder = { Text("e.g. src or build") },
+                    label = { Text(strings.folderName) },
+                    placeholder = { Text(strings.folderNamePlaceholder) },
                     shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -112,9 +113,9 @@ fun NewFolderDialog(
                     isError = isError && folderName.isNotEmpty(),
                     supportingText = {
                         if (hasIllegalChars) {
-                            Text("Invalid characters: \\ / : * ? \" < > |")
+                            Text(strings.invalidCharacters)
                         } else if (folderName.isBlank()) {
-                            Text("Name cannot be empty")
+                            Text(strings.nameCannotBeEmpty)
                         }
                     }
                 )
@@ -135,7 +136,7 @@ fun NewFolderDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -145,7 +146,7 @@ fun NewFolderDialog(
                             .heightIn(min = ButtonDefaults.MediumContainerHeight),
                         enabled = !isError
                     ) {
-                        Text("Create", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.create, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

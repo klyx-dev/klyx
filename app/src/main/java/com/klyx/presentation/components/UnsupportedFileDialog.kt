@@ -28,7 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.R
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.app.icons.WarningAmber
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -66,7 +66,7 @@ fun UnsupportedFileDialog(
                 Text(
                     text = stringResource(R.string.unsupported_file),
                     style = MaterialTheme.typography.headlineSmall,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -96,7 +96,7 @@ fun UnsupportedFileDialog(
                     Text(
                         text = stringResource(R.string.close),
                         style = MaterialTheme.typography.titleMedium,
-                        fontFamily = GoogleSansRounded,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.Bold
                     )
                 }

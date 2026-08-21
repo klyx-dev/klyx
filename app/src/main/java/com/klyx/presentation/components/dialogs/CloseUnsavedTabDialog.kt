@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -69,7 +70,7 @@ fun CloseUnsavedTabDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Unsaved Changes",
+                    text = strings.unsavedChanges,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -88,7 +89,7 @@ fun CloseUnsavedTabDialog(
                         ) {
                             append(fileName)
                         }
-                        append("' has unsaved changes.")
+                        append(strings.hasUnsavedChangesSuffix)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -98,7 +99,7 @@ fun CloseUnsavedTabDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "What would you like to do?",
+                    text = strings.whatWouldYouLikeToDo,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
@@ -116,7 +117,7 @@ fun CloseUnsavedTabDialog(
                             .fillMaxWidth()
                             .heightIn(min = ButtonDefaults.MediumContainerHeight)
                     ) {
-                        Text("Save", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.save, style = MaterialTheme.typography.titleMedium)
                     }
 
                     OutlinedButton(
@@ -125,7 +126,7 @@ fun CloseUnsavedTabDialog(
                             .fillMaxWidth()
                             .heightIn(min = ButtonDefaults.MediumContainerHeight)
                     ) {
-                        Text("Don't Save", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.dontSave, style = MaterialTheme.typography.titleMedium)
                     }
 
                     FilledTonalButton(
@@ -138,7 +139,7 @@ fun CloseUnsavedTabDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

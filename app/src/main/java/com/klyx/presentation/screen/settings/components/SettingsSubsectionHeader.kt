@@ -9,14 +9,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 
 @Composable
 fun SettingsSubsectionHeader(title: String) {
     Text(
         text = title,
         style = TextStyle(
-            fontFamily = GoogleSansRounded,
+            fontFamily = uiFontFamily(),
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp,
             lineHeight = 16.sp,

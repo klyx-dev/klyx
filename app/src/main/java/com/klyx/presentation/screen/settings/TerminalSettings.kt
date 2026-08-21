@@ -76,7 +76,7 @@ import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.data.preferences.TerminalSettings as TerminalSettingsPrefs
 import com.klyx.api.terminal.rootFs
 import com.klyx.api.ui.LocalToastHostState
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.api.util.humanBytes
 import com.klyx.api.util.sliderSteps
 import com.klyx.app.icons.CloudDownload
@@ -89,6 +89,7 @@ import com.klyx.app.icons.SystemUpdate
 import com.klyx.app.icons.TextFormat
 import com.klyx.app.icons.VolumeUp
 import com.klyx.data.preferences.updateTerminalSettings
+import com.klyx.i18n.strings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
@@ -114,6 +115,7 @@ fun TerminalSettings() {
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val toastHostState = LocalToastHostState.current
+    val s = strings
 
     val settings = LocalAppSettings.current.terminal
     val terminalInstaller: TerminalInstaller = koinInject()
@@ -158,7 +160,7 @@ fun TerminalSettings() {
             onConfirm = {
                 showUpdateDialog = false
                 isUpdating = true
-                updateStep = "Preparing..."
+                updateStep = s.preparing
                 updateProgress = 0f
                 updateProgressText = ""
                 scope.launch {
@@ -174,7 +176,7 @@ fun TerminalSettings() {
                                     val text = if (updateStep.contains("Downloading", ignoreCase = true)) {
                                         "${done.humanBytes()} / ${total.humanBytes()}"
                                     } else {
-                                        "$done / $total files"
+                                        s.filesProgress(done.toInt(), total.toInt())
                                     }
                                     updateProgress = percent
                                     updateProgressText = text
@@ -187,9 +189,9 @@ fun TerminalSettings() {
                         )
                         installedVersion = terminalInstaller.installedVersion()
                         latestVersion = null
-                        launch { toastHostState.showToast("Bootstrap updated successfully") }
+                        launch { toastHostState.showToast(s.bootstrapUpdated) }
                     } catch (e: Exception) {
-                        launch { toastHostState.showToast("Update failed: ${e.message}") }
+                        launch { toastHostState.showToast(s.updateFailed(e.message)) }
                     } finally {
                         isUpdating = false
                     }
@@ -205,7 +207,7 @@ fun TerminalSettings() {
             onConfirm = {
                 showReinstallDialog = false
                 isUpdating = true
-                updateStep = "Preparing..."
+                updateStep = s.preparing
                 updateProgress = 0f
                 updateProgressText = ""
                 scope.launch {
@@ -221,7 +223,7 @@ fun TerminalSettings() {
                                     val text = if (updateStep.contains("Downloading", ignoreCase = true)) {
                                         "${done.humanBytes()} / ${total.humanBytes()}"
                                     } else {
-                                        "$done / $total files"
+                                        s.filesProgress(done.toInt(), total.toInt())
                                     }
                                     updateProgress = percent
                                     updateProgressText = text
@@ -234,9 +236,9 @@ fun TerminalSettings() {
                         )
                         installedVersion = terminalInstaller.installedVersion()
                         latestVersion = null
-                        launch { toastHostState.showToast("Bootstrap installed successfully") }
+                        launch { toastHostState.showToast(s.bootstrapInstalled) }
                     } catch (e: Exception) {
-                        launch { toastHostState.showToast("Installation failed: ${e.message}") }
+                        launch { toastHostState.showToast(s.installationFailed(e.message)) }
                     } finally {
                         isUpdating = false
                     }
@@ -251,7 +253,7 @@ fun TerminalSettings() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Terminal") },
+                title = { Text(strings.terminal) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -264,7 +266,7 @@ fun TerminalSettings() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -322,10 +324,10 @@ private fun SoundSettingsSection(
     settings: TerminalSettingsPrefs,
     scope: CoroutineScope
 ) {
-    SettingsSubsection(title = "Sound") {
+    SettingsSubsection(title = strings.sound) {
         SwitchSettingItem(
-            title = "Bell Sound",
-            subtitle = "Play a sound when the terminal bell (BEL) is received.",
+            title = strings.bellSound,
+            subtitle = strings.bellSoundDesc,
             checked = settings.bellEnabled,
             onCheckedChange = { enabled ->
                 scope.launch {
@@ -353,7 +355,7 @@ private fun SoundSettingsSection(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 SliderSettingsItem(
-                    label = "Bell Volume",
+                    label = strings.bellVolume,
                     value = settings.bellVolume,
                     valueRange = 0f..1f,
                     steps = (0f..1f).sliderSteps(increment = 0.1f),
@@ -365,23 +367,24 @@ private fun SoundSettingsSection(
                     valueText = { "${(it * 100).toInt()}%" }
                 )
 
+                val s = strings
                 SelectorItem(
-                    label = "Bell Sound Type",
-                    description = "Choose the tone played for the terminal bell.",
+                    label = strings.bellSoundType,
+                    description = strings.bellSoundTypeDesc,
                     options = BellSoundType.entries.toImmutableList(),
                     selected = settings.bellSoundType,
                     optionLabel = { type ->
                         when (type) {
-                            BellSoundType.Gentle -> "Gentle"
-                            BellSoundType.System -> "System"
-                            BellSoundType.VisualOnly -> "Visual Only"
+                            BellSoundType.Gentle -> s.bellGentle
+                            BellSoundType.System -> s.bellSystem
+                            BellSoundType.VisualOnly -> s.bellVisualOnly
                         }
                     },
                     optionDescription = { type ->
                         when (type) {
-                            BellSoundType.Gentle -> "A soft acknowledgment tone"
-                            BellSoundType.System -> "The traditional alert beep"
-                            BellSoundType.VisualOnly -> "No sound, visual feedback only"
+                            BellSoundType.Gentle -> s.bellGentleDesc
+                            BellSoundType.System -> s.bellSystemDesc
+                            BellSoundType.VisualOnly -> s.bellVisualOnlyDesc
                         }
                     },
                     onSelectionChanged = { selectedType ->
@@ -407,9 +410,9 @@ private fun TextSettingsSection(
     settings: TerminalSettingsPrefs,
     scope: CoroutineScope
 ) {
-    SettingsSubsection(title = "Text") {
+    SettingsSubsection(title = strings.textSection) {
         SliderSettingsItem(
-            label = "Font Size",
+            label = strings.fontSize,
             value = settings.fontSize,
             valueRange = 8f..30f,
             steps = (8f..30f).sliderSteps(1f),
@@ -422,8 +425,8 @@ private fun TextSettingsSection(
         )
 
         SwitchSettingItem(
-            title = "Cursor Blinking",
-            subtitle = "Make the terminal cursor blink.",
+            title = strings.cursorBlinking,
+            subtitle = strings.cursorBlinkingDesc,
             checked = settings.cursorBlink,
             onCheckedChange = { blink ->
                 scope.launch {
@@ -439,24 +442,25 @@ private fun TextSettingsSection(
             }
         )
 
+        val s = strings
         SelectorItem(
-            label = "Cursor Style",
-            description = "Choose the shape of the terminal cursor.",
+            label = strings.cursorStyle,
+            description = strings.cursorStyleDesc,
             options = CursorStyle.availableStyles().toImmutableList(),
             selected = settings.cursorStyle,
             optionLabel = { style ->
                 when (style) {
-                    CursorStyle.Block -> "Block"
-                    CursorStyle.Underline -> "Underline"
-                    CursorStyle.Bar -> "Bar"
-                    else -> "Unknown"
+                    CursorStyle.Block -> s.cursorBlock
+                    CursorStyle.Underline -> s.cursorUnderline
+                    CursorStyle.Bar -> s.cursorBar
+                    else -> s.unknown
                 }
             },
             optionDescription = { style ->
                 when (style) {
-                    CursorStyle.Block -> "A solid rectangle after the character"
-                    CursorStyle.Underline -> "A horizontal line below the character"
-                    CursorStyle.Bar -> "A thin vertical line after the character"
+                    CursorStyle.Block -> s.cursorBlockDesc
+                    CursorStyle.Underline -> s.cursorUnderlineDesc
+                    CursorStyle.Bar -> s.cursorBarDesc
                     else -> null
                 }
             },
@@ -481,10 +485,10 @@ private fun SessionSettingsSection(
     settings: TerminalSettingsPrefs,
     scope: CoroutineScope
 ) {
-    SettingsSubsection(title = "Session") {
+    SettingsSubsection(title = strings.sessionSection) {
         SwitchSettingItem(
-            title = "Show MOTD",
-            subtitle = "Display the message of the day when a new terminal session is created.",
+            title = strings.showMotd,
+            subtitle = strings.showMotdDesc,
             checked = settings.showMotd,
             onCheckedChange = { showMotd ->
                 scope.launch {
@@ -507,9 +511,9 @@ private fun DisplaySettingsSection(
     settings: TerminalSettingsPrefs,
     scope: CoroutineScope
 ) {
-    SettingsSubsection(title = "Display") {
+    SettingsSubsection(title = strings.displaySection) {
         SliderSettingsItem(
-            label = "Scrollback Lines",
+            label = strings.scrollbackLines,
             value = settings.scrollbackLines.toFloat(),
             valueRange = 100f..50000f,
             steps = 0,
@@ -528,28 +532,29 @@ private fun KeyboardSettingsSection(
     settings: TerminalSettingsPrefs,
     scope: CoroutineScope
 ) {
-    SettingsSubsection(title = "Keyboard") {
+    SettingsSubsection(title = strings.keyboardSection) {
+        val s = strings
         SelectorItem(
-            label = "Extra Keys Style",
-            description = "Choose the layout of the extra keys toolbar.",
+            label = strings.extraKeysStyle,
+            description = strings.extraKeysStyleDesc,
             options = ExtraKeyStyle.entries.toImmutableList(),
             selected = settings.extraKeysStyle,
             optionLabel = { style ->
                 when (style) {
-                    ExtraKeyStyle.ArrowsOnly -> "Arrows Only"
-                    ExtraKeyStyle.ArrowsAll -> "Arrows All"
-                    ExtraKeyStyle.All -> "All"
-                    ExtraKeyStyle.None -> "None"
-                    ExtraKeyStyle.Default -> "Default"
+                    ExtraKeyStyle.ArrowsOnly -> s.extraArrowsOnly
+                    ExtraKeyStyle.ArrowsAll -> s.extraArrowsAll
+                    ExtraKeyStyle.All -> s.all
+                    ExtraKeyStyle.None -> s.extraNone
+                    ExtraKeyStyle.Default -> s.extraDefault
                 }
             },
             optionDescription = { style ->
                 when (style) {
-                    ExtraKeyStyle.ArrowsOnly -> "Only arrow keys"
-                    ExtraKeyStyle.ArrowsAll -> "Extended arrow keys"
-                    ExtraKeyStyle.All -> "Full ISO keyboard layout"
-                    ExtraKeyStyle.None -> "No extra keys"
-                    ExtraKeyStyle.Default -> "Default layout"
+                    ExtraKeyStyle.ArrowsOnly -> s.extraArrowsOnlyDesc
+                    ExtraKeyStyle.ArrowsAll -> s.extraArrowsAllDesc
+                    ExtraKeyStyle.All -> s.extraAllDesc
+                    ExtraKeyStyle.None -> s.extraNoneDesc
+                    ExtraKeyStyle.Default -> s.extraDefaultDesc
                 }
             },
             onSelectionChanged = { selectedStyle ->
@@ -596,10 +601,12 @@ private fun BootstrapSettingsSection(
     onUpdateProgressChange: (Float) -> Unit,
     onUpdateProgressTextChange: (String) -> Unit
 ) {
-    SettingsSubsection(title = "Bootstrap") {
+    val s = strings
+
+    SettingsSubsection(title = strings.bootstrapSection) {
         VersionInfoCard(
-            label = "Installed Version",
-            value = installedVersion ?: "Not installed",
+            label = strings.installedVersion,
+            value = installedVersion ?: strings.notInstalled,
             icon = {
                 Icon(
                     imageVector = Icons.Rounded.CheckCircle,
@@ -612,7 +619,7 @@ private fun BootstrapSettingsSection(
 
         if (latestVersion != null) {
             VersionInfoCard(
-                label = "Latest Version",
+                label = strings.latestVersion,
                 value = latestVersion!!,
                 icon = {
                     Icon(
@@ -631,7 +638,7 @@ private fun BootstrapSettingsSection(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Opening the terminal screen will automatically download and install the latest bootstrap.",
+                    text = strings.bootstrapAutoInstallNote,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(12.dp)
@@ -655,7 +662,7 @@ private fun BootstrapSettingsSection(
                 LoadingIndicator(modifier = Modifier.size(24.dp))
 
                 Text(
-                    text = "Checking for updates...",
+                    text = strings.checkingForUpdates,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -673,7 +680,7 @@ private fun BootstrapSettingsSection(
                             onInstalledVersionChange(terminalInstaller.installedVersion())
                             onLatestVersionChange(BootstrapUpdateChecker.latestVersion())
                         } catch (e: Exception) {
-                            onCheckErrorChange(e.message ?: "Unknown error")
+                            onCheckErrorChange(e.message ?: s.unknownError)
                         } finally {
                             onCheckingChange(false)
                         }
@@ -711,7 +718,7 @@ private fun BootstrapSettingsSection(
                             onInstalledVersionChange(terminalInstaller.installedVersion())
                             onLatestVersionChange(BootstrapUpdateChecker.latestVersion())
                         } catch (e: Exception) {
-                            onCheckErrorChange(e.message ?: "Unknown error")
+                            onCheckErrorChange(e.message ?: s.unknownError)
                         } finally {
                             onCheckingChange(false)
                         }
@@ -726,8 +733,8 @@ private fun BootstrapSettingsSection(
         }
 
         SwitchSettingItem(
-            title = "Expose Terminal Home via SAF",
-            subtitle = "Allow file managers to access the terminal home directory through the Storage Access Framework.",
+            title = strings.exposeTerminalHomeSaf,
+            subtitle = strings.exposeTerminalHomeSafDesc,
             checked = safExposed,
             onCheckedChange = { enabled ->
                 safExposed = enabled
@@ -786,7 +793,7 @@ private fun ErrorBootstrapCard(error: String, onRetry: () -> Unit) {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Check failed",
+                    text = strings.checkFailed,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
@@ -798,7 +805,7 @@ private fun ErrorBootstrapCard(error: String, onRetry: () -> Unit) {
             }
             Icon(
                 imageVector = Icons.Rounded.Refresh,
-                contentDescription = "Retry",
+                contentDescription = strings.retry,
                 tint = MaterialTheme.colorScheme.onErrorContainer
             )
         }
@@ -828,19 +835,19 @@ private fun UpdateAvailableBootstrapCard(from: String, to: String, onClick: () -
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Update Available",
+                    text = strings.updateAvailable,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "$from -> $to",
+                    text = strings.versionTransition(from, to),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Update",
+                contentDescription = strings.update,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .size(20.dp)
@@ -873,19 +880,19 @@ private fun InvalidBootstrapVersionCard(version: String, onClick: () -> Unit) {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Corrupted Version File",
+                    text = strings.corruptedVersionFile,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Current version \"$version\" is invalid. Reinstall terminal.",
+                    text = strings.corruptedVersionDesc(version),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Reinstall",
+                contentDescription = strings.reinstall,
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier
                     .size(20.dp)
@@ -916,7 +923,7 @@ private fun UpToDateBootstrapCard() {
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                text = "Bootstrap is up to date",
+                text = strings.bootstrapUpToDate,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -947,12 +954,12 @@ private fun CheckForUpdatesBootstrapCard(onCheck: () -> Unit) {
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Check for Updates",
+                    text = strings.checkForUpdates,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Fetch the latest bootstrap version from GitHub",
+                    text = strings.checkForUpdatesDesc,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1038,10 +1045,10 @@ private fun BootstrapReinstallDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Reinstall Terminal?",
+                    text = strings.reinstallTerminalQuestion,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
@@ -1050,16 +1057,16 @@ private fun BootstrapReinstallDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("The current version file is corrupted or invalid. The terminal will be reinstalled fresh with version $latestVersion.\n\n")
+                        append(strings.corruptedReinstallDesc(latestVersion))
                         withStyle(
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
-                            append($$"Do NOT store your projects or important files inside $PREFIX. They will be permanently deleted.\n\n")
+                            append(strings.dontStoreInPrefix($$"$PREFIX"))
                         }
-                        append($$"Store your work in $HOME or other safe directories instead.")
+                        append(strings.storeWorkInHome($$"$HOME"))
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1083,9 +1090,9 @@ private fun BootstrapReinstallDialog(
                         )
                     ) {
                         Text(
-                            text = "Cancel",
+                            text = strings.cancel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1101,9 +1108,9 @@ private fun BootstrapReinstallDialog(
                         )
                     ) {
                         Text(
-                            text = "Reinstall",
+                            text = strings.reinstall,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1151,10 +1158,10 @@ private fun BootstrapUpdateWarningDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Update Bootstrap?",
+                    text = strings.updateBootstrapQuestion,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
@@ -1162,7 +1169,7 @@ private fun BootstrapUpdateWarningDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "$currentVersion -> $latestVersion",
+                    text = strings.versionTransition(currentVersion, latestVersion),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
@@ -1173,16 +1180,16 @@ private fun BootstrapUpdateWarningDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append($$"This will download and extract the latest bootstrap, replacing all files in $ROOTFS ($${Paths.rootFs.absolutePath}/).\n\n")
+                        append(strings.updateBootstrapDesc($$"$ROOTFS ($${Paths.rootFs.absolutePath}/)"))
                         withStyle(
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
-                            append($$"Do NOT store your projects or important files inside $PREFIX. They will be permanently deleted.\n\n")
+                            append(strings.dontStoreInPrefix($$"$PREFIX"))
                         }
-                        append($$"Store your work in $HOME or other safe directories instead.")
+                        append(strings.storeWorkInHome($$"$HOME"))
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1206,9 +1213,9 @@ private fun BootstrapUpdateWarningDialog(
                         )
                     ) {
                         Text(
-                            text = "Cancel",
+                            text = strings.cancel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -1224,9 +1231,9 @@ private fun BootstrapUpdateWarningDialog(
                         )
                     ) {
                         Text(
-                            text = "Update",
+                            text = strings.update,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -1276,10 +1283,10 @@ private fun BootstrapUpdateProgressDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Updating Bootstrap...",
+                    text = strings.updatingBootstrap,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )

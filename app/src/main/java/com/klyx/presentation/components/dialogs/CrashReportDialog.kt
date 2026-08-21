@@ -38,6 +38,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.klyx.CrashHandler
 import com.klyx.app.icons.BugReport
 import com.klyx.app.icons.ContentCopy
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +87,7 @@ fun CrashReportDialog(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "App Crashed Last Time",
+                    text = strings.appCrashedLastTime,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold
@@ -103,9 +104,7 @@ fun CrashReportDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = "The app crashed due to an unexpected error. " +
-                            "If it was caused by a plugin or file, that tab has been closed. " +
-                            "You can continue using the app as usual.",
+                    text = strings.crashReportDesc,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -178,7 +177,7 @@ fun CrashReportDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Report", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.report, style = MaterialTheme.typography.titleMedium)
                     }
 
                     FilledTonalButton(
@@ -199,7 +198,7 @@ fun CrashReportDialog(
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Copy", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.copy, style = MaterialTheme.typography.titleMedium)
                     }
                 }
 
@@ -215,7 +214,7 @@ fun CrashReportDialog(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
-                    Text("Dismiss", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.dismiss, style = MaterialTheme.typography.titleMedium)
                 }
             }
         }

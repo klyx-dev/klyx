@@ -69,6 +69,7 @@ import com.klyx.app.icons.Archive
 import com.klyx.app.icons.Download
 import com.klyx.app.icons.Update
 import com.klyx.event.UiEvent
+import com.klyx.i18n.strings
 import com.klyx.plugin.PluginUiState
 import com.klyx.plugin.PluginViewModel
 import com.klyx.presentation.components.ExpressiveMenuItem
@@ -95,6 +96,7 @@ fun PluginsScreen() {
 
     val viewModel: PluginViewModel = koinViewModel()
     val storeViewModel: PluginStoreViewModel = koinViewModel()
+    val s = strings
 
     val pluginUiState by viewModel.uiState.collectAsStateWithLifecycle()
     val storeUiState by storeViewModel.uiState.collectAsStateWithLifecycle()
@@ -131,7 +133,7 @@ fun PluginsScreen() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text(text = "Plugins") },
+                title = { Text(text = strings.plugins) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -145,7 +147,7 @@ fun PluginsScreen() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 },
@@ -161,7 +163,7 @@ fun PluginsScreen() {
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.MoreVert,
-                                contentDescription = "More Options"
+                                contentDescription = strings.moreOptions
                             )
                         }
 
@@ -176,7 +178,7 @@ fun PluginsScreen() {
                                 modifier = Modifier.widthIn(min = 200.dp)
                             ) {
                                 ExpressiveMenuItem(
-                                    text = "Install from file",
+                                    text = strings.installFromFile,
                                     icon = Icons.Rounded.Archive,
                                     onClick = {
                                         showMenu = false
@@ -220,7 +222,7 @@ fun PluginsScreen() {
                         name = info.descriptor.name,
                         version = info.descriptor.version,
                         description = info.descriptor.description,
-                        author = info.descriptor.author?.name ?: "Unknown",
+                        author = info.descriptor.author?.name ?: s.unknown,
                         isInstalled = true,
                         iconUrl = info.iconPath,
                         sourceUri = viewModel.localBundleSource(info.descriptor.id)?.toString()
@@ -261,7 +263,7 @@ private fun LazyListScope.pluginList(
     if (pluginUiState.loadingState != null) {
         item(key = "loading-bundle") {
             InstallationLogCard(
-                title = "Installing Local Bundle",
+                title = strings.installingLocalBundle,
                 logs = pluginUiState.loadingState?.logs ?: emptyList()
             )
         }
@@ -271,7 +273,7 @@ private fun LazyListScope.pluginList(
         item(key = "empty") {
             Spacer(modifier = Modifier.height(64.dp))
             Text(
-                text = "No plugins available.\nInstall a local bundle via the option menu.",
+                text = strings.noPluginsAvailable,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
@@ -284,7 +286,7 @@ private fun LazyListScope.pluginList(
 
     if (installed.isNotEmpty()) {
         item(key = "header-installed") {
-            SettingsSubsectionHeader(title = "Installed")
+            SettingsSubsectionHeader(title = strings.pluginsInstalled)
         }
         items(installed, key = { "installed:${it.descriptor.id}" }) { info ->
             val storePlugin = storeUiState.storePlugins.find { it.id == info.descriptor.id }
@@ -313,7 +315,7 @@ private fun LazyListScope.pluginList(
 
     if (store.isNotEmpty()) {
         item(key = "header-store") {
-            SettingsSubsectionHeader(title = "Store")
+            SettingsSubsectionHeader(title = strings.store)
         }
         items(store, key = { "store:${it.id}" }) { plugin ->
             val installState = storeUiState.installState
@@ -333,7 +335,7 @@ private fun LazyListScope.pluginList(
             ) {
                 if (installState != null) {
                     InstallationLogCard(
-                        title = "Installing ${plugin.name}",
+                        title = strings.installingPlugin(plugin.name),
                         logs = installState.logs
                     )
                 }
@@ -435,7 +437,7 @@ private fun InstalledPluginCard(
                     } else {
                         Icon(Icons.Rounded.Update, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Update", style = MaterialTheme.typography.labelMedium)
+                        Text(strings.update, style = MaterialTheme.typography.labelMedium)
                     }
                 }
             } else {
@@ -455,7 +457,7 @@ private fun InstalledPluginCard(
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     } else {
-                        Icon(Icons.Rounded.Delete, contentDescription = "Uninstall", modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.Delete, contentDescription = strings.uninstall, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -498,7 +500,7 @@ private fun StorePluginCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "v${plugin.version} • by ${plugin.author}",
+                        text = strings.versionByAuthor(plugin.version, plugin.author),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -523,7 +525,7 @@ private fun StorePluginCard(
                     } else {
                         Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Install", style = MaterialTheme.typography.labelMedium)
+                        Text(strings.install, style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }
@@ -543,7 +545,7 @@ private fun StorePluginCard(
             if (installing) {
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(
-                    text = installState.message ?: "Installing...",
+                    text = installState.message ?: strings.installing,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

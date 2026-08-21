@@ -34,6 +34,7 @@ import com.klyx.app.icons.Fullscreen
 import com.klyx.app.icons.Language
 import com.klyx.app.icons.LightMode
 import com.klyx.data.preferences.updateAppearanceSettings
+import com.klyx.i18n.strings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
@@ -57,7 +58,7 @@ fun AppearanceSettings() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Appearance") },
+                title = { Text(strings.appearance) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -70,7 +71,7 @@ fun AppearanceSettings() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -102,13 +103,21 @@ private fun ApplicationThemeSection(
     settings: AppearanceSettings,
     scope: CoroutineScope
 ) {
-    SettingsSubsection(title = "Application Theme") {
+    val s = strings
+
+    SettingsSubsection(title = strings.applicationTheme) {
         SelectorItem(
-            label = "App Theme",
-            description = "Switch between light, dark, or follow system appearance.",
+            label = strings.appTheme,
+            description = strings.appThemeDesc,
             options = AppTheme.entries.toImmutableList(),
             selected = settings.theme,
-            optionLabel = AppTheme::displayName,
+            optionLabel = {
+                when (it) {
+                    AppTheme.System -> s.themeFollowSystem
+                    AppTheme.Light -> s.themeLight
+                    AppTheme.Dark -> s.themeDark
+                }
+            },
             onSelectionChanged = {
                 scope.launch {
                     updateAppearanceSettings { copy(theme = it) }
@@ -124,8 +133,8 @@ private fun ApplicationThemeSection(
         )
 
         SelectorItem(
-            label = "Language",
-            description = "Choose the display language of the app.",
+            label = strings.language,
+            description = strings.languageDesc,
             options = AppLanguage.entries.toImmutableList(),
             selected = settings.language,
             optionLabel = AppLanguage::displayName,
@@ -144,8 +153,8 @@ private fun ApplicationThemeSection(
         )
 
         SwitchSettingItem(
-            title = "AMOLED Dark Mode",
-            subtitle = "Turn dark backgrounds pure black to save battery on OLED screens",
+            title = strings.amoledDarkMode,
+            subtitle = strings.amoledDarkModeDesc,
             checked = settings.amoledDarkMode,
             enabled = LocalIsDarkMode.current,
             onCheckedChange = { isChecked ->
@@ -173,10 +182,10 @@ private fun WindowMotionSection(
     settings: AppearanceSettings,
     scope: CoroutineScope
 ) {
-    SettingsSubsection("Window & Motion") {
+    SettingsSubsection(strings.windowAndMotion) {
         SwitchSettingItem(
-            title = "Immersive Mode",
-            subtitle = "Hide the system status and navigation bars to maximize coding space",
+            title = strings.immersiveMode,
+            subtitle = strings.immersiveModeDesc,
             checked = settings.immersiveMode,
             onCheckedChange = { isChecked ->
                 scope.launch {
@@ -187,8 +196,8 @@ private fun WindowMotionSection(
         )
 
         SwitchSettingItem(
-            title = "Terminal in Topbar",
-            subtitle = "Show the terminal button beside the save button in the topbar. When off, Terminal is only available in the overflow menu.",
+            title = strings.terminalInTopbar,
+            subtitle = strings.terminalInTopbarDesc,
             checked = settings.showTerminalInTopbar,
             onCheckedChange = { isChecked ->
                 scope.launch {
@@ -199,8 +208,8 @@ private fun WindowMotionSection(
         )
 
         SwitchSettingItem(
-            title = "Reduce Motion",
-            subtitle = "Disable UI animations for instant menu and dialog transitions",
+            title = strings.reduceMotion,
+            subtitle = strings.reduceMotionDesc,
             checked = settings.reduceMotion,
             onCheckedChange = { isChecked ->
                 scope.launch {

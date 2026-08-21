@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.app.icons.NoteAdd
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -83,7 +84,7 @@ fun NewFileDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "New File",
+                    text = strings.newFile,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -98,8 +99,8 @@ fun NewFileDialog(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     singleLine = true,
-                    label = { Text("File name") },
-                    placeholder = { Text("e.g. main.cpp or App.kt") },
+                    label = { Text(strings.fileName) },
+                    placeholder = { Text(strings.fileNamePlaceholder) },
                     shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -108,9 +109,9 @@ fun NewFileDialog(
                     isError = isError && fileName.isNotEmpty(),
                     supportingText = {
                         if (hasIllegalChars) {
-                            Text("Invalid characters: \\ / : * ? \" < > |")
+                            Text(strings.invalidCharacters)
                         } else if (fileName.isBlank()) {
-                            Text("Name cannot be empty")
+                            Text(strings.nameCannotBeEmpty)
                         }
                     }
                 )
@@ -131,7 +132,7 @@ fun NewFileDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -141,7 +142,7 @@ fun NewFileDialog(
                             .heightIn(min = ButtonDefaults.MediumContainerHeight),
                         enabled = !isError
                     ) {
-                        Text("Create", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.create, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

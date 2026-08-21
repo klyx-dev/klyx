@@ -33,8 +33,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.app.icons.DeleteForever
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -72,10 +73,10 @@ fun TerminalWipeConfirmationDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Wipe Terminal?",
+                    text = strings.wipeTerminalQuestion,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
@@ -84,16 +85,16 @@ fun TerminalWipeConfirmationDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("This will permanently delete the entire terminal prefix and version file. ")
+                        append(strings.wipeDescFirst)
                         withStyle(
                             SpanStyle(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
-                            append("All installed packages, environments, and custom configurations will be lost.\n\n")
+                            append(strings.wipeDescSecond)
                         }
-                        append("You will need an internet connection to reinstall the bootstrap.")
+                        append(strings.wipeDescThird)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -117,9 +118,9 @@ fun TerminalWipeConfirmationDialog(
                         )
                     ) {
                         Text(
-                            text = "Cancel",
+                            text = strings.cancel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -135,9 +136,9 @@ fun TerminalWipeConfirmationDialog(
                         )
                     ) {
                         Text(
-                            text = "Wipe",
+                            text = strings.wipe,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.Bold
                         )
                     }

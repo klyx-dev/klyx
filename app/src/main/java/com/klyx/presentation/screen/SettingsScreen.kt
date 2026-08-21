@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.i18n.strings
 import com.klyx.presentation.model.IconSource
 import com.klyx.presentation.model.SettingsCategory
 import com.klyx.presentation.navigation.LocalNavigator
@@ -61,7 +62,7 @@ fun SettingsScreen() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Settings") },
+                title = { Text(strings.settings) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -74,7 +75,7 @@ fun SettingsScreen() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -232,7 +233,7 @@ private fun SettingsCategoryItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = category.title,
+                    text = category.localizedTitle(),
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -240,7 +241,7 @@ private fun SettingsCategoryItem(
                     maxLines = 1
                 )
                 Text(
-                    text = category.subtitle,
+                    text = category.localizedSubtitle(),
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
@@ -251,4 +252,28 @@ private fun SettingsCategoryItem(
             Spacer(modifier = Modifier.width(8.dp))
         }
     }
+}
+
+@Composable
+private fun SettingsCategory.localizedTitle(): String = when (this) {
+    SettingsCategory.Editor -> strings.editor
+    SettingsCategory.Appearance -> strings.appearance
+    SettingsCategory.Terminal -> strings.terminal
+    SettingsCategory.DeveloperOptions -> strings.developerOptions
+    SettingsCategory.SystemDiagnostics -> strings.systemDiagnostics
+    SettingsCategory.Plugins -> strings.plugins
+    SettingsCategory.About -> strings.about
+    SettingsCategory.FileTree -> strings.fileTree
+}
+
+@Composable
+private fun SettingsCategory.localizedSubtitle(): String = when (this) {
+    SettingsCategory.Editor -> strings.editorSubtitle
+    SettingsCategory.Appearance -> strings.appearanceSubtitle
+    SettingsCategory.Terminal -> strings.terminalSubtitle
+    SettingsCategory.DeveloperOptions -> strings.developerOptionsSubtitle
+    SettingsCategory.SystemDiagnostics -> strings.systemDiagnosticsSubtitle
+    SettingsCategory.Plugins -> strings.pluginsSubtitle
+    SettingsCategory.About -> strings.aboutSubtitle
+    SettingsCategory.FileTree -> strings.fileTreeSubtitle
 }

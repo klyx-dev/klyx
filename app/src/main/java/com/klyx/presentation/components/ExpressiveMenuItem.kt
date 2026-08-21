@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.klyx.api.ui.ToolbarIcon
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 
 @Composable
 fun ExpressiveMenuItem(
@@ -107,7 +107,7 @@ fun ExpressiveMenuItem(
             Text(
                 text = text,
                 style = MaterialTheme.typography.labelLarge,
-                fontFamily = GoogleSansRounded,
+                fontFamily = uiFontFamily(),
                 fontWeight = FontWeight.Medium
             )
         }

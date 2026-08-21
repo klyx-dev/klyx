@@ -85,6 +85,7 @@ import com.klyx.app.icons.UnfoldLess
 import com.klyx.app.icons.UnfoldMore
 import com.klyx.data.preferences.FontManager
 import com.klyx.data.preferences.updateEditorSettings
+import com.klyx.i18n.strings
 import com.klyx.presentation.components.CodeEditorDemo
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SegmentedSettingsItem
@@ -121,7 +122,7 @@ fun EditorSettings() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Editor") },
+                title = { Text(strings.editor) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -134,7 +135,7 @@ fun EditorSettings() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -253,7 +254,7 @@ private fun EditorPreviewHeader(
             .padding(start = 6.dp, bottom = 12.dp, end = 6.dp, top = 8.dp)
     ) {
         Column {
-            SettingsSubsectionHeader("Preview")
+            SettingsSubsectionHeader(strings.previewSection)
 
             CodeEditorDemo(
                 fontSize = localFontSize.sp,
@@ -280,7 +281,9 @@ private fun CommonSettingsSection(
     customFontUri: String?,
     scope: CoroutineScope
 ) {
-    SettingsSubsection("Common") {
+    val s = strings
+
+    SettingsSubsection(strings.commonSection) {
         FontFamilySettingItem(
             currentFontFamily = localFontFamily,
             customFontUri = customFontUri,
@@ -297,7 +300,7 @@ private fun CommonSettingsSection(
         )
 
         SliderSettingsItem(
-            label = "Font Size",
+            label = strings.fontSize,
             value = localFontSize,
             onValueChange = onLocalFontSizeChange,
             valueRange = 10f..32f,
@@ -312,16 +315,16 @@ private fun CommonSettingsSection(
         )
 
         SegmentedSettingsItem(
-            label = "Tab Size",
+            label = strings.tabSize,
             options = persistentListOf(2, 4, 8),
             currentValue = settings.tabSize,
             onValueChange = { update { copy(tabSize = it) } },
-            valueText = { "$it Spaces" }
+            valueText = { s.nSpaces(it) }
         )
 
         SwitchSettingItem(
-            title = "Word Wrap",
-            subtitle = "Wrap long lines to the next visual row",
+            title = strings.wordWrap,
+            subtitle = strings.wordWrapDesc,
             checked = settings.wordWrap,
             onCheckedChange = { update { copy(wordWrap = it) } },
             leadingIcon = { Icon(Icons.Rounded.FormatLineSpacing, null) }
@@ -334,10 +337,12 @@ private fun EditingSettingsSection(
     settings: EditorSettings,
     update: (suspend EditorSettings.() -> EditorSettings) -> Unit
 ) {
-    SettingsSubsection("Editing") {
+    val s = strings
+
+    SettingsSubsection(strings.editingSection) {
         SwitchSettingItem(
-            title = "Pin Line Numbers",
-            subtitle = "Keep line numbers visible when scrolling horizontally",
+            title = strings.pinLineNumbers,
+            subtitle = strings.pinLineNumbersDesc,
             checked = settings.pinLineNumbers,
             onCheckedChange = {
                 update { copy(pinLineNumbers = it) }
@@ -346,23 +351,23 @@ private fun EditingSettingsSection(
         )
 
         SwitchSettingItem(
-            title = "Delete Empty Lines Fast",
-            subtitle = "Delete the entire line instantly if it contains only whitespace",
+            title = strings.deleteEmptyLinesFast,
+            subtitle = strings.deleteEmptyLinesFastDesc,
             checked = settings.deleteEmptyLineFast,
             onCheckedChange = { update { copy(deleteEmptyLineFast = it) } },
             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Backspace, null) }
         )
 
         SelectorItem(
-            label = "Delete Multiple Spaces",
-            description = "How many leading spaces to delete at once when pressing backspace",
+            label = strings.deleteMultipleSpaces,
+            description = strings.deleteMultipleSpacesDesc,
             options = persistentListOf(-1, 1, 2, 4, 8),
             selected = settings.deleteMultiSpaces,
             optionLabel = { value ->
                 when (value) {
-                    -1 -> "Follow Tab Size"
-                    1 -> "1 Space"
-                    else -> "$value Spaces"
+                    -1 -> s.followTabSize
+                    1 -> s.oneSpace
+                    else -> s.nSpaces(value)
                 }
             },
             onSelectionChanged = { update { copy(deleteMultiSpaces = it) } },
@@ -370,16 +375,16 @@ private fun EditingSettingsSection(
         )
 
         SwitchSettingItem(
-            title = "Symbol Pair Auto-Completion",
-            subtitle = "Automatically insert closing brackets and quotes",
+            title = strings.symbolPairAutoCompletion,
+            subtitle = strings.symbolPairAutoCompletionDesc,
             checked = settings.symbolPairAutoCompletion,
             onCheckedChange = { update { copy(symbolPairAutoCompletion = it) } },
             leadingIcon = { Icon(Icons.Rounded.DataArray, null) }
         )
 
         SwitchSettingItem(
-            title = "Auto Indent",
-            subtitle = "Copy the leading indentation to the new line when pressing enter",
+            title = strings.autoIndent,
+            subtitle = strings.autoIndentDesc,
             checked = settings.autoIndent,
             onCheckedChange = { update { copy(autoIndent = it) } },
             leadingIcon = {
@@ -391,8 +396,8 @@ private fun EditingSettingsSection(
         )
 
         SwitchSettingItem(
-            title = "Format on Paste",
-            subtitle = "Automatically format code blocks when pasted",
+            title = strings.formatOnPaste,
+            subtitle = strings.formatOnPasteDesc,
             checked = settings.formatPastedText,
             onCheckedChange = { update { copy(formatPastedText = it) } },
             leadingIcon = { Icon(Icons.Rounded.ContentPaste, null) }
@@ -405,10 +410,10 @@ private fun KeyboardInputSettingsSection(
     settings: EditorSettings,
     update: (suspend EditorSettings.() -> EditorSettings) -> Unit
 ) {
-    SettingsSubsection("Keyboard & Input") {
+    SettingsSubsection(strings.keyboardInputSection) {
         SwitchSettingItem(
-            title = "Disable Keyboard Suggestions",
-            subtitle = "Force the IME to hide autocorrect suggestions (May cause keyboard restarts)",
+            title = strings.disableKeyboardSuggestions,
+            subtitle = strings.disableKeyboardSuggestionsDesc,
             checked = settings.disallowSuggestions,
             onCheckedChange = { update { copy(disallowSuggestions = it) } },
             leadingIcon = {
@@ -420,16 +425,16 @@ private fun KeyboardInputSettingsSection(
         )
 
         SwitchSettingItem(
-            title = "Enhanced Home and End",
-            subtitle = "Jumps to the first non-whitespace character before jumping to line start",
+            title = strings.enhancedHomeAndEnd,
+            subtitle = strings.enhancedHomeAndEndDesc,
             checked = settings.enhancedHomeAndEnd,
             onCheckedChange = { update { copy(enhancedHomeAndEnd = it) } },
             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardTab, null) }
         )
 
         SwitchSettingItem(
-            title = "Reselect on Long Press",
-            subtitle = "Select new words under finger even if text is already highlighted",
+            title = strings.reselectOnLongPress,
+            subtitle = strings.reselectOnLongPressDesc,
             checked = settings.reselectOnLongPress,
             onCheckedChange = { update { copy(reselectOnLongPress = it) } },
             leadingIcon = { Icon(Icons.Rounded.TouchApp, null) }
@@ -448,41 +453,41 @@ private fun IndicatorsVisualsSettingsSection(
     localWaveAmplitude: Float,
     onLocalWaveAmplitudeChange: (Float) -> Unit
 ) {
-    SettingsSubsection("Indicators & Visuals") {
+    SettingsSubsection(strings.indicatorsVisualsSection) {
         SwitchSettingItem(
-            title = "Round Text Background",
-            subtitle = "Use squircle edges for text selection and highlights",
+            title = strings.roundTextBackground,
+            subtitle = strings.roundTextBackgroundDesc,
             checked = settings.enableRoundTextBackground,
             onCheckedChange = { update { copy(enableRoundTextBackground = it) } },
             leadingIcon = { Icon(Icons.Rounded.RoundedCorner, null) }
         )
 
         SwitchSettingItem(
-            title = "Highlight Matching Delimiters",
-            subtitle = "Highlight the corresponding opening/closing bracket",
+            title = strings.highlightMatchingDelimiters,
+            subtitle = strings.highlightMatchingDelimitersDesc,
             checked = settings.highlightMatchingDelimiters,
             onCheckedChange = { update { copy(highlightMatchingDelimiters = it) } },
             leadingIcon = { Icon(Icons.Rounded.DataObject, null) }
         )
 
         SwitchSettingItem(
-            title = "Bold Matching Delimiters",
-            subtitle = "Apply bold styling to matching brackets",
+            title = strings.boldMatchingDelimiters,
+            subtitle = strings.boldMatchingDelimitersDesc,
             checked = settings.boldMatchingDelimiters,
             onCheckedChange = { update { copy(boldMatchingDelimiters = it) } },
             leadingIcon = { Icon(Icons.Rounded.FormatBold, null) }
         )
 
         SwitchSettingItem(
-            title = "Inlay Hints",
-            subtitle = "Display parameter names and type hints directly in the code",
+            title = strings.inlayHints,
+            subtitle = strings.inlayHintsDesc,
             checked = settings.inlayHints,
             onCheckedChange = { update { copy(inlayHints = it) } },
             leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
         )
 
         SliderSettingsItem(
-            label = "Error Wave Length",
+            label = strings.errorWaveLength,
             value = localWaveLength,
             onValueChange = onLocalWaveLengthChange,
             valueRange = 5f..30f,
@@ -496,7 +501,7 @@ private fun IndicatorsVisualsSettingsSection(
         )
 
         SliderSettingsItem(
-            label = "Error Wave Width",
+            label = strings.errorWaveWidth,
             value = localWaveWidth,
             onValueChange = onLocalWaveWidthChange,
             valueRange = 0.5f..5f,
@@ -510,7 +515,7 @@ private fun IndicatorsVisualsSettingsSection(
         )
 
         SliderSettingsItem(
-            label = "Error Wave Amplitude",
+            label = strings.errorWaveAmplitude,
             value = localWaveAmplitude,
             onValueChange = onLocalWaveAmplitudeChange,
             valueRange = 1f..10f,
@@ -534,22 +539,31 @@ private fun MouseScrollingSettingsSection(
     localWheelFactor: Float,
     onLocalWheelFactorChange: (Float) -> Unit
 ) {
-    SettingsSubsection("Mouse & Scrolling") {
+    val s = strings
+
+    SettingsSubsection(strings.mouseScrollingSection) {
         SelectorItem(
-            label = "Mouse Mode",
-            description = "Behavior of editor windows and selection handles with a mouse",
+            label = strings.mouseMode,
+            description = strings.mouseModeDesc,
             options = persistentListOf(
                 MouseMode.Auto,
                 MouseMode.Always,
                 MouseMode.Never
             ),
             selected = settings.mouseMode,
-            optionLabel = { it.name },
+            optionLabel = {
+                when (it) {
+                    MouseMode.Auto -> s.mouseAuto
+                    MouseMode.Always -> s.mouseAlways
+                    MouseMode.Never -> s.mouseNever
+                    else -> it.name
+                }
+            },
             optionDescription = { mode ->
                 when (mode) {
-                    MouseMode.Auto -> "Enable mouse mode if a mouse is currently hovering"
-                    MouseMode.Always -> "Force mouse handles permanently (Good for Desktop)"
-                    MouseMode.Never -> "Strictly touch interface"
+                    MouseMode.Auto -> s.mouseModeAutoDesc
+                    MouseMode.Always -> s.mouseModeAlwaysDesc
+                    MouseMode.Never -> s.mouseModeNeverDesc
                     else -> null
                 }
             },
@@ -558,23 +572,23 @@ private fun MouseScrollingSettingsSection(
         )
 
         SwitchSettingItem(
-            title = "Always Show Scrollbars",
-            subtitle = "Keep scrollbars visible when in Mouse Mode",
+            title = strings.alwaysShowScrollbars,
+            subtitle = strings.alwaysShowScrollbarsDesc,
             checked = settings.mouseModeAlwaysShowScrollbars,
             onCheckedChange = { update { copy(mouseModeAlwaysShowScrollbars = it) } },
             leadingIcon = { Icon(Icons.Rounded.UnfoldMore, null) }
         )
 
         SwitchSettingItem(
-            title = "Mouse Context Menu",
-            subtitle = "Show native right-click context menus",
+            title = strings.mouseContextMenu,
+            subtitle = strings.mouseContextMenuDesc,
             checked = settings.mouseContextMenu,
             onCheckedChange = { update { copy(mouseContextMenu = it) } },
             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.MenuOpen, null) }
         )
 
         SliderSettingsItem(
-            label = "Fast Scroll Sensitivity",
+            label = strings.fastScrollSensitivity,
             value = localFastScroll,
             onValueChange = onLocalFastScrollChange,
             valueRange = 1f..10f,
@@ -588,7 +602,7 @@ private fun MouseScrollingSettingsSection(
         )
 
         SliderSettingsItem(
-            label = "Mouse Wheel Factor",
+            label = strings.mouseWheelFactor,
             value = localWheelFactor,
             onValueChange = onLocalWheelFactorChange,
             valueRange = 0.5f..5f,
@@ -610,10 +624,10 @@ private fun StickyScrollSettingsSection(
     localStickyMax: Float,
     onLocalStickyMaxChange: (Float) -> Unit
 ) {
-    SettingsSubsection("Sticky Scroll") {
+    SettingsSubsection(strings.stickyScrollSection) {
         SwitchSettingItem(
-            title = "Enable Sticky Scroll",
-            subtitle = "Pin class and method headers to the top while scrolling",
+            title = strings.enableStickyScroll,
+            subtitle = strings.enableStickyScrollDesc,
             checked = settings.stickyScroll,
             onCheckedChange = { update { copy(stickyScroll = it) } },
             leadingIcon = { Icon(Icons.Rounded.PushPin, null) }
@@ -632,7 +646,7 @@ private fun StickyScrollSettingsSection(
             )
         ) {
             SliderSettingsItem(
-                label = "Max Sticky Lines",
+                label = strings.maxStickyLines,
                 value = localStickyMax,
                 onValueChange = onLocalStickyMaxChange,
                 valueRange = 1f..10f,
@@ -648,16 +662,16 @@ private fun StickyScrollSettingsSection(
 
 
         SwitchSettingItem(
-            title = "Prefer Inner Scope",
-            subtitle = "Push out top stuck lines to show nested inner scopes if max lines are exceeded",
+            title = strings.preferInnerScope,
+            subtitle = strings.preferInnerScopeDesc,
             checked = settings.stickyScrollPreferInnerScope,
             onCheckedChange = { update { copy(stickyScrollPreferInnerScope = it) } },
             leadingIcon = { Icon(Icons.Rounded.FilterCenterFocus, null) }
         )
 
         SwitchSettingItem(
-            title = "Auto Collapse",
-            subtitle = "Hide stuck lines temporarily when selecting text behind them",
+            title = strings.autoCollapse,
+            subtitle = strings.autoCollapseDesc,
             checked = settings.stickyScrollAutoCollapse,
             onCheckedChange = { update { copy(stickyScrollAutoCollapse = it) } },
             leadingIcon = { Icon(Icons.Rounded.UnfoldLess, null) }
@@ -670,18 +684,18 @@ private fun AdvancedSettingsSection(
     settings: EditorSettings,
     update: (suspend EditorSettings.() -> EditorSettings) -> Unit
 ) {
-    SettingsSubsection("Advanced") {
+    SettingsSubsection(strings.advancedSection) {
         SwitchSettingItem(
-            title = "Select Completion on Enter",
-            subtitle = "Accept the first autocomplete suggestion using the Enter key on software keyboards",
+            title = strings.selectCompletionOnEnter,
+            subtitle = strings.selectCompletionOnEnterDesc,
             checked = settings.selectCompletionItemOnEnterForSoftKbd,
             onCheckedChange = { update { copy(selectCompletionItemOnEnterForSoftKbd = it) } },
             leadingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardReturn, null) }
         )
 
         SwitchSettingItem(
-            title = "Use ICU Library",
-            subtitle = "Use the advanced ICU library for calculating word boundaries on double-tap",
+            title = strings.useIcuLibrary,
+            subtitle = strings.useIcuLibraryDesc,
             checked = settings.useICULibToSelectWords,
             onCheckedChange = { update { copy(useICULibToSelectWords = it) } },
             leadingIcon = { Icon(Icons.Rounded.TextFormat, null) }
@@ -744,13 +758,13 @@ fun FontFamilySettingItem(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Font Family",
+                        text = strings.fontFamily,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "The font used to render code in the editor",
+                        text = strings.fontFamilyDesc,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -763,7 +777,7 @@ fun FontFamilySettingItem(
                         modifier = Modifier.align(Alignment.Start)
                     ) {
                         Text(
-                            text = if (isBuiltIn) "JetBrains Mono" else "Custom Font",
+                            text = if (isBuiltIn) strings.jetbrainsMono else strings.customFontShort,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                             fontWeight = FontWeight.Bold,
@@ -784,15 +798,15 @@ fun FontFamilySettingItem(
         ) {
             Column(modifier = Modifier.padding(bottom = 24.dp)) {
                 Text(
-                    text = "Choose Font Family",
+                    text = strings.chooseFontFamily,
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
                     fontWeight = FontWeight.Bold
                 )
 
                 FontOptionRow(
-                    title = "JetBrains Mono",
-                    subtitle = "Built-in default editor font",
+                    title = strings.jetbrainsMono,
+                    subtitle = strings.builtinDefaultFont,
                     isSelected = isBuiltIn,
                     icon = Icons.Rounded.FontDownload,
                     fontFamily = JetBrainsMonoFontFamily,
@@ -806,8 +820,8 @@ fun FontFamilySettingItem(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 FontOptionRow(
-                    title = "Custom Font...",
-                    subtitle = "Choose a .ttf or .otf file from your device",
+                    title = strings.customFont,
+                    subtitle = strings.customFontDesc,
                     isSelected = !isBuiltIn,
                     icon = Icons.Rounded.FolderOpen,
                     fontFamily = if (currentFontFamily == JetBrainsMonoFontFamily) null else currentFontFamily,
@@ -875,7 +889,7 @@ private fun FontOptionRow(
             if (isSelected) {
                 Icon(
                     imageVector = Icons.Rounded.Check,
-                    contentDescription = "Selected",
+                    contentDescription = strings.selected,
                     tint = contentColor
                 )
             }

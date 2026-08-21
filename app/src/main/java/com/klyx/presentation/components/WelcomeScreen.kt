@@ -33,7 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
+import com.klyx.i18n.strings
 
 @Composable
 fun WelcomeScreen(
@@ -71,16 +72,16 @@ fun WelcomeScreen(
         Text(
             text = "K L Y X",
             style = MaterialTheme.typography.headlineLarge,
-            fontFamily = GoogleSansRounded,
+            fontFamily = uiFontFamily(),
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             letterSpacing = 4.sp
         )
 
         Text(
-            text = "The native mobile editor.",
+            text = strings.tagline,
             style = MaterialTheme.typography.bodyLarge,
-            fontFamily = GoogleSansRounded,
+            fontFamily = uiFontFamily(),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
         )
@@ -110,9 +111,9 @@ fun WelcomeScreen(
 //        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "Swipe from the left edge to open the file explorer.",
+            text = strings.swipeHintWelcome,
             style = MaterialTheme.typography.bodyMedium,
-            fontFamily = GoogleSansRounded,
+            fontFamily = uiFontFamily(),
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp)
@@ -166,7 +167,7 @@ private fun WelcomeActionCard(
                     text = title,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = contentColor,
                     maxLines = 1
@@ -175,7 +176,7 @@ private fun WelcomeActionCard(
                     text = subtitle,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     color = contentColor.copy(alpha = 0.8f),
                     maxLines = 1
                 )

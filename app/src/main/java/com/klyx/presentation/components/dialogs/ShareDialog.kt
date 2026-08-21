@@ -39,10 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.AsyncImage
 import com.klyx.R
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.app.icons.Article
 import com.klyx.app.icons.AttachFile
 import com.klyx.app.icons.TextSnippet
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -81,9 +82,9 @@ fun ShareDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Share",
+                    text = strings.share,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -92,7 +93,7 @@ fun ShareDialog(
                 Text(
                     text = fileName,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
@@ -101,23 +102,23 @@ fun ShareDialog(
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (hasSelection) {
                         ShareOptionCard(
-                            title = "Selected Text",
-                            subtitle = "Share only the highlighted code",
+                            title = strings.selectedText,
+                            subtitle = strings.shareSelectedOnly,
                             icon = Icons.AutoMirrored.Rounded.TextSnippet,
                             onClick = onShareSelection
                         )
                     }
 
                     ShareOptionCard(
-                        title = "Whole File Text",
-                        subtitle = "Share all code as a text message",
+                        title = strings.wholeFileText,
+                        subtitle = strings.shareAllCode,
                         icon = Icons.AutoMirrored.Rounded.Article,
                         onClick = onShareFileText
                     )
 
                     ShareOptionCard(
-                        title = "As File",
-                        subtitle = "Share as a file attachment",
+                        title = strings.asFile,
+                        subtitle = strings.shareAsAttachment,
                         icon = Icons.Rounded.AttachFile,
                         onClick = onShareFile
                     )
@@ -136,9 +137,9 @@ fun ShareDialog(
                     )
                 ) {
                     Text(
-                        text = "Cancel",
+                        text = strings.cancel,
                         style = MaterialTheme.typography.titleMedium,
-                        fontFamily = GoogleSansRounded,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -189,7 +190,7 @@ private fun ShareOptionCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -198,7 +199,7 @@ private fun ShareOptionCard(
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -235,7 +236,7 @@ fun ImageShareDialog(
                 ) {
                     AsyncImage(
                         model = imageUri,
-                        contentDescription = "Share Preview",
+                        contentDescription = strings.sharePreview,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -244,9 +245,9 @@ fun ImageShareDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Share Image",
+                    text = strings.shareImage,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -255,7 +256,7 @@ fun ImageShareDialog(
                 Text(
                     text = fileName,
                     style = MaterialTheme.typography.bodyMedium,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
@@ -276,9 +277,9 @@ fun ImageShareDialog(
                         )
                     ) {
                         Text(
-                            "Cancel",
+                            strings.cancel,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -294,9 +295,9 @@ fun ImageShareDialog(
                         )
                     ) {
                         Text(
-                            "Share",
+                            strings.share,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = FontWeight.Bold
                         )
                     }

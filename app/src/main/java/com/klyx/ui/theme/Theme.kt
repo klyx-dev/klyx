@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.ui.theme.LocalIsDarkMode
+import com.klyx.api.ui.theme.GoogleSansTypography
 import com.klyx.api.ui.theme.Typography
 import com.klyx.api.ui.theme.backgroundDark
 import com.klyx.api.ui.theme.backgroundLight
@@ -201,9 +202,16 @@ fun KlyxTheme(
     val reduceMotion = LocalReduceMotion.current
     val finalColorScheme = if (darkTheme && amoled) colorScheme.applyAmoled() else colorScheme
 
+    // Google Sans Rounded has no Devanagari glyphs; render those locales in Laila.
+    val typography = if (isDevanagariLocale()) {
+        GoogleSansTypography.withLailaFont()
+    } else {
+        Typography
+    }
+
     MaterialExpressiveTheme(
         colorScheme = finalColorScheme,
-        typography = Typography,
+        typography = typography,
         motionScheme = reducedMotionScheme(reduceMotion),
         content = content
     )

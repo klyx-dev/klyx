@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.i18n.strings
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -106,7 +107,7 @@ fun RenameFileDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Rename",
+                    text = strings.rename,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -121,8 +122,8 @@ fun RenameFileDialog(
                         .fillMaxWidth()
                         .focusRequester(focusRequester),
                     singleLine = true,
-                    label = { Text(if (isDir) "New folder name" else "New file name") },
-                    placeholder = { Text(if (isDir) "e.g. src or build" else "e.g. App.kt") },
+                    label = { Text(if (isDir) strings.newFolderName else strings.newFileName) },
+                    placeholder = { Text(if (isDir) strings.folderNamePlaceholder else strings.fileNamePlaceholder) },
                     shape = RoundedCornerShape(20.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
@@ -135,7 +136,7 @@ fun RenameFileDialog(
                     isError = textFieldValue.text.isBlank(),
                     supportingText = {
                         if (textFieldValue.text.isBlank()) {
-                            Text("Name cannot be empty")
+                            Text(strings.nameCannotBeEmpty)
                         }
                     }
                 )
@@ -161,7 +162,7 @@ fun RenameFileDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -171,7 +172,7 @@ fun RenameFileDialog(
                             .heightIn(min = ButtonDefaults.MediumContainerHeight),
                         enabled = textFieldValue.text.isNotBlank() && textFieldValue.text != initialName && !isProtected
                     ) {
-                        Text("Rename", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.rename, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

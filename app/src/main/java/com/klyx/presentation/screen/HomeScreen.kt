@@ -132,7 +132,7 @@ import com.klyx.api.ui.ToolbarAction
 import com.klyx.api.ui.ToolbarCategory
 import com.klyx.api.ui.ToolbarRegistry
 import com.klyx.api.ui.showFailureToast
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.api.util.share
@@ -345,7 +345,7 @@ fun HomeScreen(
                 } else {
                     scope.launch {
                         val s = getLocaleStrings()
-                        toastHostState.showFailureToast(s.installationFailed("No active tab"))
+                        toastHostState.showFailureToast(s.installationFailed(s.noActiveTab))
                     }
                 }
             }
@@ -853,7 +853,7 @@ private fun HomeTopBar(
                 ) {
                     Icon(
                         painter = painterResource(R.drawable.folder_code_24px),
-                        contentDescription = "File Explorer"
+                        contentDescription = strings.fileExplorer
                     )
                 }
             },
@@ -876,7 +876,7 @@ private fun HomeTopBar(
                         ) {
                             Icon(
                                 Icons.Outlined.Save,
-                                contentDescription = "Save File"
+                                contentDescription = strings.saveFile
                             )
                         }
                     }
@@ -892,7 +892,7 @@ private fun HomeTopBar(
                         ) {
                             Icon(
                                 Icons.Rounded.PlayArrow,
-                                contentDescription = "Run File"
+                                contentDescription = strings.runFile
                             )
                         }
                     }
@@ -909,7 +909,7 @@ private fun HomeTopBar(
                         ) {
                             Icon(
                                 painter = painterResource(R.drawable.terminal_2_24px),
-                                contentDescription = "Terminal"
+                                contentDescription = strings.terminal
                             )
                         }
                     }
@@ -973,7 +973,7 @@ private fun MainMenu(
         ) {
             Icon(
                 Icons.Rounded.MoreVert,
-                contentDescription = "More Options"
+                contentDescription = strings.moreOptions
             )
         }
 
@@ -988,11 +988,11 @@ private fun MainMenu(
                 modifier = Modifier.widthIn(min = 180.dp)
             ) {
                 if (activeTab is WorkspaceTab.TextFile || activeTab is WorkspaceTab.ImageFile) {
-                    MenuSectionHeader("Current File")
+                    MenuSectionHeader(strings.currentFileSection)
 
                     if (activeTab is WorkspaceTab.TextFile) {
                         ExpressiveMenuItem(
-                            text = "Save As...",
+                            text = strings.saveAs,
                             icon = painterResource(R.drawable.save_as_24px),
                             onClick = {
                                 showMenu = false
@@ -1002,7 +1002,7 @@ private fun MainMenu(
                     }
 
                     ExpressiveMenuItem(
-                        text = "Share",
+                        text = strings.share,
                         icon = painterResource(R.drawable.share_24px),
                         onClick = {
                             showMenu = false
@@ -1021,10 +1021,10 @@ private fun MainMenu(
                     )
                 }
 
-                MenuSectionHeader("Workspace")
+                MenuSectionHeader(strings.workspaceSection)
 
                 ExpressiveMenuItem(
-                    text = "Terminal",
+                    text = strings.terminal,
                     icon = painterResource(R.drawable.terminal_2_24px),
                     onClick = {
                         showMenu = false
@@ -1033,7 +1033,7 @@ private fun MainMenu(
                 )
 
                 ExpressiveMenuItem(
-                    text = "Settings",
+                    text = strings.settings,
                     icon = painterResource(R.drawable.settings_24px),
                     onClick = {
                         showMenu = false
@@ -1069,7 +1069,7 @@ private fun MainMenu(
                         )
                     }
 
-                    MenuSectionHeader("Plugins")
+                    MenuSectionHeader(strings.plugins)
 
                     MenuActionItems(
                         actions = pluginsActions,
@@ -1087,7 +1087,7 @@ private fun MenuSectionHeader(text: String) {
         text = text,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
-        fontFamily = GoogleSansRounded,
+        fontFamily = uiFontFamily(),
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
@@ -1165,7 +1165,7 @@ private fun EditorTabs(
                         Text(
                             text = tab.title,
                             style = MaterialTheme.typography.titleMedium,
-                            fontFamily = GoogleSansRounded,
+                            fontFamily = uiFontFamily(),
                             fontWeight = if (index == activeTabIndex) FontWeight.SemiBold else FontWeight.Medium
                         )
 
@@ -1194,7 +1194,7 @@ private fun EditorTabs(
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Close,
-                                contentDescription = "Close ${tab.title}",
+                                contentDescription = strings.closeTabDescription(tab.title),
                                 modifier = Modifier.size(14.dp),
                                 tint = LocalContentColor.current
                             )
@@ -1214,8 +1214,8 @@ private fun EditorTabs(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Close",
-                                        fontFamily = GoogleSansRounded,
+                                        strings.closeTabAction,
+                                        fontFamily = uiFontFamily(),
                                         fontWeight = FontWeight.Medium
                                     )
                                 },
@@ -1233,8 +1233,8 @@ private fun EditorTabs(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Close Others",
-                                        fontFamily = GoogleSansRounded,
+                                        strings.closeOthers,
+                                        fontFamily = uiFontFamily(),
                                         fontWeight = FontWeight.Medium
                                     )
                                 },
@@ -1250,8 +1250,8 @@ private fun EditorTabs(
                             DropdownMenuItem(
                                 text = {
                                     Text(
-                                        "Close All",
-                                        fontFamily = GoogleSansRounded,
+                                        strings.closeAllTabs,
+                                        fontFamily = uiFontFamily(),
                                         fontWeight = FontWeight.Bold
                                     )
                                 },
@@ -1344,7 +1344,7 @@ fun EditorEmptyState(modifier: Modifier = Modifier) {
             Text(
                 text = "K L Y X",
                 style = MaterialTheme.typography.headlineMedium,
-                fontFamily = GoogleSansRounded,
+                fontFamily = uiFontFamily(),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f),
                 letterSpacing = 8.sp
@@ -1353,9 +1353,9 @@ fun EditorEmptyState(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Swipe from the left edge\nto open the explorer",
+                text = strings.swipeHintHome,
                 style = MaterialTheme.typography.bodyLarge,
-                fontFamily = GoogleSansRounded,
+                fontFamily = uiFontFamily(),
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                 textAlign = TextAlign.Center,
                 lineHeight = 24.sp
@@ -1554,7 +1554,7 @@ private fun TextFileEditor(
                     ) {
                         Icon(
                             Icons.Rounded.KeyboardArrowUp,
-                            contentDescription = "Show Tools",
+                            contentDescription = strings.showTools,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -1633,7 +1633,7 @@ private fun EditorAccessoryBar(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Rounded.Undo,
-                        contentDescription = "Undo",
+                        contentDescription = strings.undo,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1645,7 +1645,7 @@ private fun EditorAccessoryBar(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Rounded.Redo,
-                        contentDescription = "Redo",
+                        contentDescription = strings.redo,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1697,7 +1697,7 @@ private fun EditorAccessoryBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = "Hide Toolbar",
+                    contentDescription = strings.hideToolbar,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .size(24.dp)

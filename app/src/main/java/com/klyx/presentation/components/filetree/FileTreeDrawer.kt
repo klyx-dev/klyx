@@ -104,7 +104,7 @@ import com.klyx.R
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.Paths
 import com.klyx.api.terminal.home
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.app.icons.Cloud
 import com.klyx.app.icons.FolderOpen
 import com.klyx.app.icons.FolderShared
@@ -112,6 +112,7 @@ import com.klyx.app.icons.FolderSpecial
 import com.klyx.app.icons.Smartphone
 import com.klyx.data.file.resolveName
 import com.klyx.data.fs.SftpFileSystem
+import com.klyx.i18n.strings
 import com.klyx.presentation.viewmodel.FileTreeUiState
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.LocalReduceMotion
@@ -405,7 +406,7 @@ private fun DrawerActionBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Search,
-                    contentDescription = "Search",
+                    contentDescription = strings.search,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
@@ -450,9 +451,9 @@ private fun SearchBottomSheet(
                 .navigationBarsPadding()
         ) {
             Text(
-                text = "Search",
+                text = strings.search,
                 style = MaterialTheme.typography.titleLarge,
-                fontFamily = GoogleSansRounded,
+                fontFamily = uiFontFamily(),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 16.dp, bottom = 16.dp)
@@ -495,7 +496,7 @@ private fun SearchBottomSheet(
 
             if (showFdHint && isSearching) {
                 Text(
-                    text = "Install fd-find for faster search: apt install fd-find",
+                    text = strings.installFdFind,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
@@ -507,7 +508,7 @@ private fun SearchBottomSheet(
             if (resultList.isNotEmpty()) {
                 if (searchResultCount > 0) {
                     Text(
-                        text = "Found $searchResultCount files",
+                        text = strings.foundFiles(searchResultCount),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
@@ -738,7 +739,7 @@ private fun EmptyState(
 
                     Icon(
                         imageVector = Icons.Rounded.FolderOpen,
-                        contentDescription = "Folder Icon",
+                        contentDescription = strings.folderIcon,
                         modifier = Modifier.size(56.dp),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer
                     )
@@ -756,7 +757,7 @@ private fun EmptyState(
                         text = stringResource(R.string.ready_to_code),
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        fontFamily = GoogleSansRounded,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.Bold
                     )
                     Text(
@@ -806,7 +807,7 @@ private fun OpenProjectButton(
         Text(
             text = stringResource(R.string.open_project),
             style = ButtonDefaults.textStyleFor(buttonHeight),
-            fontFamily = GoogleSansRounded,
+            fontFamily = uiFontFamily(),
             fontWeight = FontWeight.Bold
         )
     }
@@ -835,9 +836,9 @@ fun ProjectLocationBottomSheet(
                 .navigationBarsPadding()
         ) {
             Text(
-                text = "Open Project",
+                text = strings.openProject,
                 style = MaterialTheme.typography.titleLarge,
-                fontFamily = GoogleSansRounded,
+                fontFamily = uiFontFamily(),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(start = 16.dp, bottom = 16.dp)
@@ -851,7 +852,7 @@ fun ProjectLocationBottomSheet(
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
-                        Text("Browse and access all folders available on your device.")
+                        Text(strings.browseAllFoldersDesc)
                     },
                     leadingContent = {
                         Box(
@@ -872,8 +873,8 @@ fun ProjectLocationBottomSheet(
                     }
                 ) {
                     Text(
-                        "Internal Storage",
-                        fontFamily = GoogleSansRounded,
+                        strings.internalStorage,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -889,7 +890,7 @@ fun ProjectLocationBottomSheet(
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
-                        Text("Direct access to the internal data directory where all app files are stored.")
+                        Text(strings.appDataDesc)
                     },
                     leadingContent = {
                         Box(
@@ -910,8 +911,8 @@ fun ProjectLocationBottomSheet(
                     }
                 ) {
                     Text(
-                        "App Data Directory",
-                        fontFamily = GoogleSansRounded,
+                        strings.appDataDirectory,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -927,7 +928,7 @@ fun ProjectLocationBottomSheet(
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
-                        Text($$"Open the terminal's home directory ($HOME). This is the default working directory where your files, projects, and personal data are stored inside the terminal environment.")
+                        Text(strings.terminalHomeDesc)
                     },
                     leadingContent = {
                         Box(
@@ -948,8 +949,8 @@ fun ProjectLocationBottomSheet(
                     }
                 ) {
                     Text(
-                        "Terminal Home",
-                        fontFamily = GoogleSansRounded,
+                        strings.terminalHome,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -965,7 +966,7 @@ fun ProjectLocationBottomSheet(
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
-                        Text("Connect to a remote server via SFTP to browse and edit files.")
+                        Text(strings.sftpDesc)
                     },
                     leadingContent = {
                         Box(
@@ -987,7 +988,7 @@ fun ProjectLocationBottomSheet(
                 ) {
                     Text(
                         "SFTP Connection",
-                        fontFamily = GoogleSansRounded,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -1003,7 +1004,7 @@ fun ProjectLocationBottomSheet(
                 ListItem(
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     supportingContent = {
-                        Text("Select a specific folder using the built-in file manager.")
+                        Text(strings.safPickerDesc)
                     },
                     leadingContent = {
                         Box(
@@ -1024,8 +1025,8 @@ fun ProjectLocationBottomSheet(
                     }
                 ) {
                     Text(
-                        "System Picker",
-                        fontFamily = GoogleSansRounded,
+                        strings.systemPicker,
+                        fontFamily = uiFontFamily(),
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -1052,6 +1053,7 @@ private fun SftpConnectionSheet(
     var detecting by remember { mutableStateOf(false) }
     var detectError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val s = strings
 
     val isValid = host.isNotBlank() && username.isNotBlank()
 
@@ -1069,7 +1071,7 @@ private fun SftpConnectionSheet(
                 }
                 path = home
             } catch (e: Exception) {
-                detectError = e.message ?: "Detection failed"
+                detectError = e.message ?: s.detectionFailed
             } finally {
                 detecting = false
             }
@@ -1107,7 +1109,7 @@ private fun SftpConnectionSheet(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "SFTP Connection",
+                text = strings.sftpConnection,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
@@ -1122,8 +1124,8 @@ private fun SftpConnectionSheet(
                 OutlinedTextField(
                     value = host,
                     onValueChange = { host = it },
-                    label = { Text("Host") },
-                    placeholder = { Text("e.g. 192.168.1.100") },
+                    label = { Text(strings.host) },
+                    placeholder = { Text(strings.hostPlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -1135,7 +1137,7 @@ private fun SftpConnectionSheet(
                 OutlinedTextField(
                     value = portText,
                     onValueChange = { portText = it.filter { c -> c.isDigit() } },
-                    label = { Text("Port") },
+                    label = { Text(strings.port) },
                     placeholder = { Text("22") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -1149,8 +1151,8 @@ private fun SftpConnectionSheet(
                 OutlinedTextField(
                     value = username,
                     onValueChange = { username = it },
-                    label = { Text("Username") },
-                    placeholder = { Text("e.g. root") },
+                    label = { Text(strings.username) },
+                    placeholder = { Text(strings.usernamePlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -1162,8 +1164,8 @@ private fun SftpConnectionSheet(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
-                    placeholder = { Text("Optional") },
+                    label = { Text(strings.password) },
+                    placeholder = { Text(strings.passwordPlaceholder) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -1177,7 +1179,7 @@ private fun SftpConnectionSheet(
                 OutlinedTextField(
                     value = path,
                     onValueChange = { path = it; detectError = null },
-                    label = { Text("Path") },
+                    label = { Text(strings.path) },
                     placeholder = { Text("/") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -1201,7 +1203,7 @@ private fun SftpConnectionSheet(
                                 enabled = host.isNotBlank() && username.isNotBlank() && !detecting,
                                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("Detect", style = MaterialTheme.typography.labelMedium)
+                                Text(strings.detect, style = MaterialTheme.typography.labelMedium)
                             }
                         }
                     }
@@ -1224,7 +1226,7 @@ private fun SftpConnectionSheet(
                         contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
-                    Text("Cancel", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                 }
 
                 Button(
@@ -1238,7 +1240,7 @@ private fun SftpConnectionSheet(
                         .heightIn(min = ButtonDefaults.MediumContainerHeight),
                     enabled = isValid
                 ) {
-                    Text("Connect", style = MaterialTheme.typography.titleMedium)
+                    Text(strings.connect, style = MaterialTheme.typography.titleMedium)
                 }
             }
 

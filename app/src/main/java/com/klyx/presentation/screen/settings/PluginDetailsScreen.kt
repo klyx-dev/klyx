@@ -112,6 +112,7 @@ import com.klyx.app.icons.Public
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
 import com.klyx.event.UiEvent
+import com.klyx.i18n.strings
 import com.klyx.network.fetchBody
 import com.klyx.plugin.PluginManager
 import com.klyx.plugin.PluginUiState
@@ -279,7 +280,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 },
@@ -306,7 +307,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Settings,
-                                contentDescription = "Settings"
+                                contentDescription = strings.settings
                             )
                         }
                     }
@@ -403,7 +404,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                             item {
                                 PluginMarkdownContent(
                                     content = changelog,
-                                    emptyText = "No changelog provided for this plugin."
+                                    emptyText = strings.noChangelogProvided
                                 )
                             }
                         }
@@ -412,7 +413,7 @@ fun PluginDetailsScreen(payload: PluginDetailPayload) {
                             item {
                                 PluginMarkdownContent(
                                     content = readme,
-                                    emptyText = "No details provided for this plugin."
+                                    emptyText = strings.noDetailsProvided
                                 )
                             }
                         }
@@ -486,13 +487,13 @@ private fun PluginLoadError(onRetry: () -> Unit) {
             modifier = Modifier.size(40.dp)
         )
         Text(
-            text = "Couldn't load plugin details",
+            text = strings.couldntLoadPluginDetails,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
         Text(
-            text = "Check your connection and try again.",
+            text = strings.checkConnectionAndRetry,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -500,7 +501,7 @@ private fun PluginLoadError(onRetry: () -> Unit) {
         OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("Retry")
+            Text(strings.retry)
         }
     }
 }
@@ -539,11 +540,11 @@ private fun PluginInstallButton(
                     color = MaterialTheme.colorScheme.onErrorContainer
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Uninstalling...", style = MaterialTheme.typography.labelLarge)
+                Text(strings.uninstalling, style = MaterialTheme.typography.labelLarge)
             } else {
                 Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Uninstall", style = MaterialTheme.typography.labelLarge)
+                Text(strings.uninstall, style = MaterialTheme.typography.labelLarge)
             }
         }
     } else {
@@ -595,7 +596,7 @@ private fun PluginInstallButton(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = installState.message ?: "Installing...",
+                            text = installState.message ?: strings.installing,
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -608,7 +609,7 @@ private fun PluginInstallButton(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Installing...",
+                            text = strings.installing,
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -621,7 +622,7 @@ private fun PluginInstallButton(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            if (installing) "Another task running" else "Install",
+                            if (installing) strings.anotherTaskRunning else strings.install,
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -654,7 +655,7 @@ private fun PluginInstallButton(
                     }
                     if (installState != null) {
                         InstallationLogCard(
-                            title = "Installation Logs",
+                            title = strings.installationLogs,
                             logs = installState.logs
                         )
                     }
@@ -688,10 +689,16 @@ private fun PluginDetailsTabs(
                     divider = { }
                 ) {
                     tabs.forEachIndexed { index, title ->
+                        val label = when (title) {
+                            "Details" -> strings.tabDetails
+                            "Changelog" -> strings.tabChangelog
+                            "Logs" -> strings.tabLogs
+                            else -> title
+                        }
                         Tab(
                             selected = selectedTab == index,
                             onClick = { onTabSelected(index) },
-                            text = { Text(title, fontWeight = FontWeight.Bold) }
+                            text = { Text(label, fontWeight = FontWeight.Bold) }
                         )
                     }
                 }
@@ -840,7 +847,7 @@ private fun PluginHeroCard(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    text = "by $author",
+                                    text = strings.byAuthor(author),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -848,7 +855,7 @@ private fun PluginHeroCard(
                                 )
                                 if (!github.isNullOrBlank()) {
                                     Text(
-                                        text = " @${githubHandle(github)}",
+                                        text = " ${strings.githubHandle(github)}",
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.primary,
@@ -858,7 +865,7 @@ private fun PluginHeroCard(
                                 }
                                 Icon(
                                     imageVector = Icons.Rounded.ChevronRight,
-                                    contentDescription = "View author details",
+                                    contentDescription = strings.viewAuthorDetails,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                                     modifier = Modifier.size(16.dp),
                                 )
@@ -889,7 +896,7 @@ private fun PluginHeroCard(
 
                     val minAppVersion = descriptor?.minAppVersion
                     if (!minAppVersion.isNullOrBlank()) {
-                        HeroChip(text = "Requires v$minAppVersion")
+                        HeroChip(text = strings.requiresVersion(minAppVersion))
                     }
 
                     val license = descriptor?.license
@@ -900,7 +907,7 @@ private fun PluginHeroCard(
                     val permissionCount = descriptor?.permissions?.size ?: 0
                     if (permissionCount > 0) {
                         HeroChip(
-                            text = if (permissionCount == 1) "1 permission" else "$permissionCount permissions",
+                            text = if (permissionCount == 1) strings.onePermission else strings.nPermissions(permissionCount),
                         )
                     }
                 }
@@ -1022,7 +1029,7 @@ private fun PluginAboutSheet(
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
-                        contentDescription = "Close",
+                        contentDescription = strings.close,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .padding(10.dp)
@@ -1049,7 +1056,7 @@ private fun PluginAboutSheet(
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Author",
+                                text = strings.author,
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1122,13 +1129,13 @@ private fun PluginAboutSheet(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 PluginStatTile(
-                    label = "Version",
+                    label = strings.version,
                     value = "v${payload.version}",
                     modifier = Modifier.weight(1f),
                 )
                 if (payload.downloadCount > 0) {
                     PluginStatTile(
-                        label = "Downloads",
+                        label = strings.downloads,
                         value = "${payload.downloadCount}",
                         modifier = Modifier.weight(1f),
                     )
@@ -1142,7 +1149,7 @@ private fun PluginAboutSheet(
                 ) {
                     if (!minAppVersion.isNullOrBlank()) {
                         PluginStatTile(
-                            label = "Requires App",
+                            label = strings.requiresApp,
                             value = "v$minAppVersion",
                             modifier = Modifier.weight(1f),
                         )
@@ -1151,7 +1158,7 @@ private fun PluginAboutSheet(
                     }
                     if (!license.isNullOrBlank()) {
                         PluginStatTile(
-                            label = "License",
+                            label = strings.license,
                             value = license,
                             modifier = Modifier.weight(1f),
                         )
@@ -1163,16 +1170,16 @@ private fun PluginAboutSheet(
 
             if (links != null) {
                 val linkItems = buildList {
-                    links.source?.let { add(SheetLinkItem("Source", it, Icons.Rounded.Code)) }
-                    links.issues?.let { add(SheetLinkItem("Issues", it, Icons.Rounded.BugReport)) }
-                    links.website?.let { add(SheetLinkItem("Website", it, Icons.Rounded.Public)) }
-                    links.donate?.let { add(SheetLinkItem("Donate", it, Icons.Rounded.Favorite)) }
+                    links.source?.let { add(SheetLinkItem(strings.linkSource, it, Icons.Rounded.Code)) }
+                    links.issues?.let { add(SheetLinkItem(strings.linkIssues, it, Icons.Rounded.BugReport)) }
+                    links.website?.let { add(SheetLinkItem(strings.linkWebsite, it, Icons.Rounded.Public)) }
+                    links.donate?.let { add(SheetLinkItem(strings.linkDonate, it, Icons.Rounded.Favorite)) }
                 }
 
                 if (linkItems.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            text = "Links",
+                            text = strings.links,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -1204,7 +1211,7 @@ private fun PluginAboutSheet(
             if (permissions.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Permissions",
+                        text = strings.permissions,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -1275,7 +1282,7 @@ private fun AuthorAvatar(
                     .data(avatarUrl)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Author avatar",
+                contentDescription = strings.authorAvatar,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()

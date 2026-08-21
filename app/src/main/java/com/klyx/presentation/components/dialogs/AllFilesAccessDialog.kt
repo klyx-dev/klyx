@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.klyx.app.icons.FolderOpen
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -71,7 +72,7 @@ fun AllFilesAccessDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Storage Access",
+                    text = strings.storageAccess,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -81,7 +82,7 @@ fun AllFilesAccessDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("Klyx requires ")
+                        append(strings.allFilesAccessIntro)
 
                         withStyle(
                             SpanStyle(
@@ -89,13 +90,13 @@ fun AllFilesAccessDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
-                            append("All Files Access")
+                            append(strings.allFilesAccess)
                         }
 
-                        append(" to manage your workspaces, read code files, and save your projects across your device.\n\n")
+                        append(strings.allFilesAccessOutro)
 
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("Please grant this permission in settings.")
+                            append(strings.grantPermissionInSettings)
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -119,7 +120,7 @@ fun AllFilesAccessDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Exit", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.exit, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -132,7 +133,7 @@ fun AllFilesAccessDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("Grant", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.grant, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }
@@ -176,7 +177,7 @@ fun LegacyStorageAccessDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Storage Access",
+                    text = strings.storageAccess,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -186,10 +187,10 @@ fun LegacyStorageAccessDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("Klyx requires access to your device storage to manage your workspaces, read code files, and save your projects.\n\n")
+                        append(strings.legacyStorageDesc)
 
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("Please allow read and write permissions on the next prompt.")
+                            append(strings.allowPermissionsPrompt)
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -213,7 +214,7 @@ fun LegacyStorageAccessDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Exit", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.exit, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -226,7 +227,7 @@ fun LegacyStorageAccessDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("Continue", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.continueAction, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

@@ -1,0 +1,120 @@
+{
+  "defaultLanguageTag": "en",
+  "params": {
+    "invalidPath": {
+      "path": "String"
+    },
+    "exportFailed": {
+      "message": "String?"
+    },
+    "installationFailed": {
+      "message": "String?"
+    },
+    "updateFailed": {
+      "message": "String?"
+    },
+    "screenNotRegistered": {
+      "id": "String"
+    },
+    "somethingWentWrong": {
+      "name": "String?"
+    },
+    "pluginCrashed": {
+      "id": "String"
+    },
+    "installFromAssetsDesc": {
+      "assetName": "String"
+    },
+    "couldNotOpenFile": {
+      "message": "String?"
+    },
+    "couldNotShareFile": {
+      "message": "String?"
+    },
+    "filesAndFolders": {
+      "files": "Int",
+      "folders": "Int"
+    },
+    "moreCount": {
+      "count": "Int"
+    },
+    "deleteTypeQuestion": {
+      "type": "String"
+    },
+    "foundFiles": {
+      "count": "Int"
+    },
+    "closeTabDescription": {
+      "tab": "String"
+    },
+    "versionInfo": {
+      "version": "String"
+    },
+    "contributions": {
+      "count": "Int"
+    },
+    "avatarOf": {
+      "name": "String"
+    },
+    "iconOf": {
+      "name": "String"
+    },
+    "byAuthor": {
+      "author": "String"
+    },
+    "githubHandle": {
+      "handle": "String"
+    },
+    "requiresVersion": {
+      "version": "String"
+    },
+    "versionByAuthor": {
+      "version": "String",
+      "author": "String"
+    },
+    "installingPlugin": {
+      "name": "String"
+    },
+    "versionTransition": {
+      "from": "String",
+      "to": "String"
+    },
+    "corruptedVersionDesc": {
+      "version": "String"
+    },
+    "sessionsRunning": {
+      "count": "Int"
+    },
+    "nSpaces": {
+      "count": "Int"
+    },
+    "nPermissions": {
+      "count": "Int"
+    },
+    "sessionNumber": {
+      "index": "Int"
+    },
+    "pidLabel": {
+      "pid": "Int"
+    },
+    "statusExited": {
+      "status": "String"
+    },
+    "filesProgress": {
+      "done": "Int",
+      "total": "Int"
+    },
+    "corruptedReinstallDesc": {
+      "version": "String"
+    },
+    "dontStoreInPrefix": {
+      "path": "String"
+    },
+    "storeWorkInHome": {
+      "home": "String"
+    },
+    "updateBootstrapDesc": {
+      "path": "String"
+    }
+  }
+}

@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.klyx.app.icons.NotificationsActive
+import com.klyx.i18n.strings
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -71,7 +72,7 @@ fun NotificationPermissionDialog(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Text(
-                    text = "Enable Notifications",
+                    text = strings.enableNotifications,
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.Center
@@ -81,7 +82,7 @@ fun NotificationPermissionDialog(
 
                 Text(
                     text = buildAnnotatedString {
-                        append("Klyx runs terminal sessions as a ")
+                        append(strings.notifRunsAsIntro)
 
                         withStyle(
                             SpanStyle(
@@ -89,13 +90,13 @@ fun NotificationPermissionDialog(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
-                            append("foreground service")
+                            append(strings.foregroundService)
                         }
 
-                        append(". A persistent notification keeps your running shells alive and lets the system avoid killing them in the background.\n\n")
+                        append(strings.notifOutro)
 
                         withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append("Please allow notifications on the next prompt.")
+                            append(strings.allowNotificationsPrompt)
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -119,7 +120,7 @@ fun NotificationPermissionDialog(
                             contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
-                        Text("Not now", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.notNow, style = MaterialTheme.typography.titleMedium)
                     }
 
                     Button(
@@ -132,7 +133,7 @@ fun NotificationPermissionDialog(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("Allow", style = MaterialTheme.typography.titleMedium)
+                        Text(strings.allow, style = MaterialTheme.typography.titleMedium)
                     }
                 }
             }

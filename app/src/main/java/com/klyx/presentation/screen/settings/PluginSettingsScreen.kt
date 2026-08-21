@@ -27,6 +27,7 @@ import com.klyx.api.InternalKlyxApi
 import com.klyx.api.plugin.PluginSettingsRegistry
 import com.klyx.core.unsafe.GlobalApp
 import com.klyx.core.unsafe.UnsafeGlobalAccess
+import com.klyx.i18n.strings
 import com.klyx.plugin.PluginManager
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.navigation.PluginSettingsPayload
@@ -75,7 +76,7 @@ fun PluginSettingsScreen(payload: PluginSettingsPayload) {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -98,7 +99,7 @@ fun PluginSettingsScreen(payload: PluginSettingsPayload) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "This plugin doesn't expose any settings.",
+                    text = strings.pluginNoSettings,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center

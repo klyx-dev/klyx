@@ -70,6 +70,7 @@ import com.klyx.api.util.openUrl
 import com.klyx.app.icons.Android
 import com.klyx.app.icons.Palette
 import com.klyx.app.icons.Public
+import com.klyx.i18n.strings
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.presentation.components.SmartImage
@@ -110,13 +111,14 @@ fun AboutScreen() {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     val context = LocalContext.current
+    val s = strings
     val versionName by remember {
         derivedStateOf {
             try {
                 val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-                packageInfo.versionName ?: "N/A"
+                packageInfo.versionName ?: s.notAvailable
             } catch (_: Exception) {
-                "N/A"
+                s.notAvailable
             }
         }
     }
@@ -129,7 +131,7 @@ fun AboutScreen() {
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("About") },
+                title = { Text(strings.about) },
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     FilledIconButton(
@@ -142,7 +144,7 @@ fun AboutScreen() {
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = strings.back
                         )
                     }
                 }
@@ -171,8 +173,8 @@ fun AboutScreen() {
 
             item {
                 AboutSectionHeader(
-                    title = "Maintainer",
-                    subtitle = "The person behind Klyx.",
+                    title = strings.maintainer,
+                    subtitle = strings.maintainerDesc,
                     modifier = Modifier.padding(top = 24.dp),
                 )
             }
@@ -255,7 +257,7 @@ private fun AboutHeroCard(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = "Open source code editor.",
+                            text = strings.openSourceEditor,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 2,
@@ -280,7 +282,7 @@ private fun AboutHeroCard(
                         },
                 ) {
                     Text(
-                        text = "Version v$versionName",
+                        text = strings.versionInfo(versionName),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onTertiaryContainer,
@@ -300,8 +302,8 @@ private fun AboutHeroCard(
 @Composable
 private fun CommunitySignalsRow() {
     val labels = persistentListOf(
-        "Open source" to Icons.Rounded.Public,
-        "Material 3 Expressive" to Icons.Rounded.Palette,
+        strings.openSource to Icons.Rounded.Public,
+        strings.material3Expressive to Icons.Rounded.Palette,
     )
 
     FlowRow(
@@ -418,7 +420,10 @@ private fun ContributorCard(
                 )
 
                 Text(
-                    text = contributor.role,
+                    text = when (contributor.role) {
+                        "Creator and maintainer" -> strings.creatorAndMaintainer
+                        else -> contributor.role
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -428,7 +433,10 @@ private fun ContributorCard(
 
                 contributor.detail?.takeIf { it.isNotBlank() }?.let { detail ->
                     Text(
-                        text = detail,
+                        text = when (detail) {
+                            "I love low-level programming." -> strings.loveLowLevel
+                            else -> detail
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
@@ -446,7 +454,7 @@ private fun ContributorCard(
                         ContributorLabel(text = badge)
                     }
                     if (showContributionCount && contributor.contributions != null) {
-                        ContributorLabel(text = "${contributor.contributions} contrib.")
+                        ContributorLabel(text = strings.contributions(contributor.contributions))
                     }
                 }
             }
@@ -457,12 +465,12 @@ private fun ContributorCard(
             ) {
                 SocialIconButton(
                     painterRes = R.drawable.github,
-                    contentDescription = "Open GitHub profile",
+                    contentDescription = strings.openGithubProfile,
                     url = contributor.githubUrl,
                 )
                 SocialIconButton(
                     painterRes = R.drawable.telegram,
-                    contentDescription = "Open Telegram",
+                    contentDescription = strings.openTelegram,
                     url = contributor.telegramUrl,
                 )
             }
@@ -511,7 +519,7 @@ private fun ContributorAvatar(
             cachedBitmap != null -> {
                 Image(
                     bitmap = cachedBitmap!!,
-                    contentDescription = "Avatar of $name",
+                    contentDescription = strings.avatarOf(name),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop,
                 )
@@ -523,7 +531,7 @@ private fun ContributorAvatar(
                         .data(avatarUrl)
                         .crossfade(true)
                         .build(),
-                    contentDescription = "Avatar of $name",
+                    contentDescription = strings.avatarOf(name),
                     modifier = Modifier.fillMaxSize(),
                     shape = CircleShape,
                     contentScale = ContentScale.Crop,
@@ -549,7 +557,7 @@ private fun ContributorAvatar(
                         onPainter = {
                             Icon(
                                 painter = it,
-                                contentDescription = "Icon of $name",
+                                contentDescription = strings.iconOf(name),
                                 tint = iconTint,
                                 modifier = Modifier.size(28.dp),
                             )
@@ -557,7 +565,7 @@ private fun ContributorAvatar(
                         onVector = {
                             Icon(
                                 imageVector = it,
-                                contentDescription = "Icon of $name",
+                                contentDescription = strings.iconOf(name),
                                 tint = iconTint,
                                 modifier = Modifier.size(28.dp),
                             )

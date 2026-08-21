@@ -6,8 +6,15 @@ import com.klyx.api.ui.theme.GoogleSansTypography
 
 @Composable
 fun ProvideGoogleSansTypography(content: @Composable () -> Unit) {
+    // Google Sans Rounded has no Devanagari glyphs; render those locales in Laila.
+    val typography = if (isDevanagariLocale()) {
+        GoogleSansTypography.withLailaFont()
+    } else {
+        GoogleSansTypography
+    }
+
     MaterialTheme(
-        typography = GoogleSansTypography,
+        typography = typography,
         content = content
     )
 }

@@ -82,7 +82,7 @@ import com.klyx.R
 import com.klyx.api.data.file.FileStatInfo
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileSystem
-import com.klyx.api.ui.theme.GoogleSansRounded
+import com.klyx.ui.theme.uiFontFamily
 import com.klyx.api.util.asLocalDateTime
 import com.klyx.api.util.formatDateTime
 import com.klyx.api.util.humanBytes
@@ -226,7 +226,7 @@ private fun FileActionSheetHeader(file: KxFile, cornerShape: Shape) {
 
                 Image(
                     painter = icon.painter,
-                    contentDescription = "File Icon",
+                    contentDescription = strings.fileIcon,
                     colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onSurfaceVariant),
                     modifier = Modifier.size(32.dp),
                     contentScale = ContentScale.Fit
@@ -330,7 +330,7 @@ private fun BoxScope.FileActionSheetTabBar(pagerState: PagerState, scope: Corout
                 Spacer(Modifier.width(4.dp))
                 Text(
                     strings.options,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold,
                 )
             }
@@ -355,7 +355,7 @@ private fun BoxScope.FileActionSheetTabBar(pagerState: PagerState, scope: Corout
                 Spacer(Modifier.width(4.dp))
                 Text(
                     strings.info,
-                    fontFamily = GoogleSansRounded,
+                    fontFamily = uiFontFamily(),
                     fontWeight = FontWeight.Bold
                 )
             }
