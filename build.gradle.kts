@@ -34,7 +34,7 @@ tasks.register("prepareTreeSitter") {
 }
 
 allprojects {
-    group = "io.github.klyx-dev"
+    group = "io.github.seijiidev"
     version = property("project.version") as String
 }
 
@@ -42,7 +42,7 @@ subprojects {
     pluginManager.withPlugin("com.vanniktech.maven.publish.base") {
         configure<MavenPublishBaseExtension> {
             coordinates(
-                groupId = "io.github.klyx-dev",
+                groupId = "io.github.seijiidev",
                 artifactId = project.path.removePrefix(":").replace(":", "-"),
                 version = property("project.version") as String
             )
@@ -104,8 +104,8 @@ subprojects {
         extensions.configure<GrammarExtension> {
             baseDir = projectDir
             grammarName = langName
-            className = "TreeSitter$capitalizedName"
-            packageName = "com.klyx.languages.$langName"
+            className = "TreeSitter${'$'}{capitalizedName}"
+            packageName = "com.knox.languages.${'$'}{langName}"
         }
 
         val generateTask = tasks.named<GrammarFilesTask>("generateGrammarFiles")
@@ -120,7 +120,7 @@ subprojects {
                         val dir = genSrcDir.resolve(folderName)
                         if (dir.exists()) {
                             dir.deleteRecursively()
-                            println("[${project.name}] Deleted unnecessary KMP folder: $folderName")
+                            println("[${'$'}{project.name}] Deleted unnecessary KMP folder: $folderName")
                         }
                     }
 
@@ -131,11 +131,11 @@ subprojects {
 
                         if (originalContent != cleanedContent) {
                             file.writeText(cleanedContent)
-                            println("[${project.name}] Cleaned KMP keywords in -> ${file.name}")
+                            println("[${'$'}{project.name}] Cleaned KMP keywords in -> ${'$'}{file.name}")
                         }
                     }
                 } else {
-                    println("[${project.name}] Kotlin target directory not found, skipping KMP cleanup.")
+                    println("[${'$'}{project.name}] Kotlin target directory not found, skipping KMP cleanup.")
                 }
 
                 val bindingFile = genSrcDir.resolve("jni/binding.c")
@@ -143,27 +143,27 @@ subprojects {
 
                 if (bindingFile.exists()) {
                     var content = bindingFile.readText()
-                    val includeTarget = "#include <tree-sitter-${langName}.h>"
+                    val includeTarget = "#include <tree-sitter-${'$'}{langName}.h>"
 
                     val hasTreeSitterSubdir =
-                        projectDir.resolve("bindings/c/tree_sitter/tree-sitter-${langName}.h").exists() ||
-                                projectDir.resolve("src/tree_sitter/tree-sitter-${langName}.h").exists() ||
-                                projectDir.parentFile.resolve("bindings/c/tree_sitter/tree-sitter-${langName}.h")
+                        projectDir.resolve("bindings/c/tree_sitter/tree-sitter-${'$'}{langName}.h").exists() ||
+                                projectDir.resolve("src/tree_sitter/tree-sitter-${'$'}{langName}.h").exists() ||
+                                projectDir.parentFile.resolve("bindings/c/tree_sitter/tree-sitter-${'$'}{langName}.h")
                                     .exists()
 
                     val hasAnyHeader = hasTreeSitterSubdir ||
-                            projectDir.resolve("bindings/c/tree-sitter-${langName}.h").exists() ||
-                            projectDir.resolve("src/tree-sitter-${langName}.h").exists()
+                            projectDir.resolve("bindings/c/tree-sitter-${'$'}{langName}.h").exists() ||
+                            projectDir.resolve("src/tree-sitter-${'$'}{langName}.h").exists()
 
                     if (hasTreeSitterSubdir && content.contains(includeTarget)) {
-                        content = content.replace(includeTarget, "#include <tree_sitter/tree-sitter-${langName}.h>")
+                        content = content.replace(includeTarget, "#include <tree_sitter/tree-sitter-${'$'}{langName}.h>")
                     } else if (!hasAnyHeader && content.contains(includeTarget)) {
                         // grammar doesn't provide a header! remove the include and declare it manually.
                         val externDecl = """
                         #ifdef __cplusplus
                         extern "C" {
                         #endif
-                        void *tree_sitter_$langName();
+                        void *tree_sitter_${'$'}{langName}();
                         #ifdef __cplusplus
                         }
                         #endif
@@ -182,23 +182,23 @@ subprojects {
                     if (scannerC.exists() && !cmakeContent.contains("src/scanner.c")) {
                         cmakeContent = cmakeContent.replace(
                             "src/parser.c)",
-                            $$"src/parser.c\n        ${CMAKE_CURRENT_SOURCE_DIR}/../../src/scanner.c)"
+                            $$"src/parser.c\n        ${'$'}{CMAKE_CURRENT_SOURCE_DIR}/../../src/scanner.c)"
                         )
                     } else if (scannerCc.exists() && !cmakeContent.contains("src/scanner.cc")) {
                         cmakeContent = cmakeContent.replace(
                             "src/parser.c)",
-                            $$"src/parser.c\n        ${CMAKE_CURRENT_SOURCE_DIR}/../../src/scanner.cc)"
+                            $$"src/parser.c\n        ${'$'}{CMAKE_CURRENT_SOURCE_DIR}/../../src/scanner.cc)"
                         )
                     }
 
-                    val includePaths = mutableListOf($$"${CMAKE_CURRENT_SOURCE_DIR}/../../src")
+                    val includePaths = mutableListOf($$"${'$'}{CMAKE_CURRENT_SOURCE_DIR}/../../src")
                     if (projectDir.parentFile.resolve("bindings/c").exists()) {
-                        includePaths.add($$"${CMAKE_CURRENT_SOURCE_DIR}/../../../bindings/c")
+                        includePaths.add($$"${'$'}{CMAKE_CURRENT_SOURCE_DIR}/../../../bindings/c")
                     }
 
                     // ensure src/ is in the include directories so <tree_sitter/parser.h> resolves
                     val includeDirString =
-                        $$"target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../src)"
+                        $$"target_include_directories(${'$'}{CMAKE_PROJECT_NAME} PRIVATE ${'$'}{CMAKE_CURRENT_SOURCE_DIR}/../../src)"
                     if (!cmakeContent.contains(includeDirString)) {
                         cmakeContent += "\n\n$includeDirString"
                     }
@@ -209,7 +209,7 @@ subprojects {
         }
 
         configure<LibraryExtension> {
-            namespace = "com.klyx.languages.$langName"
+            namespace = "com.knox.languages.${'$'}{langName}"
             ndkVersion = property("ndk.version") as String
 
             compileSdk {

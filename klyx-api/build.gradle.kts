@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.klyx.api"
+    namespace = "com.knox.api"
 
     compileSdk {
         version = release(37)
@@ -28,7 +28,7 @@ android {
     }
 
     defaultConfig {
-        buildConfigField("String", "VERSION_NAME", "\"$${project.property("project.version")}\"")
+        buildConfigField("String", "VERSION_NAME", "\"$${'$'}{project.property("project.version")}\"")
     }
 }
 

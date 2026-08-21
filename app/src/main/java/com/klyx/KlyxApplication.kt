@@ -1,61 +1,61 @@
-package com.klyx
+package com.knox
 
 import android.app.Application
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
-import com.klyx.api.InternalKlyxApi
-import com.klyx.api.NavDestination
-import com.klyx.api.Navigator
-import com.klyx.api.data.editor.FileOpenRequest
-import com.klyx.api.data.editor.FileOpener
-import com.klyx.api.data.editor.FileOpenerRegistration
-import com.klyx.api.data.editor.FileOpenerRegistry
-import com.klyx.api.data.editor.WorkspaceTab
-import com.klyx.api.data.fs.FileSystem
-import com.klyx.api.data.fs.Paths
-import com.klyx.api.data.fs.pluginsDir
-import com.klyx.api.data.runner.FileRunner
-import com.klyx.api.data.runner.FileRunRequest
-import com.klyx.api.data.runner.FileRunnerRegistration
-import com.klyx.api.data.runner.FileRunnerRegistry
-import com.klyx.api.data.terminal.TerminalManager
-import com.klyx.api.data.terminal.TerminalSessionBinder
-import com.klyx.api.data.terminal.TerminalSessionManager
-import com.klyx.api.event.EventBusHolder
-import com.klyx.api.language.LanguageRegistry
-import com.klyx.api.lsp.LanguageServerRegistry
-import com.klyx.api.plugin.KlyxPlugin
-import com.klyx.api.plugin.PluginInfo
-import com.klyx.api.plugin.PluginSettings
-import com.klyx.api.plugin.PluginSettingsRegistration
-import com.klyx.api.plugin.PluginSettingsRegistry
-import com.klyx.api.plugin.info
-import com.klyx.api.service.Logger
-import com.klyx.api.ui.Content
-import com.klyx.api.ui.Screen
-import com.klyx.api.ui.ScreenId
-import com.klyx.api.ui.ScreenRegistration
-import com.klyx.api.ui.ScreenRegistry
-import com.klyx.api.ui.ToolbarAction
-import com.klyx.api.ui.ToolbarIcon
-import com.klyx.api.ui.ToolbarRegistration
-import com.klyx.api.ui.ToolbarRegistry
-import com.klyx.language.LanguageRegistryImpl
-import com.klyx.core.App
-import com.klyx.core.initApp
-import com.klyx.data.terminal.DefaultTerminalSessionManager
-import com.klyx.data.terminal.TerminalSessionBinderImpl
-import com.klyx.data.runner.PythonFileRunner
-import com.klyx.data.runner.TerminalCommandRunner
-import com.klyx.di.AppModule
-import com.klyx.event.eventBus
-import com.klyx.event.initializeGlobalEventBus
-import com.klyx.plugin.PluginManager
-import com.klyx.service.FontsWrapper
-import com.klyx.service.SettingsWrapper
-import com.klyx.service.TabsWrapper
+import com.knox.api.InternalKlyxApi
+import com.knox.api.NavDestination
+import com.knox.api.Navigator
+import com.knox.api.data.editor.FileOpenRequest
+import com.knox.api.data.editor.FileOpener
+import com.knox.api.data.editor.FileOpenerRegistration
+import com.knox.api.data.editor.FileOpenerRegistry
+import com.knox.api.data.editor.WorkspaceTab
+import com.knox.api.data.fs.FileSystem
+import com.knox.api.data.fs.Paths
+import com.knox.api.data.fs.pluginsDir
+import com.knox.api.data.runner.FileRunner
+import com.knox.api.data.runner.FileRunRequest
+import com.knox.api.data.runner.FileRunnerRegistration
+import com.knox.api.data.runner.FileRunnerRegistry
+import com.knox.api.data.terminal.TerminalManager
+import com.knox.api.data.terminal.TerminalSessionBinder
+import com.knox.api.data.terminal.TerminalSessionManager
+import com.knox.api.event.EventBusHolder
+import com.knox.api.language.LanguageRegistry
+import com.knox.api.lsp.LanguageServerRegistry
+import com.knox.api.plugin.KlyxPlugin
+import com.knox.api.plugin.PluginInfo
+import com.knox.api.plugin.PluginSettings
+import com.knox.api.plugin.PluginSettingsRegistration
+import com.knox.api.plugin.PluginSettingsRegistry
+import com.knox.api.plugin.info
+import com.knox.api.service.Logger
+import com.knox.api.ui.Content
+import com.knox.api.ui.Screen
+import com_knox.api.ui.ScreenId
+import com_knox.api.ui.ScreenRegistration
+import com_knox.api.ui.ScreenRegistry
+import com_knox.api.ui.ToolbarAction
+import com_knox.api.ui.ToolbarIcon
+import com_knox.api.ui.ToolbarRegistration
+import com_knox.api.ui.ToolbarRegistry
+import com.knox.language.LanguageRegistryImpl
+import com_knox.core.App
+import com_knox.core.initApp
+import com_knox.data.terminal.DefaultTerminalSessionManager
+import com_knox.data.terminal.TerminalSessionBinderImpl
+import com_knox.data.runner.PythonFileRunner
+import com_knox.data.runner.TerminalCommandRunner
+import com_knox.di.AppModule
+import com_knox.event.eventBus
+import com_knox.event.initializeGlobalEventBus
+import com_knox.plugin.PluginManager
+import com_knox.service.FontsWrapper
+import com_knox.service.SettingsWrapper
+import com_knox.service.TabsWrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -66,7 +66,7 @@ import org.koin.core.context.GlobalContext
 import org.koin.plugin.module.dsl.startKoin
 
 @KoinApplication(modules = [AppModule::class])
-class KlyxApplication : Application() {
+class KnoxApplication : Application() {
 
     lateinit var app: App
         private set
@@ -76,11 +76,11 @@ class KlyxApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         CrashHandler.install(this)
-        System.loadLibrary("klyx")
+        System.loadLibrary("knox")
 
-        startKoin<KlyxApplication> {
+        startKoin<KnoxApplication> {
             androidLogger()
-            androidContext(this@KlyxApplication)
+            androidContext(this@KnoxApplication)
         }
 
         app = initApp()
@@ -212,7 +212,7 @@ class KlyxApplication : Application() {
                     if (file.exists()) {
                         ToolbarIcon.File(file)
                     } else {
-                        Log.w("ToolbarRegistry", "Plugin '${info.id}' references missing icon '${icon.path}'.")
+                        Log.w("ToolbarRegistry", "Plugin '${'$'}{info.id}' references missing icon '${'$'}{icon.path}'.")
                         null
                     }
                 }

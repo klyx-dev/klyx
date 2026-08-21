@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "com.klyx"
+    namespace = "com.knox"
     ndkVersion = property("ndk.version") as String
 
     compileSdk {
@@ -18,7 +18,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.klyx"
+        applicationId = "com.knox"
         minSdk = 28
         targetSdk = 37
         versionCode = (property("project.versionCode") as String).toInt()
@@ -37,8 +37,8 @@ android {
             abiFilters += listOf("arm64-v8a", "x86_64")
         }
 
-        buildConfigField("String", "COMPOSE_VERSION", "\"${libs.versions.compose.bom.get()}\"")
-        buildConfigField("String", "TREESITTER_VERSION", "\"${libs.versions.ktreesitter.get()}\"")
+        buildConfigField("String", "COMPOSE_VERSION", "\"${'$'}{libs.versions.compose.bom.get()}\"")
+        buildConfigField("String", "TREESITTER_VERSION", "\"${'$'}{libs.versions.ktreesitter.get()}\"")
     }
 
     signingConfigs {
@@ -48,7 +48,7 @@ android {
             val propPath = if (isCI) {
                 "/tmp/sign.properties"
             } else {
-                "${System.getenv("HOME")}/klyx/key/sign.properties"
+                "${'$'}{System.getenv("HOME")}/knox/key/sign.properties"
             }
 
             val propFile = File(propPath)
@@ -60,7 +60,7 @@ android {
                 keyAlias = properties.getProperty("keyAlias")
                 keyPassword = properties.getProperty("keyPassword")
                 storeFile = if (isCI) {
-                    File("/tmp/klyx.keystore")
+                    File("/tmp/knox.keystore")
                 } else {
                     File(properties.getProperty("storeFile"))
                 }
@@ -89,7 +89,7 @@ android {
             applicationIdSuffix = ".debug"
             //signingConfig = releaseConfig
             versionNameSuffix = "-debug"
-            resValue("string", "app_name", "Klyx [D]")
+            resValue("string", "app_name", "Knox [D]")
         }
     }
 
@@ -212,7 +212,7 @@ dependencies {
     implementation(libs.bundles.markdown.renderer)
     implementation(libs.sshd.sftp)
 
-    implementation(projects.klyxApi)
+    implementation(projects.knoxApi)
     implementation(projects.core)
     implementation(projects.terminal)
     implementation(projects.editor)

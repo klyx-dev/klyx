@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name" translatable="false">Klyx</string>
+    <string name="app_name" translatable="false">Knox</string>
     <string name="open_project">Open Project</string>
     <string name="loading">Loading…</string>
     <string name="refresh">Refresh</string>
     <string name="open_folder_desc">Open a folder to load your workspace and start editing files.</string>
     <string name="ready_to_code">Ready to code?</string>
-    <string name="unsupported_file_msg">The file \"%1$s\" cannot be displayed in the editor because it is either binary or uses an unsupported text encoding.</string>
+    <string name="unsupported_file_msg">The file "%1$s" cannot be displayed in the editor because it is either binary or uses an unsupported text encoding.</string>
     <string name="unsupported_file">Unsupported File</string>
     <string name="add_folder">Add Folder</string>
     <string name="search_files">Search files</string>

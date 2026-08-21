@@ -1,4 +1,4 @@
-package com.klyx
+package com.knox
 
 import android.content.Context
 import android.content.Intent
