@@ -22,12 +22,12 @@ val LailaFontFamily = FontFamily(
 )
 
 /** Languages written in the Devanagari script. */
-val DevanagariLanguages = setOf("hi", "mr", "ne", "mai", "kok", "sa", "doi")
+val DevanagariLanguages = setOf("hi", "mr", "ne", "mai", "kok", "sa", "doi", "bho")
 
 /** Whether the effective app language (in-app override, else system locale) uses the Devanagari script. */
 @Composable
 fun isDevanagariLocale(): Boolean {
-    val languageTag = LocalAppSettings.current.appearance.language.languageTag
+    val languageTag = LocalAppSettings.current.appearance.effectiveLanguageTag
         ?: Locale.current.toLanguageTag()
     return languageTag.substringBefore('-') in DevanagariLanguages
 }

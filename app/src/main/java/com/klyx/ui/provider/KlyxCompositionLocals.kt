@@ -98,7 +98,7 @@ fun KlyxCompositionLocals(content: @Composable BoxScope.() -> Unit) {
         ImmersiveModeHandler(
             isImmersiveModeEnabled = settings.appearance.immersiveMode
         ) {
-            val languageTag = settings.appearance.language.languageTag
+            val languageTag = settings.appearance.effectiveLanguageTag
                 ?: Locale.current.toLanguageTag()
             ProvideStrings(rememberStrings(currentLanguageTag = languageTag)) {
                 KlyxThemeSurface {

@@ -34,6 +34,7 @@ import com.klyx.app.icons.Fullscreen
 import com.klyx.app.icons.Language
 import com.klyx.app.icons.LightMode
 import com.klyx.data.preferences.updateAppearanceSettings
+import com.klyx.i18n.Strings as AllTranslations
 import com.klyx.i18n.strings
 import com.klyx.presentation.navigation.LocalNavigator
 import com.klyx.presentation.screen.settings.components.SelectorItem
@@ -42,6 +43,7 @@ import com.klyx.presentation.screen.settings.components.SwitchSettingItem
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -135,12 +137,14 @@ private fun ApplicationThemeSection(
         SelectorItem(
             label = strings.language,
             description = strings.languageDesc,
-            options = AppLanguage.entries.toImmutableList(),
-            selected = settings.language,
-            optionLabel = AppLanguage::displayName,
+            options = languageChoices().toImmutableList(),
+            selected = LanguageChoice(settings.effectiveLanguageTag),
+            optionLabel = { choice ->
+                choice.tag?.let(::nativeLanguageName) ?: s.themeFollowSystem
+            },
             onSelectionChanged = {
                 scope.launch {
-                    updateAppearanceSettings { copy(language = it) }
+                    updateAppearanceSettings { copy(languageTag = it.tag, language = AppLanguage.System) }
                 }
             },
             leadingIcon = {
@@ -218,5 +222,19 @@ private fun WindowMotionSection(
             },
             leadingIcon = { Icon(Icons.Rounded.Animation, null) }
         )
+    }
+}
+
+/** A selectable entry in the language picker; [tag] is `null` for "follow the system language". */
+private data class LanguageChoice(val tag: String?)
+
+private fun languageChoices(): List<LanguageChoice> =
+    (listOf(LanguageChoice(null)) + AllTranslations.keys.map(::LanguageChoice))
+        .sortedWith(compareBy({ it.tag != null }, { it.tag?.let(::nativeLanguageName) ?: "" }))
+
+private fun nativeLanguageName(tag: String): String {
+    val locale = Locale.forLanguageTag(tag)
+    return locale.getDisplayLanguage(locale).replaceFirstChar {
+        if (it.isLowerCase()) it.uppercase(locale) else it.toString()
     }
 }

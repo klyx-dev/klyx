@@ -29,3 +29,6 @@ Every language lives in a single plain-text JSON file in this folder:
 3. Send the file back (a pull request, an issue attachment, or however the
    project accepts contributions).
 
+That's it. the language appears in the app's settings picker automatically
+when the file is bundled, with its name shown in your own language.
+

@@ -91,7 +91,11 @@ enum class AppTheme(val displayName: String) {
 }
 
 /**
- * Defines the application's display language.
+ * Legacy representation of the application's display language.
+ *
+ * Superseded by [AppearanceSettings.languageTag], which supports any bundled
+ * translation without code changes. Kept only so settings saved by older app
+ * versions still decode; new code should use [AppearanceSettings.effectiveLanguageTag].
  *
  * @property displayName Human-readable name shown in settings.
  * @property languageTag The BCP 47 language tag used to select translations, or `null` to follow the system language.
@@ -112,7 +116,11 @@ enum class AppLanguage(val displayName: String, val languageTag: String?) {
  * Visual and theme-related settings for the application.
  *
  * @property theme The selected application theme.
- * @property language The selected application language.
+ * @property languageTag BCP 47 tag of the selected display language, or `null` to follow the system language.
+ * Any language bundled in the i18n translations is valid here; the legacy [language] enum is only
+ * kept so previously saved settings still decode.
+ * @property language Legacy language field, superseded by [languageTag]. Still read as a fallback
+ * when [languageTag] is not set (e.g. settings saved by an older app version).
  * @property amoledDarkMode Whether to use pure black backgrounds in dark mode for OLED screens.
  * @property immersiveMode Whether to hide system bars to maximize application space.
  * @property reduceMotion Whether to disable UI animations for faster transitions.
@@ -121,12 +129,20 @@ enum class AppLanguage(val displayName: String, val languageTag: String?) {
 @Serializable
 data class AppearanceSettings(
     val theme: AppTheme = AppTheme.System,
+    val languageTag: String? = null,
     val language: AppLanguage = AppLanguage.System,
     val amoledDarkMode: Boolean = false,
     val immersiveMode: Boolean = false,
     val reduceMotion: Boolean = false,
     val showTerminalInTopbar: Boolean = true
-)
+) {
+    /**
+     * The selected language tag, or `null` to follow the system language.
+     * Falls back to the legacy enum-based setting for older saved settings.
+     */
+    val effectiveLanguageTag: String?
+        get() = languageTag ?: language.languageTag
+}
 
 /**
  * Core settings for the code editor component.
