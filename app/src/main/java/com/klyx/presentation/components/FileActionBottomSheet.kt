@@ -91,6 +91,7 @@ import com.klyx.app.icons.ContentCut
 import com.klyx.app.icons.ContentPaste
 import com.klyx.app.icons.ContentPasteGo
 import com.klyx.app.icons.CopyAll
+import com.klyx.app.icons.Link
 import com.klyx.app.icons.CreateNewFolder
 import com.klyx.app.icons.DeleteForever
 import com.klyx.app.icons.EditCalendar
@@ -207,6 +208,7 @@ fun FileActionBottomSheet(
 
 @Composable
 private fun FileActionSheetHeader(file: KxFile, cornerShape: Shape) {
+    val fileSystem: FileSystem = koinInject()
     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
         Row(
             modifier = Modifier
@@ -468,6 +470,7 @@ private fun InfoItems(
                 icon = rememberVectorPainter(Icons.Rounded.Link),
                 iconDescription = null,
                 shape = infoSegmentItemShape,
+                onClick = { copyText(target) }
             )
         }
     }

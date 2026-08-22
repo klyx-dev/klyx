@@ -65,10 +65,14 @@ data class TerminalSettings(
  * Settings for the file tree explorer.
  *
  * @property showHiddenFiles Whether to display hidden files (starting with a dot) in the tree.
+ * @property useTrash Whether deletions from the file tree move items to Trash instead of erasing them.
+ * @property trashRetentionDays Days a trashed item is kept before automatic purge.
  */
 @Serializable
 data class FileTreeSettings(
-    val showHiddenFiles: Boolean = false
+    val showHiddenFiles: Boolean = false,
+    val useTrash: Boolean = true,
+    val trashRetentionDays: Int = 30
 )
 
 /**

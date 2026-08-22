@@ -2584,3 +2584,35 @@ val Icons.Rounded.WarningAmber: ImageVector
             close()
         }
     }
+
+val Icons.Rounded.RestoreFromTrash: ImageVector
+    get() = materialIcon(name = "Rounded.RestoreFromTrash") {
+        materialPath {
+            moveTo(15.5f, 4.0f)
+            lineToRelative(-1.0f, -1.0f)
+            horizontalLineToRelative(-5.0f)
+            lineToRelative(-1.0f, 1.0f)
+            lineTo(5.0f, 4.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineToRelative(14.0f)
+            verticalLineToRelative(-2.0f)
+            close()
+            moveTo(6.0f, 19.0f)
+            curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
+            horizontalLineToRelative(8.0f)
+            curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
+            lineTo(18.0f, 7.0f)
+            lineTo(6.0f, 7.0f)
+            verticalLineToRelative(12.0f)
+            close()
+            moveTo(8.0f, 13.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(3.0f)
+            horizontalLineToRelative(2.0f)
+            verticalLineToRelative(-3.0f)
+            horizontalLineToRelative(2.0f)
+            lineToRelative(-3.0f, -3.0f)
+            lineToRelative(-3.0f, 3.0f)
+            close()
+        }
+    }

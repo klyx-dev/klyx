@@ -49,6 +49,8 @@ import com.klyx.data.terminal.DefaultTerminalSessionManager
 import com.klyx.data.terminal.TerminalSessionBinderImpl
 import com.klyx.data.runner.PythonFileRunner
 import com.klyx.data.runner.TerminalCommandRunner
+import com.klyx.data.preferences.SettingsDataStore
+import com.klyx.data.repository.TrashRepository
 import com.klyx.di.AppModule
 import com.klyx.event.eventBus
 import com.klyx.event.initializeGlobalEventBus
@@ -59,6 +61,8 @@ import com.klyx.service.TabsWrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.annotation.KoinApplication
@@ -85,6 +89,16 @@ class KlyxApplication : Application() {
 
         app = initApp()
         initializeGlobals()
+        scheduleTrashPurge()
+    }
+
+    private fun scheduleTrashPurge() {
+        applicationScope.launch(Dispatchers.IO) {
+            runCatching {
+                val retention = auto<SettingsDataStore>().data.first().fileTree.trashRetentionDays
+                auto<TrashRepository>().purgeExpired(retention)
+            }.onFailure { Log.w("Trash", "Startup purge failed", it) }
+        }
     }
 
     @OptIn(InternalKlyxApi::class)

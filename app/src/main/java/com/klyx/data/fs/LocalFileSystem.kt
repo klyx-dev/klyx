@@ -1,5 +1,6 @@
 package com.klyx.data.fs
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import android.os.Environment
 import android.system.ErrnoException
@@ -15,12 +16,18 @@ import com.klyx.api.data.file.wrap
 import com.klyx.api.data.fs.FileCapabilities
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.fs.PathGuard
+import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.fs.ProtectedPathException
 import com.klyx.api.data.fs.SizeProgress
 import com.klyx.api.system.Stdio
 import com.klyx.api.system.command
 import com.klyx.api.system.firstAvailable
 import com.klyx.api.system.streamLines
 import com.klyx.api.system.which
+import com.klyx.api.terminal.home
+import com.klyx.api.terminal.projects
+import com.klyx.api.terminal.rootFs
 import com.klyx.api.util.applicationContext
 import com.klyx.api.util.isTextFile
 import com.klyx.api.util.tryOrNull
@@ -48,6 +55,50 @@ import java.util.concurrent.atomic.AtomicInteger
 import com.klyx.native.Os as NativeOs
 
 class LocalFileSystem : FileSystem {
+
+    private val storageDir: File by lazy { Paths.home.resolve("storage") }
+
+    private val guard: PathGuard by lazy {
+        @SuppressLint("SdCardPath")
+        PathGuard.of(
+            PathGuard.Rule.Exact(Environment.getExternalStorageDirectory().absolutePath, "Internal storage root"),
+            PathGuard.Rule.Exact("/sdcard", "Internal storage root"),
+            PathGuard.Rule.Exact("/storage/self/primary", "Internal storage root"),
+            PathGuard.Rule.Prefix("/proc", "Kernel virtual filesystem"),
+            PathGuard.Rule.Prefix("/sys", "Kernel virtual filesystem"),
+            PathGuard.Rule.Prefix("/dev", "Device filesystem"),
+            PathGuard.Rule.Exact(applicationContext().dataDir.canonicalPath, "App private data"),
+            PathGuard.Rule.Exact(applicationContext().filesDir.canonicalPath, "App private files"),
+            PathGuard.Rule.Exact(Paths.home.canonicalPath, "Terminal Home"),
+            PathGuard.Rule.Exact(Paths.projects.canonicalPath, "Terminal projects directory"),
+            PathGuard.Rule.Exact(Paths.rootFs.canonicalPath, "Terminal rootfs"),
+            PathGuard.Rule.Exact(storageDir.canonicalPath, "Terminal storage directory")
+        )
+    }
+
+    /** Reason string when [file] must not be deleted or moved; null when allowed. */
+    private fun protectionViolation(file: File): String? {
+        val canonical = try {
+            file.canonicalPath
+        } catch (_: Exception) {
+            return null
+        }
+        guard.violation(canonical)?.let { return it }
+
+        // Any direct child of ~/storage that is itself a symlink (shared, downloads, ...)
+        // is protected regardless of what it points to.
+        val parent = file.parentFile?.canonicalPath ?: return null
+        if (parent == storageDir.canonicalPath && isSymbolicLinkFast(file)) {
+            return "Terminal storage symlink"
+        }
+        return null
+    }
+
+    private fun isSymbolicLinkFast(file: File): Boolean = try {
+        OsConstants.S_ISLNK(Os.lstat(file.absolutePath).st_mode)
+    } catch (_: Exception) {
+        false
+    }
 
     override suspend fun list(uri: Uri): List<KxFile> = withContext(Dispatchers.IO) {
         uri.toFile().listFiles()?.map { it.wrap() }.orEmpty()
@@ -223,11 +274,16 @@ class LocalFileSystem : FileSystem {
 
     override fun outputStream(uri: Uri, mode: String): OutputStream = uri.toFile().outputStream()
 
-    override suspend fun delete(uri: Uri) = withContext(Dispatchers.IO) {
-        uri.toFile().deleteRecursively()
+    override suspend fun delete(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        val file = uri.toFile()
+        protectionViolation(file)?.let { throw ProtectedPathException(it) }
+        SafeFileOps.delete(file.toPath())
+        true
     }
 
     override suspend fun rename(uri: Uri, newName: String): Uri? = withContext(Dispatchers.IO) {
+        if (protectionViolation(uri.toFile()) != null) return@withContext null
+
         val file = uri.toFile()
         val newFile = file.resolveSibling(newName)
         if (file.renameTo(newFile)) newFile.toUri() else null
@@ -280,6 +336,7 @@ class LocalFileSystem : FileSystem {
     override suspend fun move(source: Uri, sourceParent: Uri, targetParent: Uri): Uri? = withContext(Dispatchers.IO) {
         try {
             val srcFile = source.toFile()
+            if (protectionViolation(srcFile) != null) return@withContext null
             val target = targetParent.toFile().resolve(srcFile.name)
 
             if (target.exists()) return@withContext null
@@ -441,21 +498,8 @@ class LocalFileSystem : FileSystem {
         }
     }
 
-    @Suppress("SdCardPath")
     override suspend fun isProtectedPath(uri: Uri): Boolean = withContext(Dispatchers.IO) {
-        val path = try {
-            File(uri.path!!).canonicalPath
-        } catch (_: Exception) {
-            uri.path ?: return@withContext false
-        }
-        path == Environment.getExternalStorageDirectory().canonicalPath
-                || path == "/sdcard"
-                || path == "/storage/self/primary"
-                || path == applicationContext().dataDir.canonicalPath
-                || path == applicationContext().filesDir.canonicalPath
-                || path.startsWith("/proc")
-                || path.startsWith("/sys")
-                || path.startsWith("/dev")
+        protectionViolation(uri.toFile()) != null
     }
 
     override suspend fun resolveName(file: KxFile): String = withContext(Dispatchers.IO) {

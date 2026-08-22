@@ -115,6 +115,24 @@
     },
     "updateBootstrapDesc": {
       "path": "String"
+    },
+    "restoredItem": {
+      "name": "String"
+    },
+    "deletePermanentlyQuestion": {
+      "name": "String"
+    },
+    "emptyTrashDesc": {
+      "count": "Int"
+    },
+    "deletedAgo": {
+      "date": "String"
+    },
+    "daysCount": {
+      "days": "Int"
+    },
+    "symlinkPointsTo": {
+      "target": "String"
     }
   }
 }

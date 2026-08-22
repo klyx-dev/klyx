@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import com.klyx.app.icons.DeleteOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -26,8 +27,10 @@ import com.klyx.app.icons.VisibilityOff
 import com.klyx.data.preferences.updateFileTreeSettings
 import com.klyx.i18n.strings
 import com.klyx.presentation.navigation.LocalNavigator
+import com.klyx.presentation.screen.settings.components.SegmentedSettingsItem
 import com.klyx.presentation.screen.settings.components.SettingsSubsection
 import com.klyx.presentation.screen.settings.components.SwitchSettingItem
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,6 +96,43 @@ fun FileTreeSettingsScreen() {
                             )
                         }
                     )
+                }
+            }
+
+            item {
+                SettingsSubsection(title = strings.trash) {
+                    SwitchSettingItem(
+                        title = strings.useTrashSetting,
+                        subtitle = strings.useTrashSettingDesc,
+                        checked = settings.useTrash,
+                        onCheckedChange = { isChecked ->
+                            scope.launch {
+                                updateFileTreeSettings { copy(useTrash = isChecked) }
+                            }
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Outlined.DeleteOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    )
+
+                    if (settings.useTrash) {
+                        val s = strings
+                        SegmentedSettingsItem(
+                            label = strings.trashRetentionTitle,
+                            options = persistentListOf(7, 30, 90),
+                            currentValue = settings.trashRetentionDays,
+                            onValueChange = { days ->
+                                scope.launch {
+                                    updateFileTreeSettings { copy(trashRetentionDays = days) }
+                                }
+                            },
+                            valueText = { s.daysCount(it) }
+                        )
+                    }
                 }
             }
         }

@@ -21,6 +21,9 @@ sealed interface Screen : NavKey {
     data object Terminal : Screen
 
     @Serializable
+    data object Trash : Screen
+
+    @Serializable
     data class Custom(val id: ScreenId) : Screen
 
     companion object {
@@ -30,6 +33,7 @@ sealed interface Screen : NavKey {
                     subclass(Home::class)
                     subclass(Settings::class)
                     subclass(Terminal::class)
+                    subclass(Trash::class)
                     subclass(Custom::class)
                     subclass(SettingsScreen.Editor::class)
                     subclass(SettingsScreen.Appearance::class)

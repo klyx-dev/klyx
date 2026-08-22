@@ -94,8 +94,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.documentfile.provider.DocumentFile
@@ -103,20 +103,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.klyx.R
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.Paths
+import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.terminal.home
-import com.klyx.ui.theme.uiFontFamily
 import com.klyx.app.icons.Cloud
+import com.klyx.app.icons.DeleteOutline
 import com.klyx.app.icons.FolderOpen
 import com.klyx.app.icons.FolderShared
 import com.klyx.app.icons.FolderSpecial
+import com.klyx.app.icons.Link
 import com.klyx.app.icons.Smartphone
 import com.klyx.data.file.resolveName
 import com.klyx.data.fs.SftpFileSystem
 import com.klyx.i18n.strings
+import com.klyx.presentation.navigation.LocalNavigator
+import com.klyx.presentation.navigation.Screen
 import com.klyx.presentation.viewmodel.FileTreeUiState
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.ui.animation.LocalReduceMotion
 import com.klyx.ui.animation.orSnap
+import com.klyx.ui.theme.uiFontFamily
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
@@ -138,6 +143,7 @@ fun FileTreeDrawer(
     val context = LocalContext.current
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
+    val navigator = LocalNavigator.current
     val drawerWidth = FileTree.drawerWidth()
 
     val fraction by remember {
@@ -168,6 +174,8 @@ fun FileTreeDrawer(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val showTrashEntry = LocalAppSettings.current.fileTree.useTrash
+
     val directoryPicker =
         rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
             if (uri != null) {
@@ -193,6 +201,12 @@ fun FileTreeDrawer(
                 uiState = uiState,
                 onAddFolderClick = { showLocationPicker = true },
                 onSearchClick = { showSearchSheet = true },
+                onTrashClick = if (showTrashEntry) {
+                    {
+                        navigator.navigateTo(Screen.Trash)
+                        scope.launch { drawerState.close() }
+                    }
+                } else null,
                 viewModel = viewModel,
                 onNodeClick = onFileClick,
                 onNodeLongClick = onFileLongClick
@@ -315,6 +329,7 @@ private fun FileTreeDrawerSheet(
     uiState: FileTreeUiState,
     onAddFolderClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onTrashClick: (() -> Unit)?,
     viewModel: FileTreeViewModel,
     onNodeClick: (node: FileNode, rootNode: FileNode) -> Unit,
     onNodeLongClick: (node: FileNode, rootNode: FileNode) -> Unit,
@@ -338,7 +353,8 @@ private fun FileTreeDrawerSheet(
             Column(modifier = Modifier.fillMaxSize()) {
                 DrawerActionBar(
                     onAddFolderClick = onAddFolderClick,
-                    onSearchClick = onSearchClick
+                    onSearchClick = onSearchClick,
+                    onTrashClick = onTrashClick
                 )
 
                 FileTree(
@@ -356,6 +372,7 @@ private fun FileTreeDrawerSheet(
 private fun DrawerActionBar(
     onAddFolderClick: () -> Unit,
     onSearchClick: () -> Unit,
+    onTrashClick: (() -> Unit)?,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -410,6 +427,27 @@ private fun DrawerActionBar(
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+        }
+
+        if (onTrashClick != null) {
+            Surface(
+                onClick = onTrashClick,
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.clip(RoundedCornerShape(10.dp))
+            ) {
+                Box(
+                    modifier = Modifier.size(42.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.DeleteOutline,
+                        contentDescription = strings.trash,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
@@ -594,14 +632,26 @@ private fun SearchResultItem(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             val fileIcon = iconForFile(file)
-            Icon(
-                painter = fileIcon.painter,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = if (fileIcon.tint.isSpecified) fileIcon.tint
-                else if (file.isDirectory) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Box {
+                Icon(
+                    painter = fileIcon.painter,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = if (fileIcon.tint.isSpecified) fileIcon.tint
+                    else if (file.isDirectory) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (file.isSymlink) {
+                    Icon(
+                        imageVector = Icons.Rounded.Link,
+                        contentDescription = strings.symlink,
+                        modifier = Modifier
+                            .size(10.dp)
+                            .align(Alignment.BottomEnd),
+                        tint = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+            }
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(

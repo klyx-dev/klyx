@@ -86,6 +86,7 @@ import com.klyx.presentation.navigation.toEntries
 import com.klyx.presentation.screen.HomeScreen
 import com.klyx.presentation.screen.SettingsScreen
 import com.klyx.presentation.screen.TerminalScreen
+import com.klyx.presentation.screen.TrashScreen
 import com.klyx.presentation.screen.settings.AboutScreen
 import com.klyx.presentation.screen.settings.AppearanceSettings
 import com.klyx.presentation.screen.settings.DeveloperOptionsScreen
@@ -211,6 +212,7 @@ class MainActivity : ComposeActivity() {
     ) {
         entry<Screen.Home> { HomeScreen() }
         entry<Screen.Terminal> { TerminalScreen() }
+        entry<Screen.Trash> { TrashScreen() }
         entry<Screen.Settings> { ProvideGoogleSansTypography { SettingsScreen() } }
 
         settingsEntry<SettingsScreen.Editor> { EditorSettings() }

@@ -12,6 +12,7 @@ import com.klyx.api.data.file.wrap
 import com.klyx.api.data.fs.FileSystem
 import com.klyx.data.preferences.SettingsRepository
 import com.klyx.data.repository.RecentProjectRepository
+import com.klyx.data.repository.TrashRepository
 import com.klyx.presentation.components.filetree.FileNode
 import com.klyx.presentation.components.filetree.FlatNode
 import com.klyx.api.system.firstAvailable
@@ -74,6 +75,7 @@ class FileTreeViewModel(
     private val fileSystem: FileSystem,
     private val recentProjectRepository: RecentProjectRepository,
     private val settingsRepository: SettingsRepository,
+    private val trashRepository: TrashRepository,
 ) : ViewModel() {
 
     companion object {
@@ -433,12 +435,21 @@ class FileTreeViewModel(
 
     fun deleteNode(
         node: FileNode,
+        toTrash: Boolean = true,
         onSuccess: () -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
         viewModelScope.launch {
             try {
-                val success = fileSystem.delete(node.uri)
+                val success = if (toTrash) {
+                    if (fileSystem.isProtectedPath(node.uri)) {
+                        onError("This is a protected system path and cannot be deleted.")
+                        return@launch
+                    }
+                    trashRepository.moveToTrash(java.io.File(node.uri.path!!)) is TrashRepository.Result.Success
+                } else {
+                    fileSystem.delete(node.uri)
+                }
 
                 if (success) {
                     if (isRootNode(node)) {

@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 import java.io.File
+import java.nio.file.Files
 import java.io.Serializable as JavaSerializable
 
 @Serializable
@@ -14,6 +15,7 @@ class KxFile(
     val isDirectory: Boolean = false,
     val size: Long = 0L,
     val lastModified: Long = 0L,
+    val isSymlink: Boolean = false,
 ) : JavaSerializable {
 
     val uri: Uri get() = Uri.parse(uriString)
@@ -57,6 +59,7 @@ fun File.wrap(): KxFile = KxFile(
     isDirectory = isDirectory,
     size = length(),
     lastModified = lastModified(),
+    isSymlink = Files.isSymbolicLink(toPath()),
 )
 
 fun Uri.wrap(): KxFile = KxFile(this)

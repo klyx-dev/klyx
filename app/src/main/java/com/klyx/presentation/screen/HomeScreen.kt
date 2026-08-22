@@ -488,12 +488,31 @@ fun HomeScreen(
     }
 
     nodeToDelete?.let { targetNode ->
+        val useTrash = LocalAppSettings.current.fileTree.useTrash
         DeleteFileDialog(
             file = targetNode.file,
+            useTrash = useTrash,
             onDismiss = { nodeToDelete = null },
-            onConfirm = {
+            onMoveToTrash = {
                 fileTreeViewModel.deleteNode(
                     node = targetNode,
+                    toTrash = true,
+                    onSuccess = {
+                        editorViewModel.handleFileDeleted(targetNode.uri)
+                        nodeToDelete = null
+                    },
+                    onError = { errorMessage ->
+                        nodeToDelete = null
+                        scope.launch {
+                            toastHostState.showFailureToast(errorMessage)
+                        }
+                    }
+                )
+            },
+            onDeletePermanently = {
+                fileTreeViewModel.deleteNode(
+                    node = targetNode,
+                    toTrash = false,
                     onSuccess = {
                         editorViewModel.handleFileDeleted(targetNode.uri)
                         nodeToDelete = null

@@ -122,3 +122,32 @@ val Icons.Outlined.Save: ImageVector
             close()
         }
     }
+
+val Icons.Outlined.DeleteOutline: ImageVector
+    get() = materialIcon(name = "Outlined.DeleteOutline") {
+        materialPath {
+            moveTo(6.0f, 19.0f)
+            curveToRelative(0.0f, 1.1f, 0.9f, 2.0f, 2.0f, 2.0f)
+            horizontalLineToRelative(8.0f)
+            curveToRelative(1.1f, 0.0f, 2.0f, -0.9f, 2.0f, -2.0f)
+            lineTo(18.0f, 7.0f)
+            lineTo(6.0f, 7.0f)
+            verticalLineToRelative(12.0f)
+            close()
+            moveTo(8.0f, 9.0f)
+            horizontalLineToRelative(8.0f)
+            verticalLineToRelative(10.0f)
+            lineTo(8.0f, 19.0f)
+            lineTo(8.0f, 9.0f)
+            close()
+            moveTo(15.5f, 4.0f)
+            lineToRelative(-1.0f, -1.0f)
+            horizontalLineToRelative(-5.0f)
+            lineToRelative(-1.0f, 1.0f)
+            lineTo(5.0f, 4.0f)
+            verticalLineToRelative(2.0f)
+            horizontalLineToRelative(14.0f)
+            lineTo(19.0f, 4.0f)
+            close()
+        }
+    }

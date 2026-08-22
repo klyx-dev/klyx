@@ -21,6 +21,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,14 +49,19 @@ import org.koin.compose.koinInject
 @Composable
 fun DeleteFileDialog(
     file: KxFile,
+    useTrash: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onMoveToTrash: () -> Unit,
+    onDeletePermanently: () -> Unit
 ) {
     val fileSystem: FileSystem = koinInject()
     val isDir = file.isDirectory
     val typeName = if (isDir) strings.directory else strings.file
-    var isProtected by remember { mutableStateOf(false) }
+
+    var isProtected by remember(file) { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(file) { isProtected = fileSystem.isProtectedPath(file.uri) }
+
+    val actionsEnabled = isProtected == false
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -93,21 +99,34 @@ fun DeleteFileDialog(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
-                    text = buildAnnotatedString {
-                        append(strings.deleteConfirmPrefix)
-
-                        withStyle(
-                            SpanStyle(
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            append(file.name)
+                    text = if (useTrash && isProtected == false) {
+                        buildAnnotatedString {
+                            append(strings.moveToTrashHintPrefix)
+                            withStyle(
+                                SpanStyle(fontWeight = FontWeight.Bold)
+                            ) {
+                                append(file.name)
+                            }
+                            append(if (isDir) strings.deleteConfirmDirSuffix else strings.deleteConfirmFileSuffix)
+                            append(strings.moveToTrashHint)
                         }
-                        append(if (isDir) strings.deleteConfirmDirSuffix else strings.deleteConfirmFileSuffix)
+                    } else {
+                        buildAnnotatedString {
+                            append(strings.deleteConfirmPrefix)
 
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                            append(strings.cannotBeUndone)
+                            withStyle(
+                                SpanStyle(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                append(file.name)
+                            }
+                            append(if (isDir) strings.deleteConfirmDirSuffix else strings.deleteConfirmFileSuffix)
+
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                append(strings.cannotBeUndone)
+                            }
                         }
                     },
                     style = MaterialTheme.typography.bodyMedium,
@@ -115,21 +134,18 @@ fun DeleteFileDialog(
                     textAlign = TextAlign.Center
                 )
 
-                if (isProtected) {
+                if (isProtected == true) {
                     Spacer(modifier = Modifier.height(12.dp))
                     ProtectedMessage(isDir)
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                if (isProtected == true) {
                     FilledTonalButton(
                         onClick = onDismiss,
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth()
                             .heightIn(min = ButtonDefaults.MediumContainerHeight),
                         colors = ButtonDefaults.filledTonalButtonColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -138,19 +154,78 @@ fun DeleteFileDialog(
                     ) {
                         Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
                     }
-
-                    Button(
-                        onClick = onConfirm,
-                        enabled = !isProtected,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = ButtonDefaults.MediumContainerHeight),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
+                } else if (useTrash) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(strings.delete, style = MaterialTheme.typography.titleMedium)
+                        Button(
+                            onClick = onMoveToTrash,
+                            enabled = actionsEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = ButtonDefaults.MediumContainerHeight)
+                        ) {
+                            Text(strings.moveToTrash, style = MaterialTheme.typography.titleMedium)
+                        }
+
+                        OutlinedButton(
+                            onClick = onDeletePermanently,
+                            enabled = actionsEnabled,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = ButtonDefaults.MediumContainerHeight)
+                        ) {
+                            Text(
+                                text = strings.deletePermanently,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+
+                        FilledTonalButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = onDismiss,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                            colors = ButtonDefaults.filledTonalButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        ) {
+                            Text(strings.cancel, style = MaterialTheme.typography.titleMedium)
+                        }
+
+                        Button(
+                            onClick = onDeletePermanently,
+                            enabled = actionsEnabled,
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = ButtonDefaults.MediumContainerHeight),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text(strings.delete, style = MaterialTheme.typography.titleMedium)
+                        }
                     }
                 }
             }
