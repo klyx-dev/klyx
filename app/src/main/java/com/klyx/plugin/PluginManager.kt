@@ -12,6 +12,7 @@ import com.klyx.api.data.fs.Paths
 import com.klyx.api.data.fs.installedPluginsJson
 import com.klyx.api.data.fs.localBundleSourcesJson
 import com.klyx.api.data.fs.pluginsDir
+import com.klyx.api.data.runner.FileRunnerRegistry
 import com.klyx.api.plugin.KlyxPlugin
 import com.klyx.api.plugin.PluginDescriptor
 import com.klyx.api.plugin.PluginInfo
@@ -19,6 +20,7 @@ import com.klyx.api.plugin.PluginRuntimeRegistry
 import com.klyx.api.plugin.PluginRuntimeService
 import com.klyx.api.plugin.PluginSettings
 import com.klyx.api.plugin.PluginSettingsRegistry
+import com.klyx.api.ui.ScreenRegistry
 import com.klyx.core.App
 import com.klyx.core.Global
 import com.klyx.core.koin
@@ -113,49 +115,71 @@ class PluginManager(
             val pluginId = desc.id
             progress?.step(PluginLoadProgressListener.Step("found plugin.json with id $pluginId", desc))
 
-            if (pluginId in runtimesById) {
-                throw PluginLoadException("Plugin with id '$pluginId' is already loaded. Unload it first.")
-            }
-
+            // validate the new bundle before touching the installed version so a
+            // bad bundle can never take down a working plugin.
             validate(desc)
+
             val pluginDir = Paths.pluginsDir.resolve(pluginId)
-            pluginDir.mkdirs()
+            val backupDir = Paths.tempDir.resolve("klyx-plugin-bundles/backup-${System.nanoTime()}")
+            backupDir.parentFile?.mkdirs()
 
-            if (!pluginDir.exists()) {
-                Os.rename(tmpDir.absolutePath, pluginDir.absolutePath)
-            } else {
-                pluginDir.deleteRecursively()
-                Os.rename(tmpDir.absolutePath, pluginDir.absolutePath)
+            if (pluginDir.exists()) {
+                // keep the current installation around until the new one succeeds,
+                // so a failed install/update doesn't destroy it.
+                Os.rename(pluginDir.absolutePath, backupDir.absolutePath)
             }
 
-            val bundleCopy = File(pluginDir, "bundle.klyx")
-            if (bundleCopy.exists()) bundleCopy.delete()
-
-            fs.inputStream(bundleUri).buffered().use { inputStream ->
-                bundleCopy.outputStream().buffered().use { outputStream ->
-                    val _ = inputStream.copyTo(outputStream)
+            try {
+                // installing a bundle whose id matches a loaded plugin is an
+                // update: detach the old runtime so its classes can be replaced.
+                if (pluginId in runtimesById) {
+                    progress?.step("unloading previous version")
+                    detachRuntime(pluginId)
                 }
+
+                Os.rename(tmpDir.absolutePath, pluginDir.absolutePath)
+
+                val bundleCopy = File(pluginDir, "bundle.klyx")
+                if (bundleCopy.exists()) bundleCopy.delete()
+
+                fs.inputStream(bundleUri).buffered().use { inputStream ->
+                    bundleCopy.outputStream().buffered().use { outputStream ->
+                        val _ = inputStream.copyTo(outputStream)
+                    }
+                }
+
+                val apkFile = File(pluginDir, "plugin.apk")
+                if (!apkFile.exists()) {
+                    throw PluginLoadException(
+                        "APK file not found at $apkFile the bundle is missing plugin.apk. " +
+                                "Rebuild the bundle and reinstall."
+                    )
+                }
+                apkFile.setReadOnly()
+
+                progress?.step("instantiating plugin")
+                val plugin = instantiatePlugin(apkFile.absolutePath, desc)
+                val info = createPluginInfo(pluginDir, desc)
+                progress?.step("creating runtime")
+                val runtime = PluginRuntime(app, plugin, info)
+                progress?.step("loading plugin")
+                register(runtime, progress)
+                startRuntime(runtime, progress)
+                progress?.step("loaded successfully")
+                installPlugin(pluginId)
+
+                crashedPluginIds.remove(pluginId)
+                backupDir.deleteRecursively()
+            } catch (t: Throwable) {
+                // restore the previous installation so a failed update doesn't wipe it.
+                if (backupDir.exists()) {
+                    pluginDir.deleteRecursively()
+                    runCatching { Os.rename(backupDir.absolutePath, pluginDir.absolutePath) }
+                        .onFailure { Log.w("PluginManager", "Failed to restore previous plugin files", it) }
+                }
+                throw t
             }
 
-            val apkFile = File(pluginDir, "plugin.apk")
-            if (!apkFile.exists()) {
-                throw PluginLoadException(
-                    "APK file not found at $apkFile the bundle is missing plugin.apk. " +
-                            "Rebuild the bundle and reinstall."
-                )
-            }
-            apkFile.setReadOnly()
-
-            progress?.step("instantiating plugin")
-            val plugin = instantiatePlugin(apkFile.absolutePath, desc)
-            val info = createPluginInfo(pluginDir, desc)
-            progress?.step("creating runtime")
-            val runtime = PluginRuntime(app, plugin, info)
-            progress?.step("loading plugin")
-            register(runtime, progress)
-            startRuntime(runtime, progress)
-            progress?.step("loading successfully")
-            installPlugin(pluginId)
             if (recordSource) {
                 synchronized(localBundleSources) {
                     localBundleSources[pluginId] = bundleUri.toString()
@@ -351,15 +375,28 @@ class PluginManager(
         runtime.stop()
     }
 
-    suspend fun unloadPlugin(id: String) {
+    private suspend fun detachRuntime(id: String): PluginRuntime? {
         val runtime = synchronized(runtimes) {
-            val r = runtimesById.remove(id) ?: return
+            val r = runtimesById.remove(id) ?: return null
             runtimes.remove(r.plugin)
             r
         }
-        runtime.unload()
-        @OptIn(InternalKlyxApi::class)
-        app.global<PluginSettingsRegistry>().unregisterAll(id)
+
+        try {
+            runtime.unload()
+        } catch (t: Throwable) {
+            Log.w("PluginManager", "Plugin '$id' failed to unload cleanly", t)
+        } finally {
+            app.global<PluginSettingsRegistry>().unregisterAll(id)
+            app.global<ScreenRegistry>().unregisterAll(id)
+            app.global<FileRunnerRegistry>().unregisterAll(id)
+        }
+
+        return runtime
+    }
+
+    suspend fun unloadPlugin(id: String) {
+        detachRuntime(id) ?: return
         uninstallPlugin(id)
     }
 

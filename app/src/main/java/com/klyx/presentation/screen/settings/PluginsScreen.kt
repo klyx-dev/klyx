@@ -83,8 +83,16 @@ import com.klyx.presentation.viewmodel.PluginInstallState
 import com.klyx.presentation.viewmodel.PluginStoreUiState
 import com.klyx.presentation.viewmodel.PluginStoreViewModel
 import com.klyx.presentation.viewmodel.StorePlugin
+import io.github.z4kn4fein.semver.toVersion
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
+
+private fun isNewerVersion(candidate: String, current: String): Boolean {
+    if (candidate == current) return false
+    val candidateVersion = runCatching { candidate.toVersion(strict = false) }.getOrNull() ?: return true
+    val currentVersion = runCatching { current.toVersion(strict = false) }.getOrNull() ?: return true
+    return candidateVersion > currentVersion
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -368,7 +376,7 @@ private fun InstalledPluginCard(
     onDetail: () -> Unit,
 ) {
     val desc = plugin.descriptor
-    val updateAvailable = storeVersion != null && storeVersion != desc.version
+    val updateAvailable = storeVersion != null && isNewerVersion(storeVersion, desc.version)
 
     Surface(
         modifier = Modifier
@@ -457,7 +465,11 @@ private fun InstalledPluginCard(
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
                     } else {
-                        Icon(Icons.Rounded.Delete, contentDescription = strings.uninstall, modifier = Modifier.size(18.dp))
+                        Icon(
+                            Icons.Rounded.Delete,
+                            contentDescription = strings.uninstall,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }

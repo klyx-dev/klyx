@@ -93,19 +93,22 @@ internal class PluginRuntime(
     suspend fun unload() {
         if (lifecycle.currentState == Lifecycle.State.DESTROYED) return
 
-        runInPluginScope {
-            try {
-                if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
-                    lifecycle(Lifecycle.Event.ON_STOP)
-                    plugin.onStop()
-                }
+        try {
+            runInPluginScope {
+                try {
+                    if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                        lifecycle(Lifecycle.Event.ON_STOP)
+                        plugin.onStop()
+                    }
 
-                plugin.onUnload()
-            } finally {
-                lifecycle(Lifecycle.Event.ON_DESTROY)
+                    plugin.onUnload()
+                } finally {
+                    lifecycle(Lifecycle.Event.ON_DESTROY)
+                }
             }
+        } finally {
+            scope.cancel()
         }
-        scope.cancel()
     }
 
     fun crash(t: Throwable) {
