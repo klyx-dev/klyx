@@ -133,6 +133,15 @@
     },
     "symlinkPointsTo": {
       "target": "String"
+    },
+    "autoSaveDelayValue": {
+      "value": "Long"
+    },
+    "autoSaveIntervalValue": {
+      "value": "Long"
+    },
+    "autoSaved": {
+      "name": "String"
     }
   }
 }

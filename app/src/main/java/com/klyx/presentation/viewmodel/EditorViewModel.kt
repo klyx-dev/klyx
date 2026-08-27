@@ -2,6 +2,7 @@ package com.klyx.presentation.viewmodel
 
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.klyx.api.data.editor.EditorAction
@@ -13,6 +14,8 @@ import com.klyx.api.data.editor.WorkspaceTab
 import com.klyx.api.data.file.KxFile
 import com.klyx.api.data.fs.FileCategory
 import com.klyx.api.data.fs.FileSystem
+import com.klyx.api.data.preferences.AutoSaveScope
+import com.klyx.api.data.preferences.AutoSaveSettings
 import com.klyx.api.event.editor.FileOpenedEvent
 import com.klyx.api.util.stateInWhileSubscribed
 import com.klyx.core.event.EventBus
@@ -34,14 +37,22 @@ import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.KoinViewModel
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 
 data class UnsupportedFileAlert(
     val file: KxFile,
@@ -93,8 +104,262 @@ class EditorViewModel(
     private val _events = Channel<EditorEvent>()
     val events = _events.receiveAsFlow()
 
+    private val autoSaveJobs = ConcurrentHashMap<String, Job>()
+    private val autoSaveMutexes = ConcurrentHashMap<String, Mutex>()
+    private var periodicAutoSaveJob: Job? = null
+
+    private val autoSaveSettingsFlow = settingsRepository.settings
+        .map { it.editor.autoSave }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, AutoSaveSettings())
+
     init {
         restoreSession()
+        observeAutoSaveSettings()
+    }
+
+    private fun observeAutoSaveSettings() {
+        viewModelScope.launch {
+            autoSaveSettingsFlow.collect { settings ->
+                periodicAutoSaveJob?.cancel()
+                periodicAutoSaveJob = null
+                val interval = settings.periodicIntervalMillis
+                if (settings.enabled && interval != null && interval >= 1000L) {
+                    periodicAutoSaveJob = viewModelScope.launch {
+                        while (isActive) {
+                            delay(interval.milliseconds)
+                            if (!autoSaveSettingsFlow.value.enabled) break
+                            performPeriodicAutoSave()
+                        }
+                    }
+                }
+                if (!settings.enabled) {
+                    autoSaveJobs.values.forEach { it.cancel() }
+                    autoSaveJobs.clear()
+                }
+            }
+        }
+    }
+
+    private suspend fun performPeriodicAutoSave() {
+        val settings = autoSaveSettingsFlow.value
+        val dirtyTabs = _uiState.value.openTabs
+            .filterIsInstance<WorkspaceTab.TextFile>()
+            .filter { it.hasUnsavedChanges }
+        if (dirtyTabs.isEmpty()) {
+            // fallback: check baseline vs text for cases where hasUnsavedChanges hasn't propagated yet
+            return
+        }
+        val targetIds = when (settings.scope) {
+            AutoSaveScope.ALL_TABS -> dirtyTabs.map { it.id }
+            AutoSaveScope.ACTIVE_TAB -> {
+                val active = _uiState.value.activeTabId
+                if (active != null && dirtyTabs.any { it.id == active }) listOf(active) else emptyList()
+            }
+        }
+        if (targetIds.isEmpty()) return
+        for (tabId in targetIds) {
+            performAutoSaveInternal(tabId, showToast = settings.showToast)
+        }
+    }
+
+    fun onContentChanged(tabId: String) {
+        val settings = autoSaveSettingsFlow.value
+        if (!settings.enabled || !settings.onTyping) return
+        autoSaveJobs[tabId]?.cancel()
+        val job = viewModelScope.launch {
+            delay(settings.delayMillis.coerceIn(200L, 10000L).milliseconds)
+            if (!isActive) return@launch
+            val currentSettings = autoSaveSettingsFlow.value
+            if (!currentSettings.enabled || !currentSettings.onTyping) return@launch
+
+            val tab = _uiState.value.openTabs.find { it.id == tabId } as? WorkspaceTab.TextFile ?: return@launch
+            // If hasUnsavedChanges is false, double-check baseline vs actual text on background thread
+            if (!tab.hasUnsavedChanges) {
+                val isDirty = withContext(Dispatchers.Default) {
+                    val state = editorStateRegistry[tabId] ?: return@withContext false
+                    val baseline = editorStateRegistry.getBaselineText(tabId) ?: return@withContext false
+                    state.text.toString() != baseline
+                }
+                if (!isDirty) return@launch
+            }
+
+            if (currentSettings.skipLargeFiles) {
+                val isLarge = withContext(Dispatchers.Default) {
+                    val state = editorStateRegistry[tabId] ?: return@withContext false
+                    state.text.length > currentSettings.largeFileThresholdKb * 1024
+                }
+                if (isLarge) {
+                    Log.d("AutoSave", "Skip large file $tabId > ${currentSettings.largeFileThresholdKb}KB")
+                    return@launch
+                }
+            }
+            if (currentSettings.scope == AutoSaveScope.ALL_TABS) {
+                val dirtyIds = _uiState.value.openTabs
+                    .filterIsInstance<WorkspaceTab.TextFile>()
+                    .filter { it.hasUnsavedChanges }
+                    .map { it.id }
+                val toSave = if (dirtyIds.isNotEmpty()) dirtyIds else listOf(tabId)
+                for (id in toSave) {
+                    performAutoSaveInternal(id, currentSettings.showToast)
+                }
+            } else {
+                performAutoSaveInternal(tabId, currentSettings.showToast)
+            }
+        }
+        autoSaveJobs[tabId] = job
+    }
+
+    fun cancelAutoSave(tabId: String) {
+        autoSaveJobs[tabId]?.cancel()
+        autoSaveJobs.remove(tabId)
+    }
+
+    fun onTabSwitched(oldTabId: String?, newTabId: String?) {
+        val settings = autoSaveSettingsFlow.value
+        if (!settings.enabled || !settings.onTabSwitch) return
+        val previous = oldTabId ?: return
+
+        autoSaveJobs[previous]?.cancel()
+        autoSaveJobs.remove(previous)
+        viewModelScope.launch {
+            val dirtyIds: List<String> = when (settings.scope) {
+                AutoSaveScope.ALL_TABS -> _uiState.value.openTabs
+                    .filterIsInstance<WorkspaceTab.TextFile>()
+                    .filter { it.hasUnsavedChanges }
+                    .map { it.id }
+                    .ifEmpty { listOf(previous) }
+
+                AutoSaveScope.ACTIVE_TAB -> listOf(previous)
+            }
+
+            val toSave = mutableListOf<String>()
+            for (id in dirtyIds) {
+                val tab = _uiState.value.openTabs.find { it.id == id } as? WorkspaceTab.TextFile ?: continue
+                if (tab.hasUnsavedChanges) {
+                    toSave += id
+                } else {
+                    val isDirty = withContext(Dispatchers.Default) {
+                        val state = editorStateRegistry[id] ?: return@withContext false
+                        val baseline = editorStateRegistry.getBaselineText(id) ?: return@withContext false
+                        state.text.toString() != baseline
+                    }
+                    if (isDirty) toSave += id
+                }
+            }
+            if (toSave.isEmpty()) return@launch
+            for (id in toSave) {
+                performAutoSaveInternal(id, settings.showToast)
+            }
+        }
+    }
+
+    fun onAppPaused() {
+        val settings = autoSaveSettingsFlow.value
+        if (!settings.enabled || !settings.onAppPause) return
+        viewModelScope.launch {
+            autoSaveJobs.values.forEach { it.cancel() }
+            autoSaveJobs.clear()
+            val dirtyTabs = _uiState.value.openTabs
+                .filterIsInstance<WorkspaceTab.TextFile>()
+                .filter { it.hasUnsavedChanges }
+            if (dirtyTabs.isEmpty()) {
+                val activeId = _uiState.value.activeTabId
+                if (activeId != null) {
+                    val isDirty = withContext(Dispatchers.Default) {
+                        val state = editorStateRegistry[activeId] ?: return@withContext false
+                        val baseline = editorStateRegistry.getBaselineText(activeId) ?: return@withContext false
+                        state.text.toString() != baseline
+                    }
+                    if (isDirty) performAutoSaveInternal(activeId, settings.showToast)
+                }
+                return@launch
+            }
+            val targetIds = when (settings.scope) {
+                AutoSaveScope.ALL_TABS -> dirtyTabs.map { it.id }
+                AutoSaveScope.ACTIVE_TAB -> {
+                    val active = _uiState.value.activeTabId
+                    if (active != null && dirtyTabs.any { it.id == active }) listOf(active) else emptyList()
+                }
+            }
+            if (targetIds.isEmpty()) return@launch
+            for (id in targetIds) {
+                performAutoSaveInternal(id, settings.showToast)
+            }
+        }
+    }
+
+    private suspend fun performAutoSaveInternal(tabId: String, showToast: Boolean): Boolean {
+        val mutex = autoSaveMutexes.getOrPut(tabId) { Mutex() }
+        mutex.lock()
+        try {
+            val tab = _uiState.value.openTabs.find { it.id == tabId } as? WorkspaceTab.TextFile ?: return false
+            val state = editorStateRegistry[tabId] ?: return false
+            val settings = autoSaveSettingsFlow.value
+
+            if (settings.skipLargeFiles) {
+                val length = withContext(Dispatchers.Default) { state.text.length }
+                if (length > settings.largeFileThresholdKb * 1024) return false
+            }
+
+            val baseline = editorStateRegistry.getBaselineText(tabId) ?: return false
+            val currentText = withContext(Dispatchers.Default) { state.text.toString() }
+            if (currentText == baseline) {
+                if (tab.hasUnsavedChanges) {
+                    _uiState.update { s ->
+                        s.copy(
+                            openTabs = s.openTabs.mutate { tabs ->
+                                val idx = tabs.indexOfFirst { it.id == tabId }
+                                if (idx != -1) {
+                                    val t = tabs[idx] as? WorkspaceTab.TextFile ?: return@mutate
+                                    tabs[idx] = t.copy(hasUnsavedChanges = false)
+                                }
+                            }
+                        )
+                    }
+                }
+                return false
+            }
+            return withContext(Dispatchers.IO) {
+                try {
+                    fileSystem.outputStream(tab.file.uri).use { out ->
+                        state.writeTextTo(out)
+                    }
+
+                    withContext(Dispatchers.Main) {
+                        editorStateRegistry.setBaselineText(tabId, currentText)
+                        lspManager.onFileSaved(tabId)
+                        _uiState.update { s ->
+                            s.copy(
+                                openTabs = s.openTabs.mutate { tabs ->
+                                    val idx = tabs.indexOfFirst { it.id == tabId }
+                                    if (idx != -1) {
+                                        val t = tabs[idx] as? WorkspaceTab.TextFile ?: return@mutate
+                                        if (t.hasUnsavedChanges) tabs[idx] = t.copy(hasUnsavedChanges = false)
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    Log.d("AutoSave", "Auto-saved $tabId (${currentText.length} chars)")
+                    if (showToast) {
+                        sendEvent(EditorEvent.ShowMessage("Auto-saved ${tab.file.name}"))
+                    }
+                    true
+                } catch (e: Exception) {
+                    Log.e("AutoSave", "Failed auto-save $tabId", e)
+                    false
+                }
+            }
+        } finally {
+            mutex.unlock()
+        }
+    }
+
+    fun triggerImmediateAutoSave(tabId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            performAutoSaveInternal(tabId, autoSaveSettingsFlow.value.showToast)
+        }
     }
 
     @SuppressLint("UseKtx")
@@ -152,6 +417,10 @@ class EditorViewModel(
     }
 
     fun selectTab(tabId: String) {
+        val previous = _uiState.value.activeTabId
+        if (previous != null && previous != tabId) {
+            onTabSwitched(previous, tabId)
+        }
         _uiState.update { currentState ->
             currentState.copy(activeTabId = tabId)
         }
@@ -172,6 +441,8 @@ class EditorViewModel(
     }
 
     private fun forceCloseTab(tabId: String) {
+        cancelAutoSave(tabId)
+        autoSaveMutexes.remove(tabId)
         editorStateRegistry.unregister(tabId)
         lspManager.onEditorClosed(tabId)
         _uiState.update { state ->
@@ -258,6 +529,8 @@ class EditorViewModel(
         val closedTabs = state.openTabs.filter { it.id != currentTabId }
 
         closedTabs.forEach { tab ->
+            cancelAutoSave(tab.id)
+            autoSaveMutexes.remove(tab.id)
             editorStateRegistry.unregister(tab.id)
             lspManager.onEditorClosed(tab.id)
         }
@@ -289,6 +562,9 @@ class EditorViewModel(
     }
 
     fun closeAllTabs() {
+        autoSaveJobs.values.forEach { it.cancel() }
+        autoSaveJobs.clear()
+        autoSaveMutexes.clear()
         _uiState.value.openTabs.forEach { tab ->
             editorStateRegistry.unregister(tab.id)
             lspManager.onEditorClosed(tab.id)
@@ -396,6 +672,13 @@ class EditorViewModel(
         _uiState.update { it.copy(unsupportedFileAlert = null) }
     }
 
+    override fun onCleared() {
+        periodicAutoSaveJob?.cancel()
+        autoSaveJobs.values.forEach { it.cancel() }
+        autoSaveJobs.clear()
+        autoSaveMutexes.clear()
+    }
+
     fun handleFileRenamed(oldUri: Uri, newUri: Uri) {
         viewModelScope.launch {
             try {
@@ -406,6 +689,24 @@ class EditorViewModel(
                         is WorkspaceTab.TextFile -> it.file.uri == oldUri
                         is WorkspaceTab.ImageFile -> it.uri == oldUri
                         else -> false
+                    }
+                }
+
+                // transfer / cancel auto-save state for renamed file
+                if (oldTab != null) {
+                    cancelAutoSave(oldTab.id)
+                    autoSaveMutexes.remove(oldTab.id)
+                    // move baseline and editor state to new id if it's a text file
+                    if (oldTab is WorkspaceTab.TextFile) {
+                        val baseline = editorStateRegistry.getBaselineText(oldTab.id)
+                        val state = editorStateRegistry[oldTab.id]
+                        if (baseline != null) {
+                            editorStateRegistry.setBaselineText(newFile.uri.toString(), baseline)
+                        }
+                        if (state != null) {
+                            editorStateRegistry[newFile.uri.toString()] = state
+                            editorStateRegistry.unregister(oldTab.id)
+                        }
                     }
                 }
 
@@ -448,6 +749,7 @@ class EditorViewModel(
             }
         }
     }
+
     fun handleFileDeleted(deletedUri: Uri) {
         val tabIdToClose = _uiState.value.openTabs.find { tab ->
             when (tab) {
@@ -526,6 +828,8 @@ class EditorViewModel(
     }
 
     private fun saveFile(action: Save) {
+        // cancel pending auto-save for active tab since we're saving manually
+        _uiState.value.activeTabId?.let { cancelAutoSave(it) }
         viewModelScope.launch {
             if (saveFileSuspending(action.file)) {
                 sendEvent(EditorEvent.ShowMessage("Saved ${action.file.name}"))
@@ -542,25 +846,27 @@ class EditorViewModel(
         try {
             val activeTabId = _uiState.value.activeTabId ?: return@withContext false
             val editorState = activeEditorState ?: return@withContext false
+            cancelAutoSave(activeTabId)
 
             fileSystem.outputStream(file.uri).use { output ->
                 editorState.writeTextTo(output)
             }
-            val savedText = editorState.text.toString()
+            val savedText = withContext(Dispatchers.Default) { editorState.text.toString() }
 
-            editorStateRegistry.setBaselineText(activeTabId, savedText)
-            lspManager.onFileSaved(activeTabId)
-
-            _uiState.update { state ->
-                state.copy(
-                    openTabs = state.openTabs.mutate { tabs ->
-                        val index = tabs.indexOfFirst { it.id == activeTabId }
-                        if (index != -1) {
-                            val tab = tabs[index] as? WorkspaceTab.TextFile ?: return@mutate
-                            tabs[index] = tab.copy(hasUnsavedChanges = false)
+            withContext(Dispatchers.Main) {
+                editorStateRegistry.setBaselineText(activeTabId, savedText)
+                lspManager.onFileSaved(activeTabId)
+                _uiState.update { state ->
+                    state.copy(
+                        openTabs = state.openTabs.mutate { tabs ->
+                            val index = tabs.indexOfFirst { it.id == activeTabId }
+                            if (index != -1) {
+                                val tab = tabs[index] as? WorkspaceTab.TextFile ?: return@mutate
+                                tabs[index] = tab.copy(hasUnsavedChanges = false)
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
             true
         } catch (e: Exception) {
@@ -570,6 +876,7 @@ class EditorViewModel(
     }
 
     private fun saveFileAs(action: SaveAs) {
+        cancelAutoSave(action.oldTabId)
         viewModelScope.launch(Dispatchers.IO) {
             val editorState = editorStateRegistry[action.oldTabId] ?: run {
                 sendEvent(EditorEvent.ShowError("Editor state not available"))

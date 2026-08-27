@@ -171,6 +171,18 @@ class MainActivity : ComposeActivity() {
 
         rememberGlobalNavigator(navigator, app = app)
 
+        // auto-save: flush dirty tabs when activity goes to background
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_PAUSE) {
+                    editorViewModel.onAppPaused()
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
         val navigateToTerminal by pendingTerminalNav.collectAsStateWithLifecycle()
 
         LaunchedEffect(navigateToTerminal) {

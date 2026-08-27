@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -57,12 +59,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.klyx.R
+import com.klyx.api.data.preferences.AutoSaveScope
 import com.klyx.api.data.preferences.EditorSettings
 import com.klyx.api.data.preferences.LocalAppSettings
 import com.klyx.api.data.preferences.MouseMode
 import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.app.icons.Backspace
 import com.klyx.app.icons.ContentPaste
+import com.klyx.app.icons.CopyAll
 import com.klyx.app.icons.DataArray
 import com.klyx.app.icons.DataObject
 import com.klyx.app.icons.FilterCenterFocus
@@ -78,11 +82,15 @@ import com.klyx.app.icons.MenuOpen
 import com.klyx.app.icons.Mouse
 import com.klyx.app.icons.PushPin
 import com.klyx.app.icons.RoundedCorner
+import com.klyx.app.icons.Save
 import com.klyx.app.icons.SpaceBar
+import com.klyx.app.icons.Storage
 import com.klyx.app.icons.TextFormat
 import com.klyx.app.icons.TouchApp
 import com.klyx.app.icons.UnfoldLess
 import com.klyx.app.icons.UnfoldMore
+import com.klyx.app.icons.Update
+import com.klyx.app.icons.VisibilityOff
 import com.klyx.data.preferences.FontManager
 import com.klyx.data.preferences.updateEditorSettings
 import com.klyx.i18n.strings
@@ -156,6 +164,11 @@ fun EditorSettings() {
             mutableFloatStateOf(settings.mouseWheelScrollFactor)
         }
         var localStickyMax by remember(settings.stickyScrollMaxLines) { mutableFloatStateOf(settings.stickyScrollMaxLines.toFloat()) }
+        var localAutoSaveDelay by remember(settings.autoSave.delayMillis) { mutableFloatStateOf(settings.autoSave.delayMillis.toFloat()) }
+        var localLargeFileThreshold by remember(settings.autoSave.largeFileThresholdKb) { mutableFloatStateOf(settings.autoSave.largeFileThresholdKb.toFloat()) }
+        var localPeriodicInterval by remember(settings.autoSave.periodicIntervalMillis) {
+            mutableFloatStateOf((settings.autoSave.periodicIntervalMillis ?: 30000L).toFloat())
+        }
 
         val fontManager: FontManager = koinInject()
         var localFontFamily by remember { mutableStateOf(JetBrainsMonoFontFamily) }
@@ -230,6 +243,19 @@ fun EditorSettings() {
                     update = ::update,
                     localStickyMax = localStickyMax,
                     onLocalStickyMaxChange = { localStickyMax = it }
+                )
+            }
+
+            item {
+                AutoSaveSettingsSection(
+                    settings = settings,
+                    update = ::update,
+                    localDelay = localAutoSaveDelay,
+                    onLocalDelayChange = { localAutoSaveDelay = it },
+                    localThreshold = localLargeFileThreshold,
+                    onLocalThresholdChange = { localLargeFileThreshold = it },
+                    localInterval = localPeriodicInterval,
+                    onLocalIntervalChange = { localPeriodicInterval = it }
                 )
             }
 
@@ -676,6 +702,195 @@ private fun StickyScrollSettingsSection(
             onCheckedChange = { update { copy(stickyScrollAutoCollapse = it) } },
             leadingIcon = { Icon(Icons.Rounded.UnfoldLess, null) }
         )
+    }
+}
+
+@Composable
+private fun AutoSaveSettingsSection(
+    settings: EditorSettings,
+    update: (suspend EditorSettings.() -> EditorSettings) -> Unit,
+    localDelay: Float,
+    onLocalDelayChange: (Float) -> Unit,
+    localThreshold: Float,
+    onLocalThresholdChange: (Float) -> Unit,
+    localInterval: Float,
+    onLocalIntervalChange: (Float) -> Unit
+) {
+    val s = strings
+    SettingsSubsection(strings.autoSaveSection) {
+        SwitchSettingItem(
+            title = strings.autoSaveEnabled,
+            subtitle = strings.autoSaveEnabledDesc,
+            checked = settings.autoSave.enabled,
+            onCheckedChange = { update { copy(autoSave = autoSave.copy(enabled = it)) } },
+            leadingIcon = { Icon(Icons.Outlined.Save, null) }
+        )
+
+        AnimatedVisibility(
+            visible = settings.autoSave.enabled,
+            enter = expandVertically(animationSpec = spring(dampingRatio = 0.8f, stiffness = 400f)) + fadeIn(
+                spring(
+                    stiffness = 400f
+                )
+            ),
+            exit = shrinkVertically(spring(stiffness = 500f)) + fadeOut(spring(stiffness = 500f))
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                SliderSettingsItem(
+                    label = strings.autoSaveDelay,
+                    value = localDelay,
+                    onValueChange = onLocalDelayChange,
+                    valueRange = 200f..10000f,
+                    steps = 48,
+                    onValueChangeFinished = {
+                        val coerced = localDelay.roundToInt().toLong().coerceIn(200L, 10000L)
+                        if (coerced != settings.autoSave.delayMillis) {
+                            update { copy(autoSave = autoSave.copy(delayMillis = coerced)) }
+                        }
+                    },
+                    valueText = { "${it.roundToInt()} ms" }
+                )
+
+                SwitchSettingItem(
+                    title = strings.autoSaveOnTyping,
+                    subtitle = strings.autoSaveOnTypingDesc,
+                    checked = settings.autoSave.onTyping,
+                    onCheckedChange = { update { copy(autoSave = autoSave.copy(onTyping = it)) } },
+                    leadingIcon = { Icon(Icons.Rounded.Info, null) }
+                )
+
+                SwitchSettingItem(
+                    title = strings.autoSaveOnAppPause,
+                    subtitle = strings.autoSaveOnAppPauseDesc,
+                    checked = settings.autoSave.onAppPause,
+                    onCheckedChange = { update { copy(autoSave = autoSave.copy(onAppPause = it)) } },
+                    leadingIcon = { Icon(Icons.Rounded.VisibilityOff, null) } // app background ~ visibility
+                )
+
+                SwitchSettingItem(
+                    title = strings.autoSaveOnTabSwitch,
+                    subtitle = strings.autoSaveOnTabSwitchDesc,
+                    checked = settings.autoSave.onTabSwitch,
+                    onCheckedChange = { update { copy(autoSave = autoSave.copy(onTabSwitch = it)) } },
+                    leadingIcon = { Icon(Icons.Rounded.FolderOpen, null) }
+                )
+
+                SelectorItem(
+                    label = strings.autoSaveScope,
+                    description = strings.autoSaveScopeDesc,
+                    options = persistentListOf(AutoSaveScope.ACTIVE_TAB, AutoSaveScope.ALL_TABS),
+                    selected = settings.autoSave.scope,
+                    optionLabel = {
+                        when (it) {
+                            AutoSaveScope.ACTIVE_TAB -> s.autoSaveScopeActiveTab
+                            AutoSaveScope.ALL_TABS -> s.autoSaveScopeAllTabs
+                        }
+                    },
+                    optionDescription = { scope ->
+                        when (scope) {
+                            AutoSaveScope.ACTIVE_TAB -> s.autoSaveScopeActiveTabDesc
+                            AutoSaveScope.ALL_TABS -> s.autoSaveScopeAllTabsDesc
+                        }
+                    },
+                    onSelectionChanged = { update { copy(autoSave = autoSave.copy(scope = it)) } },
+                    leadingIcon = { Icon(Icons.Rounded.CopyAll, null) }
+                )
+
+                SwitchSettingItem(
+                    title = strings.autoSaveSkipLargeFiles,
+                    subtitle = strings.autoSaveSkipLargeFilesDesc,
+                    checked = settings.autoSave.skipLargeFiles,
+                    onCheckedChange = { update { copy(autoSave = autoSave.copy(skipLargeFiles = it)) } },
+                    leadingIcon = { Icon(Icons.Rounded.Storage, null) }
+                )
+
+                AnimatedVisibility(
+                    visible = settings.autoSave.skipLargeFiles,
+                    enter = expandVertically(
+                        spring(
+                            dampingRatio = 0.8f,
+                            stiffness = 400f
+                        )
+                    ) + fadeIn(spring(stiffness = 400f)),
+                    exit = shrinkVertically(spring(stiffness = 500f)) + fadeOut(spring(stiffness = 500f))
+                ) {
+                    SliderSettingsItem(
+                        label = strings.autoSaveLargeFileThreshold,
+                        value = localThreshold,
+                        onValueChange = onLocalThresholdChange,
+                        valueRange = 50f..2048f,
+                        steps = 15,
+                        onValueChangeFinished = {
+                            val v = localThreshold.roundToInt().coerceIn(50, 5000)
+                            if (v != settings.autoSave.largeFileThresholdKb) {
+                                update { copy(autoSave = autoSave.copy(largeFileThresholdKb = v)) }
+                            }
+                        },
+                        valueText = { "${it.roundToInt()} KB" }
+                    )
+                }
+
+                val periodicEnabled = settings.autoSave.periodicIntervalMillis != null
+                SwitchSettingItem(
+                    title = strings.autoSavePeriodic,
+                    subtitle = strings.autoSavePeriodicDesc,
+                    checked = periodicEnabled,
+                    onCheckedChange = { enabled ->
+                        update {
+                            copy(
+                                autoSave = autoSave.copy(
+                                    periodicIntervalMillis = if (enabled) {
+                                        localInterval.roundToInt().toLong().coerceIn(5000L, 120000L)
+                                    } else null
+                                )
+                            )
+                        }
+                    },
+                    leadingIcon = { Icon(Icons.Rounded.Update, null) }
+                )
+
+                AnimatedVisibility(
+                    visible = periodicEnabled,
+                    enter = expandVertically(
+                        spring(
+                            dampingRatio = 0.8f,
+                            stiffness = 400f
+                        )
+                    ) + fadeIn(spring(stiffness = 400f)),
+                    exit = shrinkVertically(spring(stiffness = 500f)) + fadeOut(spring(stiffness = 500f))
+                ) {
+                    SliderSettingsItem(
+                        label = strings.autoSaveInterval,
+                        value = localInterval,
+                        onValueChange = onLocalIntervalChange,
+                        valueRange = 5000f..120000f,
+                        steps = 22,
+                        onValueChangeFinished = {
+                            val v = localInterval.roundToInt().toLong().coerceIn(5000L, 120000L)
+                            if (v != settings.autoSave.periodicIntervalMillis) {
+                                update { copy(autoSave = autoSave.copy(periodicIntervalMillis = v)) }
+                            }
+                        },
+                        valueText = { "${(it / 1000).roundToInt()} sec" }
+                    )
+                }
+
+                SwitchSettingItem(
+                    title = strings.autoSaveShowToast,
+                    subtitle = strings.autoSaveShowToastDesc,
+                    checked = settings.autoSave.showToast,
+                    onCheckedChange = { update { copy(autoSave = autoSave.copy(showToast = it)) } },
+                    leadingIcon = { Icon(Icons.Rounded.Info, null) }
+                )
+
+                Text(
+                    text = strings.autoSavePerformanceNote,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
     }
 }
 

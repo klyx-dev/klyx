@@ -145,6 +145,61 @@ data class AppearanceSettings(
 }
 
 /**
+ * Scope for auto-save operations.
+ */
+@Serializable
+enum class AutoSaveScope {
+    /** Save only the currently active or changed tab. */
+    ACTIVE_TAB,
+
+    /** Save all open dirty tabs together. */
+    ALL_TABS
+}
+
+/**
+ * Strategy for how auto-save is triggered.
+ */
+@Serializable
+enum class AutoSaveTrigger {
+    /** Save after typing idle (debounced). */
+    AFTER_DELAY,
+
+    /** Save when focus changes (tab switch or app pause). */
+    ON_FOCUS_CHANGE,
+
+    /** Save both after delay and on focus change. */
+    AFTER_DELAY_AND_ON_FOCUS
+}
+
+/**
+ * Auto-save configuration.
+ *
+ * @property enabled toggle.
+ * @property delayMillis Debounce delay after last edit before saving (200..10000 ms).
+ * @property onTyping Save after typing idle (debounced by [delayMillis]).
+ * @property onAppPause Save when app goes to background (window change).
+ * @property onTabSwitch Save previous tab when switching tabs.
+ * @property scope Whether to save only active/changed tab or all dirty tabs on triggers.
+ * @property periodicIntervalMillis Optional periodic save interval (null = disabled, 5000..120000 ms). Ensures saves even during continuous typing.
+ * @property skipLargeFiles Whether to skip saving files larger than [largeFileThresholdKb].
+ * @property largeFileThresholdKb Threshold in KB for [skipLargeFiles] guard.
+ * @property showToast Whether to show a subtle toast on auto-save (silent by default for performance/UX).
+ */
+@Serializable
+data class AutoSaveSettings(
+    val enabled: Boolean = false,
+    val delayMillis: Long = 1000L,
+    val onTyping: Boolean = true,
+    val onAppPause: Boolean = true,
+    val onTabSwitch: Boolean = false,
+    val scope: AutoSaveScope = AutoSaveScope.ACTIVE_TAB,
+    val periodicIntervalMillis: Long? = null,
+    val skipLargeFiles: Boolean = true,
+    val largeFileThresholdKb: Int = 512,
+    val showToast: Boolean = false,
+)
+
+/**
  * Core settings for the code editor component.
  *
  * @property fontSize Font size in sp for the editor text.
@@ -177,6 +232,7 @@ data class AppearanceSettings(
  * @property stickyScrollAutoCollapse Hide sticky lines when selecting text behind them.
  * @property wordWrap Whether to wrap long lines to the next visual row.
  * @property selectCompletionItemOnEnterForSoftKbd Accept autocomplete on enter for soft keyboards.
+ * @property autoSave Auto-save configuration.
  */
 @Serializable
 data class EditorSettings(
@@ -211,6 +267,7 @@ data class EditorSettings(
     val stickyScrollAutoCollapse: Boolean = true,
     val selectCompletionItemOnEnterForSoftKbd: Boolean = true,
     val inlayHints: Boolean = true,
+    val autoSave: AutoSaveSettings = AutoSaveSettings(),
 )
 
 /**

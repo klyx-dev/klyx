@@ -4,8 +4,6 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import com.klyx.i18n.strings
-import com.klyx.i18n.getLocaleStrings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -132,7 +130,6 @@ import com.klyx.api.ui.ToolbarAction
 import com.klyx.api.ui.ToolbarCategory
 import com.klyx.api.ui.ToolbarRegistry
 import com.klyx.api.ui.showFailureToast
-import com.klyx.ui.theme.uiFontFamily
 import com.klyx.api.ui.theme.JetBrainsMonoFontFamily
 import com.klyx.api.ui.theme.LocalIsDarkMode
 import com.klyx.api.util.share
@@ -153,6 +150,8 @@ import com.klyx.data.file.shareableUri
 import com.klyx.data.preferences.FontManager
 import com.klyx.data.runner.FileRunnerContextImpl
 import com.klyx.data.runner.TerminalCommandRunner
+import com.klyx.i18n.getLocaleStrings
+import com.klyx.i18n.strings
 import com.klyx.icons.Klyx
 import com.klyx.icons.KlyxIcons
 import com.klyx.lsp.LspActivityStore
@@ -191,6 +190,7 @@ import com.klyx.presentation.viewmodel.EditorViewModel
 import com.klyx.presentation.viewmodel.FileTreeViewModel
 import com.klyx.presentation.viewmodel.HomeViewModel
 import com.klyx.ui.provider.LocalTreeSitter
+import com.klyx.ui.theme.uiFontFamily
 import io.github.rosemoe.sora.compose.CodeEditor
 import io.github.rosemoe.sora.compose.CodeEditorState
 import io.github.rosemoe.sora.compose.ExperimentalEditorApi
@@ -1522,6 +1522,14 @@ private fun TextFileEditor(
             .collect { content ->
                 val baseline = registry.getBaselineText(tab.id) ?: ""
                 editorViewModel.markTabModified(tab.id, content.toString() != baseline)
+            }
+    }
+
+    LaunchedEffect(tab.id, state) {
+        state.content
+            .drop(1)
+            .collect {
+                editorViewModel.onContentChanged(tab.id)
             }
     }
 
