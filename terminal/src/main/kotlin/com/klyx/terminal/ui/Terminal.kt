@@ -539,19 +539,20 @@ private fun Modifier.scroll(
             state.scrolledWithFinger.value = true
 
             var previousPosition = down.position
+            var passedTouchSlop = false
 
             do {
                 val event = awaitPointerEvent()
                 val dragEvent = event.changes.firstOrNull { it.id == down.id } ?: break
                 if (!dragEvent.pressed) break
 
-                val dragAmount = dragEvent.position - previousPosition
-                previousPosition = dragEvent.position
-
                 if (selectionState.isActive) {
                     // Handles own their own drag; nothing to do here for plain scroll.
                     // Edge-auto-scroll is handled inside each handle's onDragPosition.
-                } else {
+                    previousPosition = dragEvent.position
+                } else if (passedTouchSlop) {
+                    val dragAmount = dragEvent.position - previousPosition
+                    previousPosition = dragEvent.position
                     dragEvent.consume()
 
                     state.scrolledWithFinger.value = true
@@ -566,6 +567,9 @@ private fun Modifier.scroll(
                             fontMetrics
                         )
                     }
+                } else if ((dragEvent.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                    passedTouchSlop = true
+                    previousPosition = dragEvent.position
                 }
             } while (true)
 
