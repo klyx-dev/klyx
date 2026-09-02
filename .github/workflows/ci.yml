@@ -163,9 +163,9 @@ jobs:
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
           if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            COMMIT_MSG="$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:"%B" --reverse)"
+            COMMIT_MSG="$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:"%Bby %an" --reverse)"
           else
-            COMMIT_MSG="$(git log -1 --pretty=%B)"
+            COMMIT_MSG="$(git log -1 --pretty=format:"%Bby %an")"
           fi
 
           # truncate to avoid Telegram caption limits (1024 chars)

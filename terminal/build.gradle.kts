@@ -8,6 +8,7 @@ plugins {
 
 android {
     namespace = "com.klyx.terminal"
+    ndkVersion = property("ndk.version") as String
 
     compileSdk {
         version = release(37)
