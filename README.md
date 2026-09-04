@@ -45,6 +45,12 @@ Contributions, bug reports, and feature requests are welcome.
 * Issues: https://github.com/klyx-dev/klyx/issues
 * Discussions: https://github.com/klyx-dev/klyx/discussions
 
+## Translations
+
+Help translate Klyx! Visit [Weblate](https://hosted.weblate.org/engage/klyx/) to get started.
+
+[![Translation status](https://hosted.weblate.org/widget/klyx/translations/matrix-blue.svg)](https://hosted.weblate.org/engage/klyx/)
+
 ## License
 
 Licensed under the GNU General Public License v3.0 (GPL-3.0). See [LICENSE](LICENSE) for details.
