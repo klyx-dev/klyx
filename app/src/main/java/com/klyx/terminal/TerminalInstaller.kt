@@ -270,12 +270,6 @@ class TerminalInstaller(private val context: Context) {
         try {
             val storageDir = Paths.home.resolve("storage")
 
-            storageDir.listFiles()?.forEach { child ->
-                if (child.delete()) {
-                    Log.e("TerminalSetup", "Cannot delete: ${child.absolutePath}")
-                }
-            }
-
             if (!storageDir.exists() && !storageDir.mkdirs()) {
                 Log.e("TerminalSetup", "Cannot create: ${storageDir.absolutePath}")
                 return@withContext
@@ -283,7 +277,23 @@ class TerminalInstaller(private val context: Context) {
 
             fun symlink(target: File?, name: String) {
                 if (target == null || !target.exists()) return
-                Os.symlink(target.absolutePath, storageDir.resolve(name).absolutePath)
+                val linkFile = storageDir.resolve(name)
+                val linkPath = linkFile.toPath()
+
+                try {
+                    if (Files.isSymbolicLink(linkPath)) {
+                        // delete only the symbolic link file, without touching target data
+                        Files.deleteIfExists(linkPath)
+                    } else if (linkFile.exists()) {
+                        // preserve user's existing non-symlink file/directory
+                        Log.w("TerminalSetup", "Skipping symlink $name: non-symlink item exists at ${linkFile.absolutePath}")
+                        return
+                    }
+
+                    Os.symlink(target.absolutePath, linkFile.absolutePath)
+                } catch (e: Exception) {
+                    Log.e("TerminalSetup", "Failed to create symlink $name: ${e.message}")
+                }
             }
 
             // shared storage
