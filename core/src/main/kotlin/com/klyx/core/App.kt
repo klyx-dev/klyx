@@ -199,7 +199,7 @@ inline fun debug(crossinline block: suspend App.() -> Unit) {
 }
 
 @Composable
-fun Debug(block: @DisallowComposableCalls suspend App.() -> Unit) {
+inline fun Debug(crossinline block: @DisallowComposableCalls suspend App.() -> Unit) {
     if (BuildConfig.IS_DEBUG_MODE) {
         val app = LocalApp.current
 
