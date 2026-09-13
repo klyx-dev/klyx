@@ -1,1 +1,21 @@
-{}
+{
+    "back": "Indietro",
+    "backupAndRestore": "Backup & Ripristino",
+    "bootstrapInstalled": "Bootstrap installato con successo",
+    "bootstrapUpdated": "Bootstrap aggiornato con successo",
+    "cancel": "Annulla",
+    "developerOptions": "Opzioni Sviluppatore",
+    "exportSettings": "Esporta Impostazioni",
+    "importSettings": "Importa Impostazioni",
+    "install": "Installa",
+    "installingBootstrap": "Installando Bootstrap",
+    "logsCopiedToClipboard": "Log copiati negli appunti",
+    "newFile": "Nuovo File",
+    "newFolder": "Nuova Cartella",
+    "noLogsToCopy": "Nessun log da copiare",
+    "noLogsToShare": "Nessun log da condividere",
+    "projectOpened": "Progetto aperto",
+    "rename": "Rinomina",
+    "settingsExported": "Impostazioni esportate",
+    "settingsImported": "Impostazioni importate e applicate"
+}
