@@ -11,6 +11,7 @@
     <application
             android:name=".KlyxApp"
             android:label="Klyx"
+            android:icon="@mipmap/ic_launcher"
             android:requestLegacyExternalStorage="true"
             android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity android:name="com.klyx.MainActivity"
