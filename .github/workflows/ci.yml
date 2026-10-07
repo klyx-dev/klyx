@@ -25,7 +25,7 @@ env:
   APP_NAME: "Klyx"
   APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
 
-  KOTLIN_SHARED_CACHE_DIR: ~/.cache/JetBrains/Kotlin
+  KOTLIN_SHARED_CACHE_DIR: /home/runner/.cache/JetBrains/Kotlin
   KOTLIN_CLI_NO_WELCOME_BANNER: "1"
 
 jobs:
@@ -46,7 +46,7 @@ jobs:
       - name: Cache Kotlin Toolchain
         uses: actions/cache@v6
         with:
-          path: ~/.cache/JetBrains/Kotlin
+          path: /home/runner/.cache/JetBrains/Kotlin
           key: ${{ runner.os }}-kotlin-${{ hashFiles('kotlin') }}
           restore-keys: |
             ${{ runner.os }}-kotlin-
