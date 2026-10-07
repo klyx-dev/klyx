@@ -25,6 +25,9 @@ env:
   APP_NAME: "Klyx"
   APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
 
+  KOTLIN_SHARED_CACHE_DIR: ~/.cache/JetBrains/Kotlin
+  KOTLIN_CLI_NO_WELCOME_BANNER: "1"
+
 jobs:
   build-android:
     name: Build Android APK
@@ -39,6 +42,14 @@ jobs:
 
       - name: Make Kotlin executable
         run: chmod +x ./kotlin
+
+      - name: Cache Kotlin Toolchain
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/JetBrains/Kotlin
+          key: ${{ runner.os }}-kotlin-${{ hashFiles('kotlin') }}
+          restore-keys: |
+            ${{ runner.os }}-kotlin-
 
       - name: Restore signing files
         if: github.event_name != 'pull_request'
@@ -88,18 +99,25 @@ jobs:
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
+          BEFORE="${{ github.event.before }}"
+          CURRENT="${{ github.sha }}"
+
           if [ "${{ github.event_name }}" = "push" ] &&
-             [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+             [ "$BEFORE" != "0000000000000000000000000000000000000000" ] &&
+             git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
 
             COMMIT_MSG="$(git log \
-              ${{ github.event.before }}..${{ github.sha }} \
+              "$BEFORE..$CURRENT" \
               --pretty=format:"%s by %an" \
               --reverse)"
+
           else
-            COMMIT_MSG="$(git log -1 --pretty=format:"%s by %an")"
+            COMMIT_MSG="$(git log -1 \
+              --pretty=format:"%s by %an" \
+              "$CURRENT")"
           fi
 
-          CAPTION=$(echo "$COMMIT_MSG" | head -c 1000)
+          CAPTION=$(printf '%s' "$COMMIT_MSG" | head -c 1000)
 
           if [ "${#COMMIT_MSG}" -gt 1000 ]; then
             CAPTION="${CAPTION}..."
