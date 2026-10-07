@@ -1,1 +1,0 @@
--keep class com.klyx.terminal.native.Native { *; }

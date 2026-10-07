@@ -1,0 +1,7 @@
+settings:
+  kotlin:
+    compilerPlugins:
+      - id: io.insert-koin.compiler.plugin
+        dependency: io.insert-koin:koin-compiler-plugin:1.2.1
+        options:
+          logSeverity: info

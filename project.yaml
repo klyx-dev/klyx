@@ -1,0 +1,8 @@
+modules:
+  - android-app
+  - app
+  - core
+  - ios-app
+  - jvm-app
+  - lsp
+  - runtime

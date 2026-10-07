@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="Valkyrie.Settings">
+    <option name="iconPackDestination" value="$PROJECT_DIR$/core/src/icons" />
+    <option name="iconPackName" value="Icons" />
+    <option name="iconPackPackage" value="androidx.compose.material.icons" />
+    <option name="mode" value="IconPack" />
+    <option name="nestedPacks" value="Filled,Outlined,Rounded,TwoTone,Sharp" />
+    <option name="packageName" value="com.klyx.core.icons" />
+    <option name="previewType" value="Auto" />
+    <option name="suppressUnusedReceiverWarning" value="true" />
+    <option name="useExplicitMode" value="true" />
+  </component>
+</project>

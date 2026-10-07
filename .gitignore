@@ -1,16 +1,2 @@
-*.iml
-.gradle
-/local.properties
-.idea
-.DS_Store
 /build
-/captures
-.externalNativeBuild
-.cxx
-.cmake
-**/build/
-**/.cxx
-**/**/.cmake
-**/**/build
-.kotlin
-/output
+/android-app/sign.properties

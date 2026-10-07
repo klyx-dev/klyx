@@ -1,0 +1,30 @@
+settings:
+  compose: enabled
+  kotlin:
+    version: 2.4.20
+    languageVersion: 2.4
+    allWarningsAsErrors: true
+    progressiveMode: true
+    freeCompilerArgs:
+      - -Wextra
+      - -Xcollection-literals
+      - -Xconsistent-data-class-copy-visibility # generates copy() with the same visibility as the constructor
+      - -Xexplicit-context-arguments
+      - -Xintrinsic-const-evaluation
+      - -Xname-based-destructuring=complete
+      - -Xrender-internal-diagnostic-names
+      - -Xreturn-value-checker=full
+      - -Xwarning-level=OVERRIDE_DEPRECATION:error
+      - -Xwarning-level=REDUNDANT_ELSE_IN_WHEN:error
+      - -Xwarning-level=UNCHECKED_CAST:error # At least suppress + explain why it's safe (where the check happened)
+      - -Xwarning-level=UNUSED_VARIABLE:error
+      - -Xwarning-level=REDUNDANT_VISIBILITY_MODIFIER:warning
+    optIns:
+      - kotlin.contracts.ExperimentalContracts
+      - kotlin.time.ExperimentalTime
+
+test-settings:
+  kotlin:
+    powerAssert: enabled
+    freeCompilerArgs:
+      - -Xallow-returns-result-of

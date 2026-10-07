@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="NoctuleWorkspaceSettings">
+    <fileSettings>
+      <settings filePath="$PROJECT_DIR$/third-party/SweetEditor/platform/Apple/Demo-macOS/Package.swift">
+        <projectSettings projectType="noctule.spm">
+          <filePath>$PROJECT_DIR$/third-party/SweetEditor/platform/Apple/Demo-macOS/Package.swift</filePath>
+        </projectSettings>
+      </settings>
+      <settings filePath="$PROJECT_DIR$/third-party/SweetEditor/platform/Apple/Package.swift">
+        <projectSettings projectType="noctule.spm">
+          <filePath>$PROJECT_DIR$/third-party/SweetEditor/platform/Apple/Package.swift</filePath>
+        </projectSettings>
+      </settings>
+    </fileSettings>
+  </component>
+</project>

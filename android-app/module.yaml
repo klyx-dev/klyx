@@ -1,0 +1,25 @@
+product: android/app
+
+dependencies:
+  - //app
+  - $libs.androidx.activity.compose
+  - bom: $libs.koin.bom
+  - $libs.koin.android
+
+settings:
+  android:
+    namespace: "com.klyx"
+    applicationId: "com.klyx"
+
+    versionCode: 1
+    versionName: "0.1.0-alpha"
+
+    abiFilters: [ arm64-v8a, x86_64 ]
+    signing:
+      enabled: true
+      propertiesFile: ./sign.properties
+  junit: junit-5
+
+apply:
+  - //common.module-template.yaml
+  - //koin.module-template.yaml

@@ -1,0 +1,16 @@
+product:
+  type: kmp/lib
+  platforms: [ jvm, android, iosArm64, iosSimulatorArm64 ]
+
+apply:
+  - //common.module-template.yaml
+  - //test.module-template.yaml
+
+settings:
+  junit: junit-5
+  kotlin:
+    serialization: json
+
+dependencies:
+  - $libs.kotlinx.io.core
+  - $libs.kotlinx.coroutines.core

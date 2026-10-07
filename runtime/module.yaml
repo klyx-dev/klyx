@@ -1,0 +1,19 @@
+product:
+  type: kmp/lib
+  platforms: [ jvm, android, iosArm64, iosSimulatorArm64 ]
+
+settings:
+  kotlin:
+    serialization: json
+
+dependencies:
+  - //core: exported
+  - bom: $libs.koin.bom
+  - $libs.koin.compose: exported
+  - androidx.datastore:datastore-core:1.3.0-alpha11
+  - androidx.datastore:datastore-core-okio:1.3.0-alpha11
+
+apply:
+  - //common.module-template.yaml
+  - //koin.module-template.yaml
+  - //test.module-template.yaml

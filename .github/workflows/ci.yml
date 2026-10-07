@@ -22,7 +22,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  GRADLE_OPTS: -Dorg.gradle.jvmargs="-Xmx4096m -XX:+HeapDumpOnOutOfMemoryError"
   APP_NAME: "Klyx"
   APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
 
@@ -30,130 +29,57 @@ jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
-    steps:
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /opt/hostedtoolcache
-          docker system prune -af || true
-          df -h
 
+    steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
           submodules: false
           fetch-depth: 0
 
-      - name: Checkout submodules
-        run: git submodule update --init --recursive --depth 1
+      - name: Make Kotlin executable
+        run: chmod +x ./kotlin
 
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "21"
-
-      - name: Setup Android SDK + NDK
-        uses: android-actions/setup-android@v4
-
-      - name: Install NDK
-        run: |
-          yes | sdkmanager "ndk;29.0.14206865"
-
-      - name: Install CMake
-        run: |
-          CMAKE_VERSION=4.3.2
-          wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
-          tar -xzf cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
-          echo "cmake.dir=$PWD/cmake-${CMAKE_VERSION}-linux-x86_64" >> local.properties
-          echo "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin" >> $GITHUB_PATH
-          "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin/cmake" --version
-
-      - name: Restore keystore
+      - name: Restore signing files
         if: github.event_name != 'pull_request'
         run: |
           echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
-
-      - name: Restore signing properties
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > /tmp/sign.properties
-
-      - name: Cache Gradle
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Make Gradle executable
-        run: chmod +x gradlew
-
-      - name: Prepare TreeSitter bindings
-        run: ./gradlew prepareTreeSitter
+          echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > android-app/sign.properties
+          sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' android-app/sign.properties
 
       - name: Build APK
-        env:
-          CI: true
-          CI_PROVIDER: github
-
-          CI_WORKFLOW: ${{ github.workflow }}
-          CI_JOB: ${{ github.job }}
-          CI_RUN_ID: ${{ github.run_id }}
-          CI_RUN_NUMBER: ${{ github.run_number }}
-          CI_ATTEMPT: ${{ github.run_attempt }}
-          CI_ACTOR: ${{ github.actor }}
-          CI_EVENT: ${{ github.event_name }}
-
-          GIT_COMMIT: ${{ github.sha }}
-          GIT_BRANCH: ${{ github.ref_name }}
-          GIT_REF: ${{ github.ref }}
-          GIT_REF_TYPE: ${{ github.ref_type }}
-          GIT_REPO: ${{ github.repository }}
-          GIT_REPO_OWNER: ${{ github.repository_owner }}
-
-          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
-
-          CI_OS: ${{ runner.os }}
-          CI_ARCH: ${{ runner.arch }}
-
-          KLYX_STORE_API_KEY: ${{ secrets.KLYX_STORE_API_KEY }}
-
-          ENABLE_STRICT_MODE: false
-          ENABLE_EXPERIMENTAL: true
-
         run: |
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            ./gradlew assembleDebug
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ./kotlin build --variant debug
           else
-            ./gradlew assembleRelease
+            ./kotlin build --variant release
           fi
 
-      - name: Cleanup sensitive files
-        if: always()
-        run: rm -f /tmp/klyx.keystore /tmp/sign.properties
-
-      - name: Prepare ARM64 APK
+      - name: Prepare APK
         id: apk
         run: |
           mkdir -p artifacts
 
           SHORT_SHA=$(git rev-parse --short HEAD)
-          APK=$(find app/build/outputs/apk -type f -name "*arm64-v8a*.apk" | head -n1)
 
-          if [ -z "$APK" ]; then
-            echo "ARM64 APK not found"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            APK="build/tasks/_android-app_buildAndroidDebug/gradle-project-debug.apk"
+          else
+            APK="build/tasks/_android-app_buildAndroidRelease/gradle-project-release.apk"
+          fi
+
+          if [ ! -f "$APK" ]; then
+            echo "APK not found: $APK"
+            echo "Available APKs:"
+            find build -type f -name "*.apk" -print
             exit 1
           fi
 
-          cp "$APK" "artifacts/klyx-${SHORT_SHA}-arm64.apk"
+          OUTPUT="artifacts/klyx-${SHORT_SHA}.apk"
+          cp "$APK" "$OUTPUT"
 
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "apk=artifacts/klyx-${SHORT_SHA}-arm64.apk" >> "$GITHUB_OUTPUT"
+          echo "apk=$OUTPUT" >> "$GITHUB_OUTPUT"
 
       - name: Send to Telegram
         if: github.ref == 'refs/heads/main'
@@ -162,120 +88,44 @@ jobs:
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
         run: |
-          if [ "${{ github.event_name }}" == "push" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
-            COMMIT_MSG="$(git log ${{ github.event.before }}..${{ github.sha }} --pretty=format:"%s by %an" --reverse)"
+          if [ "${{ github.event_name }}" = "push" ] &&
+             [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+
+            COMMIT_MSG="$(git log \
+              ${{ github.event.before }}..${{ github.sha }} \
+              --pretty=format:"%s by %an" \
+              --reverse)"
           else
             COMMIT_MSG="$(git log -1 --pretty=format:"%s by %an")"
           fi
 
-          # truncate to avoid Telegram caption limits (1024 chars)
           CAPTION=$(echo "$COMMIT_MSG" | head -c 1000)
-          if [ ${#COMMIT_MSG} -gt 1000 ]; then
+
+          if [ "${#COMMIT_MSG}" -gt 1000 ]; then
             CAPTION="${CAPTION}..."
           fi
 
-          curl -s --fail --silent --show-error -X POST \
+          curl -s \
+            --fail \
+            --show-error \
+            -X POST \
             "https://api.telegram.org/bot${TOKEN}/sendDocument" \
             -F chat_id="${CHAT_ID}" \
             -F message_thread_id="${TOPIC_ID}" \
             -F document=@"${{ steps.apk.outputs.apk }}" \
             -F caption="${CAPTION}"
 
-      - name: Upload ARM64 APK
+      - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: apk-arm64
+          name: klyx-apk
           path: ${{ steps.apk.outputs.apk }}
           retention-days: 15
           if-no-files-found: error
 
-      - name: Upload x86_64 APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: apk-x86_64
-          path: app/build/outputs/apk/**/*x86_64*.apk
-          retention-days: 15
-          if-no-files-found: ignore
-
-      - name: Upload Universal APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: apk-universal
-          path: app/build/outputs/apk/**/*universal*.apk
-          retention-days: 15
-          if-no-files-found: ignore
-
-  publish-snapshot:
-    name: Publish SNAPSHOT
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
-          fetch-depth: 1
-
-      - name: Setup Java
-        uses: actions/setup-java@v5
-        with:
-          distribution: "temurin"
-          java-version: "21"
-
-      - name: Setup Android SDK + NDK
-        uses: android-actions/setup-android@v4
-
-      - name: Install NDK
+      - name: Cleanup sensitive files
+        if: always()
         run: |
-          yes | sdkmanager "ndk;29.0.14206865"
-
-      - name: Install CMake
-        run: |
-          CMAKE_VERSION=4.3.2
-          wget -q https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
-          tar -xzf cmake-${CMAKE_VERSION}-linux-x86_64.tar.gz
-          echo "cmake.dir=$PWD/cmake-${CMAKE_VERSION}-linux-x86_64" >> local.properties
-          echo "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin" >> $GITHUB_PATH
-          "$PWD/cmake-${CMAKE_VERSION}-linux-x86_64/bin/cmake" --version
-
-      - name: Cache Gradle
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      - name: Make Gradle executable
-        run: chmod +x gradlew
-
-      - name: Prepare TreeSitter bindings
-        run: ./gradlew prepareTreeSitter
-
-      - name: Prepare signing key
-        run: echo "${{ secrets.MAVEN_SIGNING_SECRET_KEY }}" | base64 -d > /tmp/secring.gpg
-
-      - name: Publish SHA-pinned SNAPSHOT
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.MAVEN_SIGNING_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingSecretKeyRingFile: /tmp/secring.gpg
-        run: |
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          BASE_VERSION=$(grep 'project.version=' gradle.properties | cut -d= -f2)
-          ./gradlew publishToMavenCentral -Pproject.version=${BASE_VERSION}-${SHORT_SHA}-SNAPSHOT
-
-      - name: Publish latest SNAPSHOT (overwrites previous)
-        env:
-          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
-          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.MAVEN_SIGNING_KEY_ID }}
-          ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.MAVEN_SIGNING_PASSWORD }}
-          ORG_GRADLE_PROJECT_signingSecretKeyRingFile: /tmp/secring.gpg
-        run: |
-          BASE_VERSION=$(grep 'project.version=' gradle.properties | cut -d= -f2)
-          ./gradlew publishToMavenCentral -Pproject.version=${BASE_VERSION}-SNAPSHOT
+          rm -f /tmp/klyx.keystore
+          rm -f /tmp/sign.properties
+          rm -f android-app/sign.properties

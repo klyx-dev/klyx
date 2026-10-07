@@ -1,0 +1,8 @@
+product: jvm/app
+
+dependencies:
+  - //app
+  - $compose.desktop.currentOs
+
+apply:
+  - //common.module-template.yaml

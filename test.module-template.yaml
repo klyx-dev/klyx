@@ -1,0 +1,13 @@
+settings:
+  junit: junit-5
+
+test-dependencies:
+  - $libs.kotest.assertions.core
+  - $libs.kotest.framework.engine
+  - $libs.kotlinx.coroutines.test
+
+test-dependencies@jvm:
+  - $libs.kotest.runner.junit5
+
+test-dependencies@android:
+  - $libs.kotest.runner.junit5
