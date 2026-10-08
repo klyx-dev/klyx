@@ -105,6 +105,11 @@ import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SweetEditor
 import io.github.lumkit.sweeteditor.TextChangeKind
+import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
+import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
+import io.github.lumkit.sweeteditor.highlight.HighlightTheme
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.FileSystem
@@ -430,6 +435,27 @@ private fun EditorDocument(
     val focusRequester = remember { FocusRequester() }
     val settings = remember(active) { EditorSettings(readOnly = !active) }
     val theme = editorTheme()
+
+    val highlight = remember {
+        SweetLineHighlight(
+            SweetLineHighlightConfig(
+                document = HighlightDocumentDescriptor(document.name),
+                features = HighlightFeatureFlags(
+                    syntaxHighlight = true,
+                    indentGuides = true,
+                    bracketGuides = true,
+                    matchedBrackets = true,
+                    rainbowBrackets = true,
+                ),
+                theme = HighlightTheme.dark()
+            )
+        )
+    }
+
+    DisposableEffect(controller, highlight) {
+        val binding = highlight.bind(controller)
+        onDispose(binding::close)
+    }
 
     if (active && focused) {
         DisposableEffect(controller, document.id) {

@@ -9,6 +9,7 @@ dependencies:
   - $compose.material3: exported
   - $libs.composeunstyled: exported
   - io.github.lumkit:sweeteditor-compose:0.1.6
+  - io.github.lumkit:sweetline-compose:0.1.6
 
 settings:
   junit: junit-5
