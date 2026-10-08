@@ -5,7 +5,6 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSerializable
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.navigation3.runtime.NavKey
 import androidx.savedstate.compose.serialization.serializers.SnapshotStateListSerializer
 import androidx.savedstate.serialization.SavedStateConfiguration
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -41,7 +40,7 @@ fun rememberNavigator(initialRoute: Route = Home): Navigator {
         serializer = SnapshotStateListSerializer(),
         configuration = SavedStateConfiguration {
             serializersModule = SerializersModule {
-                polymorphic(NavKey::class) {
+                polymorphic(Route::class) {
                     @OptIn(ExperimentalSerializationApi::class)
                     subclassesOfSealed<Route>()
                 }

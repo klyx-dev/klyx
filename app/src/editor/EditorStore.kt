@@ -3,6 +3,7 @@ package com.klyx.editor
 import com.klyx.core.Disposable
 import com.klyx.core.action.ActionGroup
 import com.klyx.core.action.ActionRegistrar
+import com.klyx.core.merge
 import com.klyx.runtime.action.InsertText
 import com.klyx.runtime.action.Redo
 import com.klyx.runtime.action.Undo
@@ -37,7 +38,8 @@ class EditorStore : ActionGroup {
     val activeController: SweetEditorController?
         get() = activeInstance
 
-    fun install(registrar: ActionRegistrar) = registrar.register()
+    context(registrar: ActionRegistrar)
+    fun registerActions() = registrar.register()
 
     fun register(id: DocumentId, controller: SweetEditorController) {
         live.getOrPut(id) { mutableSetOf() }.add(controller)
@@ -112,11 +114,11 @@ class EditorStore : ActionGroup {
     }
 
     override fun ActionRegistrar.register(): Disposable {
-        val actions = listOf(
+        val disposables = listOf(
             action(Undo) { undo() },
             action(Redo) { redo() },
             action(InsertText) { activeInstance?.insertText(text = it.text) },
         )
-        return Disposable { actions.asReversed().forEach { it.dispose() } }
+        return disposables.merge()
     }
 }

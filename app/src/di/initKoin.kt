@@ -15,9 +15,12 @@ class KoinApp
 @IgnorableReturnValue
 fun initKoin(config: KoinAppDeclaration? = null): KoinApplication {
     val koinApplication = startKoin<KoinApp> { includes(config) }
+    val koin = koinApplication.koin
     val app = App.init(koinApplication)
-    val _ = koinApplication.koin.get<Workspace>().install(app.actionRegistrar)
-    val _ = koinApplication.koin.get<EditorStore>().install(app.actionRegistrar)
+    context(app.actionRegistrar) {
+        val _ = koin.get<Workspace>().registerActions()
+        val _ = koin.get<EditorStore>().registerActions()
+    }
     app.bindDefaultKeybindings()
     return koinApplication
 }

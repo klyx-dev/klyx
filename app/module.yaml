@@ -8,22 +8,7 @@ dependencies:
   - $libs.kotlinx.io.core
   - $compose.material3: exported
   - $libs.composeunstyled: exported
-  - $libs.navigation3.ui
   - io.github.lumkit:sweeteditor-compose:0.1.6
-
-test-dependencies:
-  - $libs.kotest.assertions.core
-  - $libs.kotest.framework.engine
-  - $libs.kotlinx.coroutines.test
-
-test-dependencies@jvm:
-  - $libs.kotest.runner.junit5
-  - org.jetbrains.compose.ui:ui-test-junit4:1.12.1
-  - org.jetbrains.skiko:skiko-awt-runtime-linux-x64:0.150.1
-
-test-dependencies@android:
-  - $libs.kotest.runner.junit5
-  - org.robolectric:robolectric:4.17
 
 settings:
   junit: junit-5

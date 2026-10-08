@@ -11,3 +11,5 @@ interface Owner {
 fun interface Disposable {
     fun dispose()
 }
+
+fun List<Disposable>.merge() = Disposable { asReversed().forEach { it.dispose() } }

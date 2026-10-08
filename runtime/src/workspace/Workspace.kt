@@ -4,9 +4,11 @@ package com.klyx.runtime.workspace
 
 import androidx.datastore.core.DataStore
 import com.klyx.core.Disposable
+import com.klyx.core.action.ActionGroup
 import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.service
 import com.klyx.core.action.singleInput
+import com.klyx.core.merge
 import com.klyx.core.utils.hashOf
 import com.klyx.runtime.Platform
 import com.klyx.runtime.action.ActivateDocument
@@ -48,7 +50,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 @Single
 class Workspace(
     private val settingsStore: DataStore<Settings>? = null,
-) {
+) : ActionGroup {
     // ponytail: app-lifetime scope, never cancelled; per-screen scopes if Workspace ever stops being a singleton
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -326,8 +328,92 @@ class Workspace(
         }
     }
 
-    fun install(registrar: ActionRegistrar): Disposable = with(registrar) {
-        val handles = listOf(
+    context(registrar: ActionRegistrar)
+    fun registerActions() = registrar.register()
+
+    private fun protectHiddenPreview(groupId: EditorGroupId) {
+        if (tabScope.value != EditorTabScope.CurrentProject) return
+        val active = activeProjectId.value
+        editorGroups.value.firstOrNull { it.id == groupId }
+            ?.documents?.firstOrNull { it.preview && !it.pinned }
+            ?.takeIf { tab -> document(tab.documentId)?.isVisibleIn(active) != true }
+            ?.let { hidden -> updateGroup(groupId) { group -> group.withUpdated(hidden.documentId) { copy(preview = false) } } }
+    }
+
+    private fun pruneDocuments() {
+        val open = openDocumentIds()
+        if (open.size == documents.value.size) return
+        documents.update { current -> current.filterKeys { it in open } }
+    }
+
+    private fun updateGroup(groupId: EditorGroupId, transform: (EditorGroup) -> EditorGroup) {
+        val index = editorGroups.value.indexOfFirst { it.id == groupId }
+        check(index >= 0) { "Group ${groupId.value} does not exist" }
+        val groups = editorGroups.value.toMutableList()
+        groups[index] = transform(groups[index])
+        editorGroups.update { groups }
+    }
+
+    private fun createDocumentId(location: DocumentLocation): String = when (location) {
+        is DocumentLocation.Project -> "${location.projectId.value}:${location.relativePath}"
+        is DocumentLocation.Local -> "local:${location.path}"
+        is DocumentLocation.Uri -> "uri:${location.value}"
+    }
+
+    private fun EditorGroup.withOpened(documentId: DocumentId, preview: Boolean): EditorGroup {
+        val existing = documents.firstOrNull { it.documentId == documentId }
+        if (existing != null) {
+            if (existing.preview && !preview) {
+                return copy(
+                    activeDocumentId = documentId,
+                    documents = documents.map { if (it.documentId == documentId) it.copy(preview = false) else it },
+                )
+            }
+            return copy(activeDocumentId = documentId)
+        }
+        val retained = if (preview) documents.filterNot { it.preview && !it.pinned } else documents
+        return copy(
+            documents = retained + WorkspaceDocument(documentId = documentId, preview = preview),
+            activeDocumentId = documentId,
+        )
+    }
+
+    private fun EditorGroup.withActivated(documentId: DocumentId): EditorGroup {
+        check(documents.any { it.documentId == documentId }) { "Document ${documentId.value} is not open" }
+        return copy(activeDocumentId = documentId)
+    }
+
+    private fun EditorGroup.withClosed(documentId: DocumentId): EditorGroup {
+        val index = documents.indexOfFirst { it.documentId == documentId }
+        if (index < 0) return this
+        val remaining = documents.toMutableList().apply { removeAt(index) }
+        return copy(
+            documents = remaining,
+            activeDocumentId = if (activeDocumentId != documentId) {
+                activeDocumentId
+            } else {
+                remaining.getOrNull(index)?.documentId ?: remaining.lastOrNull()?.documentId
+            },
+        )
+    }
+
+    private fun EditorGroup.withUpdated(
+        documentId: DocumentId,
+        required: Boolean = true,
+        transform: WorkspaceDocument.() -> WorkspaceDocument,
+    ): EditorGroup {
+        val current = documents.firstOrNull { it.documentId == documentId }
+        if (current == null) {
+            check(!required) { "Document ${documentId.value} is not open" }
+            return this
+        }
+        val next = current.transform()
+        if (next == current) return this
+        return copy(documents = documents.map { if (it.documentId == documentId) next else it })
+    }
+
+    override fun ActionRegistrar.register(): Disposable {
+        val disposables = listOf(
             action(
                 instance = SplitEditor,
                 title = "Split Editor",
@@ -453,87 +539,7 @@ class Workspace(
                 service<Workspace>().removeProject(it.projectId)
             },
         )
-        Disposable { handles.asReversed().forEach { it.dispose() } }
-    }
 
-    private fun protectHiddenPreview(groupId: EditorGroupId) {
-        if (tabScope.value != EditorTabScope.CurrentProject) return
-        val active = activeProjectId.value
-        editorGroups.value.firstOrNull { it.id == groupId }
-            ?.documents?.firstOrNull { it.preview && !it.pinned }
-            ?.takeIf { tab -> document(tab.documentId)?.isVisibleIn(active) != true }
-            ?.let { hidden -> updateGroup(groupId) { group -> group.withUpdated(hidden.documentId) { copy(preview = false) } } }
-    }
-
-    private fun pruneDocuments() {
-        val open = openDocumentIds()
-        if (open.size == documents.value.size) return
-        documents.update { current -> current.filterKeys { it in open } }
-    }
-
-    private fun updateGroup(groupId: EditorGroupId, transform: (EditorGroup) -> EditorGroup) {
-        val index = editorGroups.value.indexOfFirst { it.id == groupId }
-        check(index >= 0) { "Group ${groupId.value} does not exist" }
-        val groups = editorGroups.value.toMutableList()
-        groups[index] = transform(groups[index])
-        editorGroups.update { groups }
-    }
-
-    private fun createDocumentId(location: DocumentLocation): String = when (location) {
-        is DocumentLocation.Project -> "${location.projectId.value}:${location.relativePath}"
-        is DocumentLocation.Local -> "local:${location.path}"
-        is DocumentLocation.Uri -> "uri:${location.value}"
-    }
-
-    private fun EditorGroup.withOpened(documentId: DocumentId, preview: Boolean): EditorGroup {
-        val existing = documents.firstOrNull { it.documentId == documentId }
-        if (existing != null) {
-            if (existing.preview && !preview) {
-                return copy(
-                    activeDocumentId = documentId,
-                    documents = documents.map { if (it.documentId == documentId) it.copy(preview = false) else it },
-                )
-            }
-            return copy(activeDocumentId = documentId)
-        }
-        val retained = if (preview) documents.filterNot { it.preview && !it.pinned } else documents
-        return copy(
-            documents = retained + WorkspaceDocument(documentId = documentId, preview = preview),
-            activeDocumentId = documentId,
-        )
-    }
-
-    private fun EditorGroup.withActivated(documentId: DocumentId): EditorGroup {
-        check(documents.any { it.documentId == documentId }) { "Document ${documentId.value} is not open" }
-        return copy(activeDocumentId = documentId)
-    }
-
-    private fun EditorGroup.withClosed(documentId: DocumentId): EditorGroup {
-        val index = documents.indexOfFirst { it.documentId == documentId }
-        if (index < 0) return this
-        val remaining = documents.toMutableList().apply { removeAt(index) }
-        return copy(
-            documents = remaining,
-            activeDocumentId = if (activeDocumentId != documentId) {
-                activeDocumentId
-            } else {
-                remaining.getOrNull(index)?.documentId ?: remaining.lastOrNull()?.documentId
-            },
-        )
-    }
-
-    private fun EditorGroup.withUpdated(
-        documentId: DocumentId,
-        required: Boolean = true,
-        transform: WorkspaceDocument.() -> WorkspaceDocument,
-    ): EditorGroup {
-        val current = documents.firstOrNull { it.documentId == documentId }
-        if (current == null) {
-            check(!required) { "Document ${documentId.value} is not open" }
-            return this
-        }
-        val next = current.transform()
-        if (next == current) return this
-        return copy(documents = documents.map { if (it.documentId == documentId) next else it })
+        return disposables.merge()
     }
 }

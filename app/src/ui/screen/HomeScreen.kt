@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
-import com.klyx.core.Debug
 import com.klyx.core.IoDispatcher
 import com.klyx.core.action.action
 import com.klyx.editor.EditorStore
@@ -58,10 +57,8 @@ import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
 import com.klyx.runtime.action.InsertText
 import com.klyx.runtime.action.OpenDocument
-import com.klyx.runtime.action.OpenProject
 import com.klyx.runtime.action.PromotePreviewDocument
 import com.klyx.runtime.action.SplitEditor
-import com.klyx.runtime.fs.systemHomeDirectory
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.DocumentLocation
@@ -108,8 +105,6 @@ import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
 import io.github.lumkit.sweeteditor.SweetEditor
 import io.github.lumkit.sweeteditor.TextChangeKind
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.FileSystem
@@ -127,18 +122,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val workspace: Workspace = koinInject()
     val activeProjectId by workspace.activeProjectId.collectAsState()
     val tabScope by workspace.tabScope.collectAsState()
-
-    Debug {
-        if (workspace.projects.value.isEmpty()) {
-            try {
-                action(OpenProject(systemHomeDirectory))
-                val job = action(OpenDocument(systemHomeDirectory / "vivek/settings.json"))
-                job.join()
-            } catch (_: Throwable) {
-                currentCoroutineContext().ensureActive()
-            }
-        }
-    }
 
     (val groups = first, val activeId = second) = rememberEditorGroups()
 
