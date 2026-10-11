@@ -15,6 +15,7 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.jvm.JvmInline
 
@@ -265,8 +266,8 @@ fun <A, B, C> OneOf<A, B>.mapRight(transform: (B) -> C): OneOf<A, C> =
 /**
  * Folds this [OneOf] into a single value by applying one of two functions.
  *
- * If this is a [OneOf.Left], applies [leftFn] to its value.
- * If this is a [OneOf.Right], applies [rightFn] to its value.
+ * If this is a [OneOf.Left], applies [left] to its value.
+ * If this is a [OneOf.Right], applies [right] to its value.
  *
  * Example:
  * ```kotlin
@@ -278,14 +279,14 @@ fun <A, B, C> OneOf<A, B>.mapRight(transform: (B) -> C): OneOf<A, C> =
  * // length is 5
  * ```
  *
- * @param leftFn The function to apply to a left value
- * @param rightFn The function to apply to a right value
+ * @param left The function to apply to a left value
+ * @param right The function to apply to a right value
  * @return The result of applying the appropriate function
  */
-inline fun <A, B, C> OneOf<A, B>.fold(leftFn: (A) -> C, rightFn: (B) -> C): C =
+inline fun <A, B, C> OneOf<A, B>.fold(left: (A) -> C, right: (B) -> C): C =
     when (this) {
-        is Left -> leftFn(value)
-        is Right -> rightFn(value)
+        is Left -> left(value)
+        is Right -> right(value)
     }
 
 /**
@@ -344,11 +345,13 @@ fun <A, B> OneOf<A, B>.leftOr(default: () -> A): A =
  * @param default The value to return if this is a [OneOf.Left]
  * @return The right value or the default
  */
-fun <A, B> OneOf<A, B>.rightOr(default: () -> B): B =
-    when (this) {
+fun <A, B> OneOf<A, B>.rightOr(default: () -> B): B {
+    contract { callsInPlace(default, InvocationKind.AT_MOST_ONCE) }
+    return when (this) {
         is Left -> default()
         is Right -> value
     }
+}
 
 internal class OneOfSerializer<A, B>(
     private val leftSerializer: KSerializer<A>,

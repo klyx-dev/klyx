@@ -134,7 +134,6 @@ class JsonRpcConnectionTest : FunSpec({
         val written = setup.serverToClient.readAll()
         written shouldContain "test/notification"
         written shouldContain "\"data\":\"test\""
-        println(written)
 
         //setup.cleanup()
     }
@@ -240,7 +239,6 @@ class JsonRpcConnectionTest : FunSpec({
         val written = setup.serverToClient.readAll()
         written shouldContain "Method not found"
         written shouldContain "unknown/method"
-        println(written)
 
         //setup.cleanup()
     }
@@ -364,7 +362,6 @@ class JsonRpcConnectionTest : FunSpec({
         val written = setup.serverToClient.readAll()
         written shouldContain "Internal error"
         written shouldContain "Handler error"
-        println(written)
 
         //setup.cleanup()
     }
@@ -391,7 +388,6 @@ class JsonRpcConnectionTest : FunSpec({
 
         result.toString() shouldContain "\"name\":\"Test\""
         result.toString() shouldContain "\"value\":42"
-        println(result)
 
         responseJob.cancel()
         //setup.cleanup()

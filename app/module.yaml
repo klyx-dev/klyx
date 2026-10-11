@@ -10,6 +10,7 @@ dependencies:
   - $libs.composeunstyled: exported
   - io.github.lumkit:sweeteditor-compose:0.1.6
   - io.github.lumkit:sweetline-compose:0.1.6
+  - $libs.kmp.process
 
 settings:
   junit: junit-5
@@ -28,3 +29,4 @@ settings@android:
 apply:
   - //common.module-template.yaml
   - //koin.module-template.yaml
+  - //test.module-template.yaml

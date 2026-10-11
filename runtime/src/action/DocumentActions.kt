@@ -101,3 +101,22 @@ object ActivateNextDocument : Action {
 object ActivatePreviousDocument : Action {
     override val id = ActionId("editor.activatePreviousDocument")
 }
+
+/** Saves a document to disk. */
+data class SaveDocument(val documentId: DocumentId) : Action {
+    override val id = SaveDocument.id
+
+    companion object : ActionDescriptor<SaveDocument> {
+        override val id = ActionId("editor.saveDocument")
+    }
+}
+
+/** Saves the document currently in focus. */
+object SaveActiveDocument : Action {
+    override val id = ActionId("editor.saveActiveDocument")
+}
+
+/** Saves all open documents to disk. */
+object SaveAllDocuments : Action {
+    override val id = ActionId("editor.saveAllDocuments")
+}

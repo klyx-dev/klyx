@@ -1,5 +1,7 @@
 package com.klyx.runtime
 
+import java.io.File
+
 actual val currentOperatingSystem: OperatingSystem
     get() {
         val os = System.getProperty("os.name").lowercase()
@@ -22,3 +24,7 @@ actual val currentArchitecture: Architecture
         "arm", "arm32" -> Architecture.Arm32
         else -> Architecture.Unknown
     }
+
+actual fun getenv(name: String): String? = System.getenv(name)
+
+actual val systemPathSeparator: Char = File.pathSeparatorChar

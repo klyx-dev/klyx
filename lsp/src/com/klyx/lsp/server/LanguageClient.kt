@@ -24,6 +24,7 @@ import com.klyx.lsp.types.LSPAny
 import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
 import com.klyx.lsp.types.OneOf
+import kotlinx.serialization.json.JsonNull
 
 private fun unsupported(): Nothing = throw UnsupportedOperationException()
 
@@ -95,9 +96,7 @@ interface LanguageClient {
      *
      * @since 3.16.0
      */
-    suspend fun refreshCodeLenses() {
-        unsupported()
-    }
+    suspend fun refreshCodeLenses() {}
 
     /**
      * The `workspace/foldingRange/refresh` request is sent from the server
@@ -111,9 +110,7 @@ interface LanguageClient {
      *
      * @since 3.18.0
      */
-    suspend fun refreshFoldingRanges() {
-        unsupported()
-    }
+    suspend fun refreshFoldingRanges() {}
 
     /**
      * The `workspace/semanticTokens/refresh` request is sent from the server to the client.
@@ -126,9 +123,7 @@ interface LanguageClient {
      *
      * @since 3.16.0
      */
-    suspend fun refreshSemanticTokens() {
-        unsupported()
-    }
+    suspend fun refreshSemanticTokens() {}
 
     /**
      * The `workspace/inlayHint/refresh` request is sent from the server to the client.
@@ -141,9 +136,7 @@ interface LanguageClient {
      *
      * @since 3.17.0
      */
-    suspend fun refreshInlayHints() {
-        unsupported()
-    }
+    suspend fun refreshInlayHints() {}
 
     /**
      * The `workspace/inlineValue/refresh` request is sent from the server to the client.
@@ -156,9 +149,7 @@ interface LanguageClient {
      *
      * @since 3.17.0
      */
-    suspend fun refreshInlineValues() {
-        unsupported()
-    }
+    suspend fun refreshInlineValues() {}
 
     /**
      * Diagnostics notifications are sent from the server to the client to signal results of validation runs.
@@ -180,9 +171,7 @@ interface LanguageClient {
      * is useful if a server detects a project wide configuration change which requires a re-calculation
      * of all diagnostics.
      */
-    suspend fun refreshDiagnostics() {
-        unsupported()
-    }
+    suspend fun refreshDiagnostics() {}
 
     /**
      * The `workspace/configuration` request is sent from the server to the client to fetch configuration
@@ -193,7 +182,7 @@ interface LanguageClient {
      *
      * @since 3.6.0
      */
-    suspend fun configuration(params: ConfigurationParams): List<LSPAny> = emptyList()
+    suspend fun configuration(params: ConfigurationParams): List<LSPAny> = List(params.items.size) { JsonNull }
 
     /**
      * The `workspace/workspaceFolders` request is sent from the server to the client to fetch the current

@@ -11,10 +11,10 @@ data class ConfigurationItem(
     /**
      * The scope to get the configuration section for.
      */
-    val scopeUri: URI?,
+    val scopeUri: URI? = null,
 
     /**
      * The configuration section asked for.
      */
-    val section: String?
+    val section: String? = null
 )

@@ -3,6 +3,7 @@ package com.klyx.di
 import com.klyx.AppModule
 import com.klyx.core.App
 import com.klyx.editor.EditorStore
+import com.klyx.lsp.LspActionGroup
 import com.klyx.runtime.workspace.Workspace
 import org.koin.core.KoinApplication
 import org.koin.dsl.KoinAppDeclaration
@@ -20,6 +21,7 @@ fun initKoin(config: KoinAppDeclaration? = null): KoinApplication {
     context(app.actionRegistrar) {
         val _ = koin.get<Workspace>().registerActions()
         val _ = koin.get<EditorStore>().registerActions()
+        val _ = koin.get<LspActionGroup>().registerActions()
     }
     app.bindDefaultKeybindings()
     return koinApplication

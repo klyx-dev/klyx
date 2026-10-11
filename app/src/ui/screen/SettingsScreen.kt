@@ -34,6 +34,8 @@ import com.composeunstyled.Track
 import com.composeunstyled.UnstyledSwitch
 import com.composeunstyled.theme.Theme
 import com.klyx.navigation.LocalNavigator
+import com.klyx.runtime.OperatingSystem
+import com.klyx.runtime.currentOperatingSystem
 import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.ui.accent
@@ -93,6 +95,24 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         SectionHeader("TOP BAR")
 
         UndoRedoRow(modifier = Modifier.fillMaxWidth())
+
+        SectionHeader("EDITOR")
+
+        AutoSaveRow(modifier = Modifier.fillMaxWidth())
+
+        SectionHeader("LANGUAGE SERVER")
+
+        InlayHintsRow(modifier = Modifier.fillMaxWidth())
+
+        if (currentOperatingSystem == OperatingSystem.Android) {
+            SectionHeader("TERMUX")
+
+            TermuxSetupSection(modifier = Modifier.fillMaxWidth())
+        }
+
+        SectionHeader("LANGUAGE SERVERS")
+
+        LspServersSection(modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -220,6 +240,36 @@ private fun UndoRedoRow(modifier: Modifier = Modifier) {
         checked = show,
         onCheckedChange = workspace::setShowUndoRedoButtons,
         accessibilityLabel = "Show undo and redo buttons",
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun AutoSaveRow(modifier: Modifier = Modifier) {
+    val workspace: Workspace = koinInject()
+    val save by workspace.autoSave.collectAsState()
+
+    SettingRow(
+        title = "auto-save",
+        subtitle = "write files to disk 500ms after the last edit (top-bar save still works)",
+        checked = save,
+        onCheckedChange = workspace::setAutoSave,
+        accessibilityLabel = "Auto-save files after editing",
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun InlayHintsRow(modifier: Modifier = Modifier) {
+    val workspace: Workspace = koinInject()
+    val show by workspace.showInlayHints.collectAsState()
+
+    SettingRow(
+        title = "inlay hints",
+        subtitle = "show inline parameter and type hints from the language server",
+        checked = show,
+        onCheckedChange = workspace::setShowInlayHints,
+        accessibilityLabel = "Show inlay hints",
         modifier = modifier,
     )
 }

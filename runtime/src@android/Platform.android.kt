@@ -1,6 +1,7 @@
 package com.klyx.runtime
 
 import android.os.Build
+import java.io.File
 
 actual val currentOperatingSystem = OperatingSystem.Android
 
@@ -14,3 +15,7 @@ actual val currentArchitecture: Architecture
         "x86" -> Architecture.X86
         else -> Architecture.Unknown
     }
+
+actual fun getenv(name: String): String? = System.getenv(name)
+
+actual val systemPathSeparator: Char = File.pathSeparatorChar

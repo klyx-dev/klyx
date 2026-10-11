@@ -54,10 +54,12 @@ fun KxMenuItem(
     enabled: Boolean = true,
     danger: Boolean = false,
     trailing: String? = null,
+    closeOnClick: Boolean = true,
 ) {
     UnstyledDropdownMenuItem(
         onClick = onClick,
         enabled = enabled,
+        closeOnClick = closeOnClick,
         indication = LocalIndication.current,
         modifier = modifier
             .fillMaxWidth()

@@ -1,6 +1,7 @@
 package com.klyx.lsp.server.internal
 
 import kotlinx.io.Buffer
+import kotlinx.io.EOFException
 import kotlinx.io.Source
 
 internal const val HEADER_DELIMITER = "\r\n\r\n"
@@ -9,7 +10,13 @@ internal fun readHeaders(source: Source, buffer: Buffer) {
     val delimiter = HEADER_DELIMITER.encodeToByteArray()
 
     while (true) {
-        val _ = source.readAtMostTo(buffer, 1)
+        val read = source.readAtMostTo(buffer, 1)
+        if (read == -1L) {
+            if (buffer.size == 0L) {
+                throw EOFException("End of stream reached")
+            }
+            throw EOFException("Unexpected EOF while reading headers")
+        }
         if (buffer.endsWith(delimiter)) return
     }
 }

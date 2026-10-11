@@ -24,12 +24,12 @@ data class CodeAction(
      *
      * Used to filter code actions.
      */
-    val kind: CodeActionKind?,
+    val kind: CodeActionKind? = null,
 
     /**
      * The diagnostics that this code action resolves.
      */
-    val diagnostics: List<Diagnostic>?,
+    val diagnostics: List<Diagnostic>? = null,
 
     /**
      * Marks this as a preferred action. Preferred actions are used by the
@@ -41,7 +41,7 @@ data class CodeAction(
      *
      * @since 3.15.0
      */
-    val isPreferred: Boolean?,
+    val isPreferred: Boolean? = null,
 
     /**
      * Marks that the code action cannot currently be applied.
@@ -62,19 +62,19 @@ data class CodeAction(
      *
      * @since 3.16.0
      */
-    val disabled: CodeActionDisabled?,
+    val disabled: CodeActionDisabled? = null,
 
     /**
      * The workspace edit this code action performs.
      */
-    val edit: WorkspaceEdit?,
+    val edit: WorkspaceEdit? = null,
 
     /**
      * A command this code action executes. If a code action
      * provides an edit and a command, first the edit is
      * executed and then the command.
      */
-    val command: Command?,
+    val command: Command? = null,
 
     /**
      * A data entry field that is preserved on a code action between
@@ -82,14 +82,14 @@ data class CodeAction(
      *
      * @since 3.16.0
      */
-    val data: LSPAny?,
+    val data: LSPAny? = null,
 
     /**
      * Tags for this code action.
      *
      * @since 3.18.0 - proposed
      */
-    val tags: List<CodeActionTag>?
+    val tags: List<CodeActionTag>? = null
 )
 
 /**

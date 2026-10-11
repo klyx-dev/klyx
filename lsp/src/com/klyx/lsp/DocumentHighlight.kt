@@ -20,7 +20,7 @@ data class DocumentHighlight(
     /**
      * The highlight kind, default is [DocumentHighlightKind.Text].
      */
-    val kind: DocumentHighlightKind?
+    val kind: DocumentHighlightKind? = null
 )
 
 /**

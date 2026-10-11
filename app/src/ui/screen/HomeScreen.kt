@@ -1,6 +1,13 @@
 package com.klyx.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,8 +24,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
@@ -42,23 +51,47 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
+import com.klyx.core.Debug
 import com.klyx.core.IoDispatcher
 import com.klyx.core.action.action
 import com.klyx.editor.EditorStore
+import com.klyx.lsp.CodeAction
+import com.klyx.lsp.Diagnostic
+import com.klyx.lsp.DiagnosticSeverity
+import com.klyx.lsp.FormatDocument
+import com.klyx.lsp.EditorLsp
+import com.klyx.lsp.LspDocumentUtils
+import com.klyx.lsp.LspSessionState
+import com.klyx.lsp.RestartLanguageServer
 import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
+import com.klyx.runtime.action.Copy
+import com.klyx.runtime.action.FoldAll
 import com.klyx.runtime.action.InsertText
 import com.klyx.runtime.action.OpenDocument
+import com.klyx.runtime.action.OpenProject
+import com.klyx.runtime.action.Paste
 import com.klyx.runtime.action.PromotePreviewDocument
+import com.klyx.runtime.action.SaveActiveDocument
+import com.klyx.runtime.action.SaveAllDocuments
+import com.klyx.runtime.action.SelectAll
 import com.klyx.runtime.action.SplitEditor
+import com.klyx.runtime.action.UnfoldAll
+import com.klyx.runtime.fs.systemHomeDirectory
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.DocumentLocation
@@ -69,7 +102,9 @@ import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.isVisibleIn
 import com.klyx.ui.accent
+import com.klyx.ui.accentSecondary
 import com.klyx.ui.background
+import com.klyx.ui.bodySmall
 import com.klyx.ui.border
 import com.klyx.ui.colors
 import com.klyx.ui.components.KxButton
@@ -77,11 +112,21 @@ import com.klyx.ui.components.KxButtonDefaultMinHeight
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
+import com.klyx.ui.components.KxMenuSeparator
 import com.klyx.ui.currentFontFamily
+import com.klyx.ui.editor.CodeActionsDialog
+import com.klyx.ui.editor.CompletionDocDialog
+import com.klyx.ui.editor.CustomCompletionPopup
+import com.klyx.ui.editor.DiagnosticBanner
 import com.klyx.ui.editor.GroupStrip
+import com.klyx.ui.editor.HoverCard
+import com.klyx.ui.editor.LspCompletionItemUi
+import com.klyx.ui.editor.LspStatusDialog
+import com.klyx.ui.editor.ProblemsDialog
 import com.klyx.ui.editor.TabStrip
 import com.klyx.ui.editor.rememberEditorGroups
 import com.klyx.ui.editor.rememberHasVisibleFiles
+import com.klyx.ui.error
 import com.klyx.ui.filetree.ChildrenLoader
 import com.klyx.ui.filetree.FileNode
 import com.klyx.ui.filetree.FileTree
@@ -96,10 +141,12 @@ import com.klyx.ui.labelSmall
 import com.klyx.ui.project.OpenProjectDialog
 import com.klyx.ui.project.ProjectSwitcher
 import com.klyx.ui.surface
+import com.klyx.ui.surfaceVariant
 import com.klyx.ui.textMuted
 import com.klyx.ui.textPrimary
 import com.klyx.ui.textSecondary
 import com.klyx.ui.typography
+import com.klyx.ui.warning
 import io.github.lumkit.sweeteditor.EditorActionSource
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
@@ -110,12 +157,17 @@ import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
 import io.github.lumkit.sweeteditor.highlight.HighlightTheme
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.SYSTEM
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -125,6 +177,58 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val navigator = LocalNavigator.current
 
     val workspace: Workspace = koinInject()
+    val editors: EditorStore = koinInject()
+    val lsp: EditorLsp = koinInject()
+
+    val documents by workspace.documents.collectAsState()
+    val activeDocId by editors.activeDocumentId.collectAsState()
+    val activeDoc = documents[activeDocId]
+
+    var showProblemsDialog by remember { mutableStateOf(false) }
+    var showLspStatusDialog by remember { mutableStateOf(false) }
+
+    var showCodeActionsDialog by remember { mutableStateOf(false) }
+    var availableCodeActions by remember { mutableStateOf<List<CodeAction>>(emptyList()) }
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(toastMessage) {
+        if (toastMessage != null) {
+            delay(2.5.seconds)
+            toastMessage = null
+        }
+    }
+
+    val allDiags by lsp.client.diagnostics.collectAsState()
+    val activeDocDiags = remember(allDiags, activeDoc?.id) {
+        val doc = activeDoc ?: return@remember emptyList()
+        val uri = LspDocumentUtils.uriOf(doc, workspace)
+        val normalized = lsp.client.normalizeUri(uri)
+        allDiags.entries.firstOrNull { lsp.client.normalizeUri(it.key) == normalized }?.value ?: emptyList()
+    }
+
+    val onQuickFix: (Diagnostic) -> Unit = { diag ->
+        if (activeDoc != null) {
+            scope.launch {
+                val actions = lsp.getCodeActions(activeDoc, diag.range, listOf(diag))
+                if (actions.isNotEmpty()) {
+                    availableCodeActions = actions
+                    showCodeActionsDialog = true
+                } else {
+                    toastMessage = "No quick fixes available for this problem"
+                }
+            }
+        }
+    }
+
+    Debug {
+        try {
+            action(OpenProject(systemHomeDirectory / "zed/Projects/rs-test"))
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            toastMessage = "Failed to open project: ${e.message}"
+        }
+    }
+
     val activeProjectId by workspace.activeProjectId.collectAsState()
     val tabScope by workspace.tabScope.collectAsState()
 
@@ -132,16 +236,16 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 
     LaunchedEffect(activeProjectId, tabScope) {
         if (tabScope != EditorTabScope.CurrentProject) return@LaunchedEffect
-        val documents = workspace.documents.value
-        workspace.editorGroups.value.forEach { group ->
-            val visible = group.documents.filter { tab ->
-                documents[tab.documentId]?.isVisibleIn(activeProjectId) ?: true
+        val docs = workspace.documents.value
+        workspace.editorGroups.value.forEach { (id, documents, activeDocumentId) ->
+            val visible = documents.filter { tab ->
+                docs[tab.documentId]?.isVisibleIn(activeProjectId) ?: true
             }
-            val selectionVisible = group.activeDocumentId?.let { id ->
-                visible.any { it.documentId == id }
+            val selectionVisible = activeDocumentId?.let { active ->
+                visible.any { it.documentId == active }
             } == true
             if (!selectionVisible && visible.isNotEmpty()) {
-                workspace.activateDocument(group.id, visible.first().documentId)
+                workspace.activateDocument(id, visible.first().documentId)
             }
         }
     }
@@ -162,6 +266,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 onFilesClick = { scope.launch { drawerState.open() } },
                 onOpenDialog = { openProjectDialog = true },
                 onSettingsClick = { navigator.navigateTo(Settings) },
+                onShowProblems = { showProblemsDialog = true },
+                onShowLspStatus = { showLspStatusDialog = true },
             )
 
             GroupStrip(groups = groups, activeId = activeId)
@@ -170,6 +276,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 SinglePaneGroups(
                     groups = groups,
                     activeId = activeId,
+                    onQuickFix = onQuickFix,
+                    onShowToast = { msg -> toastMessage = msg },
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f),
@@ -201,17 +309,156 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 }
 
                 KxButton(
-                    onClick = { action(InsertText("    ")) },
+                    onClick = { action(InsertText("\t")) },
                     variant = KxButtonVariant.Outlined,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 ) {
                     Text("Tab")
+                }
+
+                if (isCmd) {
+                    KxButton(
+                        onClick = { action(SelectAll) },
+                        variant = KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Select All")
+                    }
+
+                    KxButton(
+                        onClick = { action(Copy) },
+                        variant = KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Copy")
+                    }
+
+                    KxButton(
+                        onClick = { action(Paste) },
+                        variant = KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Paste")
+                    }
+
+                    KxButton(
+                        onClick = { action(FoldAll) },
+                        variant = KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Fold")
+                    }
+
+                    KxButton(
+                        onClick = { action(UnfoldAll) },
+                        variant = KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Unfold")
+                    }
+                }
+            }
+
+            if (activeDoc != null) {
+                StatusBar(
+                    activeDoc = activeDoc,
+                    activeDiags = activeDocDiags,
+                    onShowProblems = { showProblemsDialog = true },
+                    onShowLspStatus = { showLspStatusDialog = true },
+                )
+            }
+        }
+    }
+
+    AnimatedVisibility(
+        visible = toastMessage != null,
+        enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .safeDrawingPadding()
+            .padding(top = 16.dp),
+    ) {
+        toastMessage?.let { msg ->
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .shadow(8.dp, RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Theme[colors][surfaceVariant])
+                        .border(1.dp, Theme[colors][border], RoundedCornerShape(8.dp))
+                        .clickable { toastMessage = null }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "ℹ",
+                            style = Theme[typography][bodySmall].copy(fontWeight = FontWeight.Bold),
+                            color = Theme[colors][accentSecondary],
+                        )
+                        Text(
+                            text = msg,
+                            style = Theme[typography][bodySmall],
+                            color = Theme[colors][textPrimary],
+                        )
+                    }
                 }
             }
         }
     }
 
     OpenProjectDialog(visible = openProjectDialog, onDismiss = { openProjectDialog = false })
+
+    if (activeDoc != null) {
+        ProblemsDialog(
+            visible = showProblemsDialog,
+            onDismiss = { showProblemsDialog = false },
+            documentName = activeDoc.name,
+            diagnostics = activeDocDiags,
+            onSelectDiagnostic = { diag ->
+                val ctrl = editors[activeDoc.id]
+                ctrl.setCursorPosition(diag.range.start.line.toInt(), diag.range.start.character.toInt())
+                ctrl.ensureCursorVisible()
+            },
+            onQuickFix = onQuickFix,
+        )
+    }
+
+    CodeActionsDialog(
+        visible = showCodeActionsDialog,
+        onDismiss = { showCodeActionsDialog = false },
+        actions = availableCodeActions,
+        onSelectAction = { action ->
+            scope.launch {
+                lsp.applyCodeAction(action)
+            }
+        },
+    )
+
+    val activeSessions by lsp.activeSessions.collectAsState()
+    val progressItems by lsp.client.progressItems.collectAsState()
+    LspStatusDialog(
+        visible = showLspStatusDialog,
+        onDismiss = { showLspStatusDialog = false },
+        sessions = activeSessions,
+        progressItems = progressItems,
+        onRestartLanguageServer = { lang ->
+            scope.launch {
+                val _ = lsp.restartSession(lang)
+            }
+        },
+    )
+}
+
+private enum class OverflowMenuPage {
+    Main,
+    Lsp,
 }
 
 @Suppress("UnusedReceiverParameter")
@@ -220,6 +467,8 @@ private fun ColumnScope.TopBar(
     onFilesClick: () -> Unit,
     onOpenDialog: () -> Unit,
     onSettingsClick: () -> Unit = {},
+    onShowProblems: () -> Unit = {},
+    onShowLspStatus: () -> Unit = {},
 ) {
     val editors: EditorStore = koinInject()
     val workspace: Workspace = koinInject()
@@ -274,7 +523,12 @@ private fun ColumnScope.TopBar(
             Spacer(modifier = Modifier.width(6.dp))
         }
 
-        TopBarOverflowMenu(onSettingsClick = onSettingsClick, showSplitAction = hasVisibleFiles)
+        TopBarOverflowMenu(
+            onSettingsClick = onSettingsClick,
+            onShowProblems = onShowProblems,
+            onShowLspStatus = onShowLspStatus,
+            showSplitAction = hasVisibleFiles,
+        )
     }
 
     Row(
@@ -290,22 +544,128 @@ private fun ColumnScope.TopBar(
 @Composable
 private fun TopBarOverflowMenu(
     onSettingsClick: () -> Unit,
+    onShowProblems: () -> Unit,
+    onShowLspStatus: () -> Unit,
     modifier: Modifier = Modifier,
     showSplitAction: Boolean = true,
 ) {
+    val workspace: Workspace = koinInject()
+    val editors: EditorStore = koinInject()
+    val lsp: EditorLsp = koinInject()
+    val scope = rememberCoroutineScope()
     var expanded by remember { mutableStateOf(false) }
+    var menuPage by remember { mutableStateOf(OverflowMenuPage.Main) }
+
+    val activeDocId by editors.activeDocumentId.collectAsState()
+    val hasActiveDoc = activeDocId != null
 
     UnstyledDropdownMenu(
         expanded = expanded,
-        onExpandedChange = { expanded = it },
+        onExpandedChange = {
+            expanded = it
+            if (!it) menuPage = OverflowMenuPage.Main
+        },
         sideOffset = 4.dp,
         modifier = modifier,
         panel = {
             KxMenuPanel {
-                if (showSplitAction) {
-                    KxMenuItem(label = "split editor", onClick = { action(SplitEditor) })
+                when (menuPage) {
+                    OverflowMenuPage.Main -> {
+                        KxMenuItem(
+                            label = "save",
+                            trailing = "Ctrl+S",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                action(SaveActiveDocument)
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "save all",
+                            trailing = "Ctrl+Shift+S",
+                            onClick = {
+                                action(SaveAllDocuments)
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "format document",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                action(FormatDocument)
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "LSP & tools",
+                            trailing = "▶",
+                            closeOnClick = false,
+                            onClick = {
+                                menuPage = OverflowMenuPage.Lsp
+                            },
+                        )
+                        KxMenuSeparator()
+                        if (showSplitAction) {
+                            KxMenuItem(
+                                label = "split editor",
+                                onClick = {
+                                    action(SplitEditor)
+                                    expanded = false
+                                },
+                            )
+                        }
+                        KxMenuItem(
+                            label = "settings",
+                            onClick = {
+                                onSettingsClick()
+                                expanded = false
+                            },
+                        )
+                    }
+
+                    OverflowMenuPage.Lsp -> {
+                        KxMenuItem(
+                            label = "◀ back",
+                            closeOnClick = false,
+                            onClick = { menuPage = OverflowMenuPage.Main },
+                        )
+                        KxMenuSeparator()
+                        KxMenuItem(
+                            label = "restart server",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                action(RestartLanguageServer)
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "view problems",
+                            onClick = {
+                                onShowProblems()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "server status & tasks",
+                            onClick = {
+                                onShowLspStatus()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "hover documentation",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                expanded = false
+                                scope.launch {
+                                    val doc = activeDocId?.let { workspace.document(it) } ?: return@launch
+                                    (val line, val column) = editors.activeCursor.value ?: return@launch
+                                    val _ = lsp.requestHover(doc, line, column)
+                                }
+                            },
+                        )
+                    }
                 }
-                KxMenuItem(label = "settings", onClick = onSettingsClick)
             }
         },
         anchor = {
@@ -313,7 +673,7 @@ private fun TopBarOverflowMenu(
                 onClick = { expanded = true },
                 variant = KxButtonVariant.Outlined,
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                modifier = Modifier.defaultMinSize(minHeight = KxButtonDefaultMinHeight)
+                modifier = Modifier.defaultMinSize(minHeight = KxButtonDefaultMinHeight),
             ) {
                 Text(text = "options", style = Theme[typography][label], color = Theme[colors][textSecondary])
             }
@@ -322,16 +682,24 @@ private fun TopBarOverflowMenu(
 }
 
 @Composable
-private fun SinglePane(group: EditorGroup, modifier: Modifier = Modifier) {
+private fun SinglePane(
+    group: EditorGroup,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(modifier = modifier) {
         TabStrip(group = group, modifier = Modifier.fillMaxWidth())
 
         Spacer(modifier = Modifier.height(2.dp))
 
         EditorPane(
-            group = group, modifier = Modifier
+            group = group,
+            onQuickFix = onQuickFix,
+            onShowToast = onShowToast,
+            modifier = Modifier
                 .fillMaxSize()
-                .padding(start = 2.dp)
+                .padding(start = 2.dp),
         )
     }
 }
@@ -340,6 +708,8 @@ private fun SinglePane(group: EditorGroup, modifier: Modifier = Modifier) {
 private fun SinglePaneGroups(
     groups: List<EditorGroup>,
     activeId: EditorGroupId?,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val visibleId = activeId?.takeIf { id ->
@@ -353,6 +723,8 @@ private fun SinglePaneGroups(
                 key(group.id) {
                     SinglePane(
                         group = group,
+                        onQuickFix = onQuickFix,
+                        onShowToast = onShowToast,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -371,7 +743,12 @@ private fun SinglePaneGroups(
 }
 
 @Composable
-private fun EditorPane(group: EditorGroup?, modifier: Modifier = Modifier) {
+private fun EditorPane(
+    group: EditorGroup?,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val workspace: Workspace = koinInject()
 
     val documents by workspace.documents.collectAsState()
@@ -409,6 +786,8 @@ private fun EditorPane(group: EditorGroup?, modifier: Modifier = Modifier) {
                 document = document,
                 active = active,
                 focused = focused,
+                onQuickFix = onQuickFix,
+                onShowToast = onShowToast,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -427,6 +806,8 @@ private fun EditorDocument(
     document: Document,
     active: Boolean,
     focused: Boolean,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val workspace: Workspace = koinInject()
@@ -436,13 +817,13 @@ private fun EditorDocument(
     val settings = remember(active) { EditorSettings(readOnly = !active) }
     val theme = editorTheme()
 
-    val highlight = remember {
+    val highlight = remember(document) {
         SweetLineHighlight(
             SweetLineHighlightConfig(
                 document = HighlightDocumentDescriptor(document.name),
                 features = HighlightFeatureFlags(
                     syntaxHighlight = true,
-                    indentGuides = true,
+                    indentGuides = false,
                     bracketGuides = true,
                     matchedBrackets = true,
                     rainbowBrackets = true,
@@ -455,6 +836,18 @@ private fun EditorDocument(
     DisposableEffect(controller, highlight) {
         val binding = highlight.bind(controller)
         onDispose(binding::close)
+    }
+
+    val lsp: EditorLsp = koinInject()
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(controller, document.id) {
+        editors.register(document.id, controller)
+        lsp.bindEditor(document, controller)
+        onDispose {
+            lsp.unbindEditor(document)
+            editors.unregister(document.id, controller)
+        }
     }
 
     if (active && focused) {
@@ -474,6 +867,10 @@ private fun EditorDocument(
             .let { text ->
                 controller.whenReady {
                     controller.loadDocument(text = text)
+                    scope.launch {
+                        val uri = LspDocumentUtils.uriOf(document, workspace)
+                        lsp.client.applyDiagnosticsToController(uri, controller)
+                    }
                 }
             }
     }
@@ -493,18 +890,288 @@ private fun EditorDocument(
         onDispose(unsubscribe)
     }
 
+    val allDiags by lsp.client.diagnostics.collectAsState()
+    val fileDiags = remember(allDiags, document.id) {
+        val uri = LspDocumentUtils.uriOf(document, workspace)
+        val normalized = lsp.client.normalizeUri(uri)
+        allDiags.entries.firstOrNull { lsp.client.normalizeUri(it.key) == normalized }?.value ?: emptyList()
+    }
+
+    LaunchedEffect(fileDiags, controller) {
+        controller.whenReady {
+            scope.launch {
+                val uri = LspDocumentUtils.uriOf(document, workspace)
+                lsp.client.applyDiagnosticsToController(uri, controller)
+            }
+        }
+    }
+
+    var cursorLine by remember { mutableStateOf<Int?>(null) }
+    var dismissedLine by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(fileDiags) {
+        dismissedLine = null
+    }
+
+    DisposableEffect(controller, active, focused) {
+        val unsubscribe = controller.onCursorChanged { event ->
+            cursorLine = event.cursorPosition.line
+            if (active && focused) {
+                editors.updateCursor(event.cursorPosition.line, event.cursorPosition.column)
+            }
+        }
+        onDispose(unsubscribe)
+    }
+
+    LaunchedEffect(controller, active, focused) {
+        controller.whenReady {
+            cursorLine = controller.getCursorPosition()?.line
+            val pos = controller.getCursorPosition()
+            if (pos != null && active && focused) {
+                editors.updateCursor(pos.line, pos.column)
+            }
+        }
+    }
+
+    val activeDiags = remember(fileDiags, cursorLine, dismissedLine) {
+        val line = cursorLine ?: return@remember emptyList()
+        if (line == dismissedLine) return@remember emptyList()
+        fileDiags.filter { diag ->
+            val startLine = diag.range.start.line.toInt()
+            val endLine = diag.range.end.line.toInt()
+            line in startLine..endLine
+        }
+    }
+
     LaunchedEffect(active, focused) {
         if (!active || !focused) return@LaunchedEffect
         withFrameNanos {}
         val _ = runCatching { focusRequester.requestFocus() }
     }
 
-    SweetEditor(
-        controller = controller,
-        modifier = modifier.focusRequester(focusRequester),
-        theme = theme,
-        settings = settings,
-    )
+    var editorBoxHeightPx by remember { mutableStateOf(0) }
+    var hoverScrollTick by remember { mutableStateOf(0) }
+
+    DisposableEffect(controller) {
+        val unsubscribe = controller.onScrollChanged { hoverScrollTick++ }
+        onDispose(unsubscribe)
+    }
+
+    val activeHover by lsp.activeHover.collectAsState()
+    val hoverRect = remember(activeHover, hoverScrollTick) {
+        (val line, val column) = activeHover ?: return@remember null
+        runCatching { controller.getPositionRect(line, column) }.getOrNull()
+    }
+
+    val density = LocalDensity.current
+
+    val hoverYOffsetPx = remember(hoverRect, editorBoxHeightPx) {
+        val marginPx = with(density) { 8.dp.roundToPx() }
+        if (hoverRect == null || editorBoxHeightPx <= 0) {
+            marginPx
+        } else {
+            val below = (hoverRect.y + hoverRect.height).roundToInt() + marginPx
+            val estCardPx = with(density) { 280.dp.roundToPx() }
+            if (below + estCardPx <= editorBoxHeightPx) {
+                below
+            } else {
+                (hoverRect.y.roundToInt() - marginPx - estCardPx).coerceAtLeast(marginPx)
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onSizeChanged { editorBoxHeightPx = it.height },
+    ) {
+        SweetEditor(
+            controller = controller,
+            modifier = Modifier
+                .fillMaxSize()
+                .focusRequester(focusRequester),
+            theme = theme,
+            settings = settings,
+        )
+
+        if (active && activeHover != null) {
+            HoverCard(
+                hover = activeHover!!,
+                onDismiss = { lsp.dismissHover() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp)
+                    .offset { IntOffset(0, hoverYOffsetPx) },
+            )
+        }
+
+        val activeCompletion by lsp.activeCompletion.collectAsState()
+        var docItemToShow by remember { mutableStateOf<LspCompletionItemUi?>(null) }
+
+        if (active && activeCompletion != null && activeCompletion?.documentId == document.id) {
+            CustomCompletionPopup(
+                state = activeCompletion!!,
+                onSelectItem = {  },
+                onConfirmItem = { item ->
+                    lsp.applyCompletion(item, controller)
+                },
+                onShowDoc = { item ->
+                    scope.launch {
+                        val resolved = lsp.resolveCompletionDoc(document, item)
+                        val doc = resolved.documentation?.trim()
+                        if (doc.isNullOrBlank()) {
+                            onShowToast("No documentation available for \"${item.label}\"")
+                        } else {
+                            docItemToShow = resolved
+                        }
+                    }
+                },
+                onDismiss = {
+                    lsp.dismissCompletionPopup()
+                },
+            )
+        }
+
+        if (docItemToShow != null) {
+            CompletionDocDialog(
+                item = docItemToShow!!,
+                onDismiss = { docItemToShow = null },
+            )
+        }
+
+        if (active && activeDiags.isNotEmpty()) {
+            DiagnosticBanner(
+                diagnostics = activeDiags,
+                onDismiss = { dismissedLine = cursorLine },
+                onQuickFix = onQuickFix,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusBar(
+    activeDoc: Document?,
+    activeDiags: List<Diagnostic>,
+    onShowProblems: () -> Unit,
+    onShowLspStatus: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val lsp: EditorLsp = koinInject()
+    val editors: EditorStore = koinInject()
+    val activeSessions by lsp.activeSessions.collectAsState()
+    val progressItems by lsp.client.progressItems.collectAsState()
+    val cursor by editors.activeCursor.collectAsState()
+
+    val langId = activeDoc?.let { LspDocumentUtils.languageIdOf(it) }
+    val currentSessionState = langId?.let { activeSessions[it] }
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Theme[colors][surfaceVariant])
+            .border(width = 0.5.dp, color = Theme[colors][border])
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .clickable(onClick = onShowLspStatus)
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val dotColor = when (currentSessionState) {
+                LspSessionState.Running -> Theme[colors][accent]
+                LspSessionState.Starting -> Theme[colors][warning]
+                LspSessionState.Error -> Theme[colors][error]
+                LspSessionState.Stopped, null -> Theme[colors][textMuted]
+            }
+            val statusSymbol = when (currentSessionState) {
+                LspSessionState.Running -> "●"
+                LspSessionState.Starting -> "◐"
+                LspSessionState.Error -> "●"
+                LspSessionState.Stopped, null -> "○"
+            }
+            Text(
+                text = statusSymbol,
+                style = Theme[typography][labelSmall],
+                color = dotColor,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = langId ?: "plain text",
+                style = Theme[typography][labelSmall],
+                color = Theme[colors][textSecondary],
+            )
+        }
+
+        if (progressItems.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(8.dp))
+            (val title, val percentage) = progressItems.values.first()
+            val percentText = percentage?.let { " $it%" } ?: ""
+            val extraCount = if (progressItems.size > 1) " (+${progressItems.size - 1})" else ""
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Theme[colors][accent].copy(alpha = 0.12f))
+                    .clickable(onClick = onShowLspStatus)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "$title$percentText$extraCount",
+                    style = Theme[typography][labelSmall],
+                    color = Theme[colors][accent],
+                    maxLines = 1,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        if (activeDiags.isNotEmpty()) {
+            val errorCount = activeDiags.count { it.severity == DiagnosticSeverity.Error || it.severity == null }
+            val warnCount = activeDiags.count { it.severity == DiagnosticSeverity.Warning }
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable(onClick = onShowProblems)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (errorCount > 0) {
+                    Text(
+                        text = "✕ $errorCount",
+                        style = Theme[typography][labelSmall].copy(fontWeight = FontWeight.Bold),
+                        color = Theme[colors][error],
+                    )
+                    if (warnCount > 0) Spacer(modifier = Modifier.width(6.dp))
+                }
+                if (warnCount > 0) {
+                    Text(
+                        text = "$warnCount",
+                        style = Theme[typography][labelSmall].copy(fontWeight = FontWeight.Bold),
+                        color = Theme[colors][warning],
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        if (cursor != null) {
+            Text(
+                text = "Ln ${cursor!!.line + 1}, Col ${cursor!!.column + 1}",
+                style = Theme[typography][labelSmall],
+                color = Theme[colors][textMuted],
+            )
+        }
+    }
 }
 
 @Composable
@@ -519,8 +1186,26 @@ private fun editorTheme(): EditorTheme = EditorTheme(
     scrollbarTrackColor = Theme[colors][surface].copy(alpha = 0.3f).toArgb(),
     scrollbarThumbColor = Theme[colors][accent].copy(alpha = 0.5f).toArgb(),
     scrollbarThumbActiveColor = Theme[colors][accent].copy(alpha = 0.7f).toArgb(),
-    selectionColor = Theme[colors][com.klyx.ui.accentSecondary].copy(alpha = 0.3f).toArgb(),
+    selectionColor = Theme[colors][accentSecondary].copy(alpha = 0.3f).toArgb(),
     selectionTextColor = Theme[colors][textPrimary].toArgb(),
+    diagnosticErrorColor = Theme[colors][error].toArgb(),
+    diagnosticWarningColor = Theme[colors][warning].toArgb(),
+    diagnosticInfoColor = Theme[colors][accentSecondary].toArgb(),
+    diagnosticHintColor = Theme[colors][textMuted].toArgb(),
+    codeLensColor = Theme[colors][textMuted].toArgb(),
+    activeCodeLensColor = Theme[colors][accent].toArgb(),
+    documentHighlightTextBgColor = Theme[colors][accent].copy(alpha = 0.18f).toArgb(),
+    documentHighlightReadBgColor = Theme[colors][accent].copy(alpha = 0.18f).toArgb(),
+    documentHighlightWriteBgColor = Theme[colors][accentSecondary].copy(alpha = 0.25f).toArgb(),
+    compositionUnderlineColor = Theme[colors][accent].toArgb(),
+    bracketHighlightBgColor = Theme[colors][accent].copy(alpha = 0.15f).toArgb(),
+    bracketHighlightBorderColor = Theme[colors][accent].toArgb(),
+    selectionMenuBgColor = Theme[colors][surface].toArgb(),
+    selectionMenuTextColor = Theme[colors][textPrimary].toArgb(),
+    selectionMenuDividerColor = Theme[colors][border].toArgb(),
+    contextMenuBgColor = Theme[colors][surface].toArgb(),
+    contextMenuTextColor = Theme[colors][textPrimary].toArgb(),
+    contextMenuDividerColor = Theme[colors][border].toArgb(),
     fontFamily = currentFontFamily(),
 )
 

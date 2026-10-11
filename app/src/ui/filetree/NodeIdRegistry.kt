@@ -5,7 +5,7 @@ class NodeIdRegistry {
     private val keysById = mutableMapOf<String, Pair<String, String>>() // id -> (contextId, path)
     private var counter = 0L
 
-    /** contextId: the parent node's id when minting a child, or "root" when minting a root. */
+
     fun idFor(contextId: String, path: String): String {
         val key = contextId to path
         return idsByKey.getOrPut(key) {

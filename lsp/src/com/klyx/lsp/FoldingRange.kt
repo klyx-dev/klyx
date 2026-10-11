@@ -22,7 +22,7 @@ data class FoldingRange(
      * The zero-based character offset from where the folded range starts. If
      * not defined, defaults to the length of the start line.
      */
-    val startCharacter: UInt?,
+    val startCharacter: UInt? = null,
 
     /**
      * The zero-based end line of the range to fold. The folded area ends with
@@ -35,7 +35,7 @@ data class FoldingRange(
      * The zero-based character offset before the folded range ends. If not
      * defined, defaults to the length of the end line.
      */
-    val endCharacter: UInt?,
+    val endCharacter: UInt? = null,
 
     /**
      * Describes the kind of the folding range such as `comment` or `region`.
@@ -45,7 +45,7 @@ data class FoldingRange(
      *
      * @see FoldingRangeKind
      */
-    val kind: FoldingRangeKind?,
+    val kind: FoldingRangeKind? = null,
 
     /**
      * The text that the client should show when the specified range is
@@ -54,5 +54,5 @@ data class FoldingRange(
      *
      * @since 3.17.0 - proposed
      */
-    val collapsedText: String?
+    val collapsedText: String? = null
 )

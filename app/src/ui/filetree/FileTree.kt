@@ -164,9 +164,6 @@ private fun FileTreeRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    // Directories keep the plain clickable path on purpose. combinedClickable has to arbitrate between
-    // tap, double tap and long press before it fires onClick, so putting the expand-toggle behind it makes
-    // expansion wait out a gesture window that only file rows ever use.
     val gestureModifier = if (node.node.isDirectory) {
         Modifier.clickable(
             interactionSource = interactionSource,

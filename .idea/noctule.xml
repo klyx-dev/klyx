@@ -14,4 +14,7 @@
       </settings>
     </fileSettings>
   </component>
+  <component name="SwiftToolchain">
+    <option name="toolchain" value="swiftly-#default" />
+  </component>
 </project>

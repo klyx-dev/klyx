@@ -26,6 +26,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
@@ -316,6 +318,9 @@ internal class JsonRpcConnection(
                 handler(null, notification)
             }
         } catch (err: Throwable) {
+            if (err is CancellationException) {
+                currentCoroutineContext().ensureActive()
+            }
             //println("Error handling notification ${notification.method}: ${err.message}")
             //err.printStackTrace()
             //throw err as? JsonRpcException ?: JsonRpcException("Error handling notification", err)

@@ -4,15 +4,30 @@ import com.klyx.core.Disposable
 import com.klyx.core.action.ActionGroup
 import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.merge
+import com.klyx.runtime.action.ClearSearch
+import com.klyx.runtime.action.Copy
+import com.klyx.runtime.action.Cut
+import com.klyx.runtime.action.FindNext
+import com.klyx.runtime.action.FindPrevious
+import com.klyx.runtime.action.FoldAll
+import com.klyx.runtime.action.GotoLine
+import com.klyx.runtime.action.InsertSnippet
 import com.klyx.runtime.action.InsertText
+import com.klyx.runtime.action.Paste
 import com.klyx.runtime.action.Redo
+import com.klyx.runtime.action.SelectAll
+import com.klyx.runtime.action.ToggleFold
+import com.klyx.runtime.action.TriggerCompletion
 import com.klyx.runtime.action.Undo
+import com.klyx.runtime.action.UnfoldAll
 import com.klyx.runtime.workspace.DocumentId
 import io.github.lumkit.sweeteditor.SweetEditorController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import org.koin.core.annotation.Single
+
+data class EditorCursor(val line: Int, val column: Int)
 
 @Single
 class EditorStore : ActionGroup {
@@ -23,6 +38,17 @@ class EditorStore : ActionGroup {
         field = MutableStateFlow(null)
 
     private var activeInstance: SweetEditorController? = null
+
+    val activeCursor: StateFlow<EditorCursor?>
+        field = MutableStateFlow(null)
+
+    fun updateCursor(line: Int, column: Int) {
+        activeCursor.value = EditorCursor(line, column)
+    }
+
+    fun clearCursor() {
+        activeCursor.value = null
+    }
 
     val canUndo: StateFlow<Boolean>
         field = MutableStateFlow(false)
@@ -60,20 +86,25 @@ class EditorStore : ActionGroup {
 
     operator fun get(id: DocumentId): SweetEditorController =
         live[id]?.firstOrNull() ?: SweetEditorController().also { register(id, it) }
-
-
     fun controller(id: DocumentId): SweetEditorController = get(id)
 
     fun setActive(id: DocumentId?, controller: SweetEditorController?) {
         activeInstance = controller
         activeDocumentId.update { id }
         refreshUndoState()
+        val pos = controller?.getCursorPosition()
+        if (pos != null) {
+            activeCursor.value = EditorCursor(pos.line, pos.column)
+        } else {
+            activeCursor.value = null
+        }
     }
 
     fun clearActive(controller: SweetEditorController) {
         if (activeInstance === controller) {
             activeInstance = null
             activeDocumentId.update { null }
+            activeCursor.value = null
             refreshUndoState()
         }
     }
@@ -115,9 +146,97 @@ class EditorStore : ActionGroup {
 
     override fun ActionRegistrar.register(): Disposable {
         val disposables = listOf(
-            action(Undo) { undo() },
-            action(Redo) { redo() },
-            action(InsertText) { activeInstance?.insertText(text = it.text) },
+            action(
+                instance = Undo,
+                title = "Undo",
+                defaultKeybinding = "Ctrl+Z",
+                serialize = true,
+            ) { undo() },
+            action(
+                instance = Redo,
+                title = "Redo",
+                defaultKeybinding = "Ctrl+Y",
+                serialize = true,
+            ) { redo() },
+            action(
+                descriptor = InsertText,
+                title = "Insert Text",
+                serialize = true,
+            ) { activeInstance?.insertText(text = it.text) },
+            action(
+                instance = SelectAll,
+                title = "Select All",
+                defaultKeybinding = "Ctrl+A",
+                serialize = true,
+            ) { activeInstance?.selectAll() },
+            action(
+                instance = Copy,
+                title = "Copy",
+                defaultKeybinding = "Ctrl+C",
+                serialize = true,
+            ) { activeInstance?.copyToClipboard() },
+            action(
+                instance = Cut,
+                title = "Cut",
+                defaultKeybinding = "Ctrl+X",
+                serialize = true,
+            ) { activeInstance?.cutToClipboard() },
+            action(
+                instance = Paste,
+                title = "Paste",
+                defaultKeybinding = "Ctrl+V",
+                serialize = true,
+            ) { activeInstance?.pasteFromClipboard() },
+            action(
+                instance = FoldAll,
+                title = "Fold All",
+                serialize = true,
+            ) { activeInstance?.foldAll() },
+            action(
+                instance = UnfoldAll,
+                title = "Unfold All",
+                serialize = true,
+            ) { activeInstance?.unfoldAll() },
+            action(
+                descriptor = ToggleFold,
+                title = "Toggle Fold",
+                serialize = true,
+            ) { activeInstance?.toggleFold(it.line) },
+            action(
+                instance = TriggerCompletion,
+                title = "Trigger Completion",
+                defaultKeybinding = "Ctrl+Space",
+                serialize = true,
+            ) { activeInstance?.triggerCompletion() },
+            action(
+                descriptor = InsertSnippet,
+                title = "Insert Snippet",
+                serialize = true,
+            ) { activeInstance?.insertSnippet(it.snippet) },
+            action(
+                descriptor = GotoLine,
+                title = "Go to Line",
+                defaultKeybinding = "Ctrl+G",
+                serialize = true,
+            ) { activeInstance?.gotoPosition(it.line, it.column) },
+            action(
+                instance = FindNext,
+                title = "Find Next",
+                defaultKeybinding = "F3",
+                serialize = true,
+            ) { activeInstance?.findNextSearchMatch() },
+            action(
+                instance = FindPrevious,
+                title = "Find Previous",
+                defaultKeybinding = "Shift+F3",
+                serialize = true,
+            ) { activeInstance?.findPreviousSearchMatch() },
+            action(
+                instance = ClearSearch,
+                title = "Clear Search",
+                defaultKeybinding = "Escape",
+                serialize = true,
+            ) { activeInstance?.clearSearch() },
         )
         return disposables.merge()
     }

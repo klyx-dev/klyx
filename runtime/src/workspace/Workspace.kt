@@ -29,6 +29,7 @@ import com.klyx.runtime.action.RemoveProject
 import com.klyx.runtime.action.SplitEditor
 import com.klyx.runtime.action.UnpinDocument
 import com.klyx.runtime.currentPlatform
+import com.klyx.runtime.settings.CustomLspServer
 import com.klyx.runtime.settings.Settings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +52,7 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 class Workspace(
     private val settingsStore: DataStore<Settings>? = null,
 ) : ActionGroup {
-    // ponytail: app-lifetime scope, never cancelled; per-screen scopes if Workspace ever stops being a singleton
+
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
@@ -64,6 +65,9 @@ class Workspace(
                         EditorTabScope.CurrentProject
                     }
                     showUndoRedoButtons.value = settings.showUndoRedoButtons
+                    showInlayHints.value = settings.showInlayHints
+                    autoSave.value = settings.autoSave
+                    customLspServers.value = settings.customLspServers
                 }
             }
         }
@@ -103,6 +107,38 @@ class Workspace(
     fun setShowUndoRedoButtons(show: Boolean) {
         showUndoRedoButtons.update { show }
         persistSettings { it.copy(showUndoRedoButtons = show) }
+    }
+
+    val showInlayHints: StateFlow<Boolean>
+        field = MutableStateFlow(true)
+
+    fun setShowInlayHints(show: Boolean) {
+        showInlayHints.update { show }
+        persistSettings { it.copy(showInlayHints = show) }
+    }
+
+    val autoSave: StateFlow<Boolean>
+        field = MutableStateFlow(false)
+
+    fun setAutoSave(save: Boolean) {
+        autoSave.update { save }
+        persistSettings { it.copy(autoSave = save) }
+    }
+
+    val customLspServers: StateFlow<List<CustomLspServer>>
+        field = MutableStateFlow(emptyList())
+
+    fun addCustomLspServer(server: CustomLspServer) {
+        customLspServers.update { current ->
+            (current.filterNot { it.languageId == server.languageId } + server)
+                .sortedBy { it.languageId }
+        }
+        persistSettings { it.copy(customLspServers = customLspServers.value) }
+    }
+
+    fun removeCustomLspServer(languageId: String) {
+        customLspServers.update { current -> current.filterNot { it.languageId == languageId } }
+        persistSettings { it.copy(customLspServers = customLspServers.value) }
     }
 
     private fun persistSettings(transform: (Settings) -> Settings) {
@@ -174,6 +210,17 @@ class Workspace(
     suspend fun readText(id: DocumentId): String = withContext(Dispatchers.IO) {
         val document = get(id)
         FileSystem.SYSTEM.read(resolve(document)) { readUtf8() }
+    }
+
+    suspend fun writeText(id: DocumentId, text: String): Unit = withContext(Dispatchers.IO) {
+        val document = get(id)
+        val path = resolve(document)
+        path.parent?.let { parent ->
+            if (!FileSystem.SYSTEM.exists(parent)) {
+                FileSystem.SYSTEM.createDirectories(parent)
+            }
+        }
+        FileSystem.SYSTEM.write(path) { writeUtf8(text) }
     }
 
     fun createEditorGroup(): EditorGroupId {

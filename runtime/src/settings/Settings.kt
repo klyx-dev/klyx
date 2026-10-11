@@ -18,6 +18,27 @@ import okio.Path
 data class Settings(
     val showAllProjectsTabs: Boolean = false,
     val showUndoRedoButtons: Boolean = currentPlatform != Platform.JVM,
+    val showInlayHints: Boolean = true,
+    val autoSave: Boolean = false,
+    val customLspServers: List<CustomLspServer> = emptyList(),
+)
+
+/**
+ * A user-defined language server, configured from Settings.
+ *
+ * When [manualSocket] is false the server is launched automatically
+ * (on Android via a Termux bridge, on desktop as a local stdio process).
+ * When true the app instead connects to `127.0.0.1:[port]` and the user
+ * runs a socat listener inside Termux themselves.
+ */
+@Serializable
+data class CustomLspServer(
+    val languageId: String,
+    val extensions: List<String> = emptyList(),
+    val command: String = "",
+    val args: List<String> = emptyList(),
+    val port: Int = 0,
+    val manualSocket: Boolean = false,
 )
 
 fun createDataStore(storage: Storage<Settings>): DataStore<Settings> =

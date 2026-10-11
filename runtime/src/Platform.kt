@@ -29,3 +29,7 @@ enum class Architecture {
 expect val currentOperatingSystem: OperatingSystem
 expect val currentPlatform: Platform
 expect val currentArchitecture: Architecture
+
+expect fun getenv(name: String): String?
+
+expect val systemPathSeparator: Char

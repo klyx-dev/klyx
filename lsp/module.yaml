@@ -12,5 +12,6 @@ settings:
     serialization: json
 
 dependencies:
-  - $libs.kotlinx.io.core
-  - $libs.kotlinx.coroutines.core
+  - $libs.kotlinx.io.core: exported
+  - $libs.kotlinx.coroutines.core: exported
+  - $libs.kmp.process: exported
