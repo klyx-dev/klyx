@@ -148,6 +148,7 @@ class Workspace(
     }
 
     fun openProject(root: Path): Project {
+        if (!FileSystem.SYSTEM.exists(root)) error("Project root does not exist: $root")
         val project = Project(id = ProjectId(hashOf(root.toString())), root = root)
         projects.update { it + (project.id to project) }
         addProject(project.id)
