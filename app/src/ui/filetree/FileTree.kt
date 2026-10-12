@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastAny
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledIcon
@@ -57,6 +58,7 @@ import com.klyx.ui.border
 import com.klyx.ui.colors
 import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
+import com.klyx.ui.components.KxMenuSeparator
 import com.klyx.ui.surface
 import com.klyx.ui.textPrimary
 
@@ -73,10 +75,15 @@ val platformFileTreeWidth: Dp
     }
 
 /** One entry of a file tree row's long-press menu. */
+sealed interface FileTreeMenuEntry
+
 data class FileTreeMenuItem(
     val label: String,
+    val danger: Boolean = false,
     val onClick: () -> Unit,
-)
+) : FileTreeMenuEntry
+
+data object FileTreeMenuSeparator : FileTreeMenuEntry
 
 @Composable
 fun FileTree(
@@ -90,7 +97,7 @@ fun FileTree(
     contentSniffer: ContentSniffingIconResolver? = null,
     onFileClick: (VisibleFileNode) -> Unit = {},
     onDoubleClick: (VisibleFileNode) -> Unit = {},
-    menuItems: (VisibleFileNode) -> List<FileTreeMenuItem> = { emptyList() },
+    menuItems: (VisibleFileNode) -> List<FileTreeMenuEntry> = { emptyList() },
 ) {
     var menuNodeId by remember { mutableStateOf<String?>(null) }
 
@@ -105,6 +112,7 @@ fun FileTree(
                     ShimmerFileTreeRow(depth = vn.depth, indent = indent, rowHeight = rowHeight, iconSize = iconSize)
                 } else {
                     val items = menuItems(vn)
+                    val hasActions = items.fastAny { it is FileTreeMenuItem }
                     FileTreeRow(
                         node = vn,
                         isSelected = state.selectedId == vn.node.id,
@@ -121,18 +129,26 @@ fun FileTree(
                             if (vn.node.isDirectory) state.toggle(vn) else onFileClick(vn)
                         },
                         onDoubleClick = { onDoubleClick(vn) },
-                        onLongClick = { if (items.isNotEmpty()) menuNodeId = vn.node.id },
+                        onLongClick = {
+                            state.select(vn.node.id)
+                            if (hasActions) menuNodeId = vn.node.id
+                        },
                         menuExpanded = menuNodeId == vn.node.id,
                         onMenuDismiss = { menuNodeId = null },
                         menuContent = {
-                            items.forEach { item ->
-                                KxMenuItem(
-                                    label = item.label,
-                                    onClick = {
-                                        menuNodeId = null
-                                        item.onClick()
-                                    },
-                                )
+                            items.forEach { entry ->
+                                when (entry) {
+                                    is FileTreeMenuSeparator -> KxMenuSeparator()
+
+                                    is FileTreeMenuItem -> KxMenuItem(
+                                        label = entry.label,
+                                        danger = entry.danger,
+                                        onClick = {
+                                            menuNodeId = null
+                                            entry.onClick()
+                                        },
+                                    )
+                                }
                             }
                         },
                     )
@@ -142,7 +158,6 @@ fun FileTree(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FileTreeRow(
     node: VisibleFileNode,
@@ -164,23 +179,14 @@ private fun FileTreeRow(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    val gestureModifier = if (node.node.isDirectory) {
-        Modifier.clickable(
-            interactionSource = interactionSource,
-            indication = LocalIndication.current,
-            onClick = onClick,
-            onClickLabel = node.node.name,
-        )
-    } else {
-        Modifier.combinedClickable(
-            interactionSource = interactionSource,
-            indication = LocalIndication.current,
-            onClick = onClick,
-            onClickLabel = node.node.name,
-            onDoubleClick = onDoubleClick,
-            onLongClick = onLongClick,
-        )
-    }
+    val gestureModifier = Modifier.combinedClickable(
+        interactionSource = interactionSource,
+        indication = LocalIndication.current,
+        onClick = onClick,
+        onClickLabel = node.node.name,
+        onDoubleClick = onDoubleClick,
+        onLongClick = onLongClick,
+    )
 
     UnstyledDropdownMenu(
         expanded = menuExpanded,

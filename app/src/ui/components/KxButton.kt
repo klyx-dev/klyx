@@ -127,10 +127,10 @@ fun KxButton(
     val shape = RectangleShape
 
     val background: Color = when {
+        backgroundColor != null -> backgroundColor
         !enabled && variant == KxButtonVariant.Ghost -> Color.Transparent
         !enabled -> Theme[colors][disabledSurface]
         variant == KxButtonVariant.Filled -> Theme[colors][accent]
-        backgroundColor != null -> backgroundColor
         else -> Color.Transparent
     }
 

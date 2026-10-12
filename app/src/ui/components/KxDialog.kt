@@ -86,7 +86,7 @@ fun KxDialog(
                             color = Theme[colorsProp][textPrimaryToken],
                         )
                         if (subtitle != null) {
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             Text(
                                 text = subtitle,
                                 style = Theme[typographyProp][bodySmallToken],

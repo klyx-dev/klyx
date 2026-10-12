@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
@@ -72,13 +73,14 @@ import com.klyx.editor.EditorStore
 import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
-import com.klyx.lsp.FormatDocument
 import com.klyx.lsp.EditorLsp
+import com.klyx.lsp.FormatDocument
 import com.klyx.lsp.LspDocumentUtils
 import com.klyx.lsp.LspSessionState
 import com.klyx.lsp.RestartLanguageServer
 import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
+import com.klyx.runtime.action.CloseDocument
 import com.klyx.runtime.action.Copy
 import com.klyx.runtime.action.FoldAll
 import com.klyx.runtime.action.InsertText
@@ -110,9 +112,11 @@ import com.klyx.ui.colors
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonDefaultMinHeight
 import com.klyx.ui.components.KxButtonVariant
+import com.klyx.ui.components.KxDialog
 import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.components.KxMenuSeparator
+import com.klyx.ui.components.KxTextField
 import com.klyx.ui.currentFontFamily
 import com.klyx.ui.editor.CodeActionsDialog
 import com.klyx.ui.editor.CompletionDocDialog
@@ -131,8 +135,10 @@ import com.klyx.ui.filetree.ChildrenLoader
 import com.klyx.ui.filetree.FileNode
 import com.klyx.ui.filetree.FileTree
 import com.klyx.ui.filetree.FileTreeMenuItem
+import com.klyx.ui.filetree.FileTreeMenuSeparator
 import com.klyx.ui.filetree.FileTreeState
 import com.klyx.ui.filetree.NodeIdRegistry
+import com.klyx.ui.filetree.VisibleFileNode
 import com.klyx.ui.filetree.platformFileTreeWidth
 import com.klyx.ui.filetree.rememberFileTreeIcons
 import com.klyx.ui.headline
@@ -157,12 +163,16 @@ import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
 import io.github.lumkit.sweeteditor.highlight.HighlightTheme
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okio.FileSystem
+import okio.Path
 import okio.Path.Companion.toPath
 import okio.SYSTEM
 import org.koin.compose.koinInject
@@ -1011,7 +1021,7 @@ private fun EditorDocument(
         if (active && activeCompletion != null && activeCompletion?.documentId == document.id) {
             CustomCompletionPopup(
                 state = activeCompletion!!,
-                onSelectItem = {  },
+                onSelectItem = { },
                 onConfirmItem = { item ->
                     lsp.applyCompletion(item, controller)
                 },
@@ -1314,6 +1324,10 @@ private fun ExplorerPanel(
     }
     val treeListState = remember(activeProjectId) { LazyListState() }
 
+    var createRequest by remember { mutableStateOf<Pair<FileNode, Boolean>?>(null) }
+    var renameRequest by remember { mutableStateOf<FileNode?>(null) }
+    var deleteRequest by remember { mutableStateOf<FileNode?>(null) }
+
     LaunchedEffect(state, activeProject) {
         val tree = state ?: return@LaunchedEffect
         (val id, val projectRoot = root, val name) = activeProject ?: return@LaunchedEffect
@@ -1372,14 +1386,32 @@ private fun ExplorerPanel(
             )
         }
 
-        fun isOpen(node: FileNode): Boolean {
-            val document = workspace.find(locationOf(node, workspace))
-            return document != null && workspace.isDocumentOpen(document.id)
-        }
-
         fun openFile(node: FileNode, preview: Boolean) {
             action(OpenDocument(location = locationOf(node, workspace), name = node.name, preview = preview))
             if (!node.isDirectory) onNavigate()
+        }
+
+        fun targetDirFor(node: FileNode): Path =
+            if (node.isDirectory) node.absolutePath.toPath()
+            else node.absolutePath.toPath().parent ?: activeProject.root
+
+        fun findVisibleByPath(path: String): VisibleFileNode? =
+            tree.visibleNodes.firstOrNull { it.node.absolutePath == path }
+
+        fun refreshDir(dir: Path) {
+            val vn = findVisibleByPath(dir.toString()) ?: return
+            if (tree.isExpanded(vn.node.id)) tree.refresh(vn.node) else tree.toggle(vn)
+        }
+
+        fun closeDocumentsUnder(path: Path) {
+            val raw = path.toString()
+            val prefix = raw.removeSuffix("/") + "/"
+            workspace.documents.value.values.toList().forEach { doc ->
+                val p = runCatching { workspace.resolve(doc).toString() }.getOrNull() ?: return@forEach
+                if (p == raw || p.startsWith(prefix)) {
+                    val _ = runCatching { action(CloseDocument(doc.id)) }
+                }
+            }
         }
 
         if (tree.visibleNodes.isEmpty()) {
@@ -1406,18 +1438,145 @@ private fun ExplorerPanel(
                     if (!visible.node.isDirectory) openFile(visible.node, preview = false)
                 },
                 menuItems = { visible ->
-                    if (visible.node.isDirectory) {
-                        buildList {
-                            add(FileTreeMenuItem("refresh") { tree.refresh(visible.node) })
+                    val node = visible.node
+                    val isRoot = node.absolutePath == activeProject.root.toString()
+                    buildList {
+                        if (node.isDirectory) {
+                            add(FileTreeMenuItem("new file") { createRequest = node to false })
+                            add(FileTreeMenuItem("new folder") { createRequest = node to true })
+                            add(FileTreeMenuSeparator)
+                            add(FileTreeMenuItem("refresh") { tree.refresh(node) })
+                            if (!isRoot) {
+                                add(FileTreeMenuItem("rename") { renameRequest = node })
+                                add(FileTreeMenuItem("delete", danger = true) { deleteRequest = node })
+                            }
+                        } else {
+                            val doc = runCatching { workspace.find(locationOf(node, workspace)) }.getOrNull()
+                            val tab = doc?.let { d ->
+                                workspace.editorGroups.value.flatMap { it.documents }
+                                    .firstOrNull { it.documentId == d.id }
+                            }
+                            if (doc == null || tab == null) {
+                                add(FileTreeMenuItem("open") { openFile(node, preview = false) })
+                                add(FileTreeMenuItem("open preview") { openFile(node, preview = true) })
+                            } else {
+                                add(FileTreeMenuItem("open") { openFile(node, preview = false) })
+                                if (tab.preview) {
+                                    add(FileTreeMenuItem("keep open") { action(PromotePreviewDocument(doc.id)) })
+                                }
+                                add(FileTreeMenuItem("close") { action(CloseDocument(doc.id)) })
+                            }
+                            add(FileTreeMenuSeparator)
+                            add(FileTreeMenuItem("rename") { renameRequest = node })
+                            add(FileTreeMenuItem("delete", danger = true) { deleteRequest = node })
                         }
-                    } else {
-                        val open = isOpen(visible.node)
-                        buildList {
-                            if (!open) {
-                                add(FileTreeMenuItem("open") { openFile(visible.node, preview = false) })
-                                add(FileTreeMenuItem("open preview") { openFile(visible.node, preview = true) })
+                    }
+                },
+            )
+        }
+
+        val createTarget = createRequest
+        if (createTarget != null) {
+            val target = createTarget.first
+            val isFolder = createTarget.second
+            FileNameDialog(
+                visible = true,
+                title = if (isFolder) "New folder" else "New file",
+                subtitle = "In ${target.absolutePath}",
+                initial = "",
+                confirmLabel = "create",
+                onDismiss = { createRequest = null },
+                onConfirm = { name ->
+                    val dir = targetDirFor(target)
+                    val newPath = dir / name
+                    try {
+                        withContext(IoDispatcher) {
+                            if (fs.exists(newPath)) error("Already exists")
+                            if (isFolder) {
+                                fs.createDirectories(newPath)
+                            } else {
+                                if (!fs.exists(dir)) fs.createDirectories(dir)
+                                fs.write(newPath) { }
                             }
                         }
+                        refreshDir(dir)
+                        if (!isFolder) {
+                            openFile(
+                                FileNode(
+                                    id = "",
+                                    name = name,
+                                    absolutePath = newPath.toString(),
+                                    isDirectory = false,
+                                    projectId = target.projectId,
+                                ),
+                                preview = true,
+                            )
+                        }
+                        null
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                        }
+                        t.message ?: "Failed to create"
+                    }
+                },
+            )
+        }
+
+        val renameTarget = renameRequest
+        if (renameTarget != null) {
+            FileNameDialog(
+                visible = true,
+                title = "Rename",
+                subtitle = renameTarget.absolutePath,
+                initial = renameTarget.name,
+                confirmLabel = "rename",
+                onDismiss = { renameRequest = null },
+                onConfirm = { name ->
+                    if (name == renameTarget.name) return@FileNameDialog null
+                    val src = renameTarget.absolutePath.toPath()
+                    val parent = src.parent ?: return@FileNameDialog "Cannot rename here"
+                    val dst = parent / name
+                    try {
+                        withContext(Dispatchers.IO) {
+                            if (fs.exists(dst)) error("Already exists")
+                            fs.atomicMove(src, dst)
+                        }
+                        closeDocumentsUnder(src)
+                        refreshDir(parent)
+                        null
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                        }
+                        t.message ?: "Failed to rename"
+                    }
+                },
+            )
+        }
+
+        val deleteTarget = deleteRequest
+        if (deleteTarget != null) {
+            ConfirmDeleteDialog(
+                visible = true,
+                name = deleteTarget.name,
+                subtitle = deleteTarget.absolutePath,
+                onDismiss = { deleteRequest = null },
+                onConfirm = {
+                    val path = deleteTarget.absolutePath.toPath()
+                    val parent = path.parent
+                    try {
+                        withContext(IoDispatcher) {
+                            fs.deleteRecursively(path)
+                        }
+                        closeDocumentsUnder(path)
+                        if (parent != null) refreshDir(parent)
+                        null
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                        }
+                        t.message ?: "Failed to delete"
                     }
                 },
             )
@@ -1453,6 +1612,148 @@ private fun DrawerEmptyState(
             ) {
                 Text(text = actionLabel, style = Theme[typography][label])
             }
+        }
+    }
+}
+
+@Composable
+private fun FileNameDialog(
+    visible: Boolean,
+    title: String,
+    subtitle: String?,
+    initial: String,
+    confirmLabel: String,
+    onDismiss: () -> Unit,
+    onConfirm: suspend (String) -> String?,
+) {
+    val field = rememberTextFieldState(initial)
+    var error by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(visible, initial) {
+        if (visible) {
+            error = null
+            busy = false
+            field.edit { replace(0, length, initial) }
+        }
+    }
+
+    KxDialog(
+        visible = visible,
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = title,
+        subtitle = subtitle,
+        actions = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KxButton(
+                    onClick = { if (!busy) onDismiss() },
+                    variant = KxButtonVariant.Ghost,
+                    enabled = !busy,
+                ) {
+                    Text(text = "cancel", style = Theme[typography][label])
+                }
+                KxButton(
+                    onClick = {
+                        val name = field.text.toString().trim()
+                        if (name.isEmpty()) {
+                            error = "Name is empty"
+                            return@KxButton
+                        }
+                        if (name.contains("/")) {
+                            error = "Name cannot contain /"
+                            return@KxButton
+                        }
+                        scope.launch {
+                            busy = true
+                            val err = onConfirm(name)
+                            busy = false
+                            if (err == null) onDismiss() else error = err
+                        }
+                    },
+                    variant = KxButtonVariant.Filled,
+                    enabled = !busy,
+                ) {
+                    Text(text = confirmLabel, style = Theme[typography][label])
+                }
+            }
+        },
+    ) {
+        KxTextField(state = field, label = "Name", placeholder = "untitled.txt")
+        if (error != null) {
+            Text(
+                text = error!!,
+                style = Theme[typography][bodySmall],
+                color = Theme[colors][com.klyx.ui.error],
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConfirmDeleteDialog(
+    visible: Boolean,
+    name: String,
+    subtitle: String?,
+    onDismiss: () -> Unit,
+    onConfirm: suspend () -> String?,
+) {
+    var error by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            error = null
+            busy = false
+        }
+    }
+
+    KxDialog(
+        visible = visible,
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = "Delete \"$name\"?",
+        subtitle = subtitle,
+        actions = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KxButton(
+                    onClick = { if (!busy) onDismiss() },
+                    variant = KxButtonVariant.Ghost,
+                    enabled = !busy,
+                ) {
+                    Text(text = "cancel", style = Theme[typography][label])
+                }
+                KxButton(
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            val err = onConfirm()
+                            busy = false
+                            if (err == null) onDismiss() else error = err
+                        }
+                    },
+                    backgroundColor = Theme[colors][com.klyx.ui.error],
+                    variant = KxButtonVariant.Filled,
+                    enabled = !busy,
+                ) {
+                    Text(text = "delete", style = Theme[typography][label])
+                }
+            }
+        },
+    ) {
+        Text(
+            text = "This cannot be undone.",
+            style = Theme[typography][bodySmall],
+            color = Theme[colors][textMuted],
+        )
+        if (error != null) {
+            Text(
+                text = error!!,
+                style = Theme[typography][bodySmall],
+                color = Theme[colors][com.klyx.ui.error],
+                modifier = Modifier.padding(top = 6.dp),
+            )
         }
     }
 }
