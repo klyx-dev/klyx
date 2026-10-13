@@ -47,6 +47,9 @@ class LspSession(
     var capabilities: ServerCapabilities? = null
         private set
 
+    var startError: String? = null
+        private set
+
     private val _state = MutableStateFlow(LspSessionState.Stopped)
     val state: StateFlow<LspSessionState> = _state.asStateFlow()
 
@@ -84,6 +87,7 @@ class LspSession(
         }
 
         _state.value = LspSessionState.Starting
+        startError = null
         try {
             val effectiveTransport = when (config.transportType) {
                 LspTransportType.Auto -> {
@@ -209,18 +213,19 @@ class LspSession(
 
             connection.initialized(InitializedParams)
             _state.value = LspSessionState.Running
+            startError = null
             println("[LSP] Server initialized successfully for ${config.languageId} via $effectiveTransport")
-            true
-        } catch (e: Throwable) {
+            true        } catch (e: Throwable) {
             if (e is CancellationException) {
                 ensureActive()
             }
-            println("[LSP ERROR] Failed to start server for ${config.languageId}: ${e.message}")
+            val message = e.message ?: e.toString()
+            startError = message
+            println("[LSP ERROR] Failed to start server for ${config.languageId}: $message")
             e.printStackTrace()
             _state.value = LspSessionState.Error
             close()
-            false
-        }
+            false        }
     }
 
     suspend fun didOpen(uri: String, languageId: String, text: String) {

@@ -31,8 +31,11 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -91,6 +94,8 @@ class EditorLsp(
     private val _activeSessions = MutableStateFlow<Map<String, LspSessionState>>(emptyMap())
     val activeSessions: StateFlow<Map<String, LspSessionState>> = _activeSessions.asStateFlow()
 
+    private val _lspErrors = MutableSharedFlow<String>(extraBufferCapacity = 8)
+    val lspErrors: SharedFlow<String> = _lspErrors.asSharedFlow()
 
     private val _termuxAvailability = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     val termuxAvailability: StateFlow<Map<String, Boolean>> = _termuxAvailability.asStateFlow()
@@ -179,8 +184,10 @@ class EditorLsp(
 
         val config = LspServerRegistry.findByLanguageId(langId)
             ?: LspServerRegistry.findByExtension(document.name.substringAfterLast('.', ""))
-            ?: return null
-
+            ?: run {
+                _lspErrors.tryEmit("No language server is configured for ${langId}.")
+                return null
+            }
         val session = existing ?: LspSession(config, client, scope).also { newSession ->
             sessions[langId] = newSession
             scope.launch {
@@ -207,6 +214,14 @@ class EditorLsp(
         println("[LSP] Starting session for ${config.languageId} with root: $rootUri")
         val started = session.start(rootUri, folders)
         updateActiveSessions()
+        if (!started) {
+            val base = session.startError ?: "Unknown error"
+            val hint = when {
+                config.command == "vtsls" -> "$base\nInstall the language server in Termux: pkg install -y nodejs && npm i -g @vtsls/language-server"
+                else -> base
+            }
+            _lspErrors.tryEmit("${config.languageId} language server failed to start: $hint")
+        }
         return if (started) session else null
     }
 

@@ -208,6 +208,12 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
+    LaunchedEffect(lsp) {
+        lsp.lspErrors.collect { message ->
+            toastMessage = message
+        }
+    }
+
     val allDiags by lsp.client.diagnostics.collectAsState()
     val activeDocDiags = remember(allDiags, activeDoc?.id) {
         val doc = activeDoc ?: return@remember emptyList()

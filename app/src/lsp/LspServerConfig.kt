@@ -121,7 +121,7 @@ object LspServerRegistry {
             LspServerConfig(
                 languageId = "typescript",
                 extensions = setOf("ts", "tsx", "js", "jsx"),
-                command = "typescript-language-server",
+                command = "vtsls",
                 args = listOf("--stdio"),
             )
         )

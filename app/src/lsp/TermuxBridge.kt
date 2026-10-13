@@ -79,7 +79,7 @@ object TermuxBridge {
             "clangd" -> "pkg install -y clangd"
             "gopls" -> $$"pkg install -y golang && export PATH=$PATH:$HOME/go/bin && go install golang.org/x/tools/gopls@latest"
             "pyright-langserver" -> "pkg install -y nodejs && npm i -g pyright"
-            "typescript-language-server" -> "pkg install -y nodejs && npm i -g typescript typescript-language-server"
+            "vtsls" -> "pkg install -y nodejs && npm i -g @vtsls/language-server"
             "vscode-json-language-server" -> "pkg install -y nodejs && npm i -g vscode-langservers-extracted"
             "lua-language-server" -> "pkg install -y lua-language-server"
             "bash-language-server" -> "pkg install -y nodejs && npm i -g bash-language-server"
