@@ -32,6 +32,7 @@ import com.composeunstyled.Text
 import com.composeunstyled.UnstyledButton
 import com.composeunstyled.theme.Theme
 import com.klyx.ui.accent
+import com.klyx.ui.error
 import com.klyx.ui.border
 import com.klyx.ui.colors
 import com.klyx.ui.disabledSurface
@@ -96,6 +97,7 @@ fun KxButton(
     enabled: Boolean = true,
     variant: KxButtonVariant = KxButtonVariant.Filled,
     bracketed: Boolean = false,
+    danger: Boolean = false,
     borderColor: Color? = null,
     backgroundColor: Color? = null,
     contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
@@ -110,6 +112,7 @@ fun KxButton(
 
     val bracketColor: Color = when {
         !enabled -> Theme[colors][disabledText]
+        danger && variant != KxButtonVariant.Filled -> Theme[colors][error]
         variant == KxButtonVariant.Filled -> Theme[colors][onAccent]
         borderColor != null -> borderColor
         else -> Theme[colors][accent]
@@ -130,11 +133,16 @@ fun KxButton(
         backgroundColor != null -> backgroundColor
         !enabled && variant == KxButtonVariant.Ghost -> Color.Transparent
         !enabled -> Theme[colors][disabledSurface]
+        danger && variant == KxButtonVariant.Filled -> Theme[colors][error]
         variant == KxButtonVariant.Filled -> Theme[colors][accent]
         else -> Color.Transparent
     }
 
-    val effectiveBorderColor: Color = borderColor ?: Theme[colors][border]
+    val effectiveBorderColor: Color = when {
+        danger && variant == KxButtonVariant.Outlined -> Theme[colors][error]
+        borderColor != null -> borderColor
+        else -> Theme[colors][border]
+    }
 
     val border: BorderStroke? = when {
         !enabled && variant != KxButtonVariant.Ghost -> BorderStroke(1.dp, Theme[colors][border])
