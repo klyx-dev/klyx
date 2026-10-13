@@ -192,6 +192,7 @@ private fun FileTreeRow(
         expanded = menuExpanded,
         onExpandedChange = { if (!it) onMenuDismiss() },
         sideOffset = 4.dp,
+        alignmentOffset = 12.dp,
         panel = {
             KxMenuPanel {
                 menuContent()
