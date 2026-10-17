@@ -67,6 +67,8 @@ class Workspace(
                     showUndoRedoButtons.value = settings.showUndoRedoButtons
                     showInlayHints.value = settings.showInlayHints
                     autoSave.value = settings.autoSave
+                    roundedUi.value = settings.roundedUi
+                    cornerRadius.value = settings.cornerRadius
                     customLspServers.value = settings.customLspServers
                 }
             }
@@ -123,6 +125,23 @@ class Workspace(
     fun setAutoSave(save: Boolean) {
         autoSave.update { save }
         persistSettings { it.copy(autoSave = save) }
+    }
+
+    val roundedUi: StateFlow<Boolean>
+        field = MutableStateFlow(false)
+
+    fun setRoundedUi(rounded: Boolean) {
+        roundedUi.update { rounded }
+        persistSettings { it.copy(roundedUi = rounded) }
+    }
+
+    val cornerRadius: StateFlow<Int>
+        field = MutableStateFlow(8)
+
+    fun setCornerRadius(radius: Int) {
+        val clamped = radius.coerceIn(0, 32)
+        cornerRadius.update { clamped }
+        persistSettings { it.copy(cornerRadius = clamped) }
     }
 
     val customLspServers: StateFlow<List<CustomLspServer>>

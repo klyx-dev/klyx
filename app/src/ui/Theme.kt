@@ -1,14 +1,19 @@
 package com.klyx.ui
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.theme.ColorScheme
 import com.composeunstyled.theme.ThemeProperty
@@ -125,6 +130,20 @@ val KlyxTheme = buildThemeV2 {
 }
 
 val LocalKxFont = staticCompositionLocalOf { FontOption.Default }
+
+val LocalCornerRadius = compositionLocalOf { 0.dp }
+
+@Composable
+fun kxShape(radius: Dp = LocalCornerRadius.current): Shape =
+    if (radius <= 0.dp) RectangleShape else RoundedCornerShape(radius)
+
+@Composable
+fun kxSmallShape(radius: Dp = (LocalCornerRadius.current / 2).coerceAtLeast(0.dp)): Shape =
+    if (radius <= 0.dp) RectangleShape else RoundedCornerShape(radius)
+
+val LocalCornerShape: Shape
+    @Composable
+    get() = kxShape()
 
 @Composable
 fun currentFontFamily(option: FontOption = LocalKxFont.current): FontFamily = FontFamily(

@@ -51,6 +51,7 @@ import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.buildModifier
 import com.composeunstyled.theme.Theme
+import com.klyx.ui.kxSmallShape
 import com.klyx.core.LocalWindowSizeClass
 import com.klyx.core.icons.MaterialSymbolsChevronRight
 import com.klyx.core.isWidthAtLeastMediumBreakpoint
@@ -199,19 +200,20 @@ private fun FileTreeRow(
             }
         },
         anchor = {
+            val rowShape = kxSmallShape()
             Row(
                 modifier = Modifier
                     .width(IntrinsicSize.Max)
                     .widthIn(min = platformFileTreeWidth)
                     .height(rowHeight)
                     .padding(horizontal = 2.dp)
-                    .clip(RectangleShape)
+                    .clip(rowShape)
                     .then(buildModifier {
                         if (isSelected) {
-                            add(Modifier.background(Theme[colors][surface]))
+                            add(Modifier.background(Theme[colors][surface], rowShape))
                         }
                         if (menuExpanded) {
-                            add(Modifier.border(1.dp, Theme[colors][border], RectangleShape))
+                            add(Modifier.border(1.dp, Theme[colors][border], rowShape))
                         }
                     })
                     .then(gestureModifier)
@@ -286,10 +288,11 @@ private fun ShimmerFileTreeRow(
     ) {
         Spacer(Modifier.size(16.dp)) // arrow slot
         Spacer(Modifier.width(2.dp))
+        val shimmerShape = kxSmallShape()
         Box(
             Modifier
                 .size(iconSize)
-                .clip(RectangleShape)
+                .clip(shimmerShape)
                 .shimmer()
         )
         Spacer(Modifier.width(6.dp))
@@ -297,7 +300,7 @@ private fun ShimmerFileTreeRow(
             Modifier
                 .height(10.dp)
                 .width(110.dp)
-                .clip(RectangleShape)
+                .clip(shimmerShape)
                 .shimmer()
         )
     }

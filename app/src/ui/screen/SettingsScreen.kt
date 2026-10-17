@@ -1,5 +1,10 @@
 package com.klyx.ui.screen
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,13 +25,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.Thumb
@@ -38,6 +44,7 @@ import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
 import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.Workspace
+import com.klyx.ui.LocalCornerRadius
 import com.klyx.ui.accent
 import com.klyx.ui.bodySmall
 import com.klyx.ui.border
@@ -45,6 +52,7 @@ import com.klyx.ui.colors
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.headline
+import com.klyx.ui.kxShape
 import com.klyx.ui.label
 import com.klyx.ui.labelSmall
 import com.klyx.ui.onAccent
@@ -52,6 +60,7 @@ import com.klyx.ui.surfaceVariant
 import com.klyx.ui.textMuted
 import com.klyx.ui.textPrimary
 import com.klyx.ui.typography
+import kotlin.math.roundToInt
 import org.koin.compose.koinInject
 
 @Composable
@@ -87,6 +96,12 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
         }
 
         HorizontalDivider(color = Theme[colors][border])
+
+        SectionHeader("APPEARANCE")
+
+        RoundedUiRow(modifier = Modifier.fillMaxWidth())
+
+        CornerRadiusRow(modifier = Modifier.fillMaxWidth())
 
         SectionHeader("EDITOR TABS")
 
@@ -178,6 +193,11 @@ private fun SettingSwitch(
     accessibilityLabel: String,
     modifier: Modifier = Modifier,
 ) {
+    val trackRadius = if (LocalCornerRadius.current > 0.dp) 13.dp else 0.dp
+    val thumbRadius = if (LocalCornerRadius.current > 0.dp) 9.dp else 0.dp
+    val trackShape = kxShape(trackRadius)
+    val thumbShape = kxShape(thumbRadius)
+
     UnstyledSwitch(
         checked = checked,
         onCheckedChange = onCheckedChange,
@@ -189,23 +209,137 @@ private fun SettingSwitch(
             modifier = Modifier
                 .width(46.dp)
                 .height(26.dp)
-                .clip(RectangleShape)
+                .clip(trackShape)
                 .background(
                     if (checked) Theme[colors][accent] else Theme[colors][surfaceVariant],
-                    RectangleShape,
+                    trackShape,
                 )
-                .border(1.dp, Theme[colors][border], RectangleShape),
+                .border(1.dp, Theme[colors][border], trackShape),
         ) {
             Thumb(
                 modifier = Modifier
                     .padding(4.dp)
-                    .clip(RectangleShape)
+                    .clip(thumbShape)
                     .background(
                         if (checked) Theme[colors][onAccent] else Theme[colors][textMuted],
-                        RectangleShape,
+                        thumbShape,
                     )
                     .size(18.dp),
             )
+        }
+    }
+}
+
+@Composable
+private fun RoundedUiRow(modifier: Modifier = Modifier) {
+    val workspace: Workspace = koinInject()
+    val roundedUi by workspace.roundedUi.collectAsState()
+
+    SettingRow(
+        title = "rounded ui",
+        subtitle = "enable rounded corners across the interface",
+        checked = roundedUi,
+        onCheckedChange = workspace::setRoundedUi,
+        accessibilityLabel = "Enable rounded UI",
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun CornerRadiusRow(modifier: Modifier = Modifier) {
+    val workspace: Workspace = koinInject()
+    val roundedUi by workspace.roundedUi.collectAsState()
+    val radius by workspace.cornerRadius.collectAsState()
+
+    AnimatedVisibility(
+        visible = roundedUi,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = "corner radius",
+                        style = Theme[typography][label],
+                        color = Theme[colors][textPrimary],
+                    )
+                    Text(
+                        text = "adjust corner radius ($radius dp)",
+                        style = Theme[typography][bodySmall],
+                        color = Theme[colors][textMuted],
+                    )
+                }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    KxButton(
+                        onClick = { workspace.setCornerRadius(radius - 2) },
+                        enabled = radius > 2,
+                        variant = KxButtonVariant.Outlined,
+                        bracketed = true,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text("-", style = Theme[typography][label])
+                    }
+                    Text(
+                        text = "$radius dp",
+                        style = Theme[typography][label],
+                        color = Theme[colors][accent],
+                    )
+                    KxButton(
+                        onClick = { workspace.setCornerRadius(radius + 2) },
+                        enabled = radius < 24,
+                        variant = KxButtonVariant.Outlined,
+                        bracketed = true,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text("+", style = Theme[typography][label])
+                    }
+                }
+            }
+
+            Slider(
+                value = radius.toFloat(),
+                onValueChange = { workspace.setCornerRadius(it.roundToInt()) },
+                valueRange = 2f..24f,
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaults.colors(
+                    thumbColor = Theme[colors][accent],
+                    activeTrackColor = Theme[colors][accent],
+                    inactiveTrackColor = Theme[colors][surfaceVariant],
+                ),
+            )
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                listOf(4, 8, 12, 16, 20).forEach { preset ->
+                    KxButton(
+                        onClick = { workspace.setCornerRadius(preset) },
+                        variant = if (radius == preset) KxButtonVariant.Filled else KxButtonVariant.Ghost,
+                        bracketed = true,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                    ) {
+                        Text("${preset}dp", style = Theme[typography][labelSmall])
+                    }
+                }
+            }
         }
     }
 }

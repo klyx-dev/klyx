@@ -22,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.DialogPanel
@@ -34,6 +33,7 @@ import com.klyx.ui.background as backgroundToken
 import com.klyx.ui.bodySmall as bodySmallToken
 import com.klyx.ui.border as borderToken
 import com.klyx.ui.colors as colorsProp
+import com.klyx.ui.kxShape
 import com.klyx.ui.surface as surfaceToken
 import com.klyx.ui.textMuted as textMutedToken
 import com.klyx.ui.textPrimary as textPrimaryToken
@@ -65,15 +65,16 @@ fun KxDialog(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
+            val shape = kxShape()
             DialogPanel(
                 modifier = modifier
                     .padding(20.dp)
                     .safeDrawingPadding()
                     .widthIn(max = 420.dp)
                     .fillMaxWidth()
-                    .clip(RectangleShape)
-                    .background(Theme[colorsProp][surfaceToken])
-                    .border(1.dp, Theme[colorsProp][borderToken], RectangleShape),
+                    .clip(shape)
+                    .background(Theme[colorsProp][surfaceToken], shape)
+                    .border(1.dp, Theme[colorsProp][borderToken], shape),
                 paneTitle = title,
                 enter = scaleIn(initialScale = 0.96f, transformOrigin = TransformOrigin.Center) + fadeIn(),
                 exit = scaleOut(targetScale = 0.96f, transformOrigin = TransformOrigin.Center) + fadeOut(),

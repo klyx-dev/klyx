@@ -44,6 +44,8 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
+import com.klyx.ui.kxShape
+import com.klyx.ui.kxSmallShape
 import com.klyx.lsp.CompletionItem
 import com.klyx.lsp.CompletionItemKind
 import com.klyx.runtime.workspace.DocumentId
@@ -187,12 +189,13 @@ fun CompletionItemRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
+        val badgeShape = kxSmallShape()
         Box(
             modifier = Modifier
                 .size(width = 30.dp, height = 18.dp)
-                .clip(RectangleShape)
-                .background(badge.color.copy(alpha = 0.2f))
-                .border(0.5.dp, badge.color.copy(alpha = 0.6f), RectangleShape),
+                .clip(badgeShape)
+                .background(badge.color.copy(alpha = 0.2f), badgeShape)
+                .border(0.5.dp, badge.color.copy(alpha = 0.6f), badgeShape),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -289,13 +292,14 @@ fun CustomCompletionPopup(
         onDismissRequest = onDismiss,
         properties = PopupProperties(focusable = false),
     ) {
+        val panelShape = kxShape()
         Column(
             modifier = Modifier
                 .widthIn(min = 240.dp, max = 380.dp)
-                .shadow(12.dp, RectangleShape)
-                .clip(RectangleShape)
-                .background(Theme[colors][surface])
-                .border(1.dp, Theme[colors][border], RectangleShape)
+                .shadow(12.dp, panelShape)
+                .clip(panelShape)
+                .background(Theme[colors][surface], panelShape)
+                .border(1.dp, Theme[colors][border], panelShape)
                 .padding(vertical = 4.dp),
         ) {
             LazyColumn(
@@ -328,12 +332,13 @@ fun CustomCompletionPopup(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
+                        val itemBadgeShape = kxSmallShape()
                         Box(
                             modifier = Modifier
                                 .size(width = 30.dp, height = 18.dp)
-                                .clip(RectangleShape)
-                                .background(color.copy(alpha = 0.2f))
-                                .border(0.5.dp, color.copy(alpha = 0.6f), RectangleShape),
+                                .clip(itemBadgeShape)
+                                .background(color.copy(alpha = 0.2f), itemBadgeShape)
+                                .border(0.5.dp, color.copy(alpha = 0.6f), itemBadgeShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
@@ -426,11 +431,12 @@ fun CompletionDocDialog(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                val docBadgeShape = kxSmallShape()
                 Box(
                     modifier = Modifier
-                        .clip(RectangleShape)
-                        .background(color.copy(alpha = 0.2f))
-                        .border(0.5.dp, color.copy(alpha = 0.6f), RectangleShape)
+                        .clip(docBadgeShape)
+                        .background(color.copy(alpha = 0.2f), docBadgeShape)
+                        .border(0.5.dp, color.copy(alpha = 0.6f), docBadgeShape)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
@@ -466,12 +472,13 @@ fun CompletionDocDialog(
             }
 
             if (!detail.isNullOrBlank()) {
+                val detailShape = kxSmallShape()
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Theme[colors][surface])
-                        .border(1.dp, Theme[colors][border], RoundedCornerShape(6.dp))
+                        .clip(detailShape)
+                        .background(Theme[colors][surface], detailShape)
+                        .border(1.dp, Theme[colors][border], detailShape)
                         .padding(8.dp),
                 ) {
                     Text(

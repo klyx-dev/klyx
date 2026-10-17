@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
@@ -40,6 +39,7 @@ import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.buildModifier
 import com.composeunstyled.theme.Theme
+import com.klyx.ui.kxSmallShape
 import com.klyx.core.action.action
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -117,13 +117,14 @@ fun GroupStrip(
         }
         if (hasVisibleFiles) {
             item(key = "split") {
+                val shape = kxSmallShape()
                 UnstyledButton(
                     onClick = { action(SplitEditor) },
                     indication = LocalIndication.current,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     modifier = Modifier
-                        .clip(RectangleShape)
-                        .border(1.dp, Theme[colors][border], RectangleShape),
+                        .clip(shape)
+                        .border(1.dp, Theme[colors][border], shape),
                 ) {
                     Text(
                         text = "+ split",
@@ -161,17 +162,18 @@ private fun GroupPill(index: Int, group: EditorGroup, selected: Boolean) {
             }
         },
         anchor = {
+            val shape = kxSmallShape()
             Box(
                 modifier = Modifier
-                    .clip(RectangleShape)
+                    .clip(shape)
                     .background(
                         if (selected) Theme[colors][accent].copy(alpha = 0.14f) else Color.Transparent,
-                        RectangleShape,
+                        shape,
                     )
                     .border(
                         1.dp,
                         if (selected) Theme[colors][accent] else Theme[colors][border],
-                        RectangleShape,
+                        shape,
                     )
                     .alpha(if (pressed) 0.7f else 1f)
                     .combinedClickable(
@@ -275,11 +277,12 @@ private fun DocumentTab(
             }
         },
         anchor = {
+            val shape = kxSmallShape()
             Box(
                 modifier = Modifier
-                    .clip(RectangleShape)
-                    .background(backgroundColor, RectangleShape)
-                    .border(1.dp, borderColor, RectangleShape)
+                    .clip(shape)
+                    .background(backgroundColor, shape)
+                    .border(1.dp, borderColor, shape)
                     .defaultMinSize(minHeight = 36.dp)
                     .alpha(if (pressed) 0.7f else 1f)
                     .combinedClickable(
@@ -317,7 +320,7 @@ private fun DocumentTab(
                         style = Theme[typography][label],
                         color = Theme[colors][textPrimary],
                         modifier = Modifier
-                            .clip(RectangleShape)
+                            .clip(shape)
                             .clickable { action(CloseDocument(tab.documentId)) }
                             .padding(horizontal = 2.dp),
                     )

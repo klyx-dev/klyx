@@ -129,4 +129,24 @@ class WorkspaceTest : FunSpec({
         w.open(location, "x.kt") shouldBe document
         w.documents.value.size shouldBe 1
     }
+
+    test("roundedUi defaults to false and can be updated") {
+        val w = workspace()
+        w.roundedUi.value.shouldBeFalse()
+        w.setRoundedUi(true)
+        w.roundedUi.value.shouldBeTrue()
+        w.setRoundedUi(false)
+        w.roundedUi.value.shouldBeFalse()
+    }
+
+    test("cornerRadius defaults to 8 and is clamped between 0 and 32") {
+        val w = workspace()
+        w.cornerRadius.value shouldBe 8
+        w.setCornerRadius(16)
+        w.cornerRadius.value shouldBe 16
+        w.setCornerRadius(-5)
+        w.cornerRadius.value shouldBe 0
+        w.setCornerRadius(40)
+        w.cornerRadius.value shouldBe 32
+    }
 })

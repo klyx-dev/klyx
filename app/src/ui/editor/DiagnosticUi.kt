@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
+import com.klyx.ui.kxShape
+import com.klyx.ui.kxSmallShape
 import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
@@ -116,12 +117,14 @@ fun DiagnosticBanner(
         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
         modifier = modifier,
     ) {
+        val cardShape = kxShape()
+        val badgeShape = kxSmallShape()
         Column(
             modifier = Modifier
-                .shadow(6.dp, RoundedCornerShape(8.dp))
-                .clip(RoundedCornerShape(8.dp))
-                .background(Theme[colors][surfaceVariant])
-                .border(1.dp, sevColor.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                .shadow(6.dp, cardShape)
+                .clip(cardShape)
+                .background(Theme[colors][surfaceVariant], cardShape)
+                .border(1.dp, sevColor.copy(alpha = 0.6f), cardShape)
                 .padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
             Row(
@@ -130,9 +133,9 @@ fun DiagnosticBanner(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(sevColor.copy(alpha = 0.18f))
-                        .border(1.dp, sevColor.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                        .clip(badgeShape)
+                        .background(sevColor.copy(alpha = 0.18f), badgeShape)
+                        .border(1.dp, sevColor.copy(alpha = 0.5f), badgeShape)
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
@@ -325,12 +328,13 @@ fun ProblemsDialog(
                     }
                     val sourceStr = listOfNotNull(diag.source, codeStr).joinToString(" ").ifEmpty { null }
 
+                    val itemShape = kxSmallShape()
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Theme[colors][surface])
-                            .border(1.dp, Theme[colors][border], RoundedCornerShape(6.dp))
+                            .clip(itemShape)
+                            .background(Theme[colors][surface], itemShape)
+                            .border(1.dp, Theme[colors][border], itemShape)
                             .clickable {
                                 onSelectDiagnostic(diag)
                                 onDismiss()
@@ -340,8 +344,8 @@ fun ProblemsDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(sevColor.copy(alpha = 0.2f))
+                                    .clip(itemShape)
+                                    .background(sevColor.copy(alpha = 0.2f), itemShape)
                                     .padding(horizontal = 4.dp, vertical = 1.dp),
                             ) {
                                 Text(
@@ -402,12 +406,14 @@ fun HoverCard(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cardShape = kxShape()
+    val badgeShape = kxSmallShape()
     Column(
         modifier = modifier
-            .shadow(6.dp, RoundedCornerShape(8.dp))
-            .clip(RoundedCornerShape(8.dp))
-            .background(Theme[colors][surfaceVariant])
-            .border(1.dp, Theme[colors][accent].copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+            .shadow(6.dp, cardShape)
+            .clip(cardShape)
+            .background(Theme[colors][surfaceVariant], cardShape)
+            .border(1.dp, Theme[colors][accent].copy(alpha = 0.5f), cardShape)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
         Row(
@@ -416,9 +422,9 @@ fun HoverCard(
         ) {
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Theme[colors][accent].copy(alpha = 0.18f))
-                    .border(1.dp, Theme[colors][accent].copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                    .clip(badgeShape)
+                    .background(Theme[colors][accent].copy(alpha = 0.18f), badgeShape)
+                    .border(1.dp, Theme[colors][accent].copy(alpha = 0.5f), badgeShape)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
             ) {
                 Text(
@@ -504,15 +510,16 @@ fun CodeActionsDialog(
                 items(actions) { action ->
                     val kind = action.kind?.value ?: "quickfix"
                     val isPreferred = action.isPreferred == true
+                    val actionShape = kxSmallShape()
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Theme[colors][surface])
+                            .clip(actionShape)
+                            .background(Theme[colors][surface], actionShape)
                             .border(
                                 1.dp,
                                 if (isPreferred) Theme[colors][accent] else Theme[colors][border],
-                                RoundedCornerShape(6.dp)
+                                actionShape
                             )
                             .clickable {
                                 onSelectAction(action)
@@ -531,8 +538,8 @@ fun CodeActionsDialog(
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(Theme[colors][accent].copy(alpha = 0.2f))
+                                        .clip(actionShape)
+                                        .background(Theme[colors][accent].copy(alpha = 0.2f), actionShape)
                                         .padding(horizontal = 4.dp, vertical = 1.dp),
                                 ) {
                                     Text(
@@ -610,19 +617,20 @@ fun LspStatusDialog(
                         LspSessionState.Error -> Theme[colors][error]
                         LspSessionState.Stopped -> Theme[colors][textMuted]
                     }
+                    val itemShape = kxSmallShape()
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Theme[colors][surface])
-                            .border(1.dp, Theme[colors][border], RoundedCornerShape(6.dp))
+                            .clip(itemShape)
+                            .background(Theme[colors][surface], itemShape)
+                            .border(1.dp, Theme[colors][border], itemShape)
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(color.copy(alpha = 0.2f))
+                                .clip(itemShape)
+                                .background(color.copy(alpha = 0.2f), itemShape)
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
                             Text(
@@ -665,13 +673,14 @@ fun LspStatusDialog(
                     color = Theme[colors][textMuted],
                 )
             } else {
+                val taskShape = kxSmallShape()
                 progressItems.values.forEach { item ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Theme[colors][surface])
-                            .border(1.dp, Theme[colors][border], RoundedCornerShape(6.dp))
+                            .clip(taskShape)
+                            .background(Theme[colors][surface], taskShape)
+                            .border(1.dp, Theme[colors][border], taskShape)
                             .padding(8.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {

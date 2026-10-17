@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
+import com.klyx.ui.kxSmallShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
@@ -124,14 +124,15 @@ fun ProjectSwitcher(
             }
         },
         anchor = {
+            val shape = kxSmallShape()
             UnstyledButton(
                 onClick = { expanded = true },
                 indication = LocalIndication.current,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                 modifier = Modifier
-                    .clip(RectangleShape)
-                    .border(1.dp, Theme[colors][border], RectangleShape)
-                    .background(Theme[colors][surfaceVariant], RectangleShape),
+                    .clip(shape)
+                    .border(1.dp, Theme[colors][border], shape)
+                    .background(Theme[colors][surfaceVariant], shape),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,

@@ -63,9 +63,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.RectangleShape
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
+import com.klyx.ui.LocalCornerRadius
+import com.klyx.ui.kxShape
+import com.klyx.ui.kxSmallShape
 import com.klyx.core.Debug
 import com.klyx.core.IoDispatcher
 import com.klyx.core.action.action
@@ -400,12 +404,13 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.TopCenter,
             ) {
+                val toastShape = kxShape()
                 Box(
                     modifier = Modifier
-                        .shadow(8.dp, RoundedCornerShape(8.dp))
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Theme[colors][surfaceVariant])
-                        .border(1.dp, Theme[colors][border], RoundedCornerShape(8.dp))
+                        .shadow(8.dp, toastShape)
+                        .clip(toastShape)
+                        .background(Theme[colors][surfaceVariant], toastShape)
+                        .border(1.dp, Theme[colors][border], toastShape)
                         .clickable { toastMessage = null }
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                 ) {
@@ -1085,6 +1090,7 @@ private fun StatusBar(
 
     val langId = activeDoc?.let { LspDocumentUtils.languageIdOf(it) }
     val currentSessionState = langId?.let { activeSessions[it] }
+    val pillShape = kxSmallShape()
 
     Row(
         modifier = modifier
@@ -1096,7 +1102,7 @@ private fun StatusBar(
     ) {
         Row(
             modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
+                .clip(pillShape)
                 .clickable(onClick = onShowLspStatus)
                 .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -1133,8 +1139,8 @@ private fun StatusBar(
             val extraCount = if (progressItems.size > 1) " (+${progressItems.size - 1})" else ""
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Theme[colors][accent].copy(alpha = 0.12f))
+                    .clip(pillShape)
+                    .background(Theme[colors][accent].copy(alpha = 0.12f), pillShape)
                     .clickable(onClick = onShowLspStatus)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1156,7 +1162,7 @@ private fun StatusBar(
 
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
+                    .clip(pillShape)
                     .clickable(onClick = onShowProblems)
                     .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1288,8 +1294,10 @@ private fun FileTreeDrawer(
         drawerState = drawerState,
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
+            val radius = LocalCornerRadius.current
+            val drawerShape = if (radius > 0.dp) RoundedCornerShape(topEnd = radius, bottomEnd = radius) else RectangleShape
             ModalDrawerSheet(
-                drawerShape = RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp),
+                drawerShape = drawerShape,
                 drawerState = drawerState,
                 drawerContainerColor = Theme[colors][background],
                 modifier = Modifier

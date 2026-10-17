@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.DropdownMenuPanel
 import com.composeunstyled.DropdownMenuScope
@@ -23,6 +22,8 @@ import com.klyx.ui.bodySmall as bodySmallToken
 import com.klyx.ui.border as borderToken
 import com.klyx.ui.colors as colorsProp
 import com.klyx.ui.error as errorToken
+import com.klyx.ui.kxShape
+import com.klyx.ui.kxSmallShape
 import com.klyx.ui.label as labelToken
 import com.klyx.ui.surface as surfaceToken
 import com.klyx.ui.textMuted as textMutedToken
@@ -34,13 +35,14 @@ fun DropdownMenuScope.KxMenuPanel(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
+    val shape = kxShape()
     DropdownMenuPanel(
         modifier = modifier
             .width(IntrinsicSize.Max)
             .widthIn(min = 140.dp, max = 280.dp)
-            .clip(RectangleShape)
-            .background(Theme[colorsProp][surfaceToken])
-            .border(1.dp, Theme[colorsProp][borderToken], RectangleShape),
+            .clip(shape)
+            .background(Theme[colorsProp][surfaceToken], shape)
+            .border(1.dp, Theme[colorsProp][borderToken], shape),
     ) {
         content()
     }
@@ -56,6 +58,7 @@ fun KxMenuItem(
     trailing: String? = null,
     closeOnClick: Boolean = true,
 ) {
+    val shape = kxSmallShape()
     UnstyledDropdownMenuItem(
         onClick = onClick,
         enabled = enabled,
@@ -63,7 +66,7 @@ fun KxMenuItem(
         indication = LocalIndication.current,
         modifier = modifier
             .fillMaxWidth()
-            .clip(RectangleShape),
+            .clip(shape),
     ) {
         Text(
             text = if (trailing == null) label else "$label  $trailing",

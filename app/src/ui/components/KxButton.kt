@@ -22,7 +22,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -37,6 +36,7 @@ import com.klyx.ui.border
 import com.klyx.ui.colors
 import com.klyx.ui.disabledSurface
 import com.klyx.ui.disabledText
+import com.klyx.ui.kxShape
 import com.klyx.ui.label
 import com.klyx.ui.onAccent
 import com.klyx.ui.typography
@@ -58,7 +58,7 @@ fun KxButtonSurface(
     contentPadding: PaddingValues = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
     content: @Composable () -> Unit,
 ) {
-    val shape = RectangleShape
+    val shape = kxShape()
 
     val background: Color = when {
         !enabled && variant == KxButtonVariant.Ghost -> Color.Transparent
@@ -127,7 +127,7 @@ fun KxButton(
         }
     }
 
-    val shape = RectangleShape
+    val shape = kxShape()
 
     val background: Color = when {
         backgroundColor != null -> backgroundColor

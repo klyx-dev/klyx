@@ -6,9 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
@@ -18,11 +19,11 @@ import com.composeunstyled.theme.Theme
 import com.klyx.ui.bodySmall
 import com.klyx.ui.border
 import com.klyx.ui.colors
+import com.klyx.ui.kxShape
 import com.klyx.ui.surfaceVariant
 import com.klyx.ui.textMuted
 import com.klyx.ui.textPrimary
 import com.klyx.ui.typography
-import androidx.compose.foundation.text.input.TextFieldState
 
 @Composable
 fun KxTextField(
@@ -53,11 +54,13 @@ fun KxTextField(
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
             }
+            val shape = kxShape()
             TextInput(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Theme[colors][surfaceVariant], RectangleShape)
-                    .border(1.dp, Theme[colors][border], RectangleShape)
+                    .clip(shape)
+                    .background(Theme[colors][surfaceVariant], shape)
+                    .border(1.dp, Theme[colors][border], shape)
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 placeholder = {
                     if (placeholder != null) {
