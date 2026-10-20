@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -128,7 +129,9 @@ class EditorLsp(
             val activeDocId = editorStore.activeDocumentId.value ?: return@launch
             val document = workspace.document(activeDocId) ?: return@launch
             val session = sessionForDocument(document) ?: return@launch
-            refreshDiagnostics(session, LspDocumentUtils.uriOf(document, workspace))
+            if (session.state.value == LspSessionState.Running) {
+                refreshDiagnostics(session, LspDocumentUtils.uriOf(document, workspace))
+            }
         }
     }
 
@@ -136,6 +139,7 @@ class EditorLsp(
         session: LspSession,
         uri: String,
     ) {
+        if (session.state.value != LspSessionState.Running) return
         val pulled = session.pullDiagnostics(uri) ?: return
         client.setDiagnostics(uri, pulled)
     }
@@ -150,6 +154,7 @@ class EditorLsp(
             val activeDocId = editorStore.activeDocumentId.value ?: return@launch
             val doc = workspace.document(activeDocId) ?: return@launch
             val session = sessionForDocument(doc) ?: return@launch
+            if (session.state.value != LspSessionState.Running) return@launch
             val docUri = LspDocumentUtils.uriOf(doc, workspace)
             if (targetUri != null && client.normalizeUri(targetUri) != client.normalizeUri(docUri)) {
                 return@launch
@@ -175,27 +180,87 @@ class EditorLsp(
         return sessions[langId]
     }
 
-    suspend fun ensureSession(document: Document): LspSession? {
+    fun shouldLaunchLspFor(document: Document): Boolean {
+        val ext = document.name.substringAfterLast('.', "").lowercase()
         val langId = LspDocumentUtils.languageIdOf(document)
-        val existing = sessions[langId]
-        if (existing != null && existing.state.value == LspSessionState.Running) {
-            return existing
+        return LspServerRegistry.hasServerFor(langId, ext)
+    }
+
+    private fun attachAllOpenDocuments(languageId: String, session: LspSession) {
+        scope.launch {
+            val docs = workspace.documents.value.values.filter {
+                LspDocumentUtils.languageIdOf(it) == languageId
+            }
+            for (doc in docs) {
+                val controllers = editorStore.controllersFor(doc.id)
+                val primary = controllers.firstOrNull() ?: continue
+                val uri = LspDocumentUtils.uriOf(doc, workspace)
+                val text = primary.getDocument().text.ifEmpty { workspace.readText(doc.id) }
+                session.didOpen(uri, languageId, text)
+                client.applyDiagnosticsToController(uri, primary)
+                refreshDiagnostics(session, uri)
+                refreshFolding(session, uri, primary)
+                refreshCodeLens(session, uri, primary)
+                scheduleInlayHintRefresh(session, uri, primary)
+            }
+        }
+    }
+
+    suspend fun ensureSession(document: Document, silent: Boolean = true): LspSession? {
+        val ext = document.name.substringAfterLast('.', "").lowercase()
+        val langId = LspDocumentUtils.languageIdOf(document)
+        if (!LspServerRegistry.hasServerFor(langId, ext)) {
+            if (!silent) {
+                _lspErrors.tryEmit("No language server is configured for ${if (langId != "plaintext") langId else ext.ifEmpty { "this file" }}.")
+            }
+            return null
         }
 
         val config = LspServerRegistry.findByLanguageId(langId)
-            ?: LspServerRegistry.findByExtension(document.name.substringAfterLast('.', ""))
+            ?: LspServerRegistry.findByExtension(ext)
             ?: run {
-                _lspErrors.tryEmit("No language server is configured for ${langId}.")
+                if (!silent) {
+                    _lspErrors.tryEmit("No language server is configured for ${langId}.")
+                }
                 return null
             }
-        val session = existing ?: LspSession(config, client, scope).also { newSession ->
+
+        val existing = sessions[langId]
+        if (existing != null) {
+            when (existing.state.value) {
+                LspSessionState.Running -> return existing
+                LspSessionState.Starting -> {
+                    val finished = withTimeoutOrNull(25.seconds) {
+                        existing.state.first { it != LspSessionState.Starting }
+                    }
+                    return if (finished == LspSessionState.Running) existing else null
+                }
+                LspSessionState.Error -> {
+                    if (silent && existing.isCooldownActive()) {
+                        return null
+                    }
+                }
+                LspSessionState.Stopped -> Unit
+            }
+        }
+
+        val session = existing ?: LspSession(
+            config = config,
+            client = client,
+            scope = scope,
+            onNotice = { message -> _lspErrors.tryEmit(message) },
+        ).also { newSession ->
             sessions[langId] = newSession
             scope.launch {
-                newSession.state.collect {
+                newSession.state.collect { state ->
                     updateActiveSessions()
+                    if (state == LspSessionState.Running) {
+                        attachAllOpenDocuments(config.languageId, newSession)
+                    }
                 }
             }
         }
+        session.onNotice = { message -> _lspErrors.tryEmit(message) }
 
         val activeProj = workspace.activeProjectId.value?.let { workspace.projects.value[it] }
         val docPath = LspDocumentUtils.pathOf(document, workspace)
@@ -214,7 +279,7 @@ class EditorLsp(
         println("[LSP] Starting session for ${config.languageId} with root: $rootUri")
         val started = session.start(rootUri, folders)
         updateActiveSessions()
-        if (!started) {
+        if (!started && !silent) {
             val base = session.startError ?: "Unknown error"
             val hint = when {
                 config.command == "vtsls" -> "$base\nInstall the language server in Termux: pkg install -y nodejs && npm i -g @vtsls/language-server"
@@ -231,11 +296,7 @@ class EditorLsp(
         updateActiveSessions()
         val activeDocId = editorStore.activeDocumentId.value
         val doc = activeDocId?.let { workspace.document(it) }
-        return if (doc != null && LspDocumentUtils.languageIdOf(doc) == languageId) {
-            restartLanguageServerForDocument(doc)
-        } else {
-            false
-        }
+        return doc != null && LspDocumentUtils.languageIdOf(doc) == languageId && restartLanguageServerForDocument(doc)
     }
 
     suspend fun restartLanguageServerForDocument(document: Document): Boolean {
@@ -243,7 +304,7 @@ class EditorLsp(
         val existing = sessions.remove(langId)
         existing?.close()
         updateActiveSessions()
-        val newSession = ensureSession(document)
+        val newSession = ensureSession(document, silent = false)
         val controller = editorStore.controllersFor(document.id).firstOrNull()
         if (newSession != null && controller != null) {
             val uri = LspDocumentUtils.uriOf(document, workspace)
@@ -305,7 +366,7 @@ class EditorLsp(
                         println("[AutoSave ERROR] Failed to save ${document.name}: ${e.message}")
                     }
                 }
-                if (liveSession != null) {
+                if (liveSession != null && liveSession.state.value == LspSessionState.Running) {
                     liveSession.requestDiagnosticsAfterChange(uri, latestText)
                     refreshDiagnostics(liveSession, uri)
                     if (liveSession.config.languageId == "rust") {
@@ -319,103 +380,112 @@ class EditorLsp(
                     refreshFolding(liveSession, uri, controller)
                     refreshCodeLens(liveSession, uri, controller)
                     scheduleInlayHintRefresh(liveSession, uri, controller)
+                } else {
+                    refreshSyntacticFolding(document, controller)
                 }
             }
 
-            if (sessionForDocument(document) != null) {
-                when (kind) {
-                    TextChangeKind.INSERTION, TextChangeKind.REPLACEMENT -> {
-                        val anyNewlineOrSpace = changes.any { it.newText.contains('\n') || it.newText == " " }
-                        if (anyNewlineOrSpace) {
-                            dismissCompletionPopup()
-                        } else {
-                            val shouldTrigger = changes.any { change ->
-                                change.newText.any { it.isLetterOrDigit() || it == '_' || it == '.' || it == ':' || it == '>' || it == '$' }
-                            }
-                            if (shouldTrigger) {
-                                triggerCompletionPopup(document, controller)
-                            }
+            when (kind) {
+                TextChangeKind.INSERTION, TextChangeKind.REPLACEMENT -> {
+                    val anyNewlineOrSpace = changes.any { it.newText.contains('\n') || it.newText == " " }
+                    if (anyNewlineOrSpace) {
+                        dismissCompletionPopup()
+                    } else {
+                        val shouldTrigger = changes.any { change ->
+                            change.newText.any { it.isLetterOrDigit() || it == '_' || it == '.' || it == ':' || it == '>' || it == '$' }
                         }
-                    }
-
-                    TextChangeKind.DELETION -> {
-                        val word = controller.getWordAtCursor()
-                        if (word.isNotEmpty() && word.any { it.isLetterOrDigit() || it == '_' }) {
+                        if (shouldTrigger) {
                             triggerCompletionPopup(document, controller)
-                        } else {
-                            dismissCompletionPopup()
                         }
                     }
+                }
 
-                    TextChangeKind.UNDO, TextChangeKind.REDO -> {
+                TextChangeKind.DELETION -> {
+                    val word = controller.getWordAtCursor()
+                    if (word.isNotEmpty() && word.any { it.isLetterOrDigit() || it == '_' }) {
+                        triggerCompletionPopup(document, controller)
+                    } else {
                         dismissCompletionPopup()
                     }
-
-                    else -> Unit
                 }
+
+                TextChangeKind.UNDO, TextChangeKind.REDO -> {
+                    dismissCompletionPopup()
+                }
+
+                else -> Unit
             }
         }
         unbindList.add(unsubText)
 
-        scope.launch {
-            val session = ensureSession(document) ?: return@launch
+        val unsubLongPress = controller.onLongPress { event ->
+            scope.launch {
+                val _ = requestHover(document, event.cursorPosition.line, event.cursorPosition.column)
+            }
+        }
+        unbindList.add(unsubLongPress)
 
-            controller.whenReady {
-                scope.launch {
-                    val docText = controller.getDocument().text
-                    val text = docText.ifEmpty { workspace.readText(document.id) }
-                    session.didOpen(uri, langId, text)
-                    client.applyDiagnosticsToController(uri, controller)
-                    refreshDiagnostics(session, uri)
-                    refreshFolding(session, uri, controller)
-                    refreshCodeLens(session, uri, controller)
-                    scheduleInlayHintRefresh(session, uri, controller)
+        val unsubCursor = controller.onCursorChanged { event ->
+            if (_activeHover.value?.let { it.line != event.cursorPosition.line } == true) {
+                dismissHover()
+            }
+            if (_activeCompletion.value?.let { it.anchor == null } == true) {
+                dismissCompletionPopup()
+            }
+            state.highlightJob?.cancel()
+            state.highlightJob = scope.launch {
+                delay(120.milliseconds)
+                refreshDocumentHighlights(
+                    sessionForDocument(document),
+                    uri,
+                    event.cursorPosition.line,
+                    event.cursorPosition.column,
+                    controller,
+                )
+            }
+        }
+        unbindList.add(unsubCursor)
 
-                    delay(1200.milliseconds)
-                    refreshDiagnostics(session, uri)
-                    scheduleInlayHintRefresh(session, uri, controller)
-                    refreshCodeLens(session, uri, controller)
+        val unsubCodeLens = controller.onCodeLensClick { event ->
+            val lenses = documentCodeLenses[document.id] ?: return@onCodeLensClick
+            val lens = lenses.find { it.range.start.line.toInt() == event.line }
+            val (command, arguments) = lens?.command ?: return@onCodeLensClick
+            scope.launch {
+                val session = sessionForDocument(document) ?: return@launch
+                val args = (arguments as? JsonArray)?.toList()
+                val _ = session.executeCommand(command, args)
+            }
+        }
+        unbindList.add(unsubCodeLens)
+
+        controller.whenReady {
+            scope.launch {
+                refreshSyntacticFolding(document, controller)
+            }
+        }
+
+        if (shouldLaunchLspFor(document)) {
+            scope.launch {
+                val session = ensureSession(document, silent = true) ?: return@launch
+
+                controller.whenReady {
+                    scope.launch {
+                        val docText = controller.getDocument().text
+                        val text = docText.ifEmpty { workspace.readText(document.id) }
+                        session.didOpen(uri, langId, text)
+                        client.applyDiagnosticsToController(uri, controller)
+                        refreshDiagnostics(session, uri)
+                        refreshFolding(session, uri, controller)
+                        refreshCodeLens(session, uri, controller)
+                        scheduleInlayHintRefresh(session, uri, controller)
+
+                        delay(1200.milliseconds)
+                        refreshDiagnostics(session, uri)
+                        scheduleInlayHintRefresh(session, uri, controller)
+                        refreshCodeLens(session, uri, controller)
+                    }
                 }
             }
-
-            val unsubLongPress = controller.onLongPress { event ->
-                scope.launch {
-                    val _ = requestHover(document, event.cursorPosition.line, event.cursorPosition.column)
-                }
-            }
-            unbindList.add(unsubLongPress)
-
-            val unsubCursor = controller.onCursorChanged { event ->
-                if (_activeHover.value?.let { it.line != event.cursorPosition.line } == true) {
-                    dismissHover()
-                }
-                if (_activeCompletion.value?.let { it.anchor == null } == true) {
-                    dismissCompletionPopup()
-                }
-                state.highlightJob?.cancel()
-                state.highlightJob = scope.launch {
-                    delay(120.milliseconds)
-                    refreshDocumentHighlights(
-                        session,
-                        uri,
-                        event.cursorPosition.line,
-                        event.cursorPosition.column,
-                        controller,
-                    )
-                }
-            }
-            unbindList.add(unsubCursor)
-
-            val unsubCodeLens = controller.onCodeLensClick { event ->
-                val lenses = documentCodeLenses[document.id] ?: return@onCodeLensClick
-                val lens = lenses.find { it.range.start.line.toInt() == event.line }
-                (val command, val arguments) = lens?.command ?: return@onCodeLensClick
-                scope.launch {
-                    val args = (arguments as? JsonArray)?.toList()
-                    val _ = session.executeCommand(command, args)
-                }
-            }
-            unbindList.add(unsubCodeLens)
         }
     }
 
@@ -445,22 +515,33 @@ class EditorLsp(
                 }
             }
             val session = sessionForDocument(document) ?: return@launch
-            val uri = LspDocumentUtils.uriOf(document, workspace)
-            session.didClose(uri)
+            if (session.state.value == LspSessionState.Running) {
+                val uri = LspDocumentUtils.uriOf(document, workspace)
+                session.didClose(uri)
+            }
         }
     }
 
     suspend fun notifyDocumentSaved(document: Document, text: String? = null) {
-        val session = sessionForDocument(document) ?: return
+        val session = sessionForDocument(document)
         val uri = LspDocumentUtils.uriOf(document, workspace)
         val docText = text ?: workspace.readText(document.id)
-        session.didSave(uri, docText)
-        refreshDiagnostics(session, uri)
-        val _ = editorStore.withDocument(document.id) {
-            val controller = this@withDocument
-            scope.launch {
-                refreshFolding(session, uri, controller)
-                refreshCodeLens(session, uri, controller)
+        if (session != null && session.state.value == LspSessionState.Running) {
+            session.didSave(uri, docText)
+            refreshDiagnostics(session, uri)
+            val _ = editorStore.withDocument(document.id) {
+                val controller = this@withDocument
+                scope.launch {
+                    refreshFolding(session, uri, controller)
+                    refreshCodeLens(session, uri, controller)
+                }
+            }
+        } else {
+            val _ = editorStore.withDocument(document.id) {
+                val controller = this@withDocument
+                scope.launch {
+                    refreshSyntacticFolding(document, controller)
+                }
             }
         }
     }
@@ -496,31 +577,70 @@ class EditorLsp(
     }
 
     suspend fun formatDocument(document: Document, controller: SweetEditorController): Boolean {
-        val session = sessionForDocument(document) ?: return false
+        val session = sessionForDocument(document)
         val uri = LspDocumentUtils.uriOf(document, workspace)
-        val edits = session.formatting(uri) ?: return false
+        if (session != null && session.state.value == LspSessionState.Running) {
+            val edits = session.formatting(uri)
+            if (edits != null) {
+                val sweetEdits = edits.map { edit ->
+                    EditorTextEdit(
+                        range = TextRange(
+                            start = TextPosition(edit.range.start.line.toInt(), edit.range.start.character.toInt()),
+                            end = TextPosition(edit.range.end.line.toInt(), edit.range.end.character.toInt()),
+                        ),
+                        newText = edit.newText,
+                    )
+                }
+                withContext(Dispatchers.Main) {
+                    controller.applyTextEdits(sweetEdits)
+                }
+                return true
+            }
+        }
 
-        val sweetEdits = edits.map { edit ->
-            EditorTextEdit(
-                range = TextRange(
-                    start = TextPosition(edit.range.start.line.toInt(), edit.range.start.character.toInt()),
-                    end = TextPosition(edit.range.end.line.toInt(), edit.range.end.character.toInt()),
-                ),
-                newText = edit.newText,
+        // Fallback smart formatting without LSP
+        val currentText = withContext(Dispatchers.Main) { controller.getDocument().text }
+        val ext = document.name.substringAfterLast('.', "").lowercase()
+        val formatted = SmartLanguageFeatures.formatTextFallback(currentText, ext)
+        if (formatted != currentText) {
+            val lines = currentText.lines()
+            val lastLine = (lines.size - 1).coerceAtLeast(0)
+            val lastCol = lines.getOrNull(lastLine)?.length ?: 0
+            val fullRange = TextRange(
+                start = TextPosition(0, 0),
+                end = TextPosition(lastLine, lastCol),
             )
+            withContext(Dispatchers.Main) {
+                controller.applyTextEdits(listOf(EditorTextEdit(range = fullRange, newText = formatted)))
+            }
+            return true
         }
+        return false
+    }
+
+    private suspend fun refreshSyntacticFolding(document: Document, controller: SweetEditorController) {
+        val text = withContext(Dispatchers.Main) { controller.getDocument().text }
+        val docText = text.ifEmpty { workspace.readText(document.id) }
+        val regions = SyntacticFolding.computeFoldRegions(docText)
         withContext(Dispatchers.Main) {
-            controller.applyTextEdits(sweetEdits)
+            controller.setFoldRegions(regions)
+            controller.requestDecorationRefresh()
         }
-        return true
     }
 
     private suspend fun refreshFolding(session: LspSession, uri: String, controller: SweetEditorController) {
-        val ranges = session.foldingRange(uri)
+        val ranges = if (session.state.value == LspSessionState.Running) session.foldingRange(uri) else emptyList()
         if (ranges.isEmpty()) {
-            withContext(Dispatchers.Main) {
-                controller.setFoldRegions(emptyList())
-                controller.requestDecorationRefresh()
+            val doc = workspace.documents.value.values.firstOrNull {
+                LspDocumentUtils.uriOf(it, workspace) == uri
+            }
+            if (doc != null) {
+                refreshSyntacticFolding(doc, controller)
+            } else {
+                withContext(Dispatchers.Main) {
+                    controller.setFoldRegions(emptyList())
+                    controller.requestDecorationRefresh()
+                }
             }
             return
         }
@@ -528,7 +648,7 @@ class EditorLsp(
         val validRanges = ranges.filter { (startLine, endLine) -> startLine < endLine }
         val byStartLine = validRanges.groupBy { it.startLine }
         val foldRegions = byStartLine.values.mapNotNull { group ->
-            (val startLine, val endLine) = group.maxByOrNull { it.endLine } ?: return@mapNotNull null
+            val (startLine, endLine) = group.maxByOrNull { it.endLine } ?: return@mapNotNull null
             FoldRegion(startLine = startLine.toInt(), endLine = endLine.toInt(), collapsed = false)
         }
         withContext(Dispatchers.Main) {
@@ -538,6 +658,7 @@ class EditorLsp(
     }
 
     private suspend fun refreshCodeLens(session: LspSession, uri: String, controller: SweetEditorController) {
+        if (session.state.value != LspSessionState.Running) return
         val lenses = session.codeLens(uri)
         if (lenses.isEmpty()) {
             withContext(Dispatchers.Main) {
@@ -563,7 +684,7 @@ class EditorLsp(
         }
 
         val itemsByLine = mutableMapOf<Int, MutableList<CodeLensItem>>()
-        for ((val index, val lens = value) in resolvedLenses.withIndex()) {
+        for ([index, lens] in resolvedLenses.withIndex()) {
             val title = lens.command?.title
             if (title.isNullOrBlank()) continue
             val line = lens.range.start.line.toInt()
@@ -582,41 +703,65 @@ class EditorLsp(
     }
 
     private suspend fun refreshDocumentHighlights(
-        session: LspSession,
+        session: LspSession?,
         uri: String,
         line: Int,
         column: Int,
         controller: SweetEditorController,
     ) {
-        val highlights = session.documentHighlight(uri, line, column)
-        if (highlights.isEmpty()) {
+        val highlights = if (session != null && session.state.value == LspSessionState.Running) {
+            session.documentHighlight(uri, line, column)
+        } else emptyList()
+
+        if (highlights.isNotEmpty()) {
+            val highlightsByLine = mutableMapOf<Int, MutableList<DocumentHighlight>>()
+            for ((range, kind) in highlights) {
+                val hLine = range.start.line.toInt()
+                val hCol = range.start.character.toInt()
+                val hEndCol = range.end.character.toInt()
+                val len = if (range.end.line.toInt() == hLine) (hEndCol - hCol).coerceAtLeast(1) else 1
+                val hKind = when (kind) {
+                    DocumentHighlightKind.Read -> EditorDocumentHighlightKind.READ
+                    DocumentHighlightKind.Write -> EditorDocumentHighlightKind.WRITE
+                    else -> EditorDocumentHighlightKind.TEXT
+                }
+                highlightsByLine.getOrPut(hLine) { mutableListOf() }
+                    .add(DocumentHighlight(column = hCol, length = len, kind = hKind))
+            }
             withContext(Dispatchers.Main) {
-                controller.clearDocumentHighlights()
+                controller.setBatchLineDocumentHighlights(highlightsByLine)
                 controller.requestDecorationRefresh()
             }
             return
         }
 
-        val highlightsByLine = mutableMapOf<Int, MutableList<DocumentHighlight>>()
-        for ((val range, val kind) in highlights) {
-            val hLine = range.start.line.toInt()
-            val hCol = range.start.character.toInt()
-            val hEndCol = range.end.character.toInt()
-            val len = if (range.end.line.toInt() == hLine) (hEndCol - hCol).coerceAtLeast(1) else 1
-            val kind = when (kind) {
-                DocumentHighlightKind.Read -> EditorDocumentHighlightKind.READ
-                DocumentHighlightKind.Write -> EditorDocumentHighlightKind.WRITE
-                else -> EditorDocumentHighlightKind.TEXT
+        // Smart fallback occurrence highlighting without LSP
+        val docText = withContext(Dispatchers.Main) { controller.getDocument().text }
+        val lines = docText.lines()
+        val currentLine = lines.getOrNull(line) ?: ""
+        val word = SmartLanguageFeatures.getWordAt(currentLine, column)
+
+        if (word.length >= 2 && (word[0].isLetter() || word[0] == '_')) {
+            val wordRegex = Regex("""\b${Regex.escape(word)}\b""")
+            val highlightsByLine = mutableMapOf<Int, MutableList<DocumentHighlight>>()
+            for ([idx, l] in lines.withIndex()) {
+                val matches = wordRegex.findAll(l)
+                for (m in matches) {
+                    highlightsByLine.getOrPut(idx) { mutableListOf() }
+                        .add(DocumentHighlight(column = m.range.first, length = word.length, kind = EditorDocumentHighlightKind.TEXT))
+                }
             }
-            highlightsByLine.getOrPut(hLine) { mutableListOf() }
-                .add(DocumentHighlight(column = hCol, length = len, kind = kind))
-        }
-        withContext(Dispatchers.Main) {
-            controller.setBatchLineDocumentHighlights(highlightsByLine)
-            controller.requestDecorationRefresh()
+            withContext(Dispatchers.Main) {
+                controller.setBatchLineDocumentHighlights(highlightsByLine)
+                controller.requestDecorationRefresh()
+            }
+        } else {
+            withContext(Dispatchers.Main) {
+                controller.clearDocumentHighlights()
+                controller.requestDecorationRefresh()
+            }
         }
     }
-
 
     private fun scheduleInlayHintRefresh(
         session: LspSession,
@@ -624,7 +769,7 @@ class EditorLsp(
         controller: SweetEditorController,
         debounce: Duration = 0.milliseconds,
     ) {
-        if (!workspace.showInlayHints.value) {
+        if (!workspace.showInlayHints.value || session.state.value != LspSessionState.Running) {
             inlayHintJobs.remove(uri)?.cancel()
             inlayHintGeneration.remove(uri)
             scope.launch {
@@ -652,7 +797,7 @@ class EditorLsp(
         controller: SweetEditorController,
         generation: Int,
     ) {
-        if (!session.supportsInlayHints()) return
+        if (!session.supportsInlayHints() || session.state.value != LspSessionState.Running) return
         val fetchedText = withContext(Dispatchers.Main) { controller.getDocument().text }
         session.syncTextIfNeeded(uri, fetchedText)
 
@@ -671,7 +816,7 @@ class EditorLsp(
         val currentLines = currentText.lines()
         val hintsByLine = mutableMapOf<Int, MutableList<io.github.lumkit.sweeteditor.InlayHint>>()
         if (hints.isNotEmpty()) {
-            for ((val position, val label, val paddingLeft, val paddingRight) in hints) {
+            for ((position, label, paddingLeft, paddingRight) in hints) {
                 val hLine = position.line.toInt()
                 if (hLine !in currentLines.indices) continue
                 val lineLen = currentLines[hLine].length
@@ -712,24 +857,52 @@ class EditorLsp(
     }
 
     suspend fun requestHover(document: Document, line: Int, column: Int): HoverState? {
-        val session = sessionForDocument(document) ?: return null
+        val session = sessionForDocument(document)
         val uri = LspDocumentUtils.uriOf(document, workspace)
-        val hover = session.hover(uri, line, column) ?: return null
-        val text = hover.contents.fold(
-            firstFn = { marked ->
-                marked.fold(left = { it }, right = { (language, value) -> "```$language\n$value\n```" })
-            },
-            secondFn = { list ->
-                list.joinToString("\n\n") { marked ->
-                    marked.fold(left = { it }, right = { (language, value) -> "```$language\n$value\n```" })
+        if (session != null && session.state.value == LspSessionState.Running) {
+            val hover = session.hover(uri, line, column)
+            if (hover != null) {
+                val text = hover.contents.fold(
+                    firstFn = { marked ->
+                        marked.fold(left = { it }, right = { (language, value) -> "```$language\n$value\n```" })
+                    },
+                    secondFn = { list ->
+                        list.joinToString("\n\n") { marked ->
+                            marked.fold(left = { it }, right = { (language, value) -> "```$language\n$value\n```" })
+                        }
+                    },
+                    thirdFn = { it.value }
+                )
+                if (text.isNotBlank()) {
+                    val state = HoverState(line, column, text.trim())
+                    _activeHover.value = state
+                    return state
                 }
-            },
-            thirdFn = { it.value }
-        )
-        if (text.isBlank()) return null
-        val state = HoverState(line, column, text.trim())
-        _activeHover.value = state
-        return state
+            }
+        }
+
+        // Smart fallback hover without LSP
+        val controller = editorStore.controllersFor(document.id).firstOrNull() ?: return null
+        val docText = withContext(Dispatchers.Main) { controller.getDocument().text }
+        val lines = docText.lines()
+        val currentLine = lines.getOrNull(line) ?: ""
+        val word = SmartLanguageFeatures.getWordAt(currentLine, column)
+        if (word.length >= 2 && (word[0].isLetter() || word[0] == '_')) {
+            val count = Regex("""\b${Regex.escape(word)}\b""").findAll(docText).count()
+            val declRegex = Regex("""(?m)^[ \t]*(?:fun|def|fn|val|var|let|const|class|struct|interface|enum)\s+${Regex.escape(word)}\b.*$""")
+            val declMatch = declRegex.find(docText)?.value?.trim()
+            val langId = LspDocumentUtils.languageIdOf(document)
+            val info = buildString {
+                append("**`$word`** ($count occurrences in file)")
+                if (declMatch != null) {
+                    append("\n\n```$langId\n$declMatch\n```")
+                }
+            }
+            val state = HoverState(line, column, info)
+            _activeHover.value = state
+            return state
+        }
+        return null
     }
 
     suspend fun getCodeActions(
@@ -738,6 +911,7 @@ class EditorLsp(
         diagnostics: List<Diagnostic> = emptyList(),
     ): List<CodeAction> {
         val session = sessionForDocument(document) ?: return emptyList()
+        if (session.state.value != LspSessionState.Running) return emptyList()
         val uri = LspDocumentUtils.uriOf(document, workspace)
         return session.codeAction(uri, range, diagnostics) ?: emptyList()
     }
@@ -759,22 +933,13 @@ class EditorLsp(
     }
 
     fun triggerCompletionPopup(document: Document, controller: SweetEditorController) {
-        val session = sessionForDocument(document) ?: return
         val uri = LspDocumentUtils.uriOf(document, workspace)
         val state = editorStates.getOrPut(document.id) { EditorState() }
         state.completionJob?.cancel()
         state.completionJob = scope.launch {
-            delay(70.milliseconds)
-            (val line, val column) = withContext(Dispatchers.Main) { controller.getCursorPosition() } ?: return@launch
+            delay(50.milliseconds)
+            val (line, column) = withContext(Dispatchers.Main) { controller.getCursorPosition() } ?: return@launch
             val fullText = withContext(Dispatchers.Main) { controller.getDocument().text }
-            session.syncTextIfNeeded(uri, fullText)
-
-            val rawItems = session.completion(uri, line, column)
-            if (rawItems.isEmpty()) {
-                _activeCompletion.value = null
-                return@launch
-            }
-
             val lines = fullText.lines()
             val lineStr = lines.getOrNull(line) ?: ""
             val col = column.coerceIn(0, lineStr.length)
@@ -783,6 +948,73 @@ class EditorLsp(
                 prefixStart--
             }
             val prefix = lineStr.substring(prefixStart, col)
+
+            val session = sessionForDocument(document)
+            val rawItems = mutableListOf<CompletionItem>()
+            val seenLabels = mutableSetOf<String>()
+
+            // 1. LSP completions if server is running
+            if (session != null && session.state.value == LspSessionState.Running) {
+                session.syncTextIfNeeded(uri, fullText)
+                val lspItems = runCatching { session.completion(uri, line, column) }.getOrNull().orEmpty()
+                rawItems.addAll(lspItems)
+                lspItems.forEach { seenLabels.add(it.label) }
+            }
+
+            // 2. Language keywords
+            val langId = LspDocumentUtils.languageIdOf(document)
+            val keywords = SmartLanguageFeatures.keywordsFor(langId)
+            for (kw in keywords) {
+                if (kw !in seenLabels && (prefix.isEmpty() || kw.contains(prefix, ignoreCase = true))) {
+                    seenLabels.add(kw)
+                    rawItems.add(
+                        CompletionItem(
+                            label = kw,
+                            kind = CompletionItemKind.Keyword,
+                            detail = "keyword",
+                            insertText = kw,
+                        )
+                    )
+                }
+            }
+
+            // 3. Language snippets
+            val snippets = SmartLanguageFeatures.snippetsFor(langId)
+            for ((label, detail, body) in snippets) {
+                if (label !in seenLabels && (prefix.isEmpty() || label.contains(prefix, ignoreCase = true))) {
+                    seenLabels.add(label)
+                    rawItems.add(
+                        CompletionItem(
+                            label = label,
+                            kind = CompletionItemKind.Snippet,
+                            detail = detail,
+                            insertText = body,
+                            insertTextFormat = InsertTextFormat.Snippet,
+                        )
+                    )
+                }
+            }
+
+            // 4. Buffer words
+            val bufferWords = SmartLanguageFeatures.extractWords(fullText, prefix)
+            for (word in bufferWords) {
+                if (word !in seenLabels && word != prefix) {
+                    seenLabels.add(word)
+                    rawItems.add(
+                        CompletionItem(
+                            label = word,
+                            kind = CompletionItemKind.Text,
+                            detail = "buffer",
+                            insertText = word,
+                        )
+                    )
+                }
+            }
+
+            if (rawItems.isEmpty()) {
+                _activeCompletion.value = null
+                return@launch
+            }
 
             val filteredItems = if (prefix.isEmpty()) {
                 rawItems
@@ -852,7 +1084,6 @@ class EditorLsp(
         applyCompletionReplacingPrefix(item, controller)
     }
 
-
     private fun applyCompletionReplacingPrefix(
         item: LspCompletionItemUi,
         controller: SweetEditorController,
@@ -865,7 +1096,7 @@ class EditorLsp(
         }
 
         val rawInsert = item.sweetItem.insertText ?: item.label
-        (val finalText = first, val cursorOffset = second) = expandSnippetPlaceholders(rawInsert)
+        val [finalText, cursorOffset] = expandSnippetPlaceholders(rawInsert)
         val replaceRange = TextRange(
             start = TextPosition(item.line, prefixStart),
             end = TextPosition(item.line, prefixEnd),
@@ -879,10 +1110,9 @@ class EditorLsp(
         controller.setCursorPosition(item.line, prefixStart + cursorOffset)
     }
 
-
     private fun expandSnippetPlaceholders(template: String): Pair<String, Int> {
-        var cursor = template.indexOf($$"$0")
-        var text = template.replace($$"$0", "")
+        var cursor = template.indexOf("$0")
+        var text = template.replace("$0", "")
         if (cursor < 0) cursor = Int.MIN_VALUE
         text = snippetDefaultPattern.replace(text) { it.groupValues[2] }
         text = snippetTabStopPattern.replace(text, "")
@@ -895,6 +1125,7 @@ class EditorLsp(
 
     suspend fun resolveCompletionDoc(document: Document, item: LspCompletionItemUi): LspCompletionItemUi {
         val session = sessionForDocument(document) ?: return item
+        if (session.state.value != LspSessionState.Running) return item
         if (!item.documentation.isNullOrBlank()) return item
         val resolved = session.resolveCompletionItem(item.rawItem)
         val docText = resolved.documentation?.fold(
@@ -1076,7 +1307,6 @@ class EditorLsp(
             }
         }
     }
-
 
     fun refreshServerAvailability() {
         scope.launch {

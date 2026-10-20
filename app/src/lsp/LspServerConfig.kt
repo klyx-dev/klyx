@@ -47,9 +47,18 @@ fun resolveCommandPath(command: String): String {
         if (home.isNotEmpty()) {
             add("$home/.cargo/bin")
             add("$home/.local/bin")
+            add("$home/.npm-global/bin")
+            add("$home/.yarn/bin")
+            add("$home/go/bin")
+            add("$home/.local/share/pnpm")
+            add("$home/.asdf/shims")
         }
         addAll(pathEnv.split(systemPathSeparator).filter { it.isNotBlank() })
-    }
+        add("/usr/local/bin")
+        add("/opt/homebrew/bin")
+        add("/usr/bin")
+        add("/bin")
+    }.distinct()
     for (dir in searchPaths) {
         executablePath("$dir/$command")?.let { return it }
     }
@@ -75,6 +84,10 @@ internal fun rustAnalyzerSettings(): JsonObject = buildJsonObject {
 object LspServerRegistry {
     private val defaultServers = mutableMapOf<String, LspServerConfig>()
     private val customServers = mutableMapOf<String, LspServerConfig>()
+
+    private val NON_LSP_EXTENSIONS = setOf(
+        "txt", "text", "log", "md", "markdown", "csv", "tsv", "ini", "conf", "config", "env", "properties"
+    )
 
     init {
         registerDefaults()
@@ -133,12 +146,64 @@ object LspServerRegistry {
                 args = listOf("--stdio"),
             )
         )
+        register(
+            LspServerConfig(
+                languageId = "kotlin",
+                extensions = setOf("kt", "kts"),
+                command = "kotlin-language-server",
+            )
+        )
+        register(
+            LspServerConfig(
+                languageId = "java",
+                extensions = setOf("java"),
+                command = "jdtls",
+            )
+        )
+        register(
+            LspServerConfig(
+                languageId = "shellscript",
+                extensions = setOf("sh", "bash"),
+                command = "bash-language-server",
+                args = listOf("start"),
+            )
+        )
+        register(
+            LspServerConfig(
+                languageId = "lua",
+                extensions = setOf("lua"),
+                command = "lua-language-server",
+            )
+        )
+        register(
+            LspServerConfig(
+                languageId = "yaml",
+                extensions = setOf("yaml", "yml"),
+                command = "yaml-language-server",
+                args = listOf("--stdio"),
+            )
+        )
+        register(
+            LspServerConfig(
+                languageId = "html",
+                extensions = setOf("html", "htm"),
+                command = "vscode-html-language-server",
+                args = listOf("--stdio"),
+            )
+        )
+        register(
+            LspServerConfig(
+                languageId = "css",
+                extensions = setOf("css", "scss", "less"),
+                command = "vscode-css-language-server",
+                args = listOf("--stdio"),
+            )
+        )
     }
 
     fun register(config: LspServerConfig) {
         defaultServers[config.languageId] = config
     }
-
 
     fun setCustomServers(configs: List<LspServerConfig>) {
         customServers.clear()
@@ -154,13 +219,22 @@ object LspServerRegistry {
     fun findByLanguageId(languageId: String): LspServerConfig? =
         customServers[languageId] ?: defaultServers[languageId]
 
+    fun hasServerFor(languageId: String, extension: String): Boolean {
+        val ext = extension.lowercase().removePrefix(".")
+        if (customServers.values.any { it.extensions.contains(ext) || it.languageId == languageId }) {
+            return true
+        }
+        if (ext in NON_LSP_EXTENSIONS || languageId == "plaintext" || languageId.isBlank()) {
+            return false
+        }
+        return defaultServers[languageId] != null || defaultServers.values.any { it.extensions.contains(ext) }
+    }
+
     fun all(): List<LspServerConfig> =
         (defaultServers + customServers).values.toList().sortedBy { it.languageId }
 
-
     fun isCustom(languageId: String): Boolean = customServers.containsKey(languageId)
 }
-
 
 fun CustomLspServer.toConfig(): LspServerConfig =
     LspServerConfig(

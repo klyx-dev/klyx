@@ -28,7 +28,11 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.buildJsonObject
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 
 enum class LspSessionState {
     Stopped,
@@ -41,6 +45,7 @@ class LspSession(
     val config: LspServerConfig,
     val client: LspClientImpl,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
+    var onNotice: ((String) -> Unit)? = null,
 ) : AutoCloseable {
 
     private var serverConnection: LspServerConnection? = null
@@ -49,6 +54,13 @@ class LspSession(
 
     var startError: String? = null
         private set
+
+    private var lastFailureMark: TimeMark? = null
+
+    fun isCooldownActive(cooldown: Duration = 8.seconds): Boolean =
+        lastFailureMark?.elapsedNow()?.let { it < cooldown } ?: false
+
+    private val startMutex = Mutex()
 
     private val _state = MutableStateFlow(LspSessionState.Stopped)
     val state: StateFlow<LspSessionState> = _state.asStateFlow()
@@ -82,150 +94,161 @@ class LspSession(
         rootUri: String? = null,
         workspaceFolders: List<WorkspaceFolder> = emptyList()
     ): Boolean = withContext(Dispatchers.Default) {
-        if (_state.value == LspSessionState.Running || _state.value == LspSessionState.Starting) {
-            return@withContext true
-        }
-
-        _state.value = LspSessionState.Starting
-        startError = null
-        try {
-            val effectiveTransport = when (config.transportType) {
-                LspTransportType.Auto -> {
-                    if (currentOperatingSystem == OperatingSystem.Android) {
-                        if (TermuxBridge.isTermuxInstalled()) {
-                            LspTransportType.Termux
-                        } else {
-                            LspTransportType.TcpSocket
-                        }
-                    } else {
-                        LspTransportType.Stdio
-                    }
-                }
-
-                else -> config.transportType
+        startMutex.withLock {
+            if (_state.value == LspSessionState.Running) {
+                return@withContext true
             }
 
-            val connection: LspServerConnection = when (effectiveTransport) {
-                LspTransportType.Stdio -> {
-                    val resolvedCmd = resolveCommandPath(config.command)
-                    println("[LSP] Starting Stdio process for ${config.languageId} ($resolvedCmd)")
-                    val builder = Process.Builder(resolvedCmd)
-                        .args(config.args)
-                        .apply {
-                            config.environment.forEach { (key, value) ->
-                                environment(key, value)
+            _state.value = LspSessionState.Starting
+            startError = null
+            try {
+                val effectiveTransport = when (config.transportType) {
+                    LspTransportType.Auto -> {
+                        if (currentOperatingSystem == OperatingSystem.Android) {
+                            if (TermuxBridge.isTermuxInstalled()) {
+                                LspTransportType.Termux
+                            } else {
+                                LspTransportType.TcpSocket
                             }
+                        } else {
+                            LspTransportType.Stdio
                         }
-                    launchLspProcess(builder, client, scope)
+                    }
+
+                    else -> config.transportType
                 }
 
-                LspTransportType.Termux -> {
-                    val targetPort =
-                        if (config.socketPort > 0) config.socketPort else defaultPortForLanguage(config.languageId)
-                    val projectDir = rootUri?.removePrefix("file://")
-                    println("[LSP] Starting Termux transport for ${config.languageId} (port: $targetPort, cmd: ${config.command})")
-
-                    var connectionResult: LspServerConnection? = null
-                    try {
-                        connectionResult = listenLspSocket(
-                            host = "127.0.0.1",
-                            port = 0,
-                            client = client,
-                            timeoutMs = 12_000L,
-                            onListening = { assignedPort: Int ->
-                                println("[LSP] Listening on 127.0.0.1:$assignedPort, launching bridge in Termux...")
-                                val dispatched = TermuxBridge.launchLspBridge(
-                                    command = config.command,
-                                    args = config.args,
-                                    connectPort = assignedPort,
-                                    workDir = projectDir,
-                                )
-                                if (!dispatched) {
-                                    println("[LSP] Termux RUN_COMMAND not dispatched (permission or Termux missing).")
+                val connection: LspServerConnection = when (effectiveTransport) {
+                    LspTransportType.Stdio -> {
+                        val resolvedCmd = resolveCommandPath(config.command)
+                        println("[LSP] Starting Stdio process for ${config.languageId} ($resolvedCmd)")
+                        val builder = Process.Builder(resolvedCmd)
+                            .args(config.args)
+                            .apply {
+                                config.environment.forEach { (key, value) ->
+                                    environment(key, value)
                                 }
-                            },
-                            scope = scope,
-                        )
-                    } catch (e: Throwable) {
-                        println("[LSP] Termux reverse bridge timed out or failed: ${e.message}")
+                            }
+                        launchLspProcess(builder, client, scope)
                     }
 
-                    if (connectionResult != null) {
-                        println("[LSP] Termux bridge connected for ${config.languageId}, waiting for initialize response...")
+                    LspTransportType.Termux -> {
+                        if (!TermuxBridge.isTermuxInstalled()) {
+                            val msg = "Termux is not installed on this device. Install Termux to run language servers on Android."
+                            onNotice?.invoke(msg)
+                            throw IllegalStateException(msg)
+                        }
+                        if (!TermuxBridge.hasRunCommandPermission()) {
+                            val granted = TermuxBridge.requestRunCommandPermission()
+                            if (!granted) {
+                                val _ = TermuxBridge.openAppSettings()
+                                onNotice?.invoke("Termux RUN_COMMAND permission not granted. Please allow it in system settings.")
+                            } else {
+                                onNotice?.invoke("Please grant Termux RUN_COMMAND permission to start language servers.")
+                            }
+                        }
+                        val targetPort =
+                            if (config.socketPort > 0) config.socketPort else defaultPortForLanguage(config.languageId)
+                        val projectDir = rootUri?.removePrefix("file://")
+                        println("[LSP] Starting Termux transport for ${config.languageId} (port: $targetPort, cmd: ${config.command})")
+
+                        var connectionResult: LspServerConnection? = null
+                        try {
+                            connectionResult = listenLspSocket(
+                                host = "127.0.0.1",
+                                port = 0,
+                                client = client,
+                                timeoutMs = 8_000L,
+                                onListening = { assignedPort: Int ->
+                                    println("[LSP] Listening on 127.0.0.1:$assignedPort, launching bridge in Termux...")
+                                    val dispatched = TermuxBridge.launchLspBridge(
+                                        command = config.command,
+                                        args = config.args,
+                                        connectPort = assignedPort,
+                                        workDir = projectDir,
+                                    )
+                                    if (!dispatched) {
+                                        println("[LSP] Termux RUN_COMMAND not dispatched (permission or Termux missing).")
+                                        onNotice?.invoke("Failed to launch ${config.languageId} server in Termux. Check RUN_COMMAND permission.")
+                                    }
+                                },
+                                scope = scope,
+                            )
+                        } catch (e: Throwable) {
+                            println("[LSP] Termux reverse bridge timed out or failed: ${e.message}")
+                        }
+
+                        if (connectionResult != null) {
+                            println("[LSP] Termux bridge connected for ${config.languageId}, waiting for initialize response...")
+                        }
+
+                        connectionResult ?: run {
+                            println("[LSP] Attempting direct connection to ${config.socketHost}:$targetPort in case server is running manually in Termux")
+                            connectLspSocket(
+                                host = config.socketHost,
+                                port = targetPort,
+                                client = client,
+                                timeoutMs = 3_000L,
+                            )
+                        }
                     }
 
-                    connectionResult ?: run {
-                        println("[LSP] Attempting direct connection to ${config.socketHost}:$targetPort in case server is running manually in Termux")
-                        println(
-                            "[LSP] Hint for Termux: ${
-                                TermuxBridge.generateManualCommand(
-                                    config.command,
-                                    config.args,
-                                    targetPort
-                                )
-                            }"
-                        )
+                    LspTransportType.TcpSocket, LspTransportType.Auto -> {
+                        val targetPort =
+                            if (config.socketPort > 0) config.socketPort else defaultPortForLanguage(config.languageId)
+                        println("[LSP] Connecting to TCP socket at ${config.socketHost}:$targetPort for ${config.languageId}")
                         connectLspSocket(
                             host = config.socketHost,
                             port = targetPort,
                             client = client,
-                            timeoutMs = 6_000L,
+                            timeoutMs = 8_000L,
                         )
                     }
                 }
 
-                LspTransportType.TcpSocket, LspTransportType.Auto -> {
-                    val targetPort =
-                        if (config.socketPort > 0) config.socketPort else defaultPortForLanguage(config.languageId)
-                    println("[LSP] Connecting to TCP socket at ${config.socketHost}:$targetPort for ${config.languageId}")
-                    connectLspSocket(
-                        host = config.socketHost,
-                        port = targetPort,
-                        client = client,
-                        timeoutMs = 10_000L,
-                    )
-                }
-            }
+                serverConnection = connection
 
-            serverConnection = connection
+                val initOptions = if (config.languageId == "rust") {
+                    val rustConfig = rustAnalyzerSettings()
+                    buildJsonObject {
+                        put("rust-analyzer", rustConfig)
+                        for ((key, value) in rustConfig) put(key, value)
+                    }
+                } else null
 
-            val initOptions = if (config.languageId == "rust") {
-                val rustConfig = rustAnalyzerSettings()
-                buildJsonObject {
-                    put("rust-analyzer", rustConfig)
-                    for ((key, value) in rustConfig) put(key, value)
-                }
-            } else null
-
-            val initParams = InitializeParams(
-                capabilities = defaultClientCapabilities(),
-                rootUri = rootUri,
-                workspaceFolders = workspaceFolders.ifEmpty { null },
-                initializationOptions = initOptions,
-            )
-
-            val initResult = withTimeoutOrNull(30_000.milliseconds) { connection.initialize(initParams) }
-                ?: throw IllegalStateException(
-                    "Timed out waiting for initialize response from ${config.languageId}" +
-                            " (is '${config.command}' installed and working?)"
+                val initParams = InitializeParams(
+                    capabilities = defaultClientCapabilities(),
+                    rootUri = rootUri,
+                    workspaceFolders = workspaceFolders.ifEmpty { null },
+                    initializationOptions = initOptions,
                 )
-            capabilities = initResult.capabilities
 
-            connection.initialized(InitializedParams)
-            _state.value = LspSessionState.Running
-            startError = null
-            println("[LSP] Server initialized successfully for ${config.languageId} via $effectiveTransport")
-            true        } catch (e: Throwable) {
-            if (e is CancellationException) {
-                ensureActive()
+                val initResult = withTimeoutOrNull(25_000.milliseconds) { connection.initialize(initParams) }
+                    ?: throw IllegalStateException(
+                        "Timed out waiting for initialize response from ${config.languageId}" +
+                                " (is '${config.command}' installed and working?)"
+                    )
+                capabilities = initResult.capabilities
+
+                connection.initialized(InitializedParams)
+                _state.value = LspSessionState.Running
+                startError = null
+                lastFailureMark = null
+                println("[LSP] Server initialized successfully for ${config.languageId} via $effectiveTransport")
+                true
+            } catch (e: Throwable) {
+                if (e is CancellationException) {
+                    ensureActive()
+                }
+                lastFailureMark = TimeSource.Monotonic.markNow()
+                val message = e.message ?: e.toString()
+                startError = message
+                println("[LSP ERROR] Failed to start server for ${config.languageId}: $message")
+                _state.value = LspSessionState.Error
+                close()
+                false
             }
-            val message = e.message ?: e.toString()
-            startError = message
-            println("[LSP ERROR] Failed to start server for ${config.languageId}: $message")
-            e.printStackTrace()
-            _state.value = LspSessionState.Error
-            close()
-            false        }
+        }
     }
 
     suspend fun didOpen(uri: String, languageId: String, text: String) {
@@ -260,7 +283,7 @@ class LspSession(
         diagnosticResultIds.remove(uri)
 
         val contentChange = if (syncKind() == TextDocumentSyncKind.Incremental && previousText != null) {
-            (val oldStart, val oldEnd, val newStart, val newEnd) = textDiff(previousText, text)
+            val (oldStart, oldEnd, newStart, newEnd) = textDiff(previousText, text)
             TextDocumentContentChangeEvent(
                 text = text.substring(newStart, newEnd),
                 range = Range(
@@ -312,7 +335,6 @@ class LspSession(
         )
     }
 
-
     private fun positionAt(text: String, index: Int): Position {
         val safeIndex = index.coerceIn(0, text.length)
         var line = 0
@@ -331,7 +353,6 @@ class LspSession(
             didChange(uri, text)
         }
     }
-
 
     suspend fun requestDiagnosticsAfterChange(uri: String, text: String) {
         syncTextIfNeeded(uri, text)
@@ -357,7 +378,6 @@ class LspSession(
             server.textDocument.didSave(params)
         }
     }
-
 
     suspend fun pullDiagnostics(uri: String): List<Diagnostic>? {
         return diagnosticPullMutex.withLock {
@@ -547,7 +567,6 @@ class LspSession(
             }
         }.getOrNull()
     }
-
 
     fun supportsInlayHints(): Boolean {
         return supportsThreeWayBooleanProvider(capabilities?.inlayHintProvider)
