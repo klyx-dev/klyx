@@ -39,7 +39,7 @@ import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.buildModifier
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.kxSmallShape
+import com.klyx.ui.theme.kxSmallShape
 import com.klyx.core.action.action
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -53,18 +53,18 @@ import com.klyx.runtime.workspace.EditorGroup
 import com.klyx.runtime.workspace.EditorGroupId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.WorkspaceDocument
-import com.klyx.ui.accent
-import com.klyx.ui.border
-import com.klyx.ui.colors
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
 import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
-import com.klyx.ui.label
-import com.klyx.ui.labelSmall
-import com.klyx.ui.success
-import com.klyx.ui.textMuted
-import com.klyx.ui.textPrimary
-import com.klyx.ui.textSecondary
-import com.klyx.ui.typography
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.labelSmall
+import com.klyx.ui.theme.success
+import com.klyx.ui.theme.textMuted
+import com.klyx.ui.theme.textPrimary
+import com.klyx.ui.theme.textSecondary
+import com.klyx.ui.theme.typography
 import org.koin.compose.koinInject
 
 @Composable

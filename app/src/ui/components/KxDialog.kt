@@ -29,16 +29,16 @@ import com.composeunstyled.Scrim
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDialog
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.background as backgroundToken
-import com.klyx.ui.bodySmall as bodySmallToken
-import com.klyx.ui.border as borderToken
-import com.klyx.ui.colors as colorsProp
-import com.klyx.ui.kxShape
-import com.klyx.ui.surface as surfaceToken
-import com.klyx.ui.textMuted as textMutedToken
-import com.klyx.ui.textPrimary as textPrimaryToken
-import com.klyx.ui.title as titleToken
-import com.klyx.ui.typography as typographyProp
+import com.klyx.ui.theme.background as backgroundToken
+import com.klyx.ui.theme.bodySmall as bodySmallToken
+import com.klyx.ui.theme.border as borderToken
+import com.klyx.ui.theme.colors as colorsProp
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.surface as surfaceToken
+import com.klyx.ui.theme.textMuted as textMutedToken
+import com.klyx.ui.theme.textPrimary as textPrimaryToken
+import com.klyx.ui.theme.title as titleToken
+import com.klyx.ui.theme.typography as typographyProp
 
 @Composable
 fun KxDialog(

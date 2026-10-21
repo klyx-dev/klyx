@@ -67,9 +67,9 @@ import androidx.compose.ui.graphics.RectangleShape
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.LocalCornerRadius
-import com.klyx.ui.kxShape
-import com.klyx.ui.kxSmallShape
+import com.klyx.ui.theme.LocalCornerRadius
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.kxSmallShape
 import com.klyx.core.Debug
 import com.klyx.core.IoDispatcher
 import com.klyx.core.action.action
@@ -107,12 +107,12 @@ import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.isVisibleIn
-import com.klyx.ui.accent
-import com.klyx.ui.accentSecondary
-import com.klyx.ui.background
-import com.klyx.ui.bodySmall
-import com.klyx.ui.border
-import com.klyx.ui.colors
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.accentSecondary
+import com.klyx.ui.theme.background
+import com.klyx.ui.theme.bodySmall
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonDefaultMinHeight
 import com.klyx.ui.components.KxButtonVariant
@@ -121,7 +121,7 @@ import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.components.KxMenuSeparator
 import com.klyx.ui.components.KxTextField
-import com.klyx.ui.currentFontFamily
+import com.klyx.ui.theme.currentFontFamily
 import com.klyx.ui.editor.CodeActionsDialog
 import com.klyx.ui.editor.CompletionDocDialog
 import com.klyx.ui.editor.CustomCompletionPopup
@@ -134,7 +134,7 @@ import com.klyx.ui.editor.ProblemsDialog
 import com.klyx.ui.editor.TabStrip
 import com.klyx.ui.editor.rememberEditorGroups
 import com.klyx.ui.editor.rememberHasVisibleFiles
-import com.klyx.ui.error
+import com.klyx.ui.theme.error
 import com.klyx.ui.filetree.ChildrenLoader
 import com.klyx.ui.filetree.FileNode
 import com.klyx.ui.filetree.FileTree
@@ -145,18 +145,18 @@ import com.klyx.ui.filetree.NodeIdRegistry
 import com.klyx.ui.filetree.VisibleFileNode
 import com.klyx.ui.filetree.platformFileTreeWidth
 import com.klyx.ui.filetree.rememberFileTreeIcons
-import com.klyx.ui.headline
-import com.klyx.ui.label
-import com.klyx.ui.labelSmall
+import com.klyx.ui.theme.headline
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.labelSmall
 import com.klyx.ui.project.OpenProjectDialog
 import com.klyx.ui.project.ProjectSwitcher
-import com.klyx.ui.surface
-import com.klyx.ui.surfaceVariant
-import com.klyx.ui.textMuted
-import com.klyx.ui.textPrimary
-import com.klyx.ui.textSecondary
-import com.klyx.ui.typography
-import com.klyx.ui.warning
+import com.klyx.ui.theme.surface
+import com.klyx.ui.theme.surfaceVariant
+import com.klyx.ui.theme.textMuted
+import com.klyx.ui.theme.textPrimary
+import com.klyx.ui.theme.textSecondary
+import com.klyx.ui.theme.typography
+import com.klyx.ui.theme.warning
 import io.github.lumkit.sweeteditor.EditorActionSource
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
@@ -240,14 +240,14 @@ fun HomeScreen(modifier: Modifier = Modifier) {
         }
     }
 
-    Debug {
-        try {
-            action(OpenProject(systemHomeDirectory / "zed/Projects/rs-test"))
-        } catch (e: Exception) {
-            currentCoroutineContext().ensureActive()
-            toastMessage = "Failed to open project: ${e.message}"
-        }
-    }
+//    Debug {
+//        try {
+//            action(OpenProject(systemHomeDirectory / "zed/Projects/rs-test"))
+//        } catch (e: Exception) {
+//            currentCoroutineContext().ensureActive()
+//            toastMessage = "Failed to open project: ${e.message}"
+//        }
+//    }
 
     val activeProjectId by workspace.activeProjectId.collectAsState()
     val tabScope by workspace.tabScope.collectAsState()
@@ -1698,7 +1698,7 @@ private fun FileNameDialog(
             Text(
                 text = error!!,
                 style = Theme[typography][bodySmall],
-                color = Theme[colors][com.klyx.ui.error],
+                color = Theme[colors][com.klyx.ui.theme.error],
                 modifier = Modifier.padding(top = 6.dp),
             )
         }
@@ -1747,7 +1747,7 @@ private fun ConfirmDeleteDialog(
                             if (err == null) onDismiss() else error = err
                         }
                     },
-                    backgroundColor = Theme[colors][com.klyx.ui.error],
+                    backgroundColor = Theme[colors][com.klyx.ui.theme.error],
                     variant = KxButtonVariant.Filled,
                     enabled = !busy,
                 ) {
@@ -1765,7 +1765,7 @@ private fun ConfirmDeleteDialog(
             Text(
                 text = error!!,
                 style = Theme[typography][bodySmall],
-                color = Theme[colors][com.klyx.ui.error],
+                color = Theme[colors][com.klyx.ui.theme.error],
                 modifier = Modifier.padding(top = 6.dp),
             )
         }

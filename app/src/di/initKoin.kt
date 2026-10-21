@@ -5,6 +5,8 @@ import com.klyx.core.App
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.LspActionGroup
 import com.klyx.runtime.workspace.Workspace
+import com.klyx.ui.theme.ThemeRegistry
+import kotlinx.coroutines.launch
 import org.koin.core.KoinApplication
 import org.koin.dsl.KoinAppDeclaration
 import org.koin.dsl.includes
@@ -24,5 +26,6 @@ fun initKoin(config: KoinAppDeclaration? = null): KoinApplication {
         val _ = koin.get<LspActionGroup>().registerActions()
     }
     app.bindDefaultKeybindings()
+    app.backgroundScope.launch { ThemeRegistry.init() }
     return koinApplication
 }

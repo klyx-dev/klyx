@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.kxShape
-import com.klyx.ui.kxSmallShape
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.kxSmallShape
 import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
@@ -49,25 +49,25 @@ import com.klyx.lsp.HoverState
 import com.klyx.lsp.LspProgressItem
 import com.klyx.lsp.LspSessionState
 import com.klyx.lsp.types.fold
-import com.klyx.ui.accent
-import com.klyx.ui.accentSecondary
-import com.klyx.ui.bodySmall
-import com.klyx.ui.border
-import com.klyx.ui.colors
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.accentSecondary
+import com.klyx.ui.theme.bodySmall
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.components.KxDialog
-import com.klyx.ui.currentFontFamily
-import com.klyx.ui.error
-import com.klyx.ui.label
-import com.klyx.ui.labelSmall
-import com.klyx.ui.surface
-import com.klyx.ui.surfaceVariant
-import com.klyx.ui.textMuted
-import com.klyx.ui.textPrimary
-import com.klyx.ui.textSecondary
-import com.klyx.ui.typography
-import com.klyx.ui.warning
+import com.klyx.ui.theme.currentFontFamily
+import com.klyx.ui.theme.error
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.labelSmall
+import com.klyx.ui.theme.surface
+import com.klyx.ui.theme.surfaceVariant
+import com.klyx.ui.theme.textMuted
+import com.klyx.ui.theme.textPrimary
+import com.klyx.ui.theme.textSecondary
+import com.klyx.ui.theme.typography
+import com.klyx.ui.theme.warning
 
 fun Diagnostic.messageText(): String =
     message.fold(left = { it }, right = { it.value })

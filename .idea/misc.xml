@@ -18,7 +18,7 @@
       <item index="2" class="java.lang.String" itemvalue="org.koin.core.annotation.Singleton" />
     </list>
   </component>
-  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="EclipseTemurin-25.0.4.1 (managed by Kotlin Toolchain)" project-jdk-type="JavaSDK">
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="jbr-21" project-jdk-type="JavaSDK">
     <output url="file://$PROJECT_DIR$/out" />
   </component>
 </project>

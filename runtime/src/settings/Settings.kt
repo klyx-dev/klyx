@@ -22,6 +22,10 @@ data class Settings(
     val autoSave: Boolean = false,
     val roundedUi: Boolean = false,
     val cornerRadius: Int = 8,
+    val fontName: String = "jetbrains_mono",
+    val themeName: String = "Catppuccin Mocha",
+    val lightThemeName: String = "Catppuccin Latte",
+    val themeMode: ThemeMode = ThemeMode.System,
     val customLspServers: List<CustomLspServer> = emptyList(),
 )
 

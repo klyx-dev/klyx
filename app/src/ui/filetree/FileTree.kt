@@ -7,7 +7,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -51,17 +49,17 @@ import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.buildModifier
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.kxSmallShape
+import com.klyx.ui.theme.kxSmallShape
 import com.klyx.core.LocalWindowSizeClass
 import com.klyx.core.icons.MaterialSymbolsChevronRight
 import com.klyx.core.isWidthAtLeastMediumBreakpoint
-import com.klyx.ui.border
-import com.klyx.ui.colors
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
 import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.components.KxMenuSeparator
-import com.klyx.ui.surface
-import com.klyx.ui.textPrimary
+import com.klyx.ui.theme.surface
+import com.klyx.ui.theme.textPrimary
 
 val platformFileTreeWidth: Dp
     @Composable

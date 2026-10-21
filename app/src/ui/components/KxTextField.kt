@@ -16,14 +16,16 @@ import com.composeunstyled.Text
 import com.composeunstyled.TextInput
 import com.composeunstyled.UnstyledTextField
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.bodySmall
-import com.klyx.ui.border
-import com.klyx.ui.colors
-import com.klyx.ui.kxShape
-import com.klyx.ui.surfaceVariant
-import com.klyx.ui.textMuted
-import com.klyx.ui.textPrimary
-import com.klyx.ui.typography
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.body
+import com.klyx.ui.theme.bodySmall
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.surfaceVariant
+import com.klyx.ui.theme.textMuted
+import com.klyx.ui.theme.textPrimary
+import com.klyx.ui.theme.typography
 
 @Composable
 fun KxTextField(
@@ -40,8 +42,8 @@ fun KxTextField(
         enabled = enabled,
         accessibilityLabel = label,
         lineLimits = if (singleLine) TextFieldLineLimits.SingleLine else TextFieldLineLimits.MultiLine(),
-        cursorBrush = SolidColor(Theme[colors][com.klyx.ui.accent]),
-        textStyle = Theme[typography][com.klyx.ui.body].copy(
+        cursorBrush = SolidColor(Theme[colors][accent]),
+        textStyle = Theme[typography][body].copy(
             color = Theme[colors][textPrimary],
         ),
     ) {
@@ -66,7 +68,7 @@ fun KxTextField(
                     if (placeholder != null) {
                         Text(
                             text = placeholder,
-                            style = Theme[typography][com.klyx.ui.body],
+                            style = Theme[typography][body],
                             color = Theme[colors][textMuted].copy(alpha = 0.7f),
                         )
                     }

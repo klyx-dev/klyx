@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoundEffect
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
@@ -30,16 +31,16 @@ import com.composeunstyled.ProvideContentColor
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledButton
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.accent
-import com.klyx.ui.error
-import com.klyx.ui.border
-import com.klyx.ui.colors
-import com.klyx.ui.disabledSurface
-import com.klyx.ui.disabledText
-import com.klyx.ui.kxShape
-import com.klyx.ui.label
-import com.klyx.ui.onAccent
-import com.klyx.ui.typography
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
+import com.klyx.ui.theme.disabledSurface
+import com.klyx.ui.theme.disabledText
+import com.klyx.ui.theme.error
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.onAccent
+import com.klyx.ui.theme.typography
 
 enum class KxButtonVariant {
     Filled,
@@ -97,6 +98,7 @@ fun KxButton(
     enabled: Boolean = true,
     variant: KxButtonVariant = KxButtonVariant.Filled,
     bracketed: Boolean = false,
+    playClickSound: Boolean = false,
     danger: Boolean = false,
     borderColor: Color? = null,
     backgroundColor: Color? = null,
@@ -108,6 +110,7 @@ fun KxButton(
     contentDescription: String? = null,
     content: @Composable () -> Unit,
 ) {
+    val soundEffect = LocalSoundEffect.current
     val pressed by interactionSource.collectIsPressedAsState()
 
     val bracketColor: Color = when {
@@ -153,7 +156,12 @@ fun KxButton(
     val alpha by animateFloatAsState(if (pressed && enabled) 0.7f else 1f)
 
     UnstyledButton(
-        onClick = onClick,
+        onClick = {
+            if (playClickSound) {
+                soundEffect.playClickSound()
+            }
+            onClick()
+        },
         enabled = enabled,
         contentPadding = contentPadding,
         indication = indication,

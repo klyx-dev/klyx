@@ -15,25 +15,40 @@ import androidx.compose.ui.unit.dp
 import com.composeunstyled.theme.Theme
 import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
+import com.klyx.runtime.settings.SettingsStore
+import com.klyx.runtime.settings.resolveActiveThemeName
 import com.klyx.runtime.workspace.Workspace
-import com.klyx.ui.KlyxTheme
-import com.klyx.ui.LocalColorScheme
-import com.klyx.ui.LocalCornerRadius
-import com.klyx.ui.background
-import com.klyx.ui.colors
 import com.klyx.ui.provider.ProvideCompositionLocals
 import com.klyx.ui.screen.HomeScreen
-import com.klyx.ui.screen.SettingsScreen
+import com.klyx.ui.screen.settings.SettingsScreen
+import com.klyx.ui.theme.KlyxTheme
+import com.klyx.ui.theme.LocalColorScheme
+import com.klyx.ui.theme.LocalCornerRadius
+import com.klyx.ui.theme.background
+import com.klyx.ui.theme.colors
 import org.koin.compose.koinInject
 
 @Composable
 fun Screen() {
     val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
+
+    val settings by settingsStore.settings.collectAsState()
+
     val roundedUi by workspace.roundedUi.collectAsState()
     val cornerRadius by workspace.cornerRadius.collectAsState()
     val effectiveCornerRadius = if (roundedUi) cornerRadius.dp else 0.dp
 
-    ProvideCompositionLocals {
+    val resolvedThemeName = resolveActiveThemeName(
+        themeMode = settings.themeMode,
+        darkThemeName = settings.themeName,
+        lightThemeName = settings.lightThemeName
+    )
+
+    ProvideCompositionLocals(
+        themeName = resolvedThemeName,
+        fontName = settings.fontName
+    ) {
         CompositionLocalProvider(
             LocalCornerRadius provides effectiveCornerRadius,
         ) {

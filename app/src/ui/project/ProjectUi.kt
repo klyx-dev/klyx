@@ -23,7 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import com.klyx.ui.kxSmallShape
+import com.klyx.ui.theme.kxSmallShape
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
@@ -38,9 +38,9 @@ import com.klyx.runtime.fs.systemHomeDirectory
 import com.klyx.runtime.workspace.Project
 import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
-import com.klyx.ui.bodySmall
-import com.klyx.ui.border
-import com.klyx.ui.colors
+import com.klyx.ui.theme.bodySmall
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.components.KxDialog
@@ -48,12 +48,13 @@ import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.components.KxMenuSeparator
 import com.klyx.ui.components.KxTextField
-import com.klyx.ui.label
-import com.klyx.ui.labelSmall
-import com.klyx.ui.surfaceVariant
-import com.klyx.ui.textMuted
-import com.klyx.ui.textPrimary
-import com.klyx.ui.typography
+import com.klyx.ui.theme.error
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.labelSmall
+import com.klyx.ui.theme.surfaceVariant
+import com.klyx.ui.theme.textMuted
+import com.klyx.ui.theme.textPrimary
+import com.klyx.ui.theme.typography
 import okio.FileSystem
 import okio.Path.Companion.toPath
 import okio.SYSTEM
@@ -233,7 +234,7 @@ fun OpenProjectDialog(
             Text(
                 text = error!!,
                 style = Theme[typography][bodySmall],
-                color = Theme[colors][com.klyx.ui.error],
+                color = Theme[colors][com.klyx.ui.theme.error],
                 modifier = Modifier.padding(top = 6.dp),
             )
         }
@@ -286,7 +287,7 @@ fun FolderPickerDialog(
             Text(
                 text = loadError!!,
                 style = Theme[typography][bodySmall],
-                color = Theme[colors][com.klyx.ui.error],
+                color = Theme[colors][error],
                 modifier = Modifier.padding(bottom = 8.dp),
             )
         }
