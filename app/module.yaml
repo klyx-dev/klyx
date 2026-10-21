@@ -11,6 +11,7 @@ dependencies:
   - io.github.lumkit:sweeteditor-compose:0.1.6
   - io.github.lumkit:sweetline-compose:0.1.6
   - $libs.kmp.process
+  - androidx.navigationevent:navigationevent-compose:1.2.0
 
 settings:
   junit: junit-5
