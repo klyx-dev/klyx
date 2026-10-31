@@ -280,7 +280,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
             modifier = Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             TopBar(
                 onFilesClick = { scope.launch { drawerState.open() } },
@@ -290,7 +289,11 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 onShowLspStatus = { showLspStatusDialog = true },
             )
 
+            Spacer(modifier = Modifier.height(4.dp))
+
             GroupStrip(groups = groups, activeId = activeId)
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             if (groups.isNotEmpty()) {
                 SinglePaneGroups(
@@ -302,81 +305,39 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         .fillMaxSize()
                         .weight(1f),
                 )
+
+                FlowRow(
+                    modifier = Modifier
+                        .background(Theme[colors][surfaceVariant])
+                        .height(IntrinsicSize.Max)
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp, horizontal = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    var isCmd by remember { mutableStateOf(false) }
+
+                    KxButton(
+                        onClick = { isCmd = !isCmd },
+                        variant = if (isCmd) KxButtonVariant.Filled else KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Cmd")
+                    }
+
+                    KxButton(
+                        onClick = { action(InsertText("\t")) },
+                        variant = KxButtonVariant.Outlined,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text("Tab")
+                    }
+                }
             } else {
                 EmptyEditorArea(
                     modifier = Modifier
                         .fillMaxSize()
                         .weight(1f)
                 )
-            }
-
-            FlowRow(
-                modifier = Modifier
-                    .background(Theme[colors][surface])
-                    .height(IntrinsicSize.Max)
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp, horizontal = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                var isCmd by remember { mutableStateOf(false) }
-
-                KxButton(
-                    onClick = { isCmd = !isCmd },
-                    variant = if (isCmd) KxButtonVariant.Filled else KxButtonVariant.Outlined,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    Text("Cmd")
-                }
-
-                KxButton(
-                    onClick = { action(InsertText("\t")) },
-                    variant = KxButtonVariant.Outlined,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                ) {
-                    Text("Tab")
-                }
-
-                if (isCmd) {
-                    KxButton(
-                        onClick = { action(SelectAll) },
-                        variant = KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text("Select All")
-                    }
-
-                    KxButton(
-                        onClick = { action(Copy) },
-                        variant = KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text("Copy")
-                    }
-
-                    KxButton(
-                        onClick = { action(Paste) },
-                        variant = KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text("Paste")
-                    }
-
-                    KxButton(
-                        onClick = { action(FoldAll) },
-                        variant = KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text("Fold")
-                    }
-
-                    KxButton(
-                        onClick = { action(UnfoldAll) },
-                        variant = KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text("Unfold")
-                    }
-                }
             }
 
             if (activeDoc != null) {
