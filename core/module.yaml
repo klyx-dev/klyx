@@ -21,6 +21,7 @@ dependencies:
   - $libs.compose.material3.adaptive: exported
   - $libs.okio: exported
   - $libs.kotlinx.coroutines.core: exported
+  - $libs.filekit.dialogs: exported
 
 test-settings:
   kotlin:

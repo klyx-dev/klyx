@@ -3,6 +3,7 @@ product: jvm/app
 dependencies:
   - //app
   - $compose.desktop.currentOs
+  - $libs.filekit.dialogs
 
 apply:
   - //common.module-template.yaml

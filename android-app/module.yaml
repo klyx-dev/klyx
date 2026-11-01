@@ -5,6 +5,7 @@ dependencies:
   - $libs.androidx.activity.compose
   - bom: $libs.koin.bom
   - $libs.koin.android
+  - $libs.filekit.dialogs
 
 settings:
   android:

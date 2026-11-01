@@ -5,6 +5,7 @@ import com.klyx.core.action.ActionDescriptor
 import com.klyx.core.action.ActionId
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.DocumentLocation
+import io.github.vinceglb.filekit.PlatformFile
 import okio.Path
 
 /**
@@ -33,7 +34,7 @@ data class OpenDocument(
  */
 fun OpenDocument(path: Path, preview: Boolean = false): OpenDocument =
     OpenDocument(
-        location = DocumentLocation.Local(path),
+        location = DocumentLocation.Platform(PlatformFile(path.toString())),
         name = path.name,
         preview = preview
     )

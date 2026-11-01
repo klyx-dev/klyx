@@ -44,10 +44,10 @@ class SmartLanguageFeaturesTest : FunSpec({
     }
 
     test("getWordAt extracts word at cursor") {
-        val line = "val fooBar = 42"
+        val line = "val  fooBar = 42"
         SmartLanguageFeatures.getWordAt(line, 6) shouldBe "fooBar"
         SmartLanguageFeatures.getWordAt(line, 0) shouldBe "val"
-        SmartLanguageFeatures.getWordAt(line, 3) shouldBe ""
+        SmartLanguageFeatures.getWordAt(line, 4) shouldBe ""
     }
 
     test("SyntacticFolding computes fold regions for braces and indents") {

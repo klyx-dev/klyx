@@ -24,8 +24,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.klyx.core.App
+import com.klyx.core.action.action
+import com.klyx.runtime.action.OpenDocument
 import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.settings.ThemeMode
+import com.klyx.runtime.workspace.DocumentLocation
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.init
+import io.github.vinceglb.filekit.name
 import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
@@ -47,6 +54,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         App.global.declare(this)
+        FileKit.init(this)
         if (!hasStorageAccess()) {
             requestStoragePermission()
         }
@@ -87,6 +95,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         App.global.declare(this)
         storagePermissionGranted = hasStorageAccess()
+        handleIntent(intent)
     }
 
     @SuppressLint("UseKtx")
@@ -126,4 +135,28 @@ class MainActivity : ComponentActivity() {
         } else {
             hasLegacyStoragePermissions()
         }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val uri = intent.data
+
+        if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_EDIT) {
+            if (uri != null) {
+                val file = PlatformFile(uri)
+                action(
+                    OpenDocument(
+                        location = DocumentLocation.Platform(file = file),
+                        name = file.name,
+                        preview = false
+                    )
+                )
+            }
+            setIntent(Intent())
+        }
+    }
 }

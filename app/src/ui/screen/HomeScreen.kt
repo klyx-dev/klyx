@@ -56,6 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
@@ -63,16 +64,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.RectangleShape
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.theme.LocalCornerRadius
-import com.klyx.ui.theme.kxShape
-import com.klyx.ui.theme.kxSmallShape
-import com.klyx.core.Debug
 import com.klyx.core.IoDispatcher
 import com.klyx.core.action.action
+import com.klyx.core.utils.join
+import com.klyx.core.utils.relativeTo
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
@@ -85,19 +83,12 @@ import com.klyx.lsp.RestartLanguageServer
 import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
 import com.klyx.runtime.action.CloseDocument
-import com.klyx.runtime.action.Copy
-import com.klyx.runtime.action.FoldAll
 import com.klyx.runtime.action.InsertText
 import com.klyx.runtime.action.OpenDocument
-import com.klyx.runtime.action.OpenProject
-import com.klyx.runtime.action.Paste
 import com.klyx.runtime.action.PromotePreviewDocument
 import com.klyx.runtime.action.SaveActiveDocument
 import com.klyx.runtime.action.SaveAllDocuments
-import com.klyx.runtime.action.SelectAll
 import com.klyx.runtime.action.SplitEditor
-import com.klyx.runtime.action.UnfoldAll
-import com.klyx.runtime.fs.systemHomeDirectory
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.DocumentLocation
@@ -107,12 +98,6 @@ import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.isVisibleIn
-import com.klyx.ui.theme.accent
-import com.klyx.ui.theme.accentSecondary
-import com.klyx.ui.theme.background
-import com.klyx.ui.theme.bodySmall
-import com.klyx.ui.theme.border
-import com.klyx.ui.theme.colors
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonDefaultMinHeight
 import com.klyx.ui.components.KxButtonVariant
@@ -121,7 +106,6 @@ import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.components.KxMenuSeparator
 import com.klyx.ui.components.KxTextField
-import com.klyx.ui.theme.currentFontFamily
 import com.klyx.ui.editor.CodeActionsDialog
 import com.klyx.ui.editor.CompletionDocDialog
 import com.klyx.ui.editor.CustomCompletionPopup
@@ -134,7 +118,6 @@ import com.klyx.ui.editor.ProblemsDialog
 import com.klyx.ui.editor.TabStrip
 import com.klyx.ui.editor.rememberEditorGroups
 import com.klyx.ui.editor.rememberHasVisibleFiles
-import com.klyx.ui.theme.error
 import com.klyx.ui.filetree.ChildrenLoader
 import com.klyx.ui.filetree.FileNode
 import com.klyx.ui.filetree.FileTree
@@ -145,11 +128,22 @@ import com.klyx.ui.filetree.NodeIdRegistry
 import com.klyx.ui.filetree.VisibleFileNode
 import com.klyx.ui.filetree.platformFileTreeWidth
 import com.klyx.ui.filetree.rememberFileTreeIcons
-import com.klyx.ui.theme.headline
-import com.klyx.ui.theme.label
-import com.klyx.ui.theme.labelSmall
 import com.klyx.ui.project.OpenProjectDialog
 import com.klyx.ui.project.ProjectSwitcher
+import com.klyx.ui.theme.LocalCornerRadius
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.accentSecondary
+import com.klyx.ui.theme.background
+import com.klyx.ui.theme.bodySmall
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
+import com.klyx.ui.theme.currentFontFamily
+import com.klyx.ui.theme.error
+import com.klyx.ui.theme.headline
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.kxSmallShape
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.labelSmall
 import com.klyx.ui.theme.surface
 import com.klyx.ui.theme.surfaceVariant
 import com.klyx.ui.theme.textMuted
@@ -167,6 +161,8 @@ import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
 import io.github.lumkit.sweeteditor.highlight.HighlightTheme
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.delete
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -175,10 +171,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
-import okio.SYSTEM
+import kotlinx.io.Buffer
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
@@ -731,17 +726,17 @@ private fun EditorPane(
     onShowToast: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (group == null) {
+        EmptyEditorArea(modifier)
+        return
+    }
+
     val workspace: Workspace = koinInject()
 
     val documents by workspace.documents.collectAsState()
     val activeProjectId by workspace.activeProjectId.collectAsState()
     val activeEditorGroupId by workspace.activeEditorGroupId.collectAsState()
     val tabScope by workspace.tabScope.collectAsState()
-
-    if (group == null) {
-        EmptyEditorArea(modifier)
-        return
-    }
 
     val focused = group.id == activeEditorGroupId
     val openedDocuments = group.documents.mapNotNull { documents[it.documentId] }
@@ -1256,7 +1251,8 @@ private fun FileTreeDrawer(
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             val radius = LocalCornerRadius.current
-            val drawerShape = if (radius > 0.dp) RoundedCornerShape(topEnd = radius, bottomEnd = radius) else RectangleShape
+            val drawerShape =
+                if (radius > 0.dp) RoundedCornerShape(topEnd = radius, bottomEnd = radius) else RectangleShape
             ModalDrawerSheet(
                 drawerShape = drawerShape,
                 drawerState = drawerState,
@@ -1279,9 +1275,8 @@ private fun ExplorerPanel(
     onNavigate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val fs = FileSystem.SYSTEM
     val ids = remember { NodeIdRegistry() }
-    val childrenLoader = remember(fs, ids) { fileTreeChildrenLoader(fs, ids) }
+    val childrenLoader = remember(ids) { fileTreeChildrenLoader(ids) }
     val icons = rememberFileTreeIcons()
     val workspace: Workspace = koinInject()
     val treeScope = rememberCoroutineScope()
@@ -1317,7 +1312,7 @@ private fun ExplorerPanel(
                 name = name,
                 absolutePath = projectRoot.toString(),
                 isDirectory = true,
-                childCount = runCatching { fs.listOrNull(projectRoot)?.size }.getOrNull(),
+                childCount = runCatching { SystemFileSystem.list(projectRoot).size }.getOrNull(),
                 projectId = id.value,
             )
         }
@@ -1366,9 +1361,11 @@ private fun ExplorerPanel(
             if (!node.isDirectory) onNavigate()
         }
 
-        fun targetDirFor(node: FileNode): Path =
-            if (node.isDirectory) node.absolutePath.toPath()
-            else node.absolutePath.toPath().parent ?: activeProject.root
+        fun targetDirFor(node: FileNode): Path = if (node.isDirectory) {
+            Path(node.absolutePath)
+        } else {
+            Path(node.absolutePath).parent ?: activeProject.root
+        }
 
         fun findVisibleByPath(path: String): VisibleFileNode? =
             tree.visibleNodes.firstOrNull { it.node.absolutePath == path }
@@ -1463,15 +1460,15 @@ private fun ExplorerPanel(
                 onDismiss = { createRequest = null },
                 onConfirm = { name ->
                     val dir = targetDirFor(target)
-                    val newPath = dir / name
+                    val newPath = dir.join(name)
                     try {
                         withContext(IoDispatcher) {
-                            if (fs.exists(newPath)) error("Already exists")
+                            if (SystemFileSystem.exists(newPath)) error("Already exists")
                             if (isFolder) {
-                                fs.createDirectories(newPath)
+                                SystemFileSystem.createDirectories(newPath)
                             } else {
-                                if (!fs.exists(dir)) fs.createDirectories(dir)
-                                fs.write(newPath) { }
+                                if (!SystemFileSystem.exists(dir)) SystemFileSystem.createDirectories(dir)
+                                SystemFileSystem.sink(newPath).use { it.write(Buffer(), 0) }
                             }
                         }
                         refreshDir(dir)
@@ -1509,13 +1506,13 @@ private fun ExplorerPanel(
                 onDismiss = { renameRequest = null },
                 onConfirm = { name ->
                     if (name == renameTarget.name) return@FileNameDialog null
-                    val src = renameTarget.absolutePath.toPath()
+                    val src = Path(renameTarget.absolutePath)
                     val parent = src.parent ?: return@FileNameDialog "Cannot rename here"
-                    val dst = parent / name
+                    val dst = parent.join(name)
                     try {
                         withContext(Dispatchers.IO) {
-                            if (fs.exists(dst)) error("Already exists")
-                            fs.atomicMove(src, dst)
+                            if (SystemFileSystem.exists(dst)) error("Already exists")
+                            SystemFileSystem.atomicMove(src, dst)
                         }
                         closeDocumentsUnder(src)
                         refreshDir(parent)
@@ -1538,11 +1535,11 @@ private fun ExplorerPanel(
                 subtitle = deleteTarget.absolutePath,
                 onDismiss = { deleteRequest = null },
                 onConfirm = {
-                    val path = deleteTarget.absolutePath.toPath()
+                    val path = Path(deleteTarget.absolutePath)
                     val parent = path.parent
                     try {
                         withContext(IoDispatcher) {
-                            fs.deleteRecursively(path)
+                            PlatformFile(path).delete(recursively = true)
                         }
                         closeDocumentsUnder(path)
                         if (parent != null) refreshDir(parent)
@@ -1735,23 +1732,20 @@ private fun ConfirmDeleteDialog(
 
 private fun locationOf(node: FileNode, workspace: Workspace): DocumentLocation {
     val projectId = node.projectId
-    val path = node.absolutePath.toPath()
+    val path = Path(node.absolutePath)
     return if (projectId == null) {
-        DocumentLocation.Local(path)
+        DocumentLocation.Platform(PlatformFile(path))
     } else {
         val root = workspace[ProjectId(projectId)].root
         DocumentLocation.Project(ProjectId(projectId), path.relativeTo(root))
     }
 }
 
-private fun fileTreeChildrenLoader(
-    fs: FileSystem,
-    ids: NodeIdRegistry
-): ChildrenLoader = { (id, absolutePath, projectId) ->
+private fun fileTreeChildrenLoader(ids: NodeIdRegistry): ChildrenLoader = { (id, absolutePath, projectId) ->
     withContext(IoDispatcher) {
-        fs.listOrNull(absolutePath.toPath())?.map { path ->
-            val meta = fs.metadata(path)
-            val childCount = if (meta.isDirectory) fs.listOrNull(path)?.size else null
+        SystemFileSystem.list(Path(absolutePath)).map { path ->
+            val meta = SystemFileSystem.metadataOrNull(path)!!
+            val childCount = if (meta.isDirectory) SystemFileSystem.list(path).size else null
             FileNode(
                 id = ids.idFor(id, path.toString()),
                 name = path.name,
@@ -1760,6 +1754,6 @@ private fun fileTreeChildrenLoader(
                 childCount = childCount,
                 projectId = projectId,
             )
-        }.orEmpty().sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+        }.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
     }
 }

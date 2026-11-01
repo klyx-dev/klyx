@@ -1,6 +1,6 @@
 package com.klyx.runtime.workspace
 
-import okio.Path
+import kotlinx.io.files.Path
 
 data class Project(
     val id: ProjectId,

@@ -10,6 +10,8 @@ import com.klyx.core.action.service
 import com.klyx.core.action.singleInput
 import com.klyx.core.merge
 import com.klyx.core.utils.hashOf
+import com.klyx.core.utils.join
+import com.klyx.core.utils.relativeTo
 import com.klyx.runtime.Platform
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -31,6 +33,14 @@ import com.klyx.runtime.action.UnpinDocument
 import com.klyx.runtime.currentPlatform
 import com.klyx.runtime.settings.CustomLspServer
 import com.klyx.runtime.settings.Settings
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.exists
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.parent
+import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.readString
+import io.github.vinceglb.filekit.writeString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -40,10 +50,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okio.FileSystem
-import okio.Path
-import okio.Path.Companion.toPath
-import okio.SYSTEM
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import org.koin.core.annotation.Single
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -167,7 +175,7 @@ class Workspace(
     }
 
     fun openProject(root: Path): Project {
-        if (!FileSystem.SYSTEM.exists(root)) error("Project root does not exist: $root")
+        if (!SystemFileSystem.exists(root)) error("Project root does not exist: $root")
         val project = Project(id = ProjectId(hashOf(root.toString())), root = root)
         projects.update { it + (project.id to project) }
         addProject(project.id)
@@ -221,26 +229,28 @@ class Workspace(
     operator fun get(id: ProjectId): Project =
         projects.value[id] ?: error("Project not found: ${id.value}")
 
-    fun resolve(document: Document): Path = when (val location = document.location) {
-        is DocumentLocation.Local -> location.path
-        is DocumentLocation.Project -> this[location.projectId].root / location.relativePath
-        is DocumentLocation.Uri -> error("URI document has no path: ${location.value}")
+    fun resolve(document: Document): PlatformFile = when (val location = document.location) {
+        is DocumentLocation.Platform -> location.file
+        is DocumentLocation.Project -> {
+            val path = this[location.projectId].root.join(location.relativePath)
+            PlatformFile(path.toString())
+        }
     }
 
     suspend fun readText(id: DocumentId): String = withContext(Dispatchers.IO) {
         val document = get(id)
-        FileSystem.SYSTEM.read(resolve(document)) { readUtf8() }
+        resolve(document).readString()
     }
 
     suspend fun writeText(id: DocumentId, text: String): Unit = withContext(Dispatchers.IO) {
         val document = get(id)
-        val path = resolve(document)
-        path.parent?.let { parent ->
-            if (!FileSystem.SYSTEM.exists(parent)) {
-                FileSystem.SYSTEM.createDirectories(parent)
+        val file = resolve(document)
+        file.parent()?.let { parent ->
+            if (!parent.exists()) {
+                parent.createDirectories()
             }
         }
-        FileSystem.SYSTEM.write(path) { writeUtf8(text) }
+        file.writeString(text)
     }
 
     fun createEditorGroup(): EditorGroupId {
@@ -423,8 +433,7 @@ class Workspace(
 
     private fun createDocumentId(location: DocumentLocation): String = when (location) {
         is DocumentLocation.Project -> "${location.projectId.value}:${location.relativePath}"
-        is DocumentLocation.Local -> "local:${location.path}"
-        is DocumentLocation.Uri -> "uri:${location.value}"
+        is DocumentLocation.Platform -> "platform:${location.file.path}"
     }
 
     private fun EditorGroup.withOpened(documentId: DocumentId, preview: Boolean): EditorGroup {
@@ -508,8 +517,8 @@ class Workspace(
                 title = "Open Document",
                 invocation = {
                     singleInput("Path") { input ->
-                        val path = input.trim().toPath()
-                        OpenDocument(location = DocumentLocation.Local(path), name = path.name)
+                        val file = PlatformFile(input.trim())
+                        OpenDocument(location = DocumentLocation.Platform(file), name = file.name)
                     }
                 },
                 serialize = true,

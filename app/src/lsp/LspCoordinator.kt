@@ -2,6 +2,7 @@
 
 package com.klyx.lsp
 
+import com.klyx.core.utils.join
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.types.fold
 import com.klyx.runtime.OperatingSystem
@@ -41,9 +42,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.json.JsonArray
-import okio.FileSystem
-import okio.SYSTEM
 import org.koin.core.annotation.Single
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -235,11 +236,13 @@ class EditorLsp(
                     }
                     return if (finished == LspSessionState.Running) existing else null
                 }
+
                 LspSessionState.Error -> {
                     if (silent && existing.isCooldownActive()) {
                         return null
                     }
                 }
+
                 LspSessionState.Stopped -> Unit
             }
         }
@@ -317,12 +320,12 @@ class EditorLsp(
         return newSession != null
     }
 
-    private fun findProjectRoot(filePath: okio.Path?): okio.Path? {
+    private fun findProjectRoot(filePath: Path?): Path? {
         var current = filePath?.parent ?: return null
         val markers = setOf("Cargo.toml", "go.mod", "package.json", "pom.xml", "build.gradle.kts", ".git")
         while (true) {
             for (marker in markers) {
-                if (FileSystem.SYSTEM.exists(current / marker)) {
+                if (SystemFileSystem.exists(current.join(marker))) {
                     return current
                 }
             }
@@ -748,7 +751,13 @@ class EditorLsp(
                 val matches = wordRegex.findAll(l)
                 for (m in matches) {
                     highlightsByLine.getOrPut(idx) { mutableListOf() }
-                        .add(DocumentHighlight(column = m.range.first, length = word.length, kind = EditorDocumentHighlightKind.TEXT))
+                        .add(
+                            DocumentHighlight(
+                                column = m.range.first,
+                                length = word.length,
+                                kind = EditorDocumentHighlightKind.TEXT
+                            )
+                        )
                 }
             }
             withContext(Dispatchers.Main) {
@@ -889,7 +898,8 @@ class EditorLsp(
         val word = SmartLanguageFeatures.getWordAt(currentLine, column)
         if (word.length >= 2 && (word[0].isLetter() || word[0] == '_')) {
             val count = Regex("""\b${Regex.escape(word)}\b""").findAll(docText).count()
-            val declRegex = Regex("""(?m)^[ \t]*(?:fun|def|fn|val|var|let|const|class|struct|interface|enum)\s+${Regex.escape(word)}\b.*$""")
+            val declRegex =
+                Regex("""(?m)^[ \t]*(?:fun|def|fn|val|var|let|const|class|struct|interface|enum)\s+${Regex.escape(word)}\b.*$""")
             val declMatch = declRegex.find(docText)?.value?.trim()
             val langId = LspDocumentUtils.languageIdOf(document)
             val info = buildString {

@@ -4,7 +4,7 @@ import com.klyx.core.action.Action
 import com.klyx.core.action.ActionDescriptor
 import com.klyx.core.action.ActionId
 import com.klyx.runtime.workspace.ProjectId
-import okio.Path
+import kotlinx.io.files.Path
 
 /** Opens a project, adds it to the workspace, and makes it the active project there. */
 data class OpenProject(

@@ -12,11 +12,12 @@ dependencies:
   - io.github.lumkit:sweetline-compose:0.1.6
   - $libs.kmp.process
   - androidx.navigationevent:navigationevent-compose:1.2.0
+  - $kotlin.serialization.json
 
 settings:
   junit: junit-5
   kotlin:
-    serialization: json
+    serialization: enabled
     freeCompilerArgs: [ -XXLanguage:+NameBasedDestructuring ]
   java:
     freeCompilerArgs: [ --enable-native-access=ALL-UNNAMED ]

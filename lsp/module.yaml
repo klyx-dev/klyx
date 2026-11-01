@@ -9,9 +9,10 @@ apply:
 settings:
   junit: junit-5
   kotlin:
-    serialization: json
+    serialization: enabled
 
 dependencies:
   - $libs.kotlinx.io.core: exported
   - $libs.kotlinx.coroutines.core: exported
   - $libs.kmp.process: exported
+  - $kotlin.serialization.json

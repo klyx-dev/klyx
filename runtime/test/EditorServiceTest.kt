@@ -3,6 +3,8 @@ package com.klyx.runtime
 import com.klyx.runtime.workspace.DocumentLocation
 import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
+import io.github.vinceglb.filekit.PlatformFile
+import kotlinx.io.files.Path
 import okio.Path.Companion.toPath
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -16,7 +18,7 @@ class EditorServiceTest {
 
     @Test
     fun closingOneSplitKeepsTabOpenInOtherGroup() = withWorkspace { workspace ->
-        val id = workspace.openDocument(DocumentLocation.Local("/missing-split-test".toPath()), "test")
+        val id = workspace.openDocument(DocumentLocation.Platform(PlatformFile("/missing-split-test")), "test")
         val first = workspace.activeEditorGroupId.value!!
         val second = workspace.createEditorGroup()
         workspace.openDocument(second, id)
@@ -31,7 +33,7 @@ class EditorServiceTest {
 
     @Test
     fun closingGroupKeepsTabOpenInRemainingGroup() = withWorkspace { workspace ->
-        val id = workspace.openDocument(DocumentLocation.Local("/missing-group-test".toPath()), "test")
+        val id = workspace.openDocument(DocumentLocation.Platform(PlatformFile("/missing-group-test")), "test")
         val first = workspace.activeEditorGroupId.value!!
         val second = workspace.createEditorGroup()
         workspace.openDocument(second, id)
@@ -42,8 +44,8 @@ class EditorServiceTest {
 
     @Test
     fun replacingPreviewDropsPreviousPreview() = withWorkspace { workspace ->
-        val first = workspace.openDocument(DocumentLocation.Local("/missing-preview-a".toPath()), "a", preview = true)
-        val _ = workspace.openDocument(DocumentLocation.Local("/missing-preview-b".toPath()), "b", preview = true)
+        val first = workspace.openDocument(DocumentLocation.Platform(PlatformFile("/missing-preview-a")), "a", preview = true)
+        val _ = workspace.openDocument(DocumentLocation.Platform(PlatformFile("/missing-preview-b")), "b", preview = true)
         assertFalse(workspace.isDocumentOpen(first))
     }
 
@@ -54,9 +56,9 @@ class EditorServiceTest {
         workspace.addProject(a)
         workspace.addProject(b)
         workspace.activateProject(a)
-        val first = workspace.openDocument(DocumentLocation.Project(a, "a.kt".toPath()), "a.kt", preview = true)
+        val first = workspace.openDocument(DocumentLocation.Project(a, Path("a.kt")), "a.kt", preview = true)
         workspace.activateProject(b)
-        val second = workspace.openDocument(DocumentLocation.Project(b, "b.kt".toPath()), "b.kt", preview = true)
+        val second = workspace.openDocument(DocumentLocation.Project(b, Path("b.kt")), "b.kt", preview = true)
         assertTrue(workspace.isDocumentOpen(first))
         assertTrue(workspace.isDocumentOpen(second))
         workspace.activateProject(a)

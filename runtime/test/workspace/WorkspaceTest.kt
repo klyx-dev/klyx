@@ -1,11 +1,11 @@
 package com.klyx.runtime.workspace
 
+import io.github.vinceglb.filekit.PlatformFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
 import io.kotest.matchers.booleans.shouldBeTrue
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import okio.Path.Companion.toPath
 
 class WorkspaceTest : FunSpec({
     fun workspace() = Workspace()
@@ -119,7 +119,7 @@ class WorkspaceTest : FunSpec({
 
     test("find does not register anything") {
         val w = workspace()
-        val location = DocumentLocation.Local("/tmp/x.kt".toPath())
+        val location = DocumentLocation.Platform(PlatformFile("/tmp/x.kt"))
 
         w.find(location).shouldBeNull()
         w.documents.value.size shouldBe 0
