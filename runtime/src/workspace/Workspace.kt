@@ -9,7 +9,6 @@ import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.service
 import com.klyx.core.action.singleInput
 import com.klyx.core.merge
-import com.klyx.core.utils.hashOf
 import com.klyx.core.utils.join
 import com.klyx.core.utils.relativeTo
 import com.klyx.runtime.Platform
@@ -176,7 +175,7 @@ class Workspace(
 
     fun openProject(root: Path): Project {
         if (!SystemFileSystem.exists(root)) error("Project root does not exist: $root")
-        val project = Project(id = ProjectId(hashOf(root.toString())), root = root)
+        val project = Project(id = ProjectId(root.toString()), root = root)
         projects.update { it + (project.id to project) }
         addProject(project.id)
         activateProject(project.id)

@@ -30,6 +30,7 @@ import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
 import com.klyx.core.action.action
+import com.klyx.core.utils.join
 import com.klyx.runtime.action.ActivateProject
 import com.klyx.runtime.action.CloseProject
 import com.klyx.runtime.action.OpenProject
@@ -56,9 +57,7 @@ import com.klyx.ui.theme.textMuted
 import com.klyx.ui.theme.textPrimary
 import com.klyx.ui.theme.typography
 import kotlinx.io.files.Path
-import okio.FileSystem
-import okio.Path.Companion.toPath
-import okio.SYSTEM
+import kotlinx.io.files.SystemFileSystem
 import org.koin.compose.koinInject
 
 @Composable
@@ -265,8 +264,10 @@ fun FolderPickerDialog(
 
     LaunchedEffect(path) {
         runCatching {
-            FileSystem.SYSTEM.list(path.toPath())
-                .filter { FileSystem.SYSTEM.metadata(it).isDirectory }
+            SystemFileSystem.list(Path(path))
+                .filter {
+                    SystemFileSystem.metadataOrNull(it)?.isDirectory == true
+                }
                 .map { child -> child.name }
                 .sortedBy { it.lowercase() }
         }.onSuccess { result ->
@@ -293,9 +294,9 @@ fun FolderPickerDialog(
             )
         }
 
-        if (path.toPath().parent != null) {
+        if (Path(path).parent != null) {
             KxButton(
-                onClick = { path = path.toPath().parent?.toString() ?: path },
+                onClick = { path = Path(path).parent?.toString() ?: path },
                 variant = KxButtonVariant.Ghost,
                 bracketed = true,
                 contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
@@ -316,7 +317,7 @@ fun FolderPickerDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            path = (path.toPath() / name).toString()
+                            path = (Path(path).join(name)).toString()
                         }
                         .padding(horizontal = 4.dp, vertical = 8.dp),
                 )

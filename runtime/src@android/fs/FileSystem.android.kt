@@ -1,6 +1,6 @@
 package com.klyx.runtime.fs
 
 import android.os.Environment
-import okio.Path.Companion.toOkioPath
+import io.github.vinceglb.filekit.utils.toKotlinxPath
 
-actual val systemHomeDirectory = Environment.getExternalStorageDirectory().toOkioPath()
+actual val systemHomeDirectory = Environment.getExternalStorageDirectory().toKotlinxPath()

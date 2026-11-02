@@ -1,5 +1,5 @@
 package com.klyx.runtime.fs
 
-import okio.Path.Companion.toPath
+import kotlinx.io.files.Path
 
-actual val systemHomeDirectory = System.getProperty("user.home").toPath()
+actual val systemHomeDirectory = Path(System.getProperty("user.home"))

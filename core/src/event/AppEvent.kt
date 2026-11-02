@@ -1,7 +1,7 @@
 package com.klyx.core.event
 
 import com.klyx.core.action.ActionId
-import okio.Path
+import kotlinx.io.files.Path
 
 /** Anything the app can announce. */
 interface AppEvent

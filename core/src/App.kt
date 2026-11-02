@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okio.FileSystem
 import org.koin.core.KoinApplication
 import org.koin.dsl.koinApplication
 import org.koin.mp.KoinPlatform
@@ -183,5 +182,3 @@ inline fun Debug(crossinline block: @DisallowComposableCalls suspend App.() -> U
         }
     }
 }
-
-expect val PlatformFileSystem: FileSystem

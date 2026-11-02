@@ -14,6 +14,9 @@ dependencies:
   - androidx.datastore:datastore-core-okio:1.3.0-alpha11
   - $kotlin.serialization.json
 
+test-dependencies@android: 
+  - org.robolectric:robolectric:4.17
+
 apply:
   - //common.module-template.yaml
   - //koin.module-template.yaml

@@ -4,7 +4,6 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import kotlinx.io.files.Path
-import okio.Path.Companion.toPath
 
 class TabScopeTest : FunSpec({
     val projectA = ProjectId("a")
@@ -36,21 +35,23 @@ class TabScopeTest : FunSpec({
         doc.isVisibleIn(null) shouldBe false
     }
 
-    test("local and uri documents are visible everywhere") {
-        val platform = Document(
+    test("platform documents are visible everywhere") {
+        val local = Document(
             id = DocumentId("local:/tmp/x.kt"),
             name = "x.kt",
             location = DocumentLocation.Platform(PlatformFile("/tmp/x.kt")),
         )
-        val uri = Document(
-            id = DocumentId("uri:content"),
+
+        val shared = Document(
+            id = DocumentId("shared:document"),
             name = "shared",
-            location = DocumentLocation.Platform(PlatformFile("content://shared")),
+            location = DocumentLocation.Platform(PlatformFile("/tmp/shared")),
         )
 
-        platform.isVisibleIn(projectA) shouldBe true
-        platform.isVisibleIn(null) shouldBe true
-        uri.isVisibleIn(projectB) shouldBe true
-        uri.isVisibleIn(null) shouldBe true
+        local.isVisibleIn(projectA) shouldBe true
+        local.isVisibleIn(null) shouldBe true
+
+        shared.isVisibleIn(projectB) shouldBe true
+        shared.isVisibleIn(null) shouldBe true
     }
 })

@@ -23,12 +23,10 @@ import com.klyx.core.icons.TablerFileTypePdf
 import com.klyx.core.icons.TablerFileTypeSql
 import com.klyx.core.icons.TablerFileZip
 import com.klyx.core.icons.TablerMarkdown
-import com.klyx.core.PlatformFileSystem
 import kotlinx.coroutines.withContext
-import okio.FileSystem
-import okio.Path.Companion.toPath
-import okio.buffer
-import okio.use
+import kotlinx.io.buffered
+import kotlinx.io.files.Path
+import kotlinx.io.files.SystemFileSystem
 
 class FileTreeIcons(val resolver: FileIconResolver, val sniffer: ContentSniffingIconResolver)
 
@@ -85,12 +83,12 @@ private val DefaultContainerIcons: ContainerIconTable = containerIcons {
     kind(SniffedFileKind.OPENTYPE_FONT, FileIcon.Vector(FontAwesomeFont))
 }
 
-private suspend fun readFileHeaderBytes(fs: FileSystem, node: FileNode, byteCount: Int): ByteArray? {
+private suspend fun readFileHeaderBytes(node: FileNode, byteCount: Int): ByteArray? {
     return withContext(IoDispatcher) {
         try {
-            fs.source(node.absolutePath.toPath()).buffer().use {
+            SystemFileSystem.source(Path(node.absolutePath)).buffered().use {
                 val buffer = ByteArray(byteCount)
-                val read = it.read(buffer)
+                val read = it.readAtMostTo(buffer)
                 if (read <= 0) null else buffer.copyOf(read)
             }
         } catch (_: Throwable) {
@@ -104,7 +102,7 @@ fun rememberFileTreeIcons(): FileTreeIcons {
     val sniffer = remember {
         ContentSniffingIconResolver(
             readHeader = { node, byteCount ->
-                readFileHeaderBytes(PlatformFileSystem, node, byteCount)
+                readFileHeaderBytes(node, byteCount)
             },
             classify = { node, kind ->
                 DefaultContainerIcons.resolve(node, kind)

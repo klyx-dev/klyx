@@ -1,6 +1,6 @@
 package com.klyx.runtime.fs
 
-import okio.Path
+import kotlinx.io.files.Path
 
 interface FileSystem {
     companion object
