@@ -4,11 +4,11 @@ import com.klyx.core.action.Action
 import com.klyx.core.action.ActionDescriptor
 import com.klyx.core.action.ActionId
 import com.klyx.runtime.workspace.ProjectId
-import kotlinx.io.files.Path
+import io.github.vinceglb.filekit.PlatformFile
 
 /** Opens a project, adds it to the workspace, and makes it the active project there. */
 data class OpenProject(
-    val root: Path,
+    val root: PlatformFile,
 ) : Action {
     override val id = OpenProject.id
 

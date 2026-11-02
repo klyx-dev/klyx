@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.isDirectory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -21,8 +23,8 @@ import kotlinx.coroutines.launch
 data class FileNode(
     val id: String,
     val name: String,
-    val absolutePath: String,
-    val isDirectory: Boolean,
+    val file: PlatformFile,
+    val isDirectory: Boolean = file.isDirectory(),
     val childCount: Int? = null,
     val isPlaceholder: Boolean = false,
     /**
@@ -135,31 +137,29 @@ class FileTreeState(
         }
     }
 
-    fun renameNode(id: String, newName: String, newAbsolutePath: String) {
+    fun renameNode(id: String, newName: String, newFile: PlatformFile) {
         val index = visibleNodes.indexOfFirst { it.node.id == id }
         if (index < 0) {
-            renameInCaches(id, newName, newAbsolutePath)
+            renameInCaches(id, newName, newFile)
             return
         }
 
         val vn = visibleNodes[index]
-        val updated = vn.node.copy(name = newName, absolutePath = newAbsolutePath)
+        val updated = vn.node.copy(name = newName, file = newFile)
         visibleNodes[index] = vn.copy(node = updated)
         vn.parentId?.let { parentId ->
             childrenCache[parentId]?.let { childrenCache[parentId] = it.map { c -> if (c.id == id) updated else c } }
         }
     }
 
-    private fun renameInCaches(id: String, newName: String, newAbsolutePath: String) {
-        for (entry in childrenCache) {
-            val parentId = entry.key
-            val children = entry.value
+    private fun renameInCaches(id: String, newName: String, newFile: PlatformFile) {
+        for ([parentId, children] in childrenCache) {
             if (children.any { child -> child.id == id }) {
                 childrenCache[parentId] =
                     children.map { child ->
                         if (child.id == id) child.copy(
                             name = newName,
-                            absolutePath = newAbsolutePath
+                            file = newFile
                         ) else child
                     }
                 return
@@ -168,13 +168,13 @@ class FileTreeState(
     }
 
     /** Relocates [id] under [newParentId] (null = new root), preserving its own expansion/cache state and its subtree. */
-    fun moveNode(id: String, newParentId: String?, newAbsolutePath: String) {
+    fun moveNode(id: String, newParentId: String?, newFile: PlatformFile) {
         val index = visibleNodes.indexOfFirst { vn -> vn.node.id == id }
         val movedNode: FileNode
 
         if (index >= 0) {
             val vn = visibleNodes[index]
-            movedNode = vn.node.copy(absolutePath = newAbsolutePath)
+            movedNode = vn.node.copy(file = newFile)
             var end = index + 1
             while (end < visibleNodes.size && visibleNodes[end].depth > vn.depth) end++
             visibleNodes.subList(index, end).clear()
@@ -188,7 +188,7 @@ class FileTreeState(
         } else {
             val entry = childrenCache.entries.firstOrNull { e -> e.value.any { child -> child.id == id } } ?: return
             val found = entry.value.first { child -> child.id == id }
-            movedNode = found.copy(absolutePath = newAbsolutePath)
+            movedNode = found.copy(file = newFile)
             childrenCache[entry.key] = entry.value.filterNot { child -> child.id == id }
         }
 
@@ -264,7 +264,7 @@ class FileTreeState(
                 node = FileNode(
                     id = "${vn.node.id}/__placeholder__$i",
                     name = "",
-                    absolutePath = "",
+                    file = PlatformFile(""),
                     isDirectory = false,
                     isPlaceholder = true,
                 ),

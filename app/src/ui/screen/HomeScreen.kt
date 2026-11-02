@@ -69,7 +69,6 @@ import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
 import com.klyx.core.IoDispatcher
 import com.klyx.core.action.action
-import com.klyx.core.utils.join
 import com.klyx.core.utils.relativeTo
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.CodeAction
@@ -162,7 +161,18 @@ import io.github.lumkit.sweeteditor.highlight.HighlightTheme
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.absolutePath
+import io.github.vinceglb.filekit.atomicMove
+import io.github.vinceglb.filekit.createDirectories
 import io.github.vinceglb.filekit.delete
+import io.github.vinceglb.filekit.exists
+import io.github.vinceglb.filekit.isDirectory
+import io.github.vinceglb.filekit.list
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.parent
+import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.resolve
+import io.github.vinceglb.filekit.write
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -171,9 +181,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.io.Buffer
-import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
@@ -1303,16 +1310,16 @@ private fun ExplorerPanel(
         (val id, val projectRoot = root, val name) = activeProject ?: return@LaunchedEffect
         val rootId = ids.idFor("project", id.value)
         tree.visibleNodes.firstOrNull()?.let { existing ->
-            if (existing.node.absolutePath == projectRoot.toString()) return@LaunchedEffect
+            if (existing.node.file == projectRoot) return@LaunchedEffect
             tree.removeNode(existing.node.id)
         }
         val root = withContext(IoDispatcher) {
             FileNode(
                 id = rootId,
                 name = name,
-                absolutePath = projectRoot.toString(),
+                file = projectRoot,
                 isDirectory = true,
-                childCount = runCatching { SystemFileSystem.list(projectRoot).size }.getOrNull(),
+                childCount = runCatching { projectRoot.list().size }.getOrNull(),
                 projectId = id.value,
             )
         }
@@ -1361,27 +1368,33 @@ private fun ExplorerPanel(
             if (!node.isDirectory) onNavigate()
         }
 
-        fun targetDirFor(node: FileNode): Path = if (node.isDirectory) {
-            Path(node.absolutePath)
+        fun targetDirFor(node: FileNode): PlatformFile = if (node.isDirectory) {
+            node.file
         } else {
-            Path(node.absolutePath).parent ?: activeProject.root
+            node.file.parent() ?: activeProject.root
         }
 
         fun findVisibleByPath(path: String): VisibleFileNode? =
-            tree.visibleNodes.firstOrNull { it.node.absolutePath == path }
+            tree.visibleNodes.firstOrNull { it.node.file.path == path }
 
-        fun refreshDir(dir: Path) {
-            val vn = findVisibleByPath(dir.toString()) ?: return
+        fun refreshDir(dir: PlatformFile) {
+            val vn = findVisibleByPath(dir.path) ?: return
             if (tree.isExpanded(vn.node.id)) tree.refresh(vn.node) else tree.toggle(vn)
         }
 
-        fun closeDocumentsUnder(path: Path) {
-            val raw = path.toString()
-            val prefix = raw.removeSuffix("/") + "/"
+        fun closeDocumentsUnder(path: PlatformFile) {
+            val raw = path.path.trimEnd('/')
+            val prefix = "$raw/"
+
             workspace.documents.value.values.toList().forEach { doc ->
-                val p = runCatching { workspace.resolve(doc).toString() }.getOrNull() ?: return@forEach
-                if (p == raw || p.startsWith(prefix)) {
-                    val _ = runCatching { action(CloseDocument(doc.id)) }
+                val documentPath = runCatching {
+                    workspace.resolve(doc).path.trimEnd('/')
+                }.getOrNull() ?: return@forEach
+
+                if (documentPath == raw || documentPath.startsWith(prefix)) {
+                    val _ = runCatching {
+                        action(CloseDocument(doc.id))
+                    }
                 }
             }
         }
@@ -1411,7 +1424,7 @@ private fun ExplorerPanel(
                 },
                 menuItems = { visible ->
                     val node = visible.node
-                    val isRoot = node.absolutePath == activeProject.root.toString()
+                    val isRoot = node.file == activeProject.root
                     buildList {
                         if (node.isDirectory) {
                             add(FileTreeMenuItem("new file") { createRequest = node to false })
@@ -1454,21 +1467,21 @@ private fun ExplorerPanel(
             FileNameDialog(
                 visible = true,
                 title = if (isFolder) "New folder" else "New file",
-                subtitle = "In ${target.absolutePath}",
+                subtitle = "In ${target.file.absolutePath()}",
                 initial = "",
                 confirmLabel = "create",
                 onDismiss = { createRequest = null },
                 onConfirm = { name ->
                     val dir = targetDirFor(target)
-                    val newPath = dir.join(name)
+                    val newPath = dir.resolve(name)
                     try {
                         withContext(IoDispatcher) {
-                            if (SystemFileSystem.exists(newPath)) error("Already exists")
+                            if (newPath.exists()) error("Already exists")
                             if (isFolder) {
-                                SystemFileSystem.createDirectories(newPath)
+                                newPath.createDirectories()
                             } else {
-                                if (!SystemFileSystem.exists(dir)) SystemFileSystem.createDirectories(dir)
-                                SystemFileSystem.sink(newPath).use { it.write(Buffer(), 0) }
+                                if (!dir.exists()) dir.createDirectories()
+                                newPath.write(byteArrayOf())
                             }
                         }
                         refreshDir(dir)
@@ -1477,7 +1490,7 @@ private fun ExplorerPanel(
                                 FileNode(
                                     id = "",
                                     name = name,
-                                    absolutePath = newPath.toString(),
+                                    file = newPath,
                                     isDirectory = false,
                                     projectId = target.projectId,
                                 ),
@@ -1500,19 +1513,19 @@ private fun ExplorerPanel(
             FileNameDialog(
                 visible = true,
                 title = "Rename",
-                subtitle = renameTarget.absolutePath,
+                subtitle = renameTarget.file.absolutePath(),
                 initial = renameTarget.name,
                 confirmLabel = "rename",
                 onDismiss = { renameRequest = null },
                 onConfirm = { name ->
                     if (name == renameTarget.name) return@FileNameDialog null
-                    val src = Path(renameTarget.absolutePath)
-                    val parent = src.parent ?: return@FileNameDialog "Cannot rename here"
-                    val dst = parent.join(name)
+                    val src = renameTarget.file
+                    val parent = src.parent() ?: return@FileNameDialog "Cannot rename here"
+                    val dst = parent.resolve(name)
                     try {
                         withContext(Dispatchers.IO) {
-                            if (SystemFileSystem.exists(dst)) error("Already exists")
-                            SystemFileSystem.atomicMove(src, dst)
+                            if (dst.exists()) error("Already exists")
+                            src.atomicMove(dst)
                         }
                         closeDocumentsUnder(src)
                         refreshDir(parent)
@@ -1532,14 +1545,14 @@ private fun ExplorerPanel(
             ConfirmDeleteDialog(
                 visible = true,
                 name = deleteTarget.name,
-                subtitle = deleteTarget.absolutePath,
+                subtitle = deleteTarget.file.absolutePath(),
                 onDismiss = { deleteRequest = null },
                 onConfirm = {
-                    val path = Path(deleteTarget.absolutePath)
-                    val parent = path.parent
+                    val path = deleteTarget.file
+                    val parent = path.parent()
                     try {
                         withContext(IoDispatcher) {
-                            PlatformFile(path).delete(recursively = true)
+                            path.delete(recursively = true)
                         }
                         closeDocumentsUnder(path)
                         if (parent != null) refreshDir(parent)
@@ -1732,25 +1745,25 @@ private fun ConfirmDeleteDialog(
 
 private fun locationOf(node: FileNode, workspace: Workspace): DocumentLocation {
     val projectId = node.projectId
-    val path = Path(node.absolutePath)
+    val path = node.file
     return if (projectId == null) {
-        DocumentLocation.Platform(PlatformFile(path))
+        DocumentLocation.Platform(path)
     } else {
         val root = workspace[ProjectId(projectId)].root
         DocumentLocation.Project(ProjectId(projectId), path.relativeTo(root))
     }
 }
 
-private fun fileTreeChildrenLoader(ids: NodeIdRegistry): ChildrenLoader = { (id, absolutePath, projectId) ->
+private fun fileTreeChildrenLoader(ids: NodeIdRegistry): ChildrenLoader = { (id, file, projectId) ->
     withContext(IoDispatcher) {
-        SystemFileSystem.list(Path(absolutePath)).map { path ->
-            val meta = SystemFileSystem.metadataOrNull(path)!!
-            val childCount = if (meta.isDirectory) SystemFileSystem.list(path).size else null
+        file.list().map { path ->
+            val isDirectory = path.isDirectory()
+            val childCount = if (isDirectory) path.list().size else null
             FileNode(
                 id = ids.idFor(id, path.toString()),
                 name = path.name,
-                absolutePath = path.toString(),
-                isDirectory = meta.isDirectory,
+                file = path,
+                isDirectory = isDirectory,
                 childCount = childCount,
                 projectId = projectId,
             )

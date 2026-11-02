@@ -9,8 +9,6 @@ import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.service
 import com.klyx.core.action.singleInput
 import com.klyx.core.merge
-import com.klyx.core.utils.join
-import com.klyx.core.utils.relativeTo
 import com.klyx.runtime.Platform
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -39,6 +37,7 @@ import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.parent
 import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.readString
+import io.github.vinceglb.filekit.resolve
 import io.github.vinceglb.filekit.writeString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,8 +48,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import org.koin.core.annotation.Single
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -173,8 +170,8 @@ class Workspace(
         }
     }
 
-    fun openProject(root: Path): Project {
-        if (!SystemFileSystem.exists(root)) error("Project root does not exist: $root")
+    fun openProject(root: PlatformFile): Project {
+        if (!root.exists()) error("Project root does not exist: $root")
         val project = Project(id = ProjectId(root.toString()), root = root)
         projects.update { it + (project.id to project) }
         addProject(project.id)
@@ -230,10 +227,7 @@ class Workspace(
 
     fun resolve(document: Document): PlatformFile = when (val location = document.location) {
         is DocumentLocation.Platform -> location.file
-        is DocumentLocation.Project -> {
-            val path = this[location.projectId].root.join(location.relativePath)
-            PlatformFile(path.toString())
-        }
+        is DocumentLocation.Project -> this[location.projectId].root.resolve(location.relativePath.toString())
     }
 
     suspend fun readText(id: DocumentId): String = withContext(Dispatchers.IO) {
@@ -286,13 +280,6 @@ class Workspace(
         val groupId = activeGroupOrNull()?.id ?: createEditorGroup()
         if (preview) protectHiddenPreview(groupId)
         openDocument(groupId, document.id, preview)
-        return document.id
-    }
-
-    fun openFile(groupId: EditorGroupId, projectId: ProjectId, path: Path): DocumentId {
-        val root = this[projectId].root
-        val document = open(DocumentLocation.Project(projectId, path.relativeTo(root)), path.name)
-        openDocument(groupId, document.id, preview = false)
         return document.id
     }
 

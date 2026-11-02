@@ -7,7 +7,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +59,10 @@ import com.klyx.ui.theme.surfaceVariant
 import com.klyx.ui.theme.textMuted
 import com.klyx.ui.theme.textPrimary
 import com.klyx.ui.theme.typography
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
+import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import org.koin.compose.koinInject
@@ -162,6 +169,8 @@ fun OpenProjectDialog(
     visible: Boolean,
     onDismiss: () -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+
     val defaultRoot = remember { systemHomeDirectory.toString() }
     val field = rememberTextFieldState(defaultRoot)
     var error by remember { mutableStateOf<String?>(null) }
@@ -196,7 +205,7 @@ fun OpenProjectDialog(
                             return@KxButton
                         }
                         try {
-                            action(OpenProject(Path(raw)))
+                            action(OpenProject(PlatformFile(raw)))
                             onDismiss()
                         } catch (t: Throwable) {
                             error = t.message ?: "Invalid path"
@@ -230,6 +239,30 @@ fun OpenProjectDialog(
                 Text(text = "browse", style = Theme[typography][label])
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        KxButton(
+            onClick = {
+                scope.launch {
+                    FileKit.openDirectoryPicker()?.let { directory ->
+                        try {
+                            action(OpenProject(directory))
+                            onDismiss()
+                        } catch (t: Throwable) {
+                            error = t.message ?: "Invalid path"
+                        }
+                    }
+                }
+            },
+            variant = KxButtonVariant.Outlined,
+            bracketed = true,
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+        ) {
+            Text(text = "pick folder", style = Theme[typography][label])
+        }
+
         if (error != null) {
             Text(
                 text = error!!,

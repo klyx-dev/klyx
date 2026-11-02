@@ -1,5 +1,7 @@
 package com.klyx.lsp
 
+import com.klyx.core.utils.actualUri
+import com.klyx.core.utils.isTermuxUri
 import com.klyx.lsp.capabilities.ServerCapabilities
 import com.klyx.lsp.capabilities.defaultClientCapabilities
 import com.klyx.lsp.process.launchLspProcess
@@ -12,6 +14,7 @@ import com.klyx.lsp.types.OneOfThree
 import com.klyx.lsp.types.fold
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
+import io.github.vinceglb.filekit.PlatformFile
 import io.matthewnelson.kmp.process.Process
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -91,6 +94,7 @@ class LspSession(
     )
 
     suspend fun start(
+        projectDirectory: PlatformFile? = null,
         rootUri: String? = null,
         workspaceFolders: List<WorkspaceFolder> = emptyList()
     ): Boolean = withContext(Dispatchers.Default) {
@@ -149,7 +153,11 @@ class LspSession(
                         }
                         val targetPort =
                             if (config.socketPort > 0) config.socketPort else defaultPortForLanguage(config.languageId)
-                        val projectDir = rootUri?.removePrefix("file://")
+                        val projectDir = if (projectDirectory?.isTermuxUri() == true) {
+                            projectDirectory.actualUri().removePrefix("file:/")
+                        } else {
+                            rootUri?.removePrefix("file://")
+                        }
                         println("[LSP] Starting Termux transport for ${config.languageId} (port: $targetPort, cmd: ${config.command})")
 
                         var connectionResult: LspServerConnection? = null

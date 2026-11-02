@@ -2,7 +2,9 @@
 
 package com.klyx.lsp
 
-import com.klyx.core.utils.join
+import com.klyx.core.utils.actualUri
+import com.klyx.core.utils.isFileUri
+import com.klyx.core.utils.isTermuxUri
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.types.fold
 import com.klyx.runtime.OperatingSystem
@@ -25,6 +27,11 @@ import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.lumkit.sweeteditor.TextChangeKind
 import io.github.lumkit.sweeteditor.TextPosition
 import io.github.lumkit.sweeteditor.TextRange
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.exists
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.parent
+import io.github.vinceglb.filekit.resolve
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +49,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.json.JsonArray
 import org.koin.core.annotation.Single
 import kotlin.time.Duration
@@ -247,6 +252,12 @@ class EditorLsp(
             }
         }
 
+        val activeProj = workspace.activeProjectId.value?.let { workspace.projects.value[it] }
+        val docPath = LspDocumentUtils.fileOf(document, workspace)
+        val projectRoot = activeProj?.root ?: findProjectRoot(docPath)
+
+        if (projectRoot?.isTermuxUri() == false && !projectRoot.isFileUri()) return null
+
         val session = existing ?: LspSession(
             config = config,
             client = client,
@@ -265,22 +276,19 @@ class EditorLsp(
         }
         session.onNotice = { message -> _lspErrors.tryEmit(message) }
 
-        val activeProj = workspace.activeProjectId.value?.let { workspace.projects.value[it] }
-        val docPath = LspDocumentUtils.pathOf(document, workspace)
-        val projectRoot = activeProj?.root ?: findProjectRoot(docPath)
-        val rootUri = projectRoot?.let { "file://$it" }
+        val rootUri = projectRoot?.actualUri()
         val folders = if (activeProj != null) {
             workspace.projects.value.values.map {
-                WorkspaceFolder(uri = "file://${it.root}", name = it.root.name)
+                WorkspaceFolder(uri = it.root.actualUri(), name = it.root.name)
             }
         } else if (projectRoot != null) {
-            listOf(WorkspaceFolder(uri = "file://$projectRoot", name = projectRoot.name))
+            listOf(WorkspaceFolder(uri = projectRoot.actualUri(), name = projectRoot.name))
         } else {
             emptyList()
         }
 
         println("[LSP] Starting session for ${config.languageId} with root: $rootUri")
-        val started = session.start(rootUri, folders)
+        val started = session.start(projectRoot, rootUri, folders)
         updateActiveSessions()
         if (!started && !silent) {
             val base = session.startError ?: "Unknown error"
@@ -320,16 +328,16 @@ class EditorLsp(
         return newSession != null
     }
 
-    private fun findProjectRoot(filePath: Path?): Path? {
-        var current = filePath?.parent ?: return null
+    private fun findProjectRoot(filePath: PlatformFile?): PlatformFile? {
+        var current = filePath?.parent() ?: return null
         val markers = setOf("Cargo.toml", "go.mod", "package.json", "pom.xml", "build.gradle.kts", ".git")
         while (true) {
             for (marker in markers) {
-                if (SystemFileSystem.exists(current.join(marker))) {
+                if (current.resolve(marker).exists()) {
                     return current
                 }
             }
-            val parent = current.parent ?: break
+            val parent = current.parent() ?: break
             current = parent
         }
         return null

@@ -1,32 +1,31 @@
 package com.klyx.lsp
 
+import com.klyx.core.utils.actualUri
 import com.klyx.core.utils.join
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentLocation
 import com.klyx.runtime.workspace.Workspace
+import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.resolve
 import io.github.vinceglb.filekit.toKotlinxIoPath
 import kotlinx.io.files.Path
 
 object LspDocumentUtils {
 
     fun uriOf(document: Document, workspace: Workspace): String = when (val loc = document.location) {
-        is DocumentLocation.Platform -> pathToUri(loc.file.path)
+        is DocumentLocation.Platform -> loc.file.actualUri()
         is DocumentLocation.Project -> {
-            val root = workspace.projects.value[loc.projectId]?.root
-            if (root != null) {
-                pathToUri(root.join(loc.relativePath).toString())
-            } else {
-                "file:///${loc.relativePath}"
-            }
+            val root = workspace[loc.projectId].root
+            root.resolve(loc.relativePath.toString()).actualUri()
         }
     }
 
-    fun pathOf(document: Document, workspace: Workspace): Path? = when (val location = document.location) {
-        is DocumentLocation.Platform -> runCatching { location.file.toKotlinxIoPath() }.getOrNull()
+    fun fileOf(document: Document, workspace: Workspace): PlatformFile? = when (val location = document.location) {
+        is DocumentLocation.Platform -> location.file
         is DocumentLocation.Project -> {
             val root = workspace.projects.value[location.projectId]?.root
-            root?.join(location.relativePath)
+            root?.resolve(location.relativePath.toString())
         }
     }
 

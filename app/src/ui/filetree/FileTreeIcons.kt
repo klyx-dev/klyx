@@ -23,6 +23,7 @@ import com.klyx.core.icons.TablerFileTypePdf
 import com.klyx.core.icons.TablerFileTypeSql
 import com.klyx.core.icons.TablerFileZip
 import com.klyx.core.icons.TablerMarkdown
+import io.github.vinceglb.filekit.toKotlinxIoPath
 import kotlinx.coroutines.withContext
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
@@ -86,7 +87,7 @@ private val DefaultContainerIcons: ContainerIconTable = containerIcons {
 private suspend fun readFileHeaderBytes(node: FileNode, byteCount: Int): ByteArray? {
     return withContext(IoDispatcher) {
         try {
-            SystemFileSystem.source(Path(node.absolutePath)).buffered().use {
+            SystemFileSystem.source(node.file.toKotlinxIoPath()).buffered().use {
                 val buffer = ByteArray(byteCount)
                 val read = it.readAtMostTo(buffer)
                 if (read <= 0) null else buffer.copyOf(read)
