@@ -288,7 +288,7 @@ class EditorLsp(
         }
 
         println("[LSP] Starting session for ${config.languageId} with root: $rootUri")
-        val started = session.start(projectRoot, rootUri, folders)
+        val started = session.start(rootUri, folders)
         updateActiveSessions()
         if (!started && !silent) {
             val base = session.startError ?: "Unknown error"
