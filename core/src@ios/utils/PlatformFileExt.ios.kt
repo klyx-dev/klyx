@@ -7,3 +7,5 @@ actual fun PlatformFile.isTermuxUri() = false
 actual fun PlatformFile.actualUri(): String = nsUrl.toString()
 
 actual fun PlatformFile.isFileUri() = true
+
+actual suspend fun PlatformFile.tryGetActualFile(): PlatformFile? = this

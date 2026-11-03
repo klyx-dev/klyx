@@ -34,6 +34,7 @@ import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
 import com.klyx.core.action.action
 import com.klyx.core.utils.join
+import com.klyx.core.utils.tryGetActualFileOrSelf
 import com.klyx.runtime.action.ActivateProject
 import com.klyx.runtime.action.CloseProject
 import com.klyx.runtime.action.OpenProject
@@ -62,6 +63,8 @@ import com.klyx.ui.theme.typography
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
@@ -247,10 +250,14 @@ fun OpenProjectDialog(
                 scope.launch {
                     FileKit.openDirectoryPicker()?.let { directory ->
                         try {
-                            action(OpenProject(directory))
+                            action(OpenProject(directory.tryGetActualFileOrSelf()))
                             onDismiss()
-                        } catch (t: Throwable) {
-                            error = t.message ?: "Invalid path"
+                        } catch (err: Throwable) {
+                            if (err is CancellationException) {
+                                ensureActive()
+                            }
+                            err.printStackTrace()
+                            error = err.message ?: "Invalid path"
                         }
                     }
                 }

@@ -317,3 +317,7 @@ expect fun PlatformFile.isTermuxUri(): Boolean
 expect fun PlatformFile.isFileUri(): Boolean
 
 expect fun PlatformFile.actualUri(): String
+
+expect suspend fun PlatformFile.tryGetActualFile(): PlatformFile?
+
+suspend inline fun PlatformFile.tryGetActualFileOrSelf() = tryGetActualFile() ?: this
