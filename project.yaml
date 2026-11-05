@@ -1,8 +1,12 @@
 modules:
   - android-app
   - app
+  - build-config
   - core
   - ios-app
   - jvm-app
   - lsp
   - runtime
+
+plugins:
+  - ./build-config

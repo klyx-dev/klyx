@@ -34,3 +34,8 @@ apply:
   - //common.module-template.yaml
   - //koin.module-template.yaml
   - //test.module-template.yaml
+
+plugins:
+  build-config:
+    enabled: true
+    propertiesFileName: "config"

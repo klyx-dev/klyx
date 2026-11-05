@@ -1,0 +1,10 @@
+tasks:
+  generate:
+    action: !com.klyx.build.generateSources
+      propertiesFile: ${module.rootDir}/${pluginSettings.propertiesFileName}.properties
+      generatedSourceDir: ${taskOutputDir}
+
+generated:
+  sources:
+    - language: kotlin
+      directory: ${tasks.generate.action.generatedSourceDir}
