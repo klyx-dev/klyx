@@ -190,7 +190,7 @@ jobs:
 
           THREAD=()
           if [ -n "${TOPIC_ID:-}" ]; then
-            THREAD=(-F message_thread_id="$TOPIC_ID")
+            THREAD=(--form-string message_thread_id="$TOPIC_ID")
           fi
 
           CAPTION="<b>Klyx build</b> · <code>${SHORT_SHA}</code>"
@@ -198,11 +198,11 @@ jobs:
           RESPONSE="$(curl -sS \
             --fail-with-body \
             -X POST "${API}/sendDocument" \
-            -F chat_id="$CHAT_ID" \
+            --form-string chat_id="$CHAT_ID" \
             "${THREAD[@]}" \
             -F document=@"$APK_PATH" \
-            -F parse_mode=HTML \
-            -F caption="$CAPTION")"
+            --form-string parse_mode=HTML \
+            --form-string caption="$CAPTION")"
 
           DOC_ID="$(jq -r '.result.message_id' <<< "$RESPONSE")"
 
