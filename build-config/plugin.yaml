@@ -4,7 +4,15 @@ tasks:
       propertiesFile: ${module.rootDir}/${pluginSettings.propertiesFileName}.properties
       generatedSourceDir: ${taskOutputDir}
 
+  generateBuildInfo:
+    action: !com.klyx.build.generateBuildInfo
+      projectRoot: ${project.rootDir}
+      outputDir: ${taskOutputDir}
+      version: ${module.settings.android.versionCode}
+
 generated:
   sources:
     - language: kotlin
       directory: ${tasks.generate.action.generatedSourceDir}
+    - language: kotlin
+      directory: ${tasks.generateBuildInfo.action.outputDir}

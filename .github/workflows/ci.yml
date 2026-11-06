@@ -21,6 +21,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   APP_NAME: "Klyx"
   APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
@@ -32,6 +36,7 @@ jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -53,9 +58,12 @@ jobs:
 
       - name: Restore signing files
         if: github.event_name != 'pull_request'
+        env:
+          KEYSTORE_B64: ${{ secrets.KLYX_KEYSTORE }}
+          KEYSTORE_PROP_B64: ${{ secrets.KEYSTORE_PROP }}
         run: |
-          echo "${{ secrets.KLYX_KEYSTORE }}" | base64 -d > /tmp/klyx.keystore
-          echo "${{ secrets.KEYSTORE_PROP }}" | base64 -d > android-app/sign.properties
+          echo "$KEYSTORE_B64" | base64 -d > /tmp/klyx.keystore
+          echo "$KEYSTORE_PROP_B64" | base64 -d > android-app/sign.properties
           sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' android-app/sign.properties
 
       - name: Build APK
@@ -98,40 +106,119 @@ jobs:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TOPIC_ID: ${{ secrets.TELEGRAM_TOPIC_ID }}
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          APK_PATH: ${{ steps.apk.outputs.apk }}
+          SHORT_SHA: ${{ steps.apk.outputs.short_sha }}
         run: |
-          BEFORE="${{ github.event.before }}"
-          CURRENT="${{ github.sha }}"
+          set -euo pipefail
 
-          if [ "${{ github.event_name }}" = "push" ] &&
-             [ "$BEFORE" != "0000000000000000000000000000000000000000" ] &&
-             git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+          SHA="$GITHUB_SHA"
+          ZERO="0000000000000000000000000000000000000000"
+          API="https://api.telegram.org/bot${TOKEN}"
+          MAX_CHUNK=3500
+          MAX_BODY=2500
+          SEP=$'\n\n------------\n\n'
 
-            COMMIT_MSG="$(git log \
-              "$BEFORE..$CURRENT" \
-              --pretty=format:"%s by %an" \
-              --reverse)"
+          valid_base() {
+            [ -n "${1:-}" ] && [ "$1" != "$ZERO" ] &&
+            git cat-file -e "$1^{commit}" 2>/dev/null &&
+            git merge-base --is-ancestor "$1" "$SHA" 2>/dev/null &&
+            [ "$1" != "$SHA" ]
+          }
 
-          else
-            COMMIT_MSG="$(git log -1 \
-              --pretty=format:"%s by %an" \
-              "$CURRENT")"
+          BASE="$(gh run list \
+            --workflow "$WORKFLOW_NAME" \
+            --branch main \
+            --status success \
+            --limit 1 \
+            --json headSha \
+            --jq '.[0].headSha // empty' 2>/dev/null || true)"
+
+          if ! valid_base "$BASE"; then
+            BASE="$EVENT_BEFORE"
           fi
 
-          CAPTION=$(printf '%s' "$COMMIT_MSG" | head -c 1000)
-
-          if [ "${#COMMIT_MSG}" -gt 1000 ]; then
-            CAPTION="${CAPTION}..."
+          COMMITS=()
+          if valid_base "$BASE"; then
+            mapfile -d '' -t COMMITS < <(git log -z --no-merges --reverse --pretty=format:'%B' "$BASE..$SHA")
+          fi
+          if [ "${#COMMITS[@]}" -eq 0 ]; then
+            mapfile -d '' -t COMMITS < <(git log -z -1 --pretty=format:'%B' "$SHA")
           fi
 
-          curl -s \
-            --fail \
-            --show-error \
-            -X POST \
-            "https://api.telegram.org/bot${TOKEN}/sendDocument" \
-            -F chat_id="${CHAT_ID}" \
-            -F message_thread_id="${TOPIC_ID}" \
-            -F document=@"${{ steps.apk.outputs.apk }}" \
-            -F caption="${CAPTION}"
+          esc() { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+
+          format_commit() {
+            local raw subject body out
+
+            raw="$(printf '%s\n' "$1" | grep -viE '^(signed-off-by|co-authored-by):' || true)"
+            raw="$(printf '%s\n' "$raw" | sed '/./,$!d')"
+
+            subject="$(printf '%s\n' "$raw" | head -n 1)"
+            body="$(printf '%s\n' "$raw" | tail -n +2 | sed '/./,$!d')"
+
+            if [ "${#body}" -gt "$MAX_BODY" ]; then
+              body="${body:0:$MAX_BODY}…"
+            fi
+
+            out="<b>$(printf '%s' "$subject" | esc)</b>"
+            if [ -n "$body" ]; then
+              out+=$'\n\n'"$(printf '%s' "$body" | esc)"
+            fi
+            printf '%s' "$out"
+          }
+
+          CHUNKS=()
+          CUR=""
+          for raw in "${COMMITS[@]}"; do
+            part="$(format_commit "$raw")"
+            if [ -z "$CUR" ]; then
+              CUR="$part"
+            elif [ $(( ${#CUR} + ${#SEP} + ${#part} )) -gt "$MAX_CHUNK" ]; then
+              CHUNKS+=("$CUR")
+              CUR="$part"
+            else
+              CUR+="${SEP}${part}"
+            fi
+          done
+          CHUNKS+=("$CUR")
+
+          TOTAL="${#COMMITS[@]}"
+          CHUNKS[0]="<b>Changes (${TOTAL})</b>"$'\n\n'"${CHUNKS[0]}"
+
+          THREAD=()
+          if [ -n "${TOPIC_ID:-}" ]; then
+            THREAD=(-F message_thread_id="$TOPIC_ID")
+          fi
+
+          CAPTION="<b>Klyx build</b> · <code>${SHORT_SHA}</code>"
+
+          RESPONSE="$(curl -sS \
+            --fail-with-body \
+            -X POST "${API}/sendDocument" \
+            -F chat_id="$CHAT_ID" \
+            "${THREAD[@]}" \
+            -F document=@"$APK_PATH" \
+            -F parse_mode=HTML \
+            -F caption="$CAPTION")"
+
+          DOC_ID="$(jq -r '.result.message_id' <<< "$RESPONSE")"
+
+          for chunk in "${CHUNKS[@]}"; do
+            curl -sS \
+              --fail-with-body \
+              -X POST "${API}/sendMessage" \
+              -F chat_id="$CHAT_ID" \
+              "${THREAD[@]}" \
+              -F reply_to_message_id="$DOC_ID" \
+              -F allow_sending_without_reply=true \
+              -F parse_mode=HTML \
+              -F disable_web_page_preview=true \
+              --form-string text="$chunk" > /dev/null
+            sleep 1
+          done
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
@@ -145,5 +232,4 @@ jobs:
         if: always()
         run: |
           rm -f /tmp/klyx.keystore
-          rm -f /tmp/sign.properties
           rm -f android-app/sign.properties

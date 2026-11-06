@@ -41,7 +41,8 @@ fun generateSources(
         appendLine("package com.klyx.build.generated")
         appendLine("public object Config {")
         for ((key, value) in properties) {
-            appendLine("    const val `$key`: String = \"$value\"")
+            val v = if (value is String) "\"$value\"" else value
+            appendLine("    const val `$key`: ${value::class.simpleName} = $v")
         }
         appendLine("}")
     }

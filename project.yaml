@@ -3,6 +3,7 @@ modules:
   - app
   - build-config
   - core
+  - editor
   - ios-app
   - jvm-app
   - lsp
