@@ -4,6 +4,7 @@ package com.klyx.runtime.workspace
 
 import androidx.datastore.core.DataStore
 import com.klyx.core.Disposable
+import com.klyx.core.Log
 import com.klyx.core.action.ActionGroup
 import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.service
@@ -171,6 +172,7 @@ class Workspace(
     }
 
     fun openProject(root: PlatformFile): Project {
+        Log.i("Workspace", "openProject ${root.path}")
         if (!root.exists()) error("Project root does not exist: $root")
         val project = Project(id = ProjectId(root.toString()), root = root)
         projects.update { it + (project.id to project) }
@@ -244,6 +246,7 @@ class Workspace(
             }
         }
         file.writeString(text)
+        Log.d("Workspace", "write ${document.name} (${text.length} chars)")
     }
 
     fun createEditorGroup(): EditorGroupId {
@@ -276,6 +279,7 @@ class Workspace(
         activeGroupOrNull() ?: error("Workspace has no active editor group")
 
     fun openDocument(location: DocumentLocation, name: String, preview: Boolean = false): DocumentId {
+        Log.i("Workspace", "openDocument $name preview=$preview")
         val document = open(location, name)
         val groupId = activeGroupOrNull()?.id ?: createEditorGroup()
         if (preview) protectHiddenPreview(groupId)

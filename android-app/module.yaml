@@ -6,6 +6,7 @@ dependencies:
   - bom: $libs.koin.bom
   - $libs.koin.android
   - $libs.filekit.dialogs
+  - $kotlin.serialization.json
 
 settings:
   android:
@@ -13,13 +14,17 @@ settings:
     applicationId: "com.klyx"
 
     versionCode: 1
-    versionName: "0.1.0-alpha"
+    versionName: "0.1.0-alpha.1"
 
     abiFilters: [ arm64-v8a, x86_64 ]
     signing:
       enabled: true
       propertiesFile: ./sign.properties
   junit: junit-5
+  kotlin: 
+    serialization:
+      enabled: true
+      version: 1.12.0
 
 apply:
   - //common.module-template.yaml

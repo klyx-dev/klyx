@@ -117,6 +117,7 @@ import com.klyx.ui.editor.ProblemsDialog
 import com.klyx.ui.editor.TabStrip
 import com.klyx.ui.editor.rememberEditorGroups
 import com.klyx.ui.editor.rememberHasVisibleFiles
+import com.klyx.ui.feedback.FeedbackDialog
 import com.klyx.ui.filetree.ChildrenLoader
 import com.klyx.ui.filetree.FileNode
 import com.klyx.ui.filetree.FileTree
@@ -538,6 +539,7 @@ private fun TopBarOverflowMenu(
     val lsp: EditorLsp = koinInject()
     val scope = rememberCoroutineScope()
     var expanded by remember { mutableStateOf(false) }
+    var showFeedback by remember { mutableStateOf(false) }
     var menuPage by remember { mutableStateOf(OverflowMenuPage.Main) }
 
     val activeDocId by editors.activeDocumentId.collectAsState()
@@ -605,6 +607,13 @@ private fun TopBarOverflowMenu(
                                 expanded = false
                             },
                         )
+                        KxMenuItem(
+                            label = "send feedback",
+                            onClick = {
+                                expanded = false
+                                showFeedback = true
+                            },
+                        )
                     }
 
                     OverflowMenuPage.Lsp -> {
@@ -662,6 +671,11 @@ private fun TopBarOverflowMenu(
                 Text(text = "options", style = Theme[typography][label], color = Theme[colors][textSecondary])
             }
         },
+    )
+
+    FeedbackDialog(
+        visible = showFeedback,
+        onDismiss = { showFeedback = false },
     )
 }
 

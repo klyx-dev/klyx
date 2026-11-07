@@ -2,3 +2,6 @@ product: jvm/amper-plugin
 
 pluginInfo:
   settingsClass: com.klyx.build.Settings
+
+dependencies: 
+  - $libs.snakeyaml

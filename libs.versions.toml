@@ -3,6 +3,7 @@ koin = "4.2.2"
 kotest = "6.2.6"
 kotlinx-coroutines = "1.11.0"
 kotlinx-io = "0.9.2"
+snakeyaml = "2.7"
 
 [libraries]
 androidx-activity-compose = "androidx.activity:activity-compose:1.13.0"
@@ -28,3 +29,4 @@ navigation3-ui = "org.jetbrains.androidx.navigation3:navigation3-ui:1.2.0"
 
 kmp-process = "io.matthewnelson.kmp-process:process:0.5.0"
 filekit-dialogs = "io.github.vinceglb:filekit-dialogs:0.17.0"
+snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }

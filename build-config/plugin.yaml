@@ -1,14 +1,13 @@
 tasks:
   generate:
     action: !com.klyx.build.generateSources
-      propertiesFile: ${module.rootDir}/${pluginSettings.propertiesFileName}.properties
+      propertiesFile: ${project.rootDir}/${pluginSettings.propertiesFileName}.properties
       generatedSourceDir: ${taskOutputDir}
 
   generateBuildInfo:
     action: !com.klyx.build.generateBuildInfo
       projectRoot: ${project.rootDir}
       outputDir: ${taskOutputDir}
-      version: ${module.settings.android.versionCode}
 
 generated:
   sources:

@@ -46,6 +46,7 @@ import com.composeunstyled.Thumb
 import com.composeunstyled.Track
 import com.composeunstyled.UnstyledSwitch
 import com.composeunstyled.theme.Theme
+import com.klyx.build.BuildInfo
 import com.klyx.navigation.LocalNavigator
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
@@ -55,6 +56,7 @@ import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
+import com.klyx.ui.feedback.FeedbackDialog
 import com.klyx.ui.theme.KxColors
 import com.klyx.ui.theme.KxTypography
 import com.klyx.ui.theme.LocalCornerRadius
@@ -315,7 +317,33 @@ private fun GeneralSettings() {
             SettingsDivider()
             InlayHintsRow(modifier = Modifier.fillMaxWidth())
         }
+
+        FeedbackCard(modifier = Modifier.fillMaxWidth())
     }
+}
+
+@Composable
+private fun FeedbackCard(modifier: Modifier = Modifier) {
+    var show by remember { mutableStateOf(false) }
+
+    SettingsCard(
+        title = "alpha feedback",
+        subtitle = "Klyx ${BuildInfo.VERSION_NAME} · ${BuildInfo.COMMIT.take(7)}",
+        modifier = modifier,
+    ) {
+        KxButton(
+            onClick = { show = true },
+            variant = KxButtonVariant.Outlined,
+            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+        ) {
+            Text("send feedback", style = Theme[typography][label])
+        }
+    }
+
+    FeedbackDialog(
+        visible = show,
+        onDismiss = { show = false },
+    )
 }
 
 @Composable

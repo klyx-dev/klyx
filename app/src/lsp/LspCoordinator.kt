@@ -2,6 +2,7 @@
 
 package com.klyx.lsp
 
+import com.klyx.core.Log
 import com.klyx.core.utils.actualUri
 import com.klyx.core.utils.isFileUri
 import com.klyx.core.utils.isTermuxUri
@@ -287,7 +288,7 @@ class EditorLsp(
             emptyList()
         }
 
-        println("[LSP] Starting session for ${config.languageId} with root: $rootUri")
+        Log.i("LSP", "Starting session for ${config.languageId} with root: $rootUri")
         val started = session.start(rootUri, folders)
         updateActiveSessions()
         if (!started && !silent) {
@@ -297,6 +298,7 @@ class EditorLsp(
                 else -> base
             }
             _lspErrors.tryEmit("${config.languageId} language server failed to start: $hint")
+            Log.e("LSP", "${config.languageId} failed to start: $hint")
         }
         return if (started) session else null
     }

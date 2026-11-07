@@ -2,6 +2,8 @@ package com.klyx
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -24,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.klyx.core.App
+import com.klyx.core.Log
 import com.klyx.core.action.action
 import com.klyx.runtime.action.OpenDocument
 import com.klyx.runtime.settings.SettingsStore
@@ -55,6 +58,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         App.global.declare(this)
         FileKit.init(this)
+        Log.i("App", "MainActivity.onCreate")
         if (!hasStorageAccess()) {
             requestStoragePermission()
         }
@@ -87,8 +91,57 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
+            val pendingCrash = remember {
+                mutableStateOf(CrashReporter.loadPending(this))
+            }
+
             Screen()
+
+            pendingCrash.value?.let { report ->
+                CrashReportDialog(
+                    report = report,
+                    onDismiss = {
+                        CrashReporter.clearPending(this)
+                        pendingCrash.value = null
+                    },
+                    onCopy = { copyCrashReport(report) },
+                    onShare = {
+                        shareCrashReport(report)
+                        CrashReporter.clearPending(this)
+                        pendingCrash.value = null
+                    },
+                    onOpenIssue = {
+                        openCrashIssue(report)
+                        CrashReporter.clearPending(this)
+                        pendingCrash.value = null
+                    },
+                )
+            }
         }
+    }
+
+    private fun copyCrashReport(report: CrashReport) {
+        val clipboard = getSystemService(ClipboardManager::class.java) ?: return
+        clipboard.setPrimaryClip(ClipData.newPlainText("Klyx crash report", report.toShareText()))
+    }
+
+    private fun shareCrashReport(report: CrashReport) {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "Klyx crash report")
+            putExtra(Intent.EXTRA_TEXT, report.toShareText())
+        }
+        startActivity(Intent.createChooser(intent, "Share crash report"))
+    }
+
+    private fun openCrashIssue(report: CrashReport) {
+        val title = "Crash: ${report.exceptionClass}"
+        val body = report.toShareText().take(6000)
+        val url = "https://github.com/klyx-dev/klyx/issues/new" +
+                "?title=${Uri.encode(title)}" +
+                "&body=${Uri.encode(body)}" +
+                "&labels=crash,alpha"
+        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
     }
 
     override fun onResume() {
