@@ -8,6 +8,11 @@ apply:
 
 settings:
   junit: junit-5
+  compose:
+    resources: 
+      packageName: com.klyx.resources
+      nameOfResClass: Resources
+      exposedAccessors: true
   kotlin:
     compilerPlugins:
       - id: io.insert-koin.compiler.plugin
