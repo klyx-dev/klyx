@@ -1,0 +1,80 @@
+name: Alpha bug report
+description: Report a crash or broken behavior in the Klyx alpha
+title: "[alpha] "
+labels: [ "bug", "alpha" ]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing. If Klyx crashed, use **options → send feedback**
+        or attach the crash report from the next-launch dialog.
+
+  - type: input
+    id: version
+    attributes:
+      label: Klyx version
+      description: Settings → alpha feedback, or the release tag
+      placeholder: 0.1.0-alpha.1
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Pixel 8, Android 15
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source
+    attributes:
+      label: How did you install it?
+      options:
+        - Obtainium
+        - Direct APK
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Tap ...
+        3. See ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or crash report
+      description: Paste the report here if you chose Copy.
+      render: text
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I am using the latest alpha release.
+          required: true
+        - label: I searched existing issues for this problem.
+          required: true
