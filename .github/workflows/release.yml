@@ -1,0 +1,117 @@
+name: Alpha Release
+
+on:
+  push:
+    tags: [ "[0-9]*" ]
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version, e.g. 0.1.0-alpha.2"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: alpha-release-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  KOTLIN_SHARED_CACHE_DIR: /home/runner/.cache/JetBrains/Kotlin
+  KOTLIN_CLI_NO_WELCOME_BANNER: "1"
+  VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+
+jobs:
+  release:
+    name: Build and publish alpha
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Make Kotlin executable
+        run: chmod +x ./kotlin
+
+      - name: Cache Kotlin Toolchain
+        uses: actions/cache@v6
+        with:
+          path: /home/runner/.cache/JetBrains/Kotlin
+          key: ${{ runner.os }}-kotlin-${{ hashFiles('kotlin') }}
+          restore-keys: |
+            ${{ runner.os }}-kotlin-
+
+      - name: Restore signing
+        env:
+          KEYSTORE_B64: ${{ secrets.KLYX_KEYSTORE }}
+          KEYSTORE_PROP_B64: ${{ secrets.KEYSTORE_PROP }}
+        run: |
+          set -euo pipefail
+          echo "$KEYSTORE_B64" | base64 -d > /tmp/klyx.keystore
+          echo "$KEYSTORE_PROP_B64" | base64 -d > android-app/sign.properties
+          sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' android-app/sign.properties
+
+      - name: Stamp version
+        run: |
+          set -euo pipefail
+
+          case "$VERSION" in
+            *[!0-9A-Za-z._-]*)
+              echo "Invalid version: $VERSION"
+              exit 1
+              ;;
+          esac
+
+          CODE=$((1000 + GITHUB_RUN_NUMBER))
+
+          sed -i -E "s/versionCode: [0-9]+/versionCode: ${CODE}/" android-app/module.yaml
+          sed -i -E "s|versionName: \"[^\"]*\"|versionName: \"${VERSION}\"|" android-app/module.yaml
+
+          grep -E 'versionCode|versionName' android-app/module.yaml
+
+      - name: Build release APK
+        run: ./kotlin build --variant release
+
+      - name: Prepare assets
+        run: |
+          set -euo pipefail
+
+          APK="build/tasks/_android-app_buildAndroidRelease/gradle-project-release.apk"
+
+          if [ ! -f "$APK" ]; then
+            echo "APK not found: $APK"
+            find build -type f -name "*.apk" -print
+            exit 1
+          fi
+
+          mkdir -p artifacts
+          cp "$APK" "artifacts/klyx-${VERSION}.apk"
+
+          cd artifacts
+          sha256sum "klyx-${VERSION}.apk" > SHA256SUMS
+          ls -lh
+
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          APK="artifacts/klyx-${VERSION}.apk"
+          SUMS="artifacts/SHA256SUMS"
+
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            gh release upload "$VERSION" "$APK" "$SUMS" --clobber
+            gh release edit "$VERSION" \
+              --title "Klyx $VERSION" \
+              --prerelease
+          else
+            gh release create "$VERSION" "$APK" "$SUMS" \
+              --title "Klyx $VERSION" \
+              --generate-notes \
+              --prerelease
+          fi
