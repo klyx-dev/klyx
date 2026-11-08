@@ -17,7 +17,7 @@ on:
       - "*.md"
       - "**/*.md"
       - ".gitignore"
-      - ".idea"
+      - ".idea/*"
       - "scripts/*"
 
 concurrency:
