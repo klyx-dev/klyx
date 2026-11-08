@@ -16,6 +16,9 @@ on:
     paths-ignore:
       - "*.md"
       - "**/*.md"
+      - ".gitignore"
+      - ".idea"
+      - "scripts/*"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
