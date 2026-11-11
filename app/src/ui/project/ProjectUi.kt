@@ -119,7 +119,7 @@ fun ProjectSwitcher(
                         val isActive = id == active?.id
                         KxMenuItem(
                             label = (if (isActive) "● " else "○ ") + name,
-                            onClick = { action(ActivateProject(id)) },
+                            onClick = action(ActivateProject(id)),
                         )
                     }
                 }
@@ -129,7 +129,7 @@ fun ProjectSwitcher(
                     KxMenuItem(
                         label = "close ${active.name}",
                         danger = true,
-                        onClick = { action(CloseProject(active.id)) },
+                        onClick = action(CloseProject(active.id)),
                     )
                 }
             }
@@ -208,7 +208,7 @@ fun OpenProjectDialog(
                             return@KxButton
                         }
                         try {
-                            action(OpenProject(PlatformFile(raw)))
+                            action(OpenProject(PlatformFile(raw)))()
                             onDismiss()
                         } catch (t: Throwable) {
                             error = t.message ?: "Invalid path"
@@ -250,7 +250,7 @@ fun OpenProjectDialog(
                 scope.launch {
                     FileKit.openDirectoryPicker()?.let { directory ->
                         try {
-                            action(OpenProject(directory.tryGetActualFileOrSelf()))
+                            action(OpenProject(directory.tryGetActualFileOrSelf())).invoke()
                             onDismiss()
                         } catch (err: Throwable) {
                             if (err is CancellationException) {

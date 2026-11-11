@@ -5,21 +5,11 @@ import androidx.compose.runtime.DisallowComposableCalls
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
-import com.klyx.core.action.Action
 import com.klyx.core.action.ActionDispatcher
-import com.klyx.core.action.ActionId
-import com.klyx.core.action.ActionRegistrar
-import com.klyx.core.action.ActionRegistry
-import com.klyx.core.event.AppEvent
-import com.klyx.core.keybinding.KeybindingRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.KoinApplication
@@ -41,40 +31,12 @@ class App internal constructor(
     @PublishedApi
     internal val koin = koinApplication.koin
 
-    val actionRegistry = ActionRegistry()
-    val actionRegistrar = ActionRegistrar(actionRegistry, this)
-    val keybindings = KeybindingRegistry()
-    val actions = ActionDispatcher(actionRegistry, koin)
-
     /** Scope for app-level tasks that must not run on the main thread. */
     val backgroundScope = BackgroundScope()
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** Every event the app emits. */
-    val events: SharedFlow<AppEvent> = actions.events.shareIn(appScope, SharingStarted.Eagerly, replay = 0)
-
-    init {
-        koin.declare(actionRegistry, allowOverride = true)
-        koin.declare(actionRegistrar, allowOverride = true)
-        bindDefaultKeybindings()
-    }
-
-    /**
-     * Binds every chord declared by a registered action's
-     * [com.klyx.core.action.ActionMetadata.defaultKeybinding], and returns the handles that undo them.
-     */
-    @IgnorableReturnValue
-    fun bindDefaultKeybindings(): List<Disposable> =
-        keybindings.bindAll(actionRegistry.defaultKeybindings(), owner = this)
-
-    /** Runs [action] on the background scope and returns the [Job] so callers may await it. */
-    @IgnorableReturnValue
-    fun dispatch(action: Action): Job = backgroundScope.launch { actions.dispatch(action) }
-
-    /** Runs whatever [id] resolves to through its registered factory. */
-    @IgnorableReturnValue
-    fun dispatch(id: ActionId): Job = backgroundScope.launch { actions.dispatch(id) }
+    val actions = ActionDispatcher(appScope)
 
     /** Cancels the app's scopes. Nothing is usable afterwards. */
     fun close() {

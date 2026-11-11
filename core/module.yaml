@@ -14,6 +14,9 @@ settings:
       nameOfResClass: Resources
       exposedAccessors: true
   kotlin:
+    serialization:
+      enabled: true
+      version: 1.12.0
     compilerPlugins:
       - id: io.insert-koin.compiler.plugin
         dependency: io.insert-koin:koin-compiler-plugin:1.2.1
@@ -26,6 +29,14 @@ dependencies:
   - $libs.compose.material3.adaptive: exported
   - $libs.kotlinx.coroutines.core: exported
   - $libs.filekit.dialogs: exported
+  - $kotlin.serialization.json
+
+dependencies@android: 
+  - com.lazygeniouz:dfc:2.0
+
+test-dependencies: 
+  - $compose.uiTest
+  - app.cash.molecule:molecule-runtime:2.2.0
 
 test-settings:
   kotlin:

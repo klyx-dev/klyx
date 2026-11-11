@@ -1,5 +1,7 @@
 package com.klyx.core
 
+import com.klyx.core.action.Registration
+
 interface Owner {
     val ownerId: String
 
@@ -13,3 +15,5 @@ fun interface Disposable {
 }
 
 fun List<Disposable>.merge() = Disposable { asReversed().forEach { it.dispose() } }
+
+fun List<Registration>.asDisposable() = Disposable { forEach { it.unregister() } }

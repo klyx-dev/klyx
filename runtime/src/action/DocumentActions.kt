@@ -1,11 +1,10 @@
 package com.klyx.runtime.action
 
 import com.klyx.core.action.Action
-import com.klyx.core.action.ActionDescriptor
-import com.klyx.core.action.ActionId
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.DocumentLocation
 import io.github.vinceglb.filekit.PlatformFile
+import kotlinx.serialization.Serializable
 import okio.Path
 
 /**
@@ -14,17 +13,12 @@ import okio.Path
  * A [preview] tab is temporary: the next preview tab opened in the same group replaces it. Opening the
  * same location twice returns the same document.
  */
+@Serializable
 data class OpenDocument(
     val location: DocumentLocation,
     val name: String,
     val preview: Boolean = false,
-) : Action {
-    override val id = OpenDocument.id
-
-    companion object : ActionDescriptor<OpenDocument> {
-        override val id = ActionId("editor.openDocument")
-    }
-}
+) : Action
 
 /**
  * Opens a document into the active editor group, creating the first group if the workspace has none.
@@ -42,82 +36,47 @@ fun OpenDocument(path: Path, preview: Boolean = false): OpenDocument =
 /**
  * Closes a tab, in whichever editor group holds it. The workspace picks a neighbouring tab to focus.
  */
-data class CloseDocument(val documentId: DocumentId) : Action {
-    override val id = CloseDocument.id
-
-    companion object : ActionDescriptor<CloseDocument> {
-        override val id = ActionId("editor.closeDocument")
-    }
-}
+@Serializable
+data class CloseDocument(val documentId: DocumentId) : Action
 
 /** Focuses a tab, in whichever editor group holds it. */
-data class ActivateDocument(val documentId: DocumentId) : Action {
-    override val id = ActivateDocument.id
-
-    companion object : ActionDescriptor<ActivateDocument> {
-        override val id = ActionId("editor.activateDocument")
-    }
-}
+@Serializable
+data class ActivateDocument(val documentId: DocumentId) : Action
 
 /** Pins a tab, so a later preview tab cannot replace it. Pinning also clears the preview flag. */
-data class PinDocument(val documentId: DocumentId) : Action {
-    override val id = PinDocument.id
-
-    companion object : ActionDescriptor<PinDocument> {
-        override val id = ActionId("editor.pinDocument")
-    }
-}
+@Serializable
+data class PinDocument(val documentId: DocumentId) : Action
 
 /** Unpins a tab, leaving it otherwise untouched. */
-data class UnpinDocument(val documentId: DocumentId) : Action {
-    override val id = UnpinDocument.id
-
-    companion object : ActionDescriptor<UnpinDocument> {
-        override val id = ActionId("editor.unpinDocument")
-    }
-}
+@Serializable
+data class UnpinDocument(val documentId: DocumentId) : Action
 
 /** Turns a preview tab into a permanent one, so opening another preview document keeps this tab. */
-data class PromotePreviewDocument(val documentId: DocumentId) : Action {
-    override val id = PromotePreviewDocument.id
-
-    companion object : ActionDescriptor<PromotePreviewDocument> {
-        override val id = ActionId("editor.promotePreviewDocument")
-    }
-}
+@Serializable
+data class PromotePreviewDocument(val documentId: DocumentId) : Action
 
 /**
  * Closes the tab in focus.
  */
-object CloseActiveDocument : Action {
-    override val id = ActionId("editor.closeActiveDocument")
-}
+@Serializable
+object CloseActiveDocument : Action
 
 /** Focuses the tab to the right of the focused one, wrapping around. */
-object ActivateNextDocument : Action {
-    override val id = ActionId("editor.activateNextDocument")
-}
+@Serializable
+object ActivateNextDocument : Action
 
 /** Focuses the tab to the left of the focused one, wrapping around. */
-object ActivatePreviousDocument : Action {
-    override val id = ActionId("editor.activatePreviousDocument")
-}
+@Serializable
+object ActivatePreviousDocument : Action
 
 /** Saves a document to disk. */
-data class SaveDocument(val documentId: DocumentId) : Action {
-    override val id = SaveDocument.id
-
-    companion object : ActionDescriptor<SaveDocument> {
-        override val id = ActionId("editor.saveDocument")
-    }
-}
+@Serializable
+data class SaveDocument(val documentId: DocumentId) : Action
 
 /** Saves the document currently in focus. */
-object SaveActiveDocument : Action {
-    override val id = ActionId("editor.saveActiveDocument")
-}
+@Serializable
+object SaveActiveDocument : Action
 
 /** Saves all open documents to disk. */
-object SaveAllDocuments : Action {
-    override val id = ActionId("editor.saveAllDocuments")
-}
+@Serializable
+object SaveAllDocuments : Action

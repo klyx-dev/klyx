@@ -5,11 +5,7 @@ package com.klyx.runtime.workspace
 import androidx.datastore.core.DataStore
 import com.klyx.core.Disposable
 import com.klyx.core.Log
-import com.klyx.core.action.ActionGroup
-import com.klyx.core.action.ActionRegistrar
-import com.klyx.core.action.service
-import com.klyx.core.action.singleInput
-import com.klyx.core.merge
+import com.klyx.core.action.action
 import com.klyx.runtime.Platform
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -34,7 +30,6 @@ import com.klyx.runtime.settings.Settings
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.createDirectories
 import io.github.vinceglb.filekit.exists
-import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.parent
 import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.readString
@@ -54,9 +49,7 @@ import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @Single
-class Workspace(
-    private val settingsStore: DataStore<Settings>? = null,
-) : ActionGroup {
+class Workspace(private val settingsStore: DataStore<Settings>? = null) {
 
     private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -171,6 +164,7 @@ class Workspace(
         }
     }
 
+    @IgnorableReturnValue
     fun openProject(root: PlatformFile): Project {
         Log.i("Workspace", "openProject ${root.path}")
         if (!root.exists()) error("Project root does not exist: $root")
@@ -278,6 +272,7 @@ class Workspace(
     fun activeGroup(): EditorGroup =
         activeGroupOrNull() ?: error("Workspace has no active editor group")
 
+    @IgnorableReturnValue
     fun openDocument(location: DocumentLocation, name: String, preview: Boolean = false): DocumentId {
         Log.i("Workspace", "openDocument $name preview=$preview")
         val document = open(location, name)
@@ -358,6 +353,7 @@ class Workspace(
         updateGroup(groupId) { it.withUpdated(documentId, required = false) { copy(preview = false) } }
     }
 
+    @IgnorableReturnValue
     fun splitEditor(): EditorGroupId = createEditorGroup()
 
     fun isDocumentOpen(documentId: DocumentId): Boolean = groupOf(documentId) != null
@@ -394,9 +390,6 @@ class Workspace(
             }
         }
     }
-
-    context(registrar: ActionRegistrar)
-    fun registerActions() = registrar.register()
 
     private fun protectHiddenPreview(groupId: EditorGroupId) {
         if (tabScope.value != EditorTabScope.CurrentProject) return
@@ -478,134 +471,30 @@ class Workspace(
         return copy(documents = documents.map { if (it.documentId == documentId) next else it })
     }
 
-    override fun ActionRegistrar.register(): Disposable {
-        val disposables = listOf(
-            action(
-                instance = SplitEditor,
-                title = "Split Editor",
-                defaultKeybinding = "Ctrl+\\",
-                serialize = true,
-            ) {
-                val _ = service<Workspace>().splitEditor()
+    @IgnorableReturnValue
+    fun registerActions(): Disposable {
+        val registrations = listOf(
+            action<SplitEditor> { splitEditor() },
+            action<ActivateEditorGroup> { activateEditorGroup(it.groupId) },
+            action<CloseEditorGroup> { closeEditorGroup(it.groupId) },
+            action<OpenDocument> { (location, name, preview) ->
+                openDocument(location, name, preview)
             },
-            action(
-                descriptor = ActivateEditorGroup,
-                title = "Focus Editor Group",
-                serialize = true,
-            ) {
-                service<Workspace>().activateEditorGroup(it.groupId)
-            },
-            action(
-                descriptor = CloseEditorGroup,
-                title = "Close Editor Group",
-                serialize = true,
-            ) {
-                service<Workspace>().closeEditorGroup(it.groupId)
-            },
-            action(
-                descriptor = OpenDocument,
-                title = "Open Document",
-                invocation = {
-                    singleInput("Path") { input ->
-                        val file = PlatformFile(input.trim())
-                        OpenDocument(location = DocumentLocation.Platform(file), name = file.name)
-                    }
-                },
-                serialize = true,
-            ) { (location, name, preview) ->
-                val _ = service<Workspace>().openDocument(location, name, preview)
-            },
-            action(
-                descriptor = ActivateDocument,
-                title = "Show Document",
-                serialize = true,
-            ) {
-                service<Workspace>().activateDocument(it.documentId)
-            },
-            action(
-                descriptor = CloseDocument,
-                title = "Close Document",
-                serialize = true,
-            ) {
-                service<Workspace>().closeDocument(it.documentId)
-            },
-            action(
-                descriptor = PinDocument,
-                title = "Pin Document",
-                serialize = true,
-            ) {
-                service<Workspace>().pinDocument(it.documentId)
-            },
-            action(
-                descriptor = UnpinDocument,
-                title = "Unpin Document",
-                serialize = true,
-            ) {
-                service<Workspace>().unpinDocument(it.documentId)
-            },
-            action(
-                descriptor = PromotePreviewDocument,
-                title = "Keep Document Open",
-                serialize = true,
-            ) {
-                service<Workspace>().promotePreviewDocument(it.documentId)
-            },
-            action(
-                instance = CloseActiveDocument,
-                title = "Close Tab",
-                defaultKeybinding = "Ctrl+W",
-                serialize = true,
-            ) {
-                service<Workspace>().closeActiveDocument()
-            },
-            action(
-                instance = ActivateNextDocument,
-                title = "Next Tab",
-                defaultKeybinding = "Ctrl+PageDown",
-                serialize = true,
-            ) {
-                service<Workspace>().activateAdjacentDocument(1)
-            },
-            action(
-                instance = ActivatePreviousDocument,
-                title = "Previous Tab",
-                defaultKeybinding = "Ctrl+PageUp",
-                serialize = true,
-            ) {
-                service<Workspace>().activateAdjacentDocument(-1)
-            },
-            action(
-                descriptor = OpenProject,
-                title = "Open Project",
-            ) {
-                val _ = service<Workspace>().openProject(it.root)
-            },
-            action(
-                descriptor = ActivateProject,
-                title = "Switch Project",
-            ) {
-                service<Workspace>().activateProject(it.projectId)
-            },
-            action(
-                descriptor = CloseProject,
-                title = "Close Project",
-            ) {
-                service<Workspace>().closeProject(it.projectId)
-            },
-            action(
-                descriptor = AddProject,
-                title = "Add Project",
-            ) {
-                service<Workspace>().addProject(it.projectId)
-            },
-            action(
-                descriptor = RemoveProject,
-                title = "Remove Project",
-            ) {
-                service<Workspace>().removeProject(it.projectId)
-            },
+            action<ActivateDocument> { activateDocument(it.documentId) },
+            action<CloseDocument> { closeDocument(it.documentId) },
+            action<PinDocument> { pinDocument(it.documentId) },
+            action<UnpinDocument> { unpinDocument(it.documentId) },
+            action<PromotePreviewDocument> { promotePreviewDocument(it.documentId) },
+            action<CloseActiveDocument> { closeActiveDocument() },
+            action<ActivateNextDocument> { activateAdjacentDocument(1) },
+            action<ActivatePreviousDocument> { activateAdjacentDocument(-1) },
+            action<OpenProject> { openProject(it.root) },
+            action<ActivateProject> { activateProject(it.projectId) },
+            action<CloseProject> { closeProject(it.projectId) },
+            action<AddProject> { addProject(it.projectId) },
+            action<RemoveProject> { removeProject(it.projectId) },
         )
 
-        return disposables.merge()
+        return Disposable { registrations.forEach { it.unregister() } }
     }
 }

@@ -207,7 +207,7 @@ class MainActivity : ComponentActivity() {
                         name = file.name,
                         preview = false
                     )
-                )
+                ).invoke()
             }
             setIntent(Intent())
         }

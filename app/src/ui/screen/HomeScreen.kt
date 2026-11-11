@@ -328,7 +328,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                     }
 
                     KxButton(
-                        onClick = { action(InsertText("\t")) },
+                        onClick = action(InsertText("\t")),
                         variant = KxButtonVariant.Outlined,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     ) {
@@ -562,7 +562,7 @@ private fun TopBarOverflowMenu(
                             trailing = "Ctrl+S",
                             enabled = hasActiveDoc,
                             onClick = {
-                                action(SaveActiveDocument)
+                                action(SaveActiveDocument).invoke()
                                 expanded = false
                             },
                         )
@@ -570,7 +570,7 @@ private fun TopBarOverflowMenu(
                             label = "save all",
                             trailing = "Ctrl+Shift+S",
                             onClick = {
-                                action(SaveAllDocuments)
+                                action(SaveAllDocuments).invoke()
                                 expanded = false
                             },
                         )
@@ -578,7 +578,7 @@ private fun TopBarOverflowMenu(
                             label = "format document",
                             enabled = hasActiveDoc,
                             onClick = {
-                                action(FormatDocument)
+                                action(FormatDocument)()
                                 expanded = false
                             },
                         )
@@ -595,7 +595,7 @@ private fun TopBarOverflowMenu(
                             KxMenuItem(
                                 label = "split editor",
                                 onClick = {
-                                    action(SplitEditor)
+                                    action(SplitEditor)()
                                     expanded = false
                                 },
                             )
@@ -627,7 +627,7 @@ private fun TopBarOverflowMenu(
                             label = "restart server",
                             enabled = hasActiveDoc,
                             onClick = {
-                                action(RestartLanguageServer)
+                                action(RestartLanguageServer)()
                                 expanded = false
                             },
                         )
@@ -882,7 +882,7 @@ private fun EditorDocument(
                 kind == TextChangeKind.UNDO ||
                 kind == TextChangeKind.REDO
             ) {
-                action(PromotePreviewDocument(document.id))
+                action(PromotePreviewDocument(document.id)).invoke()
             }
         }
         onDispose(unsubscribe)
@@ -1378,7 +1378,7 @@ private fun ExplorerPanel(
         }
 
         fun openFile(node: FileNode, preview: Boolean) {
-            action(OpenDocument(location = locationOf(node, workspace), name = node.name, preview = preview))
+            action(OpenDocument(location = locationOf(node, workspace), name = node.name, preview = preview))()
             if (!node.isDirectory) onNavigate()
         }
 
@@ -1461,9 +1461,14 @@ private fun ExplorerPanel(
                             } else {
                                 add(FileTreeMenuItem("open") { openFile(node, preview = false) })
                                 if (tab.preview) {
-                                    add(FileTreeMenuItem("keep open") { action(PromotePreviewDocument(doc.id)) })
+                                    add(
+                                        FileTreeMenuItem(
+                                            "keep open",
+                                            onClick = action(PromotePreviewDocument(doc.id))
+                                        )
+                                    )
                                 }
-                                add(FileTreeMenuItem("close") { action(CloseDocument(doc.id)) })
+                                add(FileTreeMenuItem("close", onClick = action(CloseDocument(doc.id))))
                             }
                             add(FileTreeMenuSeparator)
                             add(FileTreeMenuItem("rename") { renameRequest = node })

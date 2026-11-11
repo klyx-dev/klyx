@@ -1,9 +1,8 @@
 package com.klyx.editor
 
 import com.klyx.core.Disposable
-import com.klyx.core.action.ActionGroup
-import com.klyx.core.action.ActionRegistrar
-import com.klyx.core.merge
+import com.klyx.core.action.action
+import com.klyx.core.asDisposable
 import com.klyx.runtime.action.ClearSearch
 import com.klyx.runtime.action.Copy
 import com.klyx.runtime.action.Cut
@@ -30,7 +29,7 @@ import org.koin.core.annotation.Single
 data class EditorCursor(val line: Int, val column: Int)
 
 @Single
-class EditorStore : ActionGroup {
+class EditorStore {
 
     private val live = mutableMapOf<DocumentId, MutableSet<SweetEditorController>>()
 
@@ -64,9 +63,6 @@ class EditorStore : ActionGroup {
     val activeController: SweetEditorController?
         get() = activeInstance
 
-    context(registrar: ActionRegistrar)
-    fun registerActions() = registrar.register()
-
     fun register(id: DocumentId, controller: SweetEditorController) {
         live.getOrPut(id) { mutableSetOf() }.add(controller)
     }
@@ -86,6 +82,7 @@ class EditorStore : ActionGroup {
 
     operator fun get(id: DocumentId): SweetEditorController =
         live[id]?.firstOrNull() ?: SweetEditorController().also { register(id, it) }
+
     fun controller(id: DocumentId): SweetEditorController = get(id)
 
     fun setActive(id: DocumentId?, controller: SweetEditorController?) {
@@ -144,100 +141,26 @@ class EditorStore : ActionGroup {
         refreshUndoState()
     }
 
-    override fun ActionRegistrar.register(): Disposable {
-        val disposables = listOf(
-            action(
-                instance = Undo,
-                title = "Undo",
-                defaultKeybinding = "Ctrl+Z",
-                serialize = true,
-            ) { undo() },
-            action(
-                instance = Redo,
-                title = "Redo",
-                defaultKeybinding = "Ctrl+Y",
-                serialize = true,
-            ) { redo() },
-            action(
-                descriptor = InsertText,
-                title = "Insert Text",
-                serialize = true,
-            ) { activeInstance?.insertText(text = it.text) },
-            action(
-                instance = SelectAll,
-                title = "Select All",
-                defaultKeybinding = "Ctrl+A",
-                serialize = true,
-            ) { activeInstance?.selectAll() },
-            action(
-                instance = Copy,
-                title = "Copy",
-                defaultKeybinding = "Ctrl+C",
-                serialize = true,
-            ) { activeInstance?.copyToClipboard() },
-            action(
-                instance = Cut,
-                title = "Cut",
-                defaultKeybinding = "Ctrl+X",
-                serialize = true,
-            ) { activeInstance?.cutToClipboard() },
-            action(
-                instance = Paste,
-                title = "Paste",
-                defaultKeybinding = "Ctrl+V",
-                serialize = true,
-            ) { activeInstance?.pasteFromClipboard() },
-            action(
-                instance = FoldAll,
-                title = "Fold All",
-                serialize = true,
-            ) { activeInstance?.foldAll() },
-            action(
-                instance = UnfoldAll,
-                title = "Unfold All",
-                serialize = true,
-            ) { activeInstance?.unfoldAll() },
-            action(
-                descriptor = ToggleFold,
-                title = "Toggle Fold",
-                serialize = true,
-            ) { activeInstance?.toggleFold(it.line) },
-            action(
-                instance = TriggerCompletion,
-                title = "Trigger Completion",
-                defaultKeybinding = "Ctrl+Space",
-                serialize = true,
-            ) { activeInstance?.triggerCompletion() },
-            action(
-                descriptor = InsertSnippet,
-                title = "Insert Snippet",
-                serialize = true,
-            ) { activeInstance?.insertSnippet(it.snippet) },
-            action(
-                descriptor = GotoLine,
-                title = "Go to Line",
-                defaultKeybinding = "Ctrl+G",
-                serialize = true,
-            ) { activeInstance?.gotoPosition(it.line, it.column) },
-            action(
-                instance = FindNext,
-                title = "Find Next",
-                defaultKeybinding = "F3",
-                serialize = true,
-            ) { activeInstance?.findNextSearchMatch() },
-            action(
-                instance = FindPrevious,
-                title = "Find Previous",
-                defaultKeybinding = "Shift+F3",
-                serialize = true,
-            ) { activeInstance?.findPreviousSearchMatch() },
-            action(
-                instance = ClearSearch,
-                title = "Clear Search",
-                defaultKeybinding = "Escape",
-                serialize = true,
-            ) { activeInstance?.clearSearch() },
+    @IgnorableReturnValue
+    fun registerActions(): Disposable {
+        val registrations = listOf(
+            action<Undo> { undo() },
+            action<Redo> { redo() },
+            action<InsertText> { activeInstance?.insertText(text = it.text) },
+            action<SelectAll> { activeInstance?.selectAll() },
+            action<Copy> { activeInstance?.copyToClipboard() },
+            action<Cut> { activeInstance?.cutToClipboard() },
+            action<Paste> { activeInstance?.pasteFromClipboard() },
+            action<FoldAll> { activeInstance?.foldAll() },
+            action<UnfoldAll> { activeInstance?.unfoldAll() },
+            action<ToggleFold> { activeInstance?.toggleFold(it.line) },
+            action<TriggerCompletion> { activeInstance?.triggerCompletion() },
+            action<InsertSnippet> { activeInstance?.insertSnippet(it.snippet) },
+            action<GotoLine> { activeInstance?.gotoPosition(it.line, it.column) },
+            action<FindNext> { activeInstance?.findNextSearchMatch() },
+            action<FindPrevious> { activeInstance?.findPreviousSearchMatch() },
+            action<ClearSearch> { activeInstance?.clearSearch() },
         )
-        return disposables.merge()
+        return registrations.asDisposable()
     }
 }

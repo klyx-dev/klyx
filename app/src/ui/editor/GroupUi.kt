@@ -39,7 +39,6 @@ import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.buildModifier
 import com.composeunstyled.theme.Theme
-import com.klyx.ui.theme.kxSmallShape
 import com.klyx.core.action.action
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -53,11 +52,12 @@ import com.klyx.runtime.workspace.EditorGroup
 import com.klyx.runtime.workspace.EditorGroupId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.WorkspaceDocument
+import com.klyx.ui.components.KxMenuItem
+import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.theme.accent
 import com.klyx.ui.theme.border
 import com.klyx.ui.theme.colors
-import com.klyx.ui.components.KxMenuItem
-import com.klyx.ui.components.KxMenuPanel
+import com.klyx.ui.theme.kxSmallShape
 import com.klyx.ui.theme.label
 import com.klyx.ui.theme.labelSmall
 import com.klyx.ui.theme.success
@@ -119,7 +119,7 @@ fun GroupStrip(
             item(key = "split") {
                 val shape = kxSmallShape()
                 UnstyledButton(
-                    onClick = { action(SplitEditor) },
+                    onClick = action(SplitEditor),
                     indication = LocalIndication.current,
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                     modifier = Modifier
@@ -152,12 +152,12 @@ private fun GroupPill(index: Int, group: EditorGroup, selected: Boolean) {
             KxMenuPanel {
                 KxMenuItem(
                     label = "focus split ${index + 1}",
-                    onClick = { action(ActivateEditorGroup(group.id)) },
+                    onClick = action(ActivateEditorGroup(group.id)),
                 )
                 KxMenuItem(
                     label = "close split ${index + 1}",
                     danger = true,
-                    onClick = { action(CloseEditorGroup(group.id)) },
+                    onClick = action(CloseEditorGroup(group.id)),
                 )
             }
         },
@@ -180,7 +180,7 @@ private fun GroupPill(index: Int, group: EditorGroup, selected: Boolean) {
                         interactionSource = interactionSource,
                         indication = null,
                         role = Role.Tab,
-                        onClick = { action(ActivateEditorGroup(group.id)) },
+                        onClick = action(ActivateEditorGroup(group.id)),
                         onLongClick = { menuOpen = true },
                     )
                     .padding(horizontal = 10.dp, vertical = 5.dp),
@@ -265,14 +265,12 @@ private fun DocumentTab(
             KxMenuPanel {
                 KxMenuItem(
                     label = if (tab.pinned) "unpin" else "pin",
-                    onClick = {
-                        action(if (tab.pinned) UnpinDocument(tab.documentId) else PinDocument(tab.documentId))
-                    },
+                    onClick = action(if (tab.pinned) UnpinDocument(tab.documentId) else PinDocument(tab.documentId)),
                 )
                 KxMenuItem(
                     label = "close",
                     danger = true,
-                    onClick = { action(CloseDocument(tab.documentId)) },
+                    onClick = action(CloseDocument(tab.documentId)),
                 )
             }
         },
@@ -289,8 +287,8 @@ private fun DocumentTab(
                         interactionSource = interactionSource,
                         indication = null,
                         role = Role.Tab,
-                        onClick = { action(ActivateDocument(tab.documentId)) },
-                        onDoubleClick = { if (tab.preview) action(PromotePreviewDocument(tab.documentId)) },
+                        onClick = action(ActivateDocument(tab.documentId)),
+                        onDoubleClick = if (tab.preview) action(PromotePreviewDocument(tab.documentId)) else null,
                         onLongClick = { menuOpen = true },
                     )
                     .pointerHoverIcon(PointerIcon.Default)
@@ -321,7 +319,7 @@ private fun DocumentTab(
                         color = Theme[colors][textPrimary],
                         modifier = Modifier
                             .clip(shape)
-                            .clickable { action(CloseDocument(tab.documentId)) }
+                            .clickable(onClick = action(CloseDocument(tab.documentId)))
                             .padding(horizontal = 2.dp),
                     )
                 }
