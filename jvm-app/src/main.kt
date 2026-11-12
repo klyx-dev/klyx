@@ -1,11 +1,11 @@
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import com.klyx.Screen
-import com.klyx.di.initKoin
+import com.klyx.di.initApp
 import io.github.vinceglb.filekit.FileKit
 
 fun main() {
-    initKoin {
+    initApp {
         printLogger()
     }
 

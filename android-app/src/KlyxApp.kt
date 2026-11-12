@@ -2,7 +2,7 @@ package com.klyx
 
 import android.app.Application
 import com.klyx.core.Log
-import com.klyx.di.initKoin
+import com.klyx.di.initApp
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 
@@ -18,7 +18,7 @@ class KlyxApp : Application() {
         CrashReporter.install(this)
         CrashReporter.capturePreviousExit(this)
 
-        initKoin {
+        initApp {
             androidLogger()
             androidContext(this@KlyxApp)
         }

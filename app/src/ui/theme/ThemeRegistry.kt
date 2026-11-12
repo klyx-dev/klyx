@@ -9,17 +9,19 @@ object ThemeRegistry {
     private var themeNames: List<String> = emptyList()
     private val cache = mutableMapOf<String, KxTheme>()
 
-    suspend fun init() = withContext(Dispatchers.IO) {
-        if (themeNames.isNotEmpty()) return@withContext
-        themeNames = Res.readBytes("files/themes/index.txt")
-            .decodeToString()
-            .lineSequence()
-            .map(String::trim)
-            .filter(String::isNotEmpty)
-            .toList()
-    }
-
     val availableThemeNames: List<String> get() = themeNames
+
+    suspend fun initialize() {
+        withContext(Dispatchers.IO) {
+            if (themeNames.isNotEmpty()) return@withContext
+            themeNames = Res.readBytes("files/themes/index.txt")
+                .decodeToString()
+                .lineSequence()
+                .map(String::trim)
+                .filter(String::isNotEmpty)
+                .toList()
+        }
+    }
 
     suspend fun getTheme(name: String): KxTheme? = withContext(Dispatchers.IO) {
         if (name !in themeNames) return@withContext null

@@ -19,6 +19,12 @@ object KlyxLog {
     }
 
     fun log(level: String, tag: String, message: String, throwable: Throwable? = null) {
+        when (level) {
+            "D" -> Log.d(tag, message, throwable)
+            "I" -> Log.i(tag, message, throwable)
+            "W" -> Log.w(tag, message, throwable)
+            "E" -> Log.e(tag, message, throwable)
+        }
         val dir = logDir ?: return
 
         val timestamp = SimpleDateFormat("MM-dd HH:mm:ss.SSS", Locale.US).format(Date())

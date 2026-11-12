@@ -6,6 +6,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.klyx.core.action.ActionDispatcher
+import com.klyx.core.init.InitializerManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,6 +34,8 @@ class App internal constructor(
 
     /** Scope for app-level tasks that must not run on the main thread. */
     val backgroundScope = BackgroundScope()
+
+    lateinit var initializer: InitializerManager
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

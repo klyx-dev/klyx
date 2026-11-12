@@ -1,7 +1,7 @@
 @file:Suppress("unused")
 
-import com.klyx.di.initKoin
+import com.klyx.di.initApp
 
 fun initKoinIos() {
-    initKoin()
+    initApp()
 }
