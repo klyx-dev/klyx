@@ -10,6 +10,7 @@ import com.klyx.editor.EditorStore
 import com.klyx.lsp.types.fold
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
+import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.ProjectId
@@ -46,7 +47,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -66,6 +69,7 @@ data class HoverState(
 class EditorLsp(
     val workspace: Workspace,
     val editorStore: EditorStore,
+    private val settingsStore: SettingsStore,
 ) : AutoCloseable {
 
     private class EditorState {
@@ -368,7 +372,7 @@ class EditorLsp(
                 delay(500.milliseconds)
                 val latestText = controller.getDocument().text
                 val liveSession = sessionForDocument(document)
-                if (workspace.autoSave.value) {
+                if (settingsStore.settings.value.autoSave) {
                     try {
                         workspace.writeText(document.id, latestText)
                         notifyDocumentSaved(document, latestText)
@@ -788,7 +792,7 @@ class EditorLsp(
         controller: SweetEditorController,
         debounce: Duration = 0.milliseconds,
     ) {
-        if (!workspace.showInlayHints.value || session.state.value != LspSessionState.Running) {
+        if (!settingsStore.settings.value.showInlayHints || session.state.value != LspSessionState.Running) {
             inlayHintJobs.remove(uri)?.cancel()
             inlayHintGeneration.remove(uri)
             scope.launch {
@@ -830,7 +834,7 @@ class EditorLsp(
 
         val currentText = withContext(Dispatchers.Main) { controller.getDocument().text }
         if (currentText != fetchedText) return
-        if (!workspace.showInlayHints.value) return
+        if (!settingsStore.settings.value.showInlayHints) return
 
         val currentLines = currentText.lines()
         val hintsByLine = mutableMapOf<Int, MutableList<io.github.lumkit.sweeteditor.InlayHint>>()
@@ -1296,42 +1300,49 @@ class EditorLsp(
 
     private fun observeInlayHintsSetting() {
         scope.launch {
-            workspace.showInlayHints.collect { show ->
-                if (!show) {
-                    inlayHintJobs.values.forEach { it.cancel() }
-                    inlayHintJobs.clear()
-                    inlayHintGeneration.clear()
-                    withContext(Dispatchers.Main) {
-                        editorStore.forEach { _, controller ->
-                            controller.clearInlayHints()
-                            controller.requestDecorationRefresh()
+            settingsStore.settings
+                .map { it.showInlayHints }
+                .distinctUntilChanged()
+                .collect { show ->
+                    if (!show) {
+                        inlayHintJobs.values.forEach { it.cancel() }
+                        inlayHintJobs.clear()
+                        inlayHintGeneration.clear()
+                        withContext(Dispatchers.Main) {
+                            editorStore.forEach { _, controller ->
+                                controller.clearInlayHints()
+                                controller.requestDecorationRefresh()
+                            }
                         }
                     }
                 }
-            }
         }
     }
 
     private fun observeCustomServers() {
         scope.launch {
-            workspace.customLspServers.collect { servers ->
-                LspServerRegistry.setCustomServers(servers.map { it.toConfig() })
-            }
+            settingsStore.settings
+                .map { it.customLspServers }
+                .distinctUntilChanged()
+                .collect { servers -> LspServerRegistry.setCustomServers(servers.map { it.toConfig() }) }
         }
     }
 
     private fun observeServerAvailability() {
         scope.launch {
-            workspace.customLspServers.collect {
-                refreshServerAvailability()
-            }
+            settingsStore.settings
+                .map { it.customLspServers }
+                .distinctUntilChanged()
+                .collect {
+                    refreshServerAvailability()
+                }
         }
     }
 
     fun refreshServerAvailability() {
         scope.launch {
             if (currentOperatingSystem != OperatingSystem.Android) return@launch
-            val customs = workspace.customLspServers.value.map { it.toConfig() }
+            val customs = settingsStore.settings.value.customLspServers.map { it.toConfig() }
             val commands = (LspServerRegistry.all() + customs).map { it.command }.distinct()
             val result = runCatching {
                 withTimeoutOrNull(15.seconds) { TermuxBridge.probeTermuxBinaries(commands) }

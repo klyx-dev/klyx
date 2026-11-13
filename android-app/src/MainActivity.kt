@@ -200,6 +200,7 @@ class MainActivity : ComponentActivity() {
 
         if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_EDIT) {
             if (uri != null) {
+                persistUriPermissionIfAvailable(intent, uri)
                 val file = PlatformFile(uri)
                 action(
                     OpenDocument(
@@ -211,5 +212,17 @@ class MainActivity : ComponentActivity() {
             }
             setIntent(Intent())
         }
+    }
+
+    private fun persistUriPermissionIfAvailable(intent: Intent, uri: Uri) {
+        if (uri.scheme != "content") return
+        if ((intent.flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) == 0) return
+
+        val accessFlags = intent.flags and
+            (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        if (accessFlags == 0) return
+
+        runCatching { contentResolver.takePersistableUriPermission(uri, accessFlags) }
+            .onFailure { Log.w("App", "Could not retain access to opened URI $uri", it) }
     }
 }

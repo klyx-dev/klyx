@@ -2,76 +2,31 @@
 
 package com.klyx.runtime.workspace
 
-import androidx.datastore.core.DataStore
-import com.klyx.core.Disposable
 import com.klyx.core.Log
-import com.klyx.core.action.action
-import com.klyx.runtime.Platform
-import com.klyx.runtime.action.ActivateDocument
-import com.klyx.runtime.action.ActivateEditorGroup
-import com.klyx.runtime.action.ActivateNextDocument
-import com.klyx.runtime.action.ActivatePreviousDocument
-import com.klyx.runtime.action.ActivateProject
-import com.klyx.runtime.action.AddProject
-import com.klyx.runtime.action.CloseActiveDocument
-import com.klyx.runtime.action.CloseDocument
-import com.klyx.runtime.action.CloseEditorGroup
-import com.klyx.runtime.action.CloseProject
-import com.klyx.runtime.action.OpenDocument
-import com.klyx.runtime.action.OpenProject
-import com.klyx.runtime.action.PinDocument
-import com.klyx.runtime.action.PromotePreviewDocument
-import com.klyx.runtime.action.RemoveProject
-import com.klyx.runtime.action.SplitEditor
-import com.klyx.runtime.action.UnpinDocument
-import com.klyx.runtime.currentPlatform
-import com.klyx.runtime.settings.CustomLspServer
-import com.klyx.runtime.settings.Settings
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.createDirectories
 import io.github.vinceglb.filekit.exists
+import io.github.vinceglb.filekit.isDirectory
 import io.github.vinceglb.filekit.parent
 import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.readString
 import io.github.vinceglb.filekit.resolve
 import io.github.vinceglb.filekit.writeString
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @Single
-class Workspace(private val settingsStore: DataStore<Settings>? = null) {
-
-    private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-    init {
-        settingsStore?.let { store ->
-            settingsScope.launch {
-                store.data.collect { settings ->
-                    tabScope.value = if (settings.showAllProjectsTabs) {
-                        EditorTabScope.AllProjects
-                    } else {
-                        EditorTabScope.CurrentProject
-                    }
-                    showUndoRedoButtons.value = settings.showUndoRedoButtons
-                    showInlayHints.value = settings.showInlayHints
-                    autoSave.value = settings.autoSave
-                    roundedUi.value = settings.roundedUi
-                    cornerRadius.value = settings.cornerRadius
-                    customLspServers.value = settings.customLspServers
-                }
-            }
-        }
-    }
+class Workspace {
 
     val documents: StateFlow<Map<DocumentId, Document>>
         field = MutableStateFlow(emptyMap())
@@ -91,78 +46,194 @@ class Workspace(private val settingsStore: DataStore<Settings>? = null) {
     val activeEditorGroupId: StateFlow<EditorGroupId?>
         field = MutableStateFlow(null)
 
-    val tabScope: StateFlow<EditorTabScope>
-        field = MutableStateFlow(EditorTabScope.CurrentProject)
-
     private var nextGroupNumber = AtomicInt(1)
 
-    fun setTabScope(scope: EditorTabScope) {
-        tabScope.update { scope }
-        persistSettings { it.copy(showAllProjectsTabs = scope == EditorTabScope.AllProjects) }
+    internal fun observeSessionChanges(): Flow<WorkspaceSessionSnapshot> {
+        val workspaceChanges = combine(
+            projects,
+            projectIds,
+            activeProjectId,
+            editorGroups,
+            activeEditorGroupId,
+        ) { _, _, _, _, _ -> Unit }
+        return workspaceChanges.combine(documents) { _, _ -> createSessionSnapshot() }
+            .distinctUntilChanged()
     }
 
-    val showUndoRedoButtons: StateFlow<Boolean>
-        field = MutableStateFlow(currentPlatform != Platform.JVM)
+    internal fun createSessionSnapshot(): WorkspaceSessionSnapshot {
+        val projectsById = projects.value
+        val groupList = editorGroups.value
+        val roots = linkedSetOf<String>()
+        projectIds.value.forEach { id -> projectsById[id]?.let { roots += it.root.path } }
 
-    fun setShowUndoRedoButtons(show: Boolean) {
-        showUndoRedoButtons.update { show }
-        persistSettings { it.copy(showUndoRedoButtons = show) }
-    }
+        val sessionGroups = groupList.map { group ->
+            var tabIndex = 0
+            val tabIndexes = mutableMapOf<DocumentId, Int>()
+            val tabs = group.documents.mapNotNull { workspaceDocument ->
+                val document = documents.value[workspaceDocument.documentId] ?: return@mapNotNull null
+                val tab = when (val location = document.location) {
+                    is DocumentLocation.Project -> {
+                        val root = projectsById[location.projectId]?.root?.path ?: return@mapNotNull null
+                        roots += root
+                        SavedTab(
+                            projectRoot = root,
+                            path = location.relativePath.toString(),
+                            name = document.name,
+                            pinned = workspaceDocument.pinned,
+                            preview = workspaceDocument.preview,
+                        )
+                    }
 
-    val showInlayHints: StateFlow<Boolean>
-        field = MutableStateFlow(true)
-
-    fun setShowInlayHints(show: Boolean) {
-        showInlayHints.update { show }
-        persistSettings { it.copy(showInlayHints = show) }
-    }
-
-    val autoSave: StateFlow<Boolean>
-        field = MutableStateFlow(false)
-
-    fun setAutoSave(save: Boolean) {
-        autoSave.update { save }
-        persistSettings { it.copy(autoSave = save) }
-    }
-
-    val roundedUi: StateFlow<Boolean>
-        field = MutableStateFlow(false)
-
-    fun setRoundedUi(rounded: Boolean) {
-        roundedUi.update { rounded }
-        persistSettings { it.copy(roundedUi = rounded) }
-    }
-
-    val cornerRadius: StateFlow<Int>
-        field = MutableStateFlow(8)
-
-    fun setCornerRadius(radius: Int) {
-        val clamped = radius.coerceIn(0, 32)
-        cornerRadius.update { clamped }
-        persistSettings { it.copy(cornerRadius = clamped) }
-    }
-
-    val customLspServers: StateFlow<List<CustomLspServer>>
-        field = MutableStateFlow(emptyList())
-
-    fun addCustomLspServer(server: CustomLspServer) {
-        customLspServers.update { current ->
-            (current.filterNot { it.languageId == server.languageId } + server)
-                .sortedBy { it.languageId }
+                    is DocumentLocation.Platform -> SavedTab(
+                        projectRoot = null,
+                        path = location.file.path,
+                        name = document.name,
+                        pinned = workspaceDocument.pinned,
+                        preview = workspaceDocument.preview,
+                    )
+                }
+                tabIndexes[document.id] = tabIndex++
+                tab
+            }
+            val activeTabIndex = group.activeDocumentId?.let(tabIndexes::get)
+            SavedEditorGroup(tabs = tabs, activeTabIndex = activeTabIndex)
         }
-        persistSettings { it.copy(customLspServers = customLspServers.value) }
-    }
 
-    fun removeCustomLspServer(languageId: String) {
-        customLspServers.update { current -> current.filterNot { it.languageId == languageId } }
-        persistSettings { it.copy(customLspServers = customLspServers.value) }
-    }
-
-    private fun persistSettings(transform: (Settings) -> Settings) {
-        settingsStore?.let { store ->
-            settingsScope.launch { store.updateData(transform) }
+        val activeProjectRoot = activeProjectId.value?.let { projectsById[it]?.root?.path }
+        val activeGroupIndex = activeEditorGroupId.value?.let { id ->
+            groupList.indexOfFirst { it.id == id }.takeIf { it >= 0 }
         }
+        return WorkspaceSessionSnapshot(
+            projectRoots = roots.toList(),
+            activeProjectRoot = activeProjectRoot,
+            groups = sessionGroups,
+            activeGroupIndex = activeGroupIndex,
+        )
     }
+
+    internal fun restoreSession(snapshot: WorkspaceSessionSnapshot) {
+        val focusBeforeRestore = currentFocus()
+        val restoredProjects = restoreProjects(snapshot.projectRoots)
+        val restoredGroups = snapshot.groups.map { restoreGroup(it, restoredProjects) }
+
+        restoreFocus(snapshot, restoredProjects, restoredGroups, focusBeforeRestore)
+    }
+
+    private fun currentFocus() = WorkspaceFocus(
+        hasOpenTabs = editorGroups.value.any { it.documents.isNotEmpty() },
+        projectId = activeProjectId.value,
+        groupId = activeEditorGroupId.value,
+        documentId = activeGroupOrNull()?.activeDocumentId,
+    )
+
+    private fun restoreProjects(rootPaths: List<String>): Map<String, ProjectId> {
+        val restoredProjects = linkedMapOf<String, ProjectId>()
+        rootPaths.forEach { rootPath ->
+            try {
+                restoreProject(rootPath)?.let { restoredProjects[rootPath] = it }
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("Workspace", "Skipping unavailable project $rootPath", error)
+            }
+        }
+        return restoredProjects
+    }
+
+    private fun restoreProject(rootPath: String): ProjectId? {
+        val root = PlatformFile(rootPath)
+        if (!root.exists() || !root.isDirectory()) return null
+
+        val projectId = ProjectId(root.toString())
+        if (projectId in projects.value) {
+            addProject(projectId)
+        } else {
+            openProject(root)
+        }
+        return projectId
+    }
+
+    private fun restoreGroup(
+        savedGroup: SavedEditorGroup,
+        restoredProjects: Map<String, ProjectId>,
+    ): EditorGroupId {
+        val groupId = createEditorGroup()
+        val restoredTabs = mutableMapOf<Int, DocumentId>()
+
+        savedGroup.tabs.forEachIndexed { index, tab ->
+            try {
+                restoreTab(groupId, tab, restoredProjects)?.let { restoredTabs[index] = it }
+            } catch (error: kotlinx.coroutines.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                Log.w("Workspace", "Skipping unavailable document ${tab.path}", error)
+            }
+        }
+
+        val activeDocument = savedGroup.activeTabIndex?.let(restoredTabs::get)
+            ?: restoredTabs.values.firstOrNull()
+        activeDocument?.let { activateDocument(groupId, it) }
+        return groupId
+    }
+
+    private fun restoreTab(
+        groupId: EditorGroupId,
+        savedTab: SavedTab,
+        restoredProjects: Map<String, ProjectId>,
+    ): DocumentId? {
+        val location = savedTab.toLocation(restoredProjects) ?: return null
+        val file = fileFor(location) ?: return null
+        if (!file.exists() || file.isDirectory()) return null
+
+        val document = open(location, savedTab.name)
+        openDocument(groupId, document.id, savedTab.preview)
+        if (savedTab.pinned) pinDocument(groupId, document.id)
+        return document.id
+    }
+
+    private fun SavedTab.toLocation(projectsByRoot: Map<String, ProjectId>): DocumentLocation? {
+        if (projectRoot == null) return DocumentLocation.Platform(PlatformFile(path))
+
+        val projectId = projectsByRoot[projectRoot] ?: return null
+        return DocumentLocation.Project(projectId, kotlinx.io.files.Path(path))
+    }
+
+    private fun fileFor(location: DocumentLocation): PlatformFile? = when (location) {
+        is DocumentLocation.Platform -> location.file
+        is DocumentLocation.Project -> projects.value[location.projectId]
+            ?.root?.resolve(location.relativePath.toString())
+    }
+
+    private fun restoreFocus(
+        snapshot: WorkspaceSessionSnapshot,
+        restoredProjects: Map<String, ProjectId>,
+        restoredGroups: List<EditorGroupId>,
+        previous: WorkspaceFocus,
+    ) {
+        val projectToActivate = previous.projectId?.takeIf { it in projectIds.value }
+            ?: snapshot.activeProjectRoot
+                ?.let(restoredProjects::get)
+                ?.takeIf { it in projectIds.value }
+        activeProjectId.update { projectToActivate }
+
+        val groupToActivate = if (previous.hasOpenTabs) {
+            previous.groupId?.takeIf { id -> editorGroups.value.any { it.id == id } }
+        } else {
+            snapshot.activeGroupIndex?.let(restoredGroups::getOrNull)
+        }
+        groupToActivate?.let { activateEditorGroup(it) }
+
+        previous.documentId
+            ?.takeIf { previous.hasOpenTabs && isDocumentOpen(it) }
+            ?.let { activateDocument(it) }
+    }
+
+    private data class WorkspaceFocus(
+        val hasOpenTabs: Boolean,
+        val projectId: ProjectId?,
+        val groupId: EditorGroupId?,
+        val documentId: DocumentId?,
+    )
 
     @IgnorableReturnValue
     fun openProject(root: PlatformFile): Project {
@@ -244,7 +315,10 @@ class Workspace(private val settingsStore: DataStore<Settings>? = null) {
     }
 
     fun createEditorGroup(): EditorGroupId {
-        val id = EditorGroupId("group-${nextGroupNumber.fetchAndAdd(1)}")
+        var id: EditorGroupId
+        do {
+            id = EditorGroupId("group-${nextGroupNumber.fetchAndAdd(1)}")
+        } while (editorGroups.value.any { it.id == id })
         editorGroups.update { it + EditorGroup(id) }
         activeEditorGroupId.update { id }
         return id
@@ -273,11 +347,16 @@ class Workspace(private val settingsStore: DataStore<Settings>? = null) {
         activeGroupOrNull() ?: error("Workspace has no active editor group")
 
     @IgnorableReturnValue
-    fun openDocument(location: DocumentLocation, name: String, preview: Boolean = false): DocumentId {
+    fun openDocument(
+        location: DocumentLocation,
+        name: String,
+        preview: Boolean = false,
+        tabScope: EditorTabScope = EditorTabScope.CurrentProject,
+    ): DocumentId {
         Log.i("Workspace", "openDocument $name preview=$preview")
         val document = open(location, name)
         val groupId = activeGroupOrNull()?.id ?: createEditorGroup()
-        if (preview) protectHiddenPreview(groupId)
+        if (preview) protectHiddenPreview(groupId, tabScope)
         openDocument(groupId, document.id, preview)
         return document.id
     }
@@ -308,18 +387,21 @@ class Workspace(private val settingsStore: DataStore<Settings>? = null) {
         pruneDocuments()
     }
 
-    fun closeActiveDocument() {
+    fun closeActiveDocument(tabScope: EditorTabScope = EditorTabScope.CurrentProject) {
         val group = activeGroup()
-        val visible = visibleTabs(group)
+        val visible = visibleTabs(group, tabScope)
         val id = group.activeDocumentId?.takeIf { selected -> visible.any { it.documentId == selected } }
             ?: visible.firstOrNull()?.documentId
             ?: return
         closeDocument(id)
     }
 
-    fun activateAdjacentDocument(delta: Int) {
+    fun activateAdjacentDocument(
+        delta: Int,
+        tabScope: EditorTabScope = EditorTabScope.CurrentProject,
+    ) {
         val group = activeGroup()
-        val tabs = visibleTabs(group)
+        val tabs = visibleTabs(group, tabScope)
         if (tabs.size < 2) return
         val current = group.activeDocumentId?.let { id -> tabs.indexOfFirst { it.documentId == id } } ?: -1
         val index = if (current < 0) 0 else (current + delta + tabs.size) % tabs.size
@@ -373,26 +455,25 @@ class Workspace(private val settingsStore: DataStore<Settings>? = null) {
 
     fun isAnyDocumentOpen(): Boolean = editorGroups.value.any { it.documents.isNotEmpty() }
 
-    fun visibleTabs(group: EditorGroup): List<WorkspaceDocument> {
-        if (tabScope.value == EditorTabScope.AllProjects) return group.documents
+    fun visibleTabs(group: EditorGroup, tabScope: EditorTabScope): List<WorkspaceDocument> {
+        if (tabScope == EditorTabScope.AllProjects) return group.documents
         val active = activeProjectId.value
         return group.documents.filter { tab -> document(tab.documentId)?.isVisibleIn(active) ?: true }
     }
 
-    fun hasVisibleTabs(): Boolean {
+    fun hasVisibleTabs(tabScope: EditorTabScope): Boolean {
         val docs = documents.value
         val active = activeProjectId.value
-        val scope = tabScope.value
         return editorGroups.value.any { group ->
             group.documents.any { tab ->
-                if (scope == EditorTabScope.AllProjects) true
+                if (tabScope == EditorTabScope.AllProjects) true
                 else docs[tab.documentId]?.isVisibleIn(active) ?: true
             }
         }
     }
 
-    private fun protectHiddenPreview(groupId: EditorGroupId) {
-        if (tabScope.value != EditorTabScope.CurrentProject) return
+    private fun protectHiddenPreview(groupId: EditorGroupId, tabScope: EditorTabScope) {
+        if (tabScope != EditorTabScope.CurrentProject) return
         val active = activeProjectId.value
         editorGroups.value.firstOrNull { it.id == groupId }
             ?.documents?.firstOrNull { it.preview && !it.pinned }
@@ -471,30 +552,4 @@ class Workspace(private val settingsStore: DataStore<Settings>? = null) {
         return copy(documents = documents.map { if (it.documentId == documentId) next else it })
     }
 
-    @IgnorableReturnValue
-    fun registerActions(): Disposable {
-        val registrations = listOf(
-            action<SplitEditor> { splitEditor() },
-            action<ActivateEditorGroup> { activateEditorGroup(it.groupId) },
-            action<CloseEditorGroup> { closeEditorGroup(it.groupId) },
-            action<OpenDocument> { (location, name, preview) ->
-                openDocument(location, name, preview)
-            },
-            action<ActivateDocument> { activateDocument(it.documentId) },
-            action<CloseDocument> { closeDocument(it.documentId) },
-            action<PinDocument> { pinDocument(it.documentId) },
-            action<UnpinDocument> { unpinDocument(it.documentId) },
-            action<PromotePreviewDocument> { promotePreviewDocument(it.documentId) },
-            action<CloseActiveDocument> { closeActiveDocument() },
-            action<ActivateNextDocument> { activateAdjacentDocument(1) },
-            action<ActivatePreviousDocument> { activateAdjacentDocument(-1) },
-            action<OpenProject> { openProject(it.root) },
-            action<ActivateProject> { activateProject(it.projectId) },
-            action<CloseProject> { closeProject(it.projectId) },
-            action<AddProject> { addProject(it.projectId) },
-            action<RemoveProject> { removeProject(it.projectId) },
-        )
-
-        return Disposable { registrations.forEach { it.unregister() } }
-    }
 }

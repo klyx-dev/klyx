@@ -17,7 +17,6 @@ import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
 import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.settings.resolveActiveThemeName
-import com.klyx.runtime.workspace.Workspace
 import com.klyx.ui.provider.ProvideCompositionLocals
 import com.klyx.ui.screen.HomeScreen
 import com.klyx.ui.screen.settings.SettingsScreen
@@ -30,14 +29,11 @@ import org.koin.compose.koinInject
 
 @Composable
 fun Screen() {
-    val workspace: Workspace = koinInject()
     val settingsStore: SettingsStore = koinInject()
 
     val settings by settingsStore.settings.collectAsState()
 
-    val roundedUi by workspace.roundedUi.collectAsState()
-    val cornerRadius by workspace.cornerRadius.collectAsState()
-    val effectiveCornerRadius = if (roundedUi) cornerRadius.dp else 0.dp
+    val effectiveCornerRadius = if (settings.roundedUi) settings.cornerRadius.dp else 0.dp
 
     val resolvedThemeName = resolveActiveThemeName(
         themeMode = settings.themeMode,

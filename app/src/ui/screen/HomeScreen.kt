@@ -97,6 +97,7 @@ import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.isVisibleIn
+import com.klyx.runtime.settings.SettingsStore
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonDefaultMinHeight
 import com.klyx.ui.components.KxButtonVariant
@@ -194,6 +195,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val navigator = LocalNavigator.current
 
     val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
+    val settings by settingsStore.settings.collectAsState()
     val editors: EditorStore = koinInject()
     val lsp: EditorLsp = koinInject()
 
@@ -253,7 +256,7 @@ fun HomeScreen(modifier: Modifier = Modifier) {
 //    }
 
     val activeProjectId by workspace.activeProjectId.collectAsState()
-    val tabScope by workspace.tabScope.collectAsState()
+    val tabScope = if (settings.showAllProjectsTabs) EditorTabScope.AllProjects else EditorTabScope.CurrentProject
 
     (val groups = first, val activeId = second) = rememberEditorGroups()
 
@@ -456,9 +459,10 @@ private fun ColumnScope.TopBar(
     onShowLspStatus: () -> Unit = {},
 ) {
     val editors: EditorStore = koinInject()
-    val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
     val hasVisibleFiles = rememberHasVisibleFiles()
-    val showUndoRedo by workspace.showUndoRedoButtons.collectAsState()
+    val settings by settingsStore.settings.collectAsState()
+    val showUndoRedo = settings.showUndoRedoButtons
     val canUndo by editors.canUndo.collectAsState()
     val canRedo by editors.canRedo.collectAsState()
 
@@ -757,7 +761,9 @@ private fun EditorPane(
     val documents by workspace.documents.collectAsState()
     val activeProjectId by workspace.activeProjectId.collectAsState()
     val activeEditorGroupId by workspace.activeEditorGroupId.collectAsState()
-    val tabScope by workspace.tabScope.collectAsState()
+    val settingsStore: SettingsStore = koinInject()
+    val settings by settingsStore.settings.collectAsState()
+    val tabScope = if (settings.showAllProjectsTabs) EditorTabScope.AllProjects else EditorTabScope.CurrentProject
 
     val focused = group.id == activeEditorGroupId
     val openedDocuments = group.documents.mapNotNull { documents[it.documentId] }

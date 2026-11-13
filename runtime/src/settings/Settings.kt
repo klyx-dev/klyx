@@ -27,6 +27,7 @@ data class Settings(
     val lightThemeName: String = "Catppuccin Latte",
     val themeMode: ThemeMode = ThemeMode.System,
     val customLspServers: List<CustomLspServer> = emptyList(),
+    val restorePreviousSession: Boolean = true,
 )
 
 /**

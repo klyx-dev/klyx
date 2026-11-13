@@ -46,7 +46,7 @@ import com.klyx.lsp.resolveCommandPath
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
 import com.klyx.runtime.settings.CustomLspServer
-import com.klyx.runtime.workspace.Workspace
+import com.klyx.runtime.settings.SettingsStore
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.components.KxDialog
@@ -349,10 +349,11 @@ private fun SmallButton(
 
 @Composable
 fun LspServersSection(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
     val lsp: EditorLsp = koinInject()
     val scope = rememberCoroutineScope()
-    val customs by workspace.customLspServers.collectAsState()
+    val settings by settingsStore.settings.collectAsState()
+    val customs = settings.customLspServers
     val sessions by lsp.activeSessions.collectAsState()
     val availability by lsp.termuxAvailability.collectAsState()
     var check by remember { mutableStateOf(0) }
@@ -378,6 +379,23 @@ fun LspServersSection(modifier: Modifier = Modifier) {
         scope.launch {
             val _ = runCatching { lsp.restartSession(languageId) }
             check++
+        }
+    }
+
+    fun removeCustomServer(languageId: String) {
+        scope.launch {
+            settingsStore.update { current ->
+                current.copy(customLspServers = current.customLspServers.filterNot { it.languageId == languageId })
+            }
+        }
+    }
+
+    fun saveCustomServer(server: CustomLspServer) {
+        scope.launch {
+            settingsStore.update { current ->
+                val updated = current.customLspServers.filterNot { it.languageId == server.languageId } + server
+                current.copy(customLspServers = updated.sortedBy { it.languageId })
+            }
         }
     }
 
@@ -429,7 +447,7 @@ fun LspServersSection(modifier: Modifier = Modifier) {
                 },
                 onEdit = { editing = custom; dialogOpen = true },
                 onDelete = {
-                    workspace.removeCustomLspServer(server.languageId)
+                    removeCustomServer(server.languageId)
                     restart(server.languageId)
                 },
             )
@@ -484,7 +502,7 @@ fun LspServersSection(modifier: Modifier = Modifier) {
             initial = editing,
             onDismiss = { dialogOpen = false },
             onSave = { server ->
-                workspace.addCustomLspServer(server)
+                saveCustomServer(server)
                 dialogOpen = false
                 restart(server.languageId)
             },

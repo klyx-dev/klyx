@@ -5,7 +5,8 @@ import com.klyx.core.App
 import com.klyx.core.init.InitializerManager
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.LspActions
-import com.klyx.runtime.workspace.Workspace
+import com.klyx.runtime.workspace.WorkspaceActionHandlers
+import com.klyx.runtime.workspace.WorkspaceSessionManager
 import com.klyx.ui.theme.ThemeRegistry
 import kotlinx.coroutines.launch
 import org.koin.core.KoinApplication
@@ -23,8 +24,9 @@ fun initApp(config: KoinAppDeclaration? = null): KoinApplication {
     val koin = koinApplication.koin
     val app = App.init(koinApplication)
 
-    koin.get<Workspace>().registerActions()
+    koin.get<WorkspaceActionHandlers>().register()
     koin.get<EditorStore>().registerActions()
+    koin.get<WorkspaceSessionManager>().start()
     koin.get<LspActions>().registerActions()
 
     val initializerManager = InitializerManager(

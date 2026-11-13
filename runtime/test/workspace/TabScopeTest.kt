@@ -1,5 +1,6 @@
 package com.klyx.runtime.workspace
 
+import com.klyx.runtime.settings.Settings
 import io.github.vinceglb.filekit.PlatformFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
@@ -15,16 +16,9 @@ class TabScopeTest : FunSpec({
         location = DocumentLocation.Project(project, Path(name)),
     )
 
-    test("workspace defaults to the current project only") {
-        Workspace().tabScope.value shouldBe EditorTabScope.CurrentProject
-    }
-
-    test("workspace remembers the chosen scope") {
-        val workspace = Workspace()
-        workspace.setTabScope(EditorTabScope.AllProjects)
-        workspace.tabScope.value shouldBe EditorTabScope.AllProjects
-        workspace.setTabScope(EditorTabScope.CurrentProject)
-        workspace.tabScope.value shouldBe EditorTabScope.CurrentProject
+    test("tab visibility preference is stored in settings") {
+        Settings().showAllProjectsTabs shouldBe false
+        Settings(showAllProjectsTabs = true).showAllProjectsTabs shouldBe true
     }
 
     test("project documents are visible only in their own project") {

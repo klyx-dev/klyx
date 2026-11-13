@@ -1,5 +1,6 @@
 package com.klyx.runtime.workspace
 
+import com.klyx.runtime.settings.Settings
 import io.github.vinceglb.filekit.PlatformFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.booleans.shouldBeFalse
@@ -130,23 +131,15 @@ class WorkspaceTest : FunSpec({
         w.documents.value.size shouldBe 1
     }
 
-    test("roundedUi defaults to false and can be updated") {
-        val w = workspace()
-        w.roundedUi.value.shouldBeFalse()
-        w.setRoundedUi(true)
-        w.roundedUi.value.shouldBeTrue()
-        w.setRoundedUi(false)
-        w.roundedUi.value.shouldBeFalse()
+    test("rounded UI preference lives in settings") {
+        val settings = Settings()
+        settings.roundedUi shouldBe false
+        settings.copy(roundedUi = true).roundedUi shouldBe true
     }
 
-    test("cornerRadius defaults to 8 and is clamped between 0 and 32") {
-        val w = workspace()
-        w.cornerRadius.value shouldBe 8
-        w.setCornerRadius(16)
-        w.cornerRadius.value shouldBe 16
-        w.setCornerRadius(-5)
-        w.cornerRadius.value shouldBe 0
-        w.setCornerRadius(40)
-        w.cornerRadius.value shouldBe 32
+    test("corner radius preference lives in settings") {
+        val settings = Settings()
+        settings.cornerRadius shouldBe 8
+        settings.copy(cornerRadius = 16).cornerRadius shouldBe 16
     }
 })

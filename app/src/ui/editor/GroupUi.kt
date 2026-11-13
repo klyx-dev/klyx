@@ -48,8 +48,10 @@ import com.klyx.runtime.action.PinDocument
 import com.klyx.runtime.action.PromotePreviewDocument
 import com.klyx.runtime.action.SplitEditor
 import com.klyx.runtime.action.UnpinDocument
+import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.workspace.EditorGroup
 import com.klyx.runtime.workspace.EditorGroupId
+import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.WorkspaceDocument
 import com.klyx.ui.components.KxMenuItem
@@ -78,11 +80,13 @@ fun rememberEditorGroups(): Pair<List<EditorGroup>, EditorGroupId?> {
 @Composable
 fun rememberHasVisibleFiles(): Boolean {
     val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
+    val settings by settingsStore.settings.collectAsState()
     val groups by workspace.editorGroups.collectAsState()
     val documents by workspace.documents.collectAsState()
     val activeProjectId by workspace.activeProjectId.collectAsState()
-    val tabScope by workspace.tabScope.collectAsState()
-    return remember(groups, documents, activeProjectId, tabScope) { workspace.hasVisibleTabs() }
+    val tabScope = if (settings.showAllProjectsTabs) EditorTabScope.AllProjects else EditorTabScope.CurrentProject
+    return remember(groups, documents, activeProjectId, tabScope) { workspace.hasVisibleTabs(tabScope) }
 }
 
 @Composable
@@ -203,11 +207,13 @@ private fun GroupPill(index: Int, group: EditorGroup, selected: Boolean) {
 @Composable
 fun rememberVisibleTabs(group: EditorGroup): List<WorkspaceDocument> {
     val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
+    val settings by settingsStore.settings.collectAsState()
     val documents by workspace.documents.collectAsState()
     val activeProjectId by workspace.activeProjectId.collectAsState()
-    val tabScope by workspace.tabScope.collectAsState()
+    val tabScope = if (settings.showAllProjectsTabs) EditorTabScope.AllProjects else EditorTabScope.CurrentProject
     return remember(group, documents, activeProjectId, tabScope) {
-        workspace.visibleTabs(group)
+        workspace.visibleTabs(group, tabScope)
     }
 }
 

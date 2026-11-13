@@ -52,8 +52,6 @@ import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
 import com.klyx.runtime.settings.Settings
 import com.klyx.runtime.settings.SettingsStore
-import com.klyx.runtime.workspace.EditorTabScope
-import com.klyx.runtime.workspace.Workspace
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.feedback.FeedbackDialog
@@ -291,31 +289,74 @@ private fun GeneralSettings() {
                 onFontSelected = { name -> updateSettings { it.copy(fontName = name) } },
             )
             SettingsDivider()
-            RoundedUiRow(modifier = Modifier.fillMaxWidth())
-            CornerRadiusRow(modifier = Modifier.fillMaxWidth())
+            RoundedUiRow(
+                roundedUi = settings.roundedUi,
+                onChange = { enabled -> updateSettings { it.copy(roundedUi = enabled) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            CornerRadiusRow(
+                roundedUi = settings.roundedUi,
+                radius = settings.cornerRadius,
+                onRadiusChange = { radius ->
+                    updateSettings { it.copy(cornerRadius = radius.coerceIn(0, 32)) }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         SettingsCard(
             title = "editor tabs",
             subtitle = "Choose which projects' tabs are shown.",
         ) {
-            TabScopeRow(modifier = Modifier.fillMaxWidth())
+            TabScopeRow(
+                showAllProjectsTabs = settings.showAllProjectsTabs,
+                onChange = { show -> updateSettings { it.copy(showAllProjectsTabs = show) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+
+        SettingsCard(
+            title = "startup",
+            subtitle = "Choose whether to reopen your previous workspace.",
+        ) {
+            SettingRow(
+                title = "restore previous session",
+                subtitle = "Reopen projects and tabs from the last session.",
+                checked = settings.restorePreviousSession,
+                onCheckedChange = { enabled ->
+                    updateSettings { it.copy(restorePreviousSession = enabled) }
+                },
+                accessibilityLabel = "Restore previous session",
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         SettingsCard(
             title = "top bar",
             subtitle = "Show or hide the undo and redo controls.",
         ) {
-            UndoRedoRow(modifier = Modifier.fillMaxWidth())
+            UndoRedoRow(
+                show = settings.showUndoRedoButtons,
+                onChange = { show -> updateSettings { it.copy(showUndoRedoButtons = show) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         SettingsCard(
             title = "editor",
             subtitle = "Configure saving and inline language hints.",
         ) {
-            AutoSaveRow(modifier = Modifier.fillMaxWidth())
+            AutoSaveRow(
+                save = settings.autoSave,
+                onChange = { save -> updateSettings { it.copy(autoSave = save) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
             SettingsDivider()
-            InlayHintsRow(modifier = Modifier.fillMaxWidth())
+            InlayHintsRow(
+                show = settings.showInlayHints,
+                onChange = { show -> updateSettings { it.copy(showInlayHints = show) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         FeedbackCard(modifier = Modifier.fillMaxWidth())
@@ -435,26 +476,28 @@ private fun SettingSwitch(
 }
 
 @Composable
-private fun RoundedUiRow(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
-    val roundedUi by workspace.roundedUi.collectAsState()
-
+private fun RoundedUiRow(
+    roundedUi: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     SettingRow(
         title = "rounded ui",
         subtitle = "enable rounded corners across the interface",
         checked = roundedUi,
-        onCheckedChange = workspace::setRoundedUi,
+        onCheckedChange = onChange,
         accessibilityLabel = "Enable rounded UI",
         modifier = modifier,
     )
 }
 
 @Composable
-private fun CornerRadiusRow(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
-    val roundedUi by workspace.roundedUi.collectAsState()
-    val radius by workspace.cornerRadius.collectAsState()
-
+private fun CornerRadiusRow(
+    roundedUi: Boolean,
+    radius: Int,
+    onRadiusChange: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     AnimatedVisibility(
         visible = roundedUi,
         enter = expandVertically() + fadeIn(),
@@ -492,7 +535,7 @@ private fun CornerRadiusRow(modifier: Modifier = Modifier) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     KxButton(
-                        onClick = { workspace.setCornerRadius(radius - 2) },
+                        onClick = { onRadiusChange(radius - 2) },
                         enabled = radius > 2,
                         variant = KxButtonVariant.Outlined,
                         bracketed = true,
@@ -506,7 +549,7 @@ private fun CornerRadiusRow(modifier: Modifier = Modifier) {
                         color = Theme[colors][accent],
                     )
                     KxButton(
-                        onClick = { workspace.setCornerRadius(radius + 2) },
+                        onClick = { onRadiusChange(radius + 2) },
                         enabled = radius < 24,
                         variant = KxButtonVariant.Outlined,
                         bracketed = true,
@@ -519,7 +562,7 @@ private fun CornerRadiusRow(modifier: Modifier = Modifier) {
 
             Slider(
                 value = radius.toFloat(),
-                onValueChange = { workspace.setCornerRadius(it.roundToInt()) },
+                onValueChange = { onRadiusChange(it.roundToInt()) },
                 valueRange = 2f..24f,
                 modifier = Modifier.fillMaxWidth(),
                 colors = SliderDefaults.colors(
@@ -535,7 +578,7 @@ private fun CornerRadiusRow(modifier: Modifier = Modifier) {
             ) {
                 listOf(4, 8, 12, 16, 20).forEach { preset ->
                     KxButton(
-                        onClick = { workspace.setCornerRadius(preset) },
+                        onClick = { onRadiusChange(preset) },
                         variant = if (radius == preset) KxButtonVariant.Filled else KxButtonVariant.Ghost,
                         bracketed = true,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
@@ -549,64 +592,64 @@ private fun CornerRadiusRow(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun TabScopeRow(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
-    val tabScope by workspace.tabScope.collectAsState()
-
+private fun TabScopeRow(
+    showAllProjectsTabs: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     SettingRow(
         title = "show all projects' tabs",
         subtitle = "off shows only the current project's files",
-        checked = tabScope == EditorTabScope.AllProjects,
-        onCheckedChange = {
-            workspace.setTabScope(
-                if (it) EditorTabScope.AllProjects else EditorTabScope.CurrentProject,
-            )
-        },
+        checked = showAllProjectsTabs,
+        onCheckedChange = onChange,
         accessibilityLabel = "Show tabs from all projects",
         modifier = modifier,
     )
 }
 
 @Composable
-private fun UndoRedoRow(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
-    val show by workspace.showUndoRedoButtons.collectAsState()
-
+private fun UndoRedoRow(
+    show: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     SettingRow(
         title = "undo / redo buttons",
         subtitle = "show undo and redo in the top bar",
         checked = show,
-        onCheckedChange = workspace::setShowUndoRedoButtons,
+        onCheckedChange = onChange,
         accessibilityLabel = "Show undo and redo buttons",
         modifier = modifier,
     )
 }
 
 @Composable
-private fun AutoSaveRow(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
-    val save by workspace.autoSave.collectAsState()
-
+private fun AutoSaveRow(
+    save: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     SettingRow(
         title = "auto-save",
         subtitle = "write files to disk 500ms after the last edit (top-bar save still works)",
         checked = save,
-        onCheckedChange = workspace::setAutoSave,
+        onCheckedChange = onChange,
         accessibilityLabel = "Auto-save files after editing",
         modifier = modifier,
     )
 }
 
 @Composable
-private fun InlayHintsRow(modifier: Modifier = Modifier) {
-    val workspace: Workspace = koinInject()
-    val show by workspace.showInlayHints.collectAsState()
-
+private fun InlayHintsRow(
+    show: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     SettingRow(
         title = "inlay hints",
         subtitle = "show inline parameter and type hints from the language server",
         checked = show,
-        onCheckedChange = workspace::setShowInlayHints,
+        onCheckedChange = onChange,
         accessibilityLabel = "Show inlay hints",
         modifier = modifier,
     )
