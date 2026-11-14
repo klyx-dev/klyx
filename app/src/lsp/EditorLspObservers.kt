@@ -89,12 +89,7 @@ internal fun EditorLsp.refreshServerAvailability() {
             }
         }.getOrNull() ?: emptyMap()
         if (result.isNotEmpty()) {
-            _termuxAvailability.value = result
+            updateAvailability(result)
         }
     }
 }
-
-internal fun EditorLsp.updateActiveSessions() {
-    _activeSessions.value = sessions.mapValues { it.value.state.value }
-}
-

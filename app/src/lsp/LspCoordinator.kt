@@ -34,6 +34,7 @@ class EditorLsp(
     val editorStore: EditorStore,
     internal val settingsStore: SettingsStore,
     internal val documents: DocumentPersistence,
+    internal val termuxConsent: TermuxPermissionConsent,
 ) : AutoCloseable {
 
     internal class EditorState {
@@ -75,6 +76,18 @@ class EditorLsp(
 
     val termuxAvailability: StateFlow<Map<String, Boolean>>
         field = MutableStateFlow<Map<String, Boolean>>(emptyMap())
+
+    internal fun updateHover(state: HoverState?) { activeHover.value = state }
+
+    internal fun updateCompletion(state: CompletionUiState?) { activeCompletion.value = state }
+
+    internal fun reportError(message: String) { lspErrors.tryEmit(message) }
+
+    internal fun updateAvailability(availability: Map<String, Boolean>) { termuxAvailability.value = availability }
+
+    internal fun updateActiveSessions() {
+        activeSessions.value = sessions.mapValues { it.value.state.value }
+    }
 
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {

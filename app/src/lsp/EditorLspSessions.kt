@@ -48,12 +48,13 @@ internal fun EditorLsp.attachAllOpenDocuments(languageId: String, session: LspSe
     }
 }
 
+@IgnorableReturnValue
 internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean = true): LspSession? {
     val ext = document.name.substringAfterLast('.', "").lowercase()
     val langId = LspDocumentUtils.languageIdOf(document)
     if (!LspServerRegistry.hasServerFor(langId, ext)) {
         if (!silent) {
-            _lspErrors.tryEmit("No language server is configured for ${if (langId != "plaintext") langId else ext.ifEmpty { "this file" }}.")
+            reportError("No language server is configured for ${if (langId != "plaintext") langId else ext.ifEmpty { "this file" }}.")
         }
         return null
     }
@@ -62,10 +63,12 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
         ?: LspServerRegistry.findByExtension(ext)
         ?: run {
             if (!silent) {
-                _lspErrors.tryEmit("No language server is configured for ${langId}.")
+                reportError("No language server is configured for ${langId}.")
             }
             return null
         }
+
+    if (!termuxConsent.canStart(config)) return null
 
     val existing = sessions[langId]
     if (existing != null) {
@@ -98,7 +101,7 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
         config = config,
         client = client,
         scope = scope,
-        onNotice = { message -> _lspErrors.tryEmit(message) },
+        onNotice = { message -> reportError(message) },
     ).also { newSession ->
         sessions[langId] = newSession
         scope.launch {
@@ -110,7 +113,7 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
             }
         }
     }
-    session.onNotice = { message -> _lspErrors.tryEmit(message) }
+    session.onNotice = { message -> reportError(message) }
 
     val rootUri = projectRoot?.actualUri()
     val folders = if (activeProj != null) {
@@ -132,7 +135,7 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
             config.command == "vtsls" -> "$base\nInstall the language server in Termux: pkg install -y nodejs && npm i -g @vtsls/language-server"
             else -> base
         }
-        _lspErrors.tryEmit("${config.languageId} language server failed to start: $hint")
+        reportError("${config.languageId} language server failed to start: $hint")
         Log.e("LSP", "${config.languageId} failed to start: $hint")
     }
     return if (started) session else null

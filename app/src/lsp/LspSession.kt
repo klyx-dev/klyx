@@ -139,13 +139,9 @@ class LspSession(
                             throw IllegalStateException(msg)
                         }
                         if (!TermuxBridge.hasRunCommandPermission()) {
-                            val granted = TermuxBridge.requestRunCommandPermission()
-                            if (!granted) {
-                                val _ = TermuxBridge.openAppSettings()
-                                onNotice?.invoke("Termux RUN_COMMAND permission not granted. Please allow it in system settings.")
-                            } else {
-                                onNotice?.invoke("Please grant Termux RUN_COMMAND permission to start language servers.")
-                            }
+                            throw IllegalStateException(
+                                "Allow Klyx to run commands in Termux from Settings > Termux setup to start language servers."
+                            )
                         }
                         val targetPort =
                             if (config.socketPort > 0) config.socketPort else defaultPortForLanguage(config.languageId)

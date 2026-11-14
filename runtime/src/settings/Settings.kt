@@ -20,6 +20,7 @@ data class Settings(
     val showUndoRedoButtons: Boolean = currentPlatform != Platform.JVM,
     val showInlayHints: Boolean = true,
     val autoSave: Boolean = false,
+    val hideTermuxPermissionPrompt: Boolean = false,
     val roundedUi: Boolean = false,
     val cornerRadius: Int = 8,
     val fontName: String = "jetbrains_mono",

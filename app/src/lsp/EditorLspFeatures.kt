@@ -25,7 +25,7 @@ internal suspend fun EditorLsp.requestHover(document: Document, line: Int, colum
             )
             if (text.isNotBlank()) {
                 val state = HoverState(line, column, text.trim())
-                _activeHover.value = state
+                updateHover(state)
                 return state
             }
         }
@@ -50,7 +50,7 @@ internal suspend fun EditorLsp.requestHover(document: Document, line: Int, colum
             }
         }
         val state = HoverState(line, column, info)
-        _activeHover.value = state
+        updateHover(state)
         return state
     }
     return null

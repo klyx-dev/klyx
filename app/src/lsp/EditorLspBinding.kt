@@ -91,10 +91,10 @@ private fun EditorLsp.bindPointerEvents(
     unbindList.add(unsubLongPress)
 
     val unsubCursor = controller.onCursorChanged { event ->
-        if (_activeHover.value?.let { it.line != event.cursorPosition.line } == true) {
+        if (activeHover.value?.let { it.line != event.cursorPosition.line } == true) {
             dismissHover()
         }
-        if (_activeCompletion.value?.let { it.anchor == null } == true) {
+        if (activeCompletion.value?.let { it.anchor == null } == true) {
             dismissCompletionPopup()
         }
         state.highlightJob?.cancel()
@@ -171,8 +171,8 @@ internal fun EditorLsp.unbindEditor(document: Document) {
     val docUri = LspDocumentUtils.uriOf(document, workspace)
     inlayHintJobs.remove(docUri)?.cancel()
     inlayHintGeneration.remove(docUri)
-    if (_activeCompletion.value?.documentId == document.id) {
-        _activeCompletion.value = null
+    if (activeCompletion.value?.documentId == document.id) {
+        updateCompletion(null)
     }
     documentCodeLenses.remove(document.id)
 

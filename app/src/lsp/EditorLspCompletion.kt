@@ -32,7 +32,7 @@ internal fun EditorLsp.triggerCompletionPopup(document: Document, controller: Sw
         val rawItems = collectCompletionItems(document, uri, fullText, line, column, prefix)
 
         if (rawItems.isEmpty()) {
-            _activeCompletion.value = null
+            updateCompletion(null)
             return@launch
         }
 
@@ -45,19 +45,19 @@ internal fun EditorLsp.triggerCompletionPopup(document: Document, controller: Sw
             }
         }
         if (filteredItems.isEmpty()) {
-            _activeCompletion.value = null
+            updateCompletion(null)
             return@launch
         }
 
         val uiItems = completionRows(filteredItems, line, prefixStart, col, prefix)
 
         val anchor = withContext(Dispatchers.Main) { controller.getCursorRect() }
-        _activeCompletion.value = CompletionUiState(
+        updateCompletion(CompletionUiState(
             documentId = document.id,
             items = uiItems,
             selectedIndex = 0,
             anchor = anchor,
-        )
+        ))
     }
 }
 

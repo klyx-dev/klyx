@@ -74,6 +74,7 @@ import com.klyx.editor.EditorStore
 import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
+import com.klyx.ui.lsp.TermuxPermissionDialog
 import com.klyx.lsp.EditorLsp
 import com.klyx.lsp.getCodeActions
 import com.klyx.lsp.applyCodeAction
@@ -208,6 +209,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val settings by settingsStore.settings.collectAsState()
     val editors: EditorStore = koinInject()
     val lsp: EditorLsp = koinInject()
+
+    TermuxPermissionDialog()
 
     val documents by workspace.documents.collectAsState()
     val activeDocId by editors.activeDocumentId.collectAsState()
