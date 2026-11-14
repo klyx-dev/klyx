@@ -14,6 +14,6 @@ fun interface Disposable {
     fun dispose()
 }
 
-fun List<Disposable>.merge() = Disposable { asReversed().forEach { it.dispose() } }
+fun List<Disposable?>.merge() = Disposable { asReversed().forEach { it?.dispose() } }
 
-fun List<Registration>.asDisposable() = Disposable { forEach { it.unregister() } }
+fun List<Registration?>.asDisposable() = Disposable { forEach { it?.unregister() } }

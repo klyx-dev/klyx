@@ -2,6 +2,7 @@ package com.klyx.lsp
 
 import com.klyx.core.Disposable
 import com.klyx.core.action.Action
+import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.action
 import com.klyx.core.asDisposable
 import com.klyx.runtime.action.SaveActiveDocument
@@ -17,10 +18,9 @@ object FormatDocument : Action
 object RestartLanguageServer : Action
 
 @Single
-class LspActions(private val coordinator: EditorLsp) {
+class LspActions(private val coordinator: EditorLsp) : ActionRegistrar {
 
-    @IgnorableReturnValue
-    fun registerActions(): Disposable {
+    override fun registerActions(): Disposable {
         val registrations = listOf(
             action<SaveActiveDocument> { coordinator.saveActiveDocument() },
             action<SaveDocument> { coordinator.saveDocument(it.documentId) },

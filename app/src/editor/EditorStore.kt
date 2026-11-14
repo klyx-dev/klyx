@@ -1,6 +1,7 @@
 package com.klyx.editor
 
 import com.klyx.core.Disposable
+import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.action
 import com.klyx.core.asDisposable
 import com.klyx.runtime.action.ClearSearch
@@ -29,7 +30,7 @@ import org.koin.core.annotation.Single
 data class EditorCursor(val line: Int, val column: Int)
 
 @Single
-class EditorStore {
+class EditorStore : ActionRegistrar {
 
     private val live = mutableMapOf<DocumentId, MutableSet<SweetEditorController>>()
 
@@ -141,8 +142,7 @@ class EditorStore {
         refreshUndoState()
     }
 
-    @IgnorableReturnValue
-    fun registerActions(): Disposable {
+    override fun registerActions(): Disposable {
         val registrations = listOf(
             action<Undo> { undo() },
             action<Redo> { redo() },

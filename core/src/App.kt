@@ -37,14 +37,20 @@ class App internal constructor(
 
     lateinit var initializer: InitializerManager
 
+    private val disposables = mutableSetOf<Disposable>()
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val actions = ActionDispatcher(appScope)
 
     /** Cancels the app's scopes. Nothing is usable afterwards. */
     fun close() {
+        disposables.forEach { it.dispose() }
         appScope.cancel()
         backgroundScope.cancel()
+    }
+
+    fun addDisposable(disposable: Disposable) {
+        disposables.add(disposable)
     }
 
     inline fun <reified G : Global> hasGlobal() = globalOrNull<G>() != null

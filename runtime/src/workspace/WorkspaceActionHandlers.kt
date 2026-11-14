@@ -1,6 +1,7 @@
 package com.klyx.runtime.workspace
 
 import com.klyx.core.Disposable
+import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.action
 import com.klyx.runtime.action.ActivateDocument
 import com.klyx.runtime.action.ActivateEditorGroup
@@ -26,9 +27,17 @@ import org.koin.core.annotation.Single
 class WorkspaceActionHandlers(
     private val workspace: Workspace,
     private val settings: SettingsStore,
-) {
-    @IgnorableReturnValue
-    fun register(): Disposable {
+) : ActionRegistrar {
+
+    private fun currentTabScope(): EditorTabScope {
+        return if (settings.settings.value.showAllProjectsTabs) {
+            EditorTabScope.AllProjects
+        } else {
+            EditorTabScope.CurrentProject
+        }
+    }
+
+    override fun registerActions(): Disposable {
         val handlers = listOf(
             action<SplitEditor> { workspace.splitEditor() },
             action<ActivateEditorGroup> { workspace.activateEditorGroup(it.groupId) },
@@ -58,8 +67,4 @@ class WorkspaceActionHandlers(
 
         return Disposable { handlers.forEach { it.unregister() } }
     }
-
-    private fun currentTabScope(): EditorTabScope =
-        if (settings.settings.value.showAllProjectsTabs) EditorTabScope.AllProjects
-        else EditorTabScope.CurrentProject
 }

@@ -6,10 +6,13 @@ import com.klyx.runtime.settings.SettingsStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
+import kotlin.time.Duration.Companion.milliseconds
 
 @Single
 class WorkspaceSessionManager(
@@ -17,17 +20,14 @@ class WorkspaceSessionManager(
     private val settings: SettingsStore,
     private val sessions: WorkspaceSessionStore,
 ) {
-    fun start() {
-        App.global.backgroundScope.launch {
-            try {
-                restorePreviousSession()
-                saveCurrentSession()
-                saveSessionChanges()
-            } catch (error: CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                Log.e("WorkspaceSession", "Could not manage the workspace session", error)
-            }
+    fun start(): Job = App.global.backgroundScope.launch {
+        try {
+            restorePreviousSession()
+            saveCurrentSession()
+            saveSessionChanges()
+        } catch (error: Exception) {
+            if (error is CancellationException) ensureActive()
+            Log.e("WorkspaceSession", "Could not manage the workspace session", error)
         }
     }
 
@@ -47,7 +47,7 @@ class WorkspaceSessionManager(
     @OptIn(FlowPreview::class)
     private suspend fun saveSessionChanges() {
         workspace.observeSessionChanges()
-            .debounce(300)
+            .debounce(300.milliseconds)
             .collect { snapshot -> sessions.save(snapshot) }
     }
 }
