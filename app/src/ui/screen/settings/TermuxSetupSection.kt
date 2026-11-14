@@ -42,7 +42,9 @@ import com.klyx.lsp.LspServerRegistry
 import com.klyx.lsp.LspSessionState
 import com.klyx.lsp.TermuxBridge
 import com.klyx.lsp.defaultPortForLanguage
+import com.klyx.lsp.refreshServerAvailability
 import com.klyx.lsp.resolveCommandPath
+import com.klyx.lsp.restartSession
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
 import com.klyx.runtime.settings.CustomLspServer
@@ -194,10 +196,10 @@ fun TermuxSetupSection(modifier: Modifier = Modifier) {
         ) {
             HintText("On Android 10+, allow Display over other apps for Termux, or tap the Termux notification when it appears.")
             SmallButton("display-over-apps for termux", ghost = true) {
-                if (!TermuxBridge.openTermuxOverlaySettings()) {
-                    feedback = "could not open the system settings page. open Termux's app settings manually."
+                feedback = if (!TermuxBridge.openTermuxOverlaySettings()) {
+                    "could not open the system settings page. open Termux's app settings manually."
                 } else {
-                    feedback = "opened Termux's display-over-apps settings. enable the permission, then return here."
+                    "opened Termux's display-over-apps settings. enable the permission, then return here."
                 }
             }
             HintText("If Android shows a list of apps instead of Termux's settings, select Termux from that list.")
@@ -411,9 +413,8 @@ fun LspServersSection(modifier: Modifier = Modifier) {
         servers.forEach { server ->
             val custom = customs.firstOrNull { it.languageId == server.languageId }
             val sessionState = sessions[server.languageId]
-            val installedKnown = sessionState == LspSessionState.Running ||
-                    (!isAndroid && pathHits[server.languageId] == true) ||
-                    availability[server.command] == true
+            val installedKnown =
+                sessionState == LspSessionState.Running || (!isAndroid && pathHits[server.languageId] == true) || availability[server.command] == true
             val statusPair: Pair<String?, Boolean?> = when {
                 sessionState == LspSessionState.Running -> "running" to true
                 sessionState == LspSessionState.Starting -> "starting" to true

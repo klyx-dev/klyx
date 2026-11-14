@@ -75,6 +75,15 @@ import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
 import com.klyx.lsp.EditorLsp
+import com.klyx.lsp.getCodeActions
+import com.klyx.lsp.applyCodeAction
+import com.klyx.lsp.restartSession
+import com.klyx.lsp.requestHover
+import com.klyx.lsp.bindEditor
+import com.klyx.lsp.unbindEditor
+import com.klyx.lsp.applyCompletion
+import com.klyx.lsp.resolveCompletionDoc
+import com.klyx.document.DocumentPersistence
 import com.klyx.lsp.FormatDocument
 import com.klyx.lsp.LspDocumentUtils
 import com.klyx.lsp.LspSessionState
@@ -843,12 +852,15 @@ private fun EditorDocument(
     }
 
     val lsp: EditorLsp = koinInject()
+    val persistence: DocumentPersistence = koinInject()
     val scope = rememberCoroutineScope()
 
     DisposableEffect(controller, document.id) {
         editors.register(document.id, controller)
+        persistence.bindEditor(document, controller)
         lsp.bindEditor(document, controller)
         onDispose {
+            persistence.unbindEditor(document, controller)
             lsp.unbindEditor(document)
             editors.unregister(document.id, controller)
         }

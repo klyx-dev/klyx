@@ -5,9 +5,6 @@ import com.klyx.core.action.Action
 import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.action
 import com.klyx.core.asDisposable
-import com.klyx.runtime.action.SaveActiveDocument
-import com.klyx.runtime.action.SaveAllDocuments
-import com.klyx.runtime.action.SaveDocument
 import kotlinx.serialization.Serializable
 import org.koin.core.annotation.Single
 
@@ -22,9 +19,6 @@ class LspActions(private val coordinator: EditorLsp) : ActionRegistrar {
 
     override fun registerActions(): Disposable {
         val registrations = listOf(
-            action<SaveActiveDocument> { coordinator.saveActiveDocument() },
-            action<SaveDocument> { coordinator.saveDocument(it.documentId) },
-            action<SaveAllDocuments> { coordinator.saveAllDocuments() },
             action<FormatDocument> {
                 val activeDocId = coordinator.editorStore.activeDocumentId.value ?: return@action
                 val doc = coordinator.workspace.document(activeDocId) ?: return@action
