@@ -12,10 +12,11 @@
     <option name="customApplicationId" value="" />
   </component>
   <component name="EntryPointsManager">
-    <list size="3">
+    <list size="4">
       <item index="0" class="java.lang.String" itemvalue="org.koin.core.annotation.Module" />
-      <item index="1" class="java.lang.String" itemvalue="org.koin.core.annotation.Singleton" />
+      <item index="1" class="java.lang.String" itemvalue="org.koin.core.annotation.Single" />
       <item index="2" class="java.lang.String" itemvalue="org.koin.core.annotation.Singleton" />
+      <item index="3" class="java.lang.String" itemvalue="org.koin.core.annotation.Singleton" />
     </list>
   </component>
   <component name="ProjectRootManager" version="2" languageLevel="JDK_25" default="true" project-jdk-name="EclipseTemurin-25.0.5 (managed by Kotlin Toolchain)" project-jdk-type="JavaSDK">

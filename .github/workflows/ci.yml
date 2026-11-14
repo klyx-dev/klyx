@@ -103,6 +103,14 @@ jobs:
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
           echo "apk=$OUTPUT" >> "$GITHUB_OUTPUT"
 
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: klyx-apk
+          path: ${{ steps.apk.outputs.apk }}
+          retention-days: 15
+          if-no-files-found: error
+
       - name: Send to Telegram
         if: github.ref == 'refs/heads/main'
         env:
@@ -196,23 +204,46 @@ jobs:
             THREAD=(--form-string message_thread_id="$TOPIC_ID")
           fi
 
+          telegram_request() {
+            local method="$1" response_file http_status status
+            shift
+            response_file="$(mktemp)"
+            echo "Telegram: ${method}" >&2
+            if http_status="$(curl -sS \
+              --fail-with-body \
+              --retry 3 \
+              --retry-delay 5 \
+              --retry-max-time 180 \
+              --connect-timeout 20 \
+              --max-time 180 \
+              --output "$response_file" \
+              --write-out '%{http_code}' \
+              -X POST "${API}/${method}" "$@")"; then
+              cat "$response_file"
+              rm -f "$response_file"
+            else
+              status=$?
+              echo "::error::Telegram ${method} failed (HTTP ${http_status}, curl exit ${status})" >&2
+              head -c 2000 "$response_file" >&2
+              printf '\n' >&2
+              rm -f "$response_file"
+              return "$status"
+            fi
+          }
+
           CAPTION="<b>Klyx build</b> · <code>${SHORT_SHA}</code>"
 
-          RESPONSE="$(curl -sS \
-            --fail-with-body \
-            -X POST "${API}/sendDocument" \
+          RESPONSE="$(telegram_request sendDocument \
             --form-string chat_id="$CHAT_ID" \
             "${THREAD[@]}" \
             -F document=@"$APK_PATH" \
             --form-string parse_mode=HTML \
             --form-string caption="$CAPTION")"
 
-          DOC_ID="$(jq -r '.result.message_id' <<< "$RESPONSE")"
+          DOC_ID="$(jq -er '.result.message_id // empty' <<< "$RESPONSE")"
 
           for chunk in "${CHUNKS[@]}"; do
-            curl -sS \
-              --fail-with-body \
-              -X POST "${API}/sendMessage" \
+            telegram_request sendMessage \
               -F chat_id="$CHAT_ID" \
               "${THREAD[@]}" \
               -F reply_to_message_id="$DOC_ID" \
@@ -222,14 +253,6 @@ jobs:
               --form-string text="$chunk" > /dev/null
             sleep 1
           done
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v7
-        with:
-          name: klyx-apk
-          path: ${{ steps.apk.outputs.apk }}
-          retention-days: 15
-          if-no-files-found: error
 
       - name: Cleanup sensitive files
         if: always()
