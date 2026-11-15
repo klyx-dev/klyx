@@ -5,20 +5,25 @@ import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.Workspace
+import com.klyx.runtime.workspace.WorkspaceSessionManager
 import io.github.lumkit.sweeteditor.SweetEditorController
+import kotlin.time.Duration.Companion.milliseconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
-import kotlin.time.Duration.Companion.milliseconds
 
 data class SavedDocument(val document: Document, val text: String)
 
@@ -28,45 +33,120 @@ class DocumentPersistence(
     private val workspace: Workspace,
     private val editors: EditorStore,
     private val settings: SettingsStore,
+    private val sessions: WorkspaceSessionManager,
 ) : AutoCloseable {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val bindings = mutableMapOf<SweetEditorController, () -> Unit>()
+    private val bindingCounts = mutableMapOf<SweetEditorController, Int>()
     private val pendingSaves = mutableMapOf<SweetEditorController, Job>()
+    val error = MutableStateFlow<String?>(null)
+    private val writes = Mutex()
     private val saved = MutableSharedFlow<SavedDocument>()
     val savedDocuments = saved.asSharedFlow()
 
     fun bindEditor(document: Document, controller: SweetEditorController) {
-        bindings.remove(controller)?.invoke()
-        pendingSaves.remove(controller)?.cancel()
+        val count = bindingCounts[controller] ?: 0
+        bindingCounts[controller] = count + 1
+        if (count > 0) return
         bindings[controller] = controller.onTextChanged {
+            workspace.updateBuffer(document.id, controller.getDocument().text)
             pendingSaves.remove(controller)?.cancel()
             pendingSaves[controller] = scope.launch {
                 delay(500.milliseconds)
-                if (settings.settings.value.autoSave) {
+                if (settings.settings.value.autoSave && workspace.pendingClose.value == null && workspace.isDirty(document.id)) {
                     save(document, controller.getDocument().text)
                 }
             }
         }
     }
 
-    fun unbindEditor(document: Document, controller: SweetEditorController) {
+    fun unbindEditor(controller: SweetEditorController) {
+        val count = bindingCounts[controller] ?: return
+        if (count > 1) {
+            bindingCounts[controller] = count - 1
+            return
+        }
+        bindingCounts.remove(controller)
         bindings.remove(controller)?.invoke()
         pendingSaves.remove(controller)?.cancel()
-        // Capture the buffer before the controller is unregistered or disposed.
-        val text = controller.getDocument().text
-        scope.launch { save(document, text) }
+    }
+
+    suspend fun loadDocument(document: Document, controller: SweetEditorController, onLoaded: () -> Unit) {
+        try {
+            sessions.awaitRestored()
+            val text = workspace.buffers.value[document.id]?.text ?: workspace.readText(document.id)
+            withContext(Dispatchers.Main) {
+                workspace.initializeBuffer(document.id, text)
+                controller.whenReady {
+                    controller.loadDocument(text = workspace.buffers.value[document.id]?.text ?: text)
+                    onLoaded()
+                }
+            }
+        } catch (failure: CancellationException) {
+            throw failure
+        } catch (failure: Exception) {
+            error.value = "Could not open ${document.name}: ${failure.message}"
+        }
     }
 
     suspend fun saveDocument(documentId: DocumentId) {
+        if (!workspace.isDirty(documentId)) return
         val document = workspace.document(documentId) ?: return
-        val text = withContext(Dispatchers.Main) {
-            editors.controllersFor(documentId).firstOrNull()?.getDocument()?.text
-        } ?: workspace.readText(documentId)
+        val text = workspace.buffers.value[documentId]?.text ?: return
         save(document, text)
     }
 
+    suspend fun resolveClose(discard: Boolean) {
+        val request = workspace.pendingClose.value ?: return
+        error.value = null
+        pendingSaves.values.forEach { it.cancel() }
+        pendingSaves.clear()
+        if (discard) {
+            writes.withLock {
+                // Other splits may still display this document after one split closes.
+                request.documentIds.forEach { id ->
+                    val text = workspace.buffers.value[id]?.savedText ?: return@forEach
+                    editors.controllersFor(id).forEach { it.loadDocument(text = text) }
+                }
+                workspace.finishClose(discard = true)
+            }
+        } else {
+            request.documentIds.forEach { saveDocument(it) }
+            if (error.value == null) workspace.finishClose(discard = false)
+        }
+    }
+
+    fun requestExit(exit: () -> Unit) {
+        scope.launch {
+            try {
+                sessions.awaitRestored()
+                workspace.requestClose(workspace.documents.value.keys) {
+                    scope.launch { flushAndExit(exit) }
+                }
+            } catch (failure: CancellationException) {
+                throw failure
+            } catch (failure: Exception) {
+                error.value = "Could not restore the workspace: ${failure.message}"
+            }
+        }
+    }
+
+    private suspend fun flushAndExit(exit: () -> Unit) {
+        try {
+            sessions.saveCurrentSession()
+            // An edit may have arrived while the backup was being written.
+            if (workspace.buffers.value.values.any { it.isDirty }) requestExit(exit)
+            else exit()
+        } catch (failure: CancellationException) {
+            throw failure
+        } catch (failure: Exception) {
+            error.value = "Could not back up the workspace: ${failure.message}"
+        }
+    }
+
     suspend fun saveActiveDocument() {
-        editors.activeDocumentId.value?.let { saveDocument(it) }
+        (editors.activeDocumentId.value ?: workspace.activeGroupOrNull()?.activeDocumentId)
+            ?.let { saveDocument(it) }
     }
 
     suspend fun saveAllDocuments() {
@@ -75,18 +155,25 @@ class DocumentPersistence(
 
     private suspend fun save(document: Document, text: String) {
         try {
-            workspace.writeText(document.id, text)
-            saved.emit(SavedDocument(document, text))
+            writes.withLock {
+                withContext(NonCancellable) {
+                    workspace.writeText(document.id, text)
+                    withContext(Dispatchers.Main) { workspace.markSaved(document.id, text) }
+                }
+                sessions.saveCurrentSession()
+                saved.emit(SavedDocument(document, text))
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
-            println("[Save ERROR] Failed to save ${document.name}: ${error.message}")
+            this.error.value = "Could not save ${document.name}: ${error.message}"
         }
     }
 
     override fun close() {
         bindings.values.forEach { it() }
         bindings.clear()
+        bindingCounts.clear()
         pendingSaves.clear()
         scope.cancel()
     }

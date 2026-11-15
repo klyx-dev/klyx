@@ -1,6 +1,7 @@
 package com.klyx.editor
 
 import com.klyx.core.Disposable
+import com.klyx.core.action.Action
 import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.action
 import com.klyx.core.asDisposable
@@ -22,9 +23,11 @@ import com.klyx.runtime.action.Undo
 import com.klyx.runtime.action.UnfoldAll
 import com.klyx.runtime.workspace.DocumentId
 import io.github.lumkit.sweeteditor.SweetEditorController
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
 data class EditorCursor(val line: Int, val column: Int)
@@ -33,6 +36,7 @@ data class EditorCursor(val line: Int, val column: Int)
 class EditorStore : ActionRegistrar {
 
     private val live = mutableMapOf<DocumentId, MutableSet<SweetEditorController>>()
+    private val registrations = mutableMapOf<SweetEditorController, Int>()
 
     val activeDocumentId: StateFlow<DocumentId?>
         field = MutableStateFlow(null)
@@ -65,10 +69,17 @@ class EditorStore : ActionRegistrar {
         get() = activeInstance
 
     fun register(id: DocumentId, controller: SweetEditorController) {
+        registrations[controller] = (registrations[controller] ?: 0) + 1
         live.getOrPut(id) { mutableSetOf() }.add(controller)
     }
 
     fun unregister(id: DocumentId, controller: SweetEditorController) {
+        val count = registrations[controller] ?: 0
+        if (count > 1) {
+            registrations[controller] = count - 1
+            return
+        }
+        registrations.remove(controller)
         live[id]?.remove(controller)
         if (live[id].isNullOrEmpty()) live.remove(id)
         if (activeInstance === controller) {
@@ -82,7 +93,7 @@ class EditorStore : ActionRegistrar {
         live[id]?.toSet() ?: emptySet()
 
     operator fun get(id: DocumentId): SweetEditorController =
-        live[id]?.firstOrNull() ?: SweetEditorController().also { register(id, it) }
+        live[id]?.firstOrNull() ?: SweetEditorController().also { live.getOrPut(id) { mutableSetOf() }.add(it) }
 
     fun controller(id: DocumentId): SweetEditorController = get(id)
 
@@ -108,7 +119,7 @@ class EditorStore : ActionRegistrar {
     }
 
     fun remove(id: DocumentId) {
-        live.remove(id)
+        live.remove(id)?.forEach { registrations.remove(it) }
         if (activeDocumentId.value == id) {
             activeInstance = null
             activeDocumentId.update { null }
@@ -142,24 +153,27 @@ class EditorStore : ActionRegistrar {
         refreshUndoState()
     }
 
+    private inline fun <reified A : Action> editorAction(noinline handler: (A) -> Unit) =
+        action<A> { request -> withContext(Dispatchers.Main.immediate) { handler(request) } }
+
     override fun registerActions(): Disposable {
         val registrations = listOf(
-            action<Undo> { undo() },
-            action<Redo> { redo() },
-            action<InsertText> { activeInstance?.insertText(text = it.text) },
-            action<SelectAll> { activeInstance?.selectAll() },
-            action<Copy> { activeInstance?.copyToClipboard() },
-            action<Cut> { activeInstance?.cutToClipboard() },
-            action<Paste> { activeInstance?.pasteFromClipboard() },
-            action<FoldAll> { activeInstance?.foldAll() },
-            action<UnfoldAll> { activeInstance?.unfoldAll() },
-            action<ToggleFold> { activeInstance?.toggleFold(it.line) },
-            action<TriggerCompletion> { activeInstance?.triggerCompletion() },
-            action<InsertSnippet> { activeInstance?.insertSnippet(it.snippet) },
-            action<GotoLine> { activeInstance?.gotoPosition(it.line, it.column) },
-            action<FindNext> { activeInstance?.findNextSearchMatch() },
-            action<FindPrevious> { activeInstance?.findPreviousSearchMatch() },
-            action<ClearSearch> { activeInstance?.clearSearch() },
+            editorAction<Undo> { undo() },
+            editorAction<Redo> { redo() },
+            editorAction<InsertText> { activeInstance?.insertText(text = it.text) },
+            editorAction<SelectAll> { activeInstance?.selectAll() },
+            editorAction<Copy> { activeInstance?.copyToClipboard() },
+            editorAction<Cut> { activeInstance?.cutToClipboard() },
+            editorAction<Paste> { activeInstance?.pasteFromClipboard() },
+            editorAction<FoldAll> { activeInstance?.foldAll() },
+            editorAction<UnfoldAll> { activeInstance?.unfoldAll() },
+            editorAction<ToggleFold> { activeInstance?.toggleFold(it.line) },
+            editorAction<TriggerCompletion> { activeInstance?.triggerCompletion() },
+            editorAction<InsertSnippet> { activeInstance?.insertSnippet(it.snippet) },
+            editorAction<GotoLine> { activeInstance?.gotoPosition(it.line, it.column) },
+            editorAction<FindNext> { activeInstance?.findNextSearchMatch() },
+            editorAction<FindPrevious> { activeInstance?.findPreviousSearchMatch() },
+            editorAction<ClearSearch> { activeInstance?.clearSearch() },
         )
         return registrations.asDisposable()
     }

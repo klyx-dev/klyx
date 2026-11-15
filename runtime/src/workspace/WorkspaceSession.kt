@@ -30,6 +30,7 @@ data class SavedTab(
     val name: String,
     val pinned: Boolean = false,
     val preview: Boolean = false,
+    val buffer: DocumentBuffer? = null,
 )
 
 @Serializable
@@ -50,3 +51,11 @@ internal val workspaceSessionJson = Json {
     ignoreUnknownKeys = true
     namingStrategy = JsonNamingStrategy.SnakeCase
 }
+
+/** The saved baseline makes undo back to disk contents clean again. */
+@Serializable
+data class DocumentBuffer(val text: String, val savedText: String) {
+    val isDirty: Boolean get() = text != savedText
+}
+
+class CloseRequest(val documentIds: List<DocumentId>, val proceed: () -> Unit)

@@ -46,6 +46,60 @@ class Workspace {
     val activeEditorGroupId: StateFlow<EditorGroupId?>
         field = MutableStateFlow(null)
 
+    // Buffers outlive editor views, including empty buffers and hidden project tabs.
+    val buffers: StateFlow<Map<DocumentId, DocumentBuffer>>
+        field = MutableStateFlow(emptyMap())
+
+    val pendingClose: StateFlow<CloseRequest?>
+        field = MutableStateFlow(null)
+
+    fun initializeBuffer(id: DocumentId, text: String) {
+        buffers.update { if (id in it) it else it + (id to DocumentBuffer(text, text)) }
+    }
+
+    fun updateBuffer(id: DocumentId, text: String) {
+        val previous = buffers.value[id] ?: return
+        buffers.update { it + (id to previous.copy(text = text)) }
+        if (isDirty(id)) {
+            editorGroups.value.filter { group -> group.documents.any { it.documentId == id } }
+                .forEach { promotePreviewDocument(it.id, id) }
+        }
+    }
+
+    fun markSaved(id: DocumentId, text: String) {
+        buffers.update { current ->
+            val buffer = current[id] ?: return@update current
+            current + (id to buffer.copy(savedText = text))
+        }
+    }
+
+    fun isDirty(id: DocumentId): Boolean = buffers.value[id]?.isDirty == true
+
+    fun requestClose(ids: Collection<DocumentId>, proceed: () -> Unit) {
+        if (pendingClose.value != null) return
+        val dirty = ids.distinct().filter(::isDirty)
+        if (dirty.isEmpty()) proceed()
+        else pendingClose.value = CloseRequest(dirty, proceed)
+    }
+
+    fun cancelClose() {
+        pendingClose.value = null
+    }
+
+    fun finishClose(discard: Boolean) {
+        val request = pendingClose.value ?: return
+        if (discard) {
+            buffers.update { current ->
+                current.mapValues { [id, buffer] ->
+                    if (id in request.documentIds) buffer.copy(text = buffer.savedText) else buffer
+                }
+            }
+        }
+        if (request.documentIds.any(::isDirty)) return
+        pendingClose.value = null
+        request.proceed()
+    }
+
     private var nextGroupNumber = AtomicInt(1)
 
     internal fun observeSessionChanges(): Flow<WorkspaceSessionSnapshot> {
@@ -56,7 +110,7 @@ class Workspace {
             editorGroups,
             activeEditorGroupId,
         ) { _, _, _, _, _ -> Unit }
-        return workspaceChanges.combine(documents) { _, _ -> createSessionSnapshot() }
+        return combine(workspaceChanges, documents, buffers) { _, _, _ -> createSessionSnapshot() }
             .distinctUntilChanged()
     }
 
@@ -81,6 +135,7 @@ class Workspace {
                             name = document.name,
                             pinned = workspaceDocument.pinned,
                             preview = workspaceDocument.preview,
+                            buffer = buffers.value[document.id]?.takeIf { it.isDirty },
                         )
                     }
 
@@ -90,6 +145,7 @@ class Workspace {
                         name = document.name,
                         pinned = workspaceDocument.pinned,
                         preview = workspaceDocument.preview,
+                        buffer = buffers.value[document.id]?.takeIf { it.isDirty },
                     )
                 }
                 tabIndexes[document.id] = tabIndex++
@@ -183,10 +239,15 @@ class Workspace {
     ): DocumentId? {
         val location = savedTab.toLocation(restoredProjects) ?: return null
         val file = fileFor(location) ?: return null
-        if (!file.exists() || file.isDirectory()) return null
+        if (savedTab.buffer == null && (!file.exists() || file.isDirectory())) return null
 
         val document = open(location, savedTab.name)
-        openDocument(groupId, document.id, savedTab.preview)
+        savedTab.buffer?.let { recovered ->
+            buffers.update { current ->
+                if (current[document.id]?.isDirty == true) current else current + (document.id to recovered)
+            }
+        }
+        openDocument(groupId, document.id, savedTab.preview && savedTab.buffer == null)
         if (savedTab.pinned) pinDocument(groupId, document.id)
         return document.id
     }
@@ -194,7 +255,8 @@ class Workspace {
     private fun SavedTab.toLocation(projectsByRoot: Map<String, ProjectId>): DocumentLocation? {
         if (projectRoot == null) return DocumentLocation.Platform(PlatformFile(path))
 
-        val projectId = projectsByRoot[projectRoot] ?: return null
+        val projectId = projectsByRoot[projectRoot]
+            ?: return if (buffer != null) DocumentLocation.Platform(PlatformFile(projectRoot).resolve(path)) else null
         return DocumentLocation.Project(projectId, kotlinx.io.files.Path(path))
     }
 
@@ -270,6 +332,14 @@ class Workspace {
     }
 
     fun closeProject(projectId: ProjectId) {
+        val ids = documents.value.values.filter {
+            (it.location as? DocumentLocation.Project)?.projectId == projectId
+        }.map { it.id }
+        if (ids.any(::isDirty)) {
+            requestClose(ids) { closeProject(projectId) }
+            return
+        }
+        ids.forEach { id -> editorGroups.value.forEach { closeDocument(it.id, id) } }
         removeProject(projectId)
         projects.update { it - projectId }
     }
@@ -326,6 +396,11 @@ class Workspace {
 
     fun closeEditorGroup(groupId: EditorGroupId) {
         if (editorGroups.value.size <= 1) return
+        val ids = editorGroups.value.firstOrNull { it.id == groupId }?.documents.orEmpty().map { it.documentId }
+        if (ids.any(::isDirty)) {
+            requestClose(ids) { closeEditorGroup(groupId) }
+            return
+        }
         val remaining = editorGroups.value.filterNot { it.id == groupId }
         if (remaining.size == editorGroups.value.size) return
         editorGroups.update { remaining }
@@ -378,11 +453,14 @@ class Workspace {
 
     fun closeDocument(documentId: DocumentId) {
         val group = groupOf(documentId) ?: return
-        updateGroup(group.id) { it.withClosed(documentId) }
-        pruneDocuments()
+        closeDocument(group.id, documentId)
     }
 
     fun closeDocument(groupId: EditorGroupId, documentId: DocumentId) {
+        if (isDirty(documentId)) {
+            requestClose(listOf(documentId)) { closeDocument(groupId, documentId) }
+            return
+        }
         updateGroup(groupId) { it.withClosed(documentId) }
         pruneDocuments()
     }
@@ -485,6 +563,7 @@ class Workspace {
         val open = openDocumentIds()
         if (open.size == documents.value.size) return
         documents.update { current -> current.filterKeys { it in open } }
+        buffers.update { current -> current.filterKeys { it in open } }
     }
 
     private fun updateGroup(groupId: EditorGroupId, transform: (EditorGroup) -> EditorGroup) {
@@ -511,7 +590,7 @@ class Workspace {
             }
             return copy(activeDocumentId = documentId)
         }
-        val retained = if (preview) documents.filterNot { it.preview && !it.pinned } else documents
+        val retained = if (preview) documents.filterNot { it.preview && !it.pinned && !isDirty(it.documentId) } else documents
         return copy(
             documents = retained + WorkspaceDocument(documentId = documentId, preview = preview),
             activeDocumentId = documentId,

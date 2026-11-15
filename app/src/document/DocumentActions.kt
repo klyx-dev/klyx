@@ -7,13 +7,17 @@ import com.klyx.core.asDisposable
 import com.klyx.runtime.action.SaveActiveDocument
 import com.klyx.runtime.action.SaveAllDocuments
 import com.klyx.runtime.action.SaveDocument
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
 @Single
 class DocumentActions(private val documents: DocumentPersistence) : ActionRegistrar {
     override fun registerActions(): Disposable = listOf(
-        action<SaveActiveDocument> { documents.saveActiveDocument() },
-        action<SaveDocument> { documents.saveDocument(it.documentId) },
-        action<SaveAllDocuments> { documents.saveAllDocuments() },
+        action<SaveActiveDocument> { withContext(Dispatchers.Main.immediate) { documents.saveActiveDocument() } },
+        action<SaveDocument> { request ->
+            withContext(Dispatchers.Main.immediate) { documents.saveDocument(request.documentId) }
+        },
+        action<SaveAllDocuments> { withContext(Dispatchers.Main.immediate) { documents.saveAllDocuments() } },
     ).asDisposable()
 }

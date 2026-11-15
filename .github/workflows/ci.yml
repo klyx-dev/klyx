@@ -104,6 +104,7 @@ jobs:
           echo "apk=$OUTPUT" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK
+        id: apk_artifact
         uses: actions/upload-artifact@v7
         with:
           name: klyx-apk
@@ -112,6 +113,7 @@ jobs:
           if-no-files-found: error
 
       - name: Send to Telegram
+        timeout-minutes: 15
         if: github.ref == 'refs/heads/main'
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -121,6 +123,7 @@ jobs:
           WORKFLOW_NAME: ${{ github.workflow }}
           EVENT_BEFORE: ${{ github.event.before }}
           APK_PATH: ${{ steps.apk.outputs.apk }}
+          ARTIFACT_URL: ${{ steps.apk_artifact.outputs.artifact-url }}
           SHORT_SHA: ${{ steps.apk.outputs.short_sha }}
         run: |
           set -euo pipefail
@@ -213,7 +216,7 @@ jobs:
               --fail-with-body \
               --retry 3 \
               --retry-delay 5 \
-              --retry-max-time 180 \
+              --retry-max-time 600 \
               --connect-timeout 20 \
               --max-time 180 \
               --output "$response_file" \
@@ -223,7 +226,7 @@ jobs:
               rm -f "$response_file"
             else
               status=$?
-              echo "::error::Telegram ${method} failed (HTTP ${http_status}, curl exit ${status})" >&2
+              echo "::warning::Telegram ${method} failed (HTTP ${http_status}, curl exit ${status})" >&2
               head -c 2000 "$response_file" >&2
               printf '\n' >&2
               rm -f "$response_file"
@@ -233,12 +236,34 @@ jobs:
 
           CAPTION="<b>Klyx build</b> · <code>${SHORT_SHA}</code>"
 
-          RESPONSE="$(telegram_request sendDocument \
-            --form-string chat_id="$CHAT_ID" \
-            "${THREAD[@]}" \
-            -F document=@"$APK_PATH" \
-            --form-string parse_mode=HTML \
-            --form-string caption="$CAPTION")"
+          APK_BYTES="$(stat -c '%s' "$APK_PATH")"
+          echo "APK upload size: ${APK_BYTES} bytes"
+          RESPONSE=""
+          if [ "$APK_BYTES" -le 50000000 ]; then
+            if RESPONSE="$(telegram_request sendDocument \
+              --form-string chat_id="$CHAT_ID" \
+              "${THREAD[@]}" \
+              -F document=@"$APK_PATH" \
+              --form-string parse_mode=HTML \
+              --form-string caption="$CAPTION")"; then
+              echo "Telegram APK upload succeeded"
+            else
+              echo "::warning::APK upload failed; sending the GitHub artifact link instead."
+              RESPONSE=""
+            fi
+          else
+            echo "::warning::APK exceeds Telegram's 50 MB upload limit; sending the GitHub artifact link instead."
+          fi
+
+          if [ -z "$RESPONSE" ]; then
+            DOWNLOAD_URL="$(printf '%s' "$ARTIFACT_URL" | esc)"
+            FALLBACK="${CAPTION}"$'\n\n'"<a href=\"${DOWNLOAD_URL}\">Download APK from GitHub Actions</a>"$'\n'"GitHub sign-in is required. Available for 15 days."
+            RESPONSE="$(telegram_request sendMessage \
+              --form-string chat_id="$CHAT_ID" \
+              "${THREAD[@]}" \
+              --form-string parse_mode=HTML \
+              --form-string text="$FALLBACK")"
+          fi
 
           DOC_ID="$(jq -er '.result.message_id // empty' <<< "$RESPONSE")"
 

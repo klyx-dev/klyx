@@ -4,15 +4,16 @@ import com.klyx.core.App
 import com.klyx.core.Log
 import com.klyx.runtime.settings.SettingsStore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
-import kotlin.time.Duration.Companion.milliseconds
 
 @Single
 class WorkspaceSessionManager(
@@ -20,34 +21,54 @@ class WorkspaceSessionManager(
     private val settings: SettingsStore,
     private val sessions: WorkspaceSessionStore,
 ) {
+    val error = MutableStateFlow<String?>(null)
+    private val writes = Mutex()
+    private val restored = CompletableDeferred<Unit>()
+
+    suspend fun awaitRestored() = restored.await()
+
     fun start(): Job = App.global.backgroundScope.launch {
         try {
             restorePreviousSession()
-            saveCurrentSession()
+            restored.complete(Unit)
             saveSessionChanges()
         } catch (error: Exception) {
+            restored.completeExceptionally(error)
             if (error is CancellationException) ensureActive()
+            this@WorkspaceSessionManager.error.value = "Could not restore or back up the workspace: ${error.message}"
             Log.e("WorkspaceSession", "Could not manage the workspace session", error)
         }
     }
 
     private suspend fun restorePreviousSession() {
-        if (!settings.read().restorePreviousSession) return
-
-        val snapshot = sessions.read() ?: return
+        val saved = sessions.read() ?: return
+        val snapshot = if (settings.read().restorePreviousSession) saved else saved.copy(
+            groups = saved.groups.map { group -> group.copy(tabs = group.tabs.filter { it.buffer != null }) },
+        )
         withContext(Dispatchers.Main) {
             workspace.restoreSession(snapshot)
         }
     }
 
-    private suspend fun saveCurrentSession() {
-        sessions.save(workspace.createSessionSnapshot())
+    suspend fun saveCurrentSession() {
+        awaitRestored()
+        writes.withLock {
+            val snapshot = withContext(Dispatchers.Main) { workspace.createSessionSnapshot() }
+            sessions.save(snapshot)
+            error.value = null
+        }
     }
 
-    @OptIn(FlowPreview::class)
     private suspend fun saveSessionChanges() {
         workspace.observeSessionChanges()
-            .debounce(300.milliseconds)
-            .collect { snapshot -> sessions.save(snapshot) }
+            .collect {
+                try {
+                    saveCurrentSession()
+                } catch (failure: CancellationException) {
+                    throw failure
+                } catch (failure: Exception) {
+                    error.value = "Recovery backup failed: ${failure.message}"
+                }
+            }
     }
 }

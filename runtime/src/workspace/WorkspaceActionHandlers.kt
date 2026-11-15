@@ -1,6 +1,7 @@
 package com.klyx.runtime.workspace
 
 import com.klyx.core.Disposable
+import com.klyx.core.action.Action
 import com.klyx.core.action.ActionRegistrar
 import com.klyx.core.action.action
 import com.klyx.runtime.action.ActivateDocument
@@ -21,6 +22,8 @@ import com.klyx.runtime.action.RemoveProject
 import com.klyx.runtime.action.SplitEditor
 import com.klyx.runtime.action.UnpinDocument
 import com.klyx.runtime.settings.SettingsStore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
 
 @Single
@@ -37,12 +40,16 @@ class WorkspaceActionHandlers(
         }
     }
 
+    // Serialize workspace transitions with editor callbacks and close confirmation.
+    private inline fun <reified A : Action> workspaceAction(noinline handler: (A) -> Unit) =
+        action<A> { request -> withContext(Dispatchers.Main.immediate) { handler(request) } }
+
     override fun registerActions(): Disposable {
         val handlers = listOf(
-            action<SplitEditor> { workspace.splitEditor() },
-            action<ActivateEditorGroup> { workspace.activateEditorGroup(it.groupId) },
-            action<CloseEditorGroup> { workspace.closeEditorGroup(it.groupId) },
-            action<OpenDocument> { request ->
+            workspaceAction<SplitEditor> { workspace.splitEditor() },
+            workspaceAction<ActivateEditorGroup> { workspace.activateEditorGroup(it.groupId) },
+            workspaceAction<CloseEditorGroup> { workspace.closeEditorGroup(it.groupId) },
+            workspaceAction<OpenDocument> { request ->
                 workspace.openDocument(
                     location = request.location,
                     name = request.name,
@@ -50,19 +57,19 @@ class WorkspaceActionHandlers(
                     tabScope = currentTabScope(),
                 )
             },
-            action<ActivateDocument> { workspace.activateDocument(it.documentId) },
-            action<CloseDocument> { workspace.closeDocument(it.documentId) },
-            action<PinDocument> { workspace.pinDocument(it.documentId) },
-            action<UnpinDocument> { workspace.unpinDocument(it.documentId) },
-            action<PromotePreviewDocument> { workspace.promotePreviewDocument(it.documentId) },
-            action<CloseActiveDocument> { workspace.closeActiveDocument(currentTabScope()) },
-            action<ActivateNextDocument> { workspace.activateAdjacentDocument(1, currentTabScope()) },
-            action<ActivatePreviousDocument> { workspace.activateAdjacentDocument(-1, currentTabScope()) },
-            action<OpenProject> { workspace.openProject(it.root) },
-            action<ActivateProject> { workspace.activateProject(it.projectId) },
-            action<CloseProject> { workspace.closeProject(it.projectId) },
-            action<AddProject> { workspace.addProject(it.projectId) },
-            action<RemoveProject> { workspace.removeProject(it.projectId) },
+            workspaceAction<ActivateDocument> { workspace.activateDocument(it.documentId) },
+            workspaceAction<CloseDocument> { workspace.closeDocument(it.documentId) },
+            workspaceAction<PinDocument> { workspace.pinDocument(it.documentId) },
+            workspaceAction<UnpinDocument> { workspace.unpinDocument(it.documentId) },
+            workspaceAction<PromotePreviewDocument> { workspace.promotePreviewDocument(it.documentId) },
+            workspaceAction<CloseActiveDocument> { workspace.closeActiveDocument(currentTabScope()) },
+            workspaceAction<ActivateNextDocument> { workspace.activateAdjacentDocument(1, currentTabScope()) },
+            workspaceAction<ActivatePreviousDocument> { workspace.activateAdjacentDocument(-1, currentTabScope()) },
+            workspaceAction<OpenProject> { workspace.openProject(it.root) },
+            workspaceAction<ActivateProject> { workspace.activateProject(it.projectId) },
+            workspaceAction<CloseProject> { workspace.closeProject(it.projectId) },
+            workspaceAction<AddProject> { workspace.addProject(it.projectId) },
+            workspaceAction<RemoveProject> { workspace.removeProject(it.projectId) },
         )
 
         return Disposable { handlers.forEach { it.unregister() } }

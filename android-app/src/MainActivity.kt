@@ -95,7 +95,7 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(CrashReporter.loadPending(this))
             }
 
-            Screen()
+            Screen(onExit = ::finish)
 
             pendingCrash.value?.let { report ->
                 CrashReportDialog(

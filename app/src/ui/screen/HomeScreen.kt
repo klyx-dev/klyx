@@ -830,7 +830,8 @@ private fun EditorDocument(
     val editors: EditorStore = koinInject()
     val controller = retain(document) { editors[document.id] }
     val focusRequester = remember { FocusRequester() }
-    val settings = remember(active) { EditorSettings(readOnly = !active) }
+    var loaded by remember(document.id) { mutableStateOf(false) }
+    val settings = remember(active, loaded) { EditorSettings(readOnly = !active || !loaded) }
     val theme = editorTheme()
 
     val highlight = remember(document) {
@@ -863,7 +864,7 @@ private fun EditorDocument(
         persistence.bindEditor(document, controller)
         lsp.bindEditor(document, controller)
         onDispose {
-            persistence.unbindEditor(document, controller)
+            persistence.unbindEditor(controller)
             lsp.unbindEditor(document)
             editors.unregister(document.id, controller)
         }
@@ -879,19 +880,13 @@ private fun EditorDocument(
     }
 
     LaunchedEffect(document.id) {
-        controller
-            .getDocument()
-            .text
-            .ifEmpty { workspace.readText(document.id) }
-            .let { text ->
-                controller.whenReady {
-                    controller.loadDocument(text = text)
-                    scope.launch {
-                        val uri = LspDocumentUtils.uriOf(document, workspace)
-                        lsp.client.applyDiagnosticsToController(uri, controller)
-                    }
-                }
+        persistence.loadDocument(document, controller) {
+            loaded = true
+            scope.launch {
+                val uri = LspDocumentUtils.uriOf(document, workspace)
+                lsp.client.applyDiagnosticsToController(uri, controller)
             }
+        }
     }
 
     DisposableEffect(controller, document.id) {
@@ -1417,6 +1412,15 @@ private fun ExplorerPanel(
             if (tree.isExpanded(vn.node.id)) tree.refresh(vn.node) else tree.toggle(vn)
         }
 
+        fun requireCleanDocumentsUnder(path: PlatformFile) {
+            val raw = path.path.trimEnd('/')
+            val dirty = workspace.documents.value.values.any { doc ->
+                val documentPath = workspace.resolve(doc).path.trimEnd('/')
+                (documentPath == raw || documentPath.startsWith("$raw/")) && workspace.isDirty(doc.id)
+            }
+            check(!dirty) { "Save or close unsaved files before renaming or deleting them." }
+        }
+
         fun closeDocumentsUnder(path: PlatformFile) {
             val raw = path.path.trimEnd('/')
             val prefix = "$raw/"
@@ -1428,7 +1432,7 @@ private fun ExplorerPanel(
 
                 if (documentPath == raw || documentPath.startsWith(prefix)) {
                     val _ = runCatching {
-                        action(CloseDocument(doc.id))
+                        action(CloseDocument(doc.id)).invoke()
                     }
                 }
             }
@@ -1564,6 +1568,7 @@ private fun ExplorerPanel(
                     val dst = parent.resolve(name)
                     try {
                         withContext(Dispatchers.IO) {
+                            requireCleanDocumentsUnder(src)
                             if (dst.exists()) error("Already exists")
                             src.atomicMove(dst)
                         }
@@ -1592,6 +1597,7 @@ private fun ExplorerPanel(
                     val parent = path.parent()
                     try {
                         withContext(IoDispatcher) {
+                            requireCleanDocumentsUnder(path)
                             path.delete(recursively = true)
                         }
                         closeDocumentsUnder(path)

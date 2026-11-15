@@ -221,6 +221,7 @@ fun rememberVisibleTabs(group: EditorGroup): List<WorkspaceDocument> {
 fun TabStrip(group: EditorGroup, modifier: Modifier = Modifier) {
     val workspace: Workspace = koinInject()
     val documents by workspace.documents.collectAsState()
+    val buffers by workspace.buffers.collectAsState()
     val tabs = rememberVisibleTabs(group)
     if (tabs.isEmpty()) return
 
@@ -233,7 +234,8 @@ fun TabStrip(group: EditorGroup, modifier: Modifier = Modifier) {
             val isLast = tab == tabs.lastOrNull()
             DocumentTab(
                 tab = tab,
-                name = documents[tab.documentId]?.name ?: tab.documentId.value,
+                name = (documents[tab.documentId]?.name ?: tab.documentId.value) +
+                    if (buffers[tab.documentId]?.isDirty == true) " •" else "",
                 isSelected = tab.documentId == group.activeDocumentId,
                 modifier = buildModifier {
                     when {
