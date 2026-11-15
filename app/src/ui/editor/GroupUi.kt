@@ -4,8 +4,10 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -28,16 +31,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledDropdownMenu
-import com.composeunstyled.buildModifier
 import com.composeunstyled.theme.Theme
 import com.klyx.core.action.action
 import com.klyx.runtime.action.ActivateDocument
@@ -57,12 +66,14 @@ import com.klyx.runtime.workspace.WorkspaceDocument
 import com.klyx.ui.components.KxMenuItem
 import com.klyx.ui.components.KxMenuPanel
 import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.background
 import com.klyx.ui.theme.border
 import com.klyx.ui.theme.colors
 import com.klyx.ui.theme.kxSmallShape
 import com.klyx.ui.theme.label
 import com.klyx.ui.theme.labelSmall
 import com.klyx.ui.theme.success
+import com.klyx.ui.theme.surfaceVariant
 import com.klyx.ui.theme.textMuted
 import com.klyx.ui.theme.textPrimary
 import com.klyx.ui.theme.textSecondary
@@ -226,23 +237,14 @@ fun TabStrip(group: EditorGroup, modifier: Modifier = Modifier) {
     if (tabs.isEmpty()) return
 
     LazyRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth().background(Theme[colors][surfaceVariant]),
     ) {
         items(tabs, key = { it.documentId.value }) { tab ->
-            val isFirst = tab == tabs.firstOrNull()
-            val isLast = tab == tabs.lastOrNull()
             DocumentTab(
                 tab = tab,
-                name = (documents[tab.documentId]?.name ?: tab.documentId.value) +
-                    if (buffers[tab.documentId]?.isDirty == true) " •" else "",
+                name = documents[tab.documentId]?.name ?: tab.documentId.value,
+                isDirty = buffers[tab.documentId]?.isDirty == true,
                 isSelected = tab.documentId == group.activeDocumentId,
-                modifier = buildModifier {
-                    when {
-                        isFirst -> add(Modifier.padding(start = 12.dp))
-                        isLast -> add(Modifier.padding(end = 12.dp))
-                    }
-                },
             )
         }
     }
@@ -252,6 +254,7 @@ fun TabStrip(group: EditorGroup, modifier: Modifier = Modifier) {
 private fun DocumentTab(
     tab: WorkspaceDocument,
     name: String,
+    isDirty: Boolean,
     isSelected: Boolean,
     modifier: Modifier = Modifier,
 ) {
@@ -259,10 +262,16 @@ private fun DocumentTab(
     var menuOpen by remember { mutableStateOf(false) }
     val pressed by interactionSource.collectIsPressedAsState()
 
-    val backgroundColor = if (isSelected) Theme[colors][accent].copy(alpha = 0.12f) else Color.Transparent
+    val hovered by interactionSource.collectIsHoveredAsState()
+    val backgroundColor = when {
+        isSelected -> lerp(Theme[colors][background], Theme[colors][accent], 0.10f)
+        hovered -> lerp(Theme[colors][surfaceVariant], Theme[colors][accent], 0.06f)
+        else -> Theme[colors][surfaceVariant]
+    }
+    val separatorColor = Theme[colors][border].copy(alpha = 0.5f)
     val borderColor =
         if (tab.pinned) Theme[colors][success] else if (isSelected) Theme[colors][accent] else Theme[colors][border]
-    val labelColor = if (isSelected) Theme[colors][accent] else Theme[colors][textSecondary]
+    val labelColor = if (isSelected) Theme[colors][textPrimary] else Theme[colors][textSecondary]
 
     UnstyledDropdownMenu(
         expanded = menuOpen,
@@ -286,10 +295,21 @@ private fun DocumentTab(
             val shape = kxSmallShape()
             Box(
                 modifier = Modifier
-                    .clip(shape)
-                    .background(backgroundColor, shape)
-                    .border(1.dp, borderColor, shape)
-                    .defaultMinSize(minHeight = 36.dp)
+                    .background(backgroundColor)
+                    .drawBehind {
+                        drawLine(
+                            separatorColor,
+                            Offset(size.width, 0f),
+                            Offset(size.width, size.height),
+                            1.dp.toPx(),
+                        )
+                        if (isSelected || tab.pinned) {
+                            drawLine(borderColor, Offset.Zero, Offset(size.width, 0f), 2.dp.toPx())
+                        }
+                    }
+                    .hoverable(interactionSource)
+                    .semantics { selected = isSelected }
+                    .defaultMinSize(minHeight = 44.dp)
                     .alpha(if (pressed) 0.7f else 1f)
                     .combinedClickable(
                         interactionSource = interactionSource,
@@ -300,7 +320,7 @@ private fun DocumentTab(
                         onLongClick = { menuOpen = true },
                     )
                     .pointerHoverIcon(PointerIcon.Default)
-                    .padding(PaddingValues(horizontal = 14.dp, vertical = 10.dp)),
+                    .padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
@@ -319,16 +339,31 @@ private fun DocumentTab(
                     } else {
                         Theme[typography][label]
                     }
-                    Text(text = name, style = style, color = labelColor)
+                    Text(
+                        text = name,
+                        style = style,
+                        color = labelColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.sizeIn(maxWidth = 200.dp),
+                    )
+                    if (isDirty) {
+                        Text(
+                            "•",
+                            color = Theme[colors][accent],
+                            modifier = Modifier.semantics { contentDescription = "Unsaved changes" },
+                        )
+                    }
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "x",
+                        text = "×",
                         style = Theme[typography][label],
                         color = Theme[colors][textPrimary],
                         modifier = Modifier
                             .clip(shape)
+                            .semantics { contentDescription = "Close $name" }
                             .clickable(onClick = action(CloseDocument(tab.documentId)))
-                            .padding(horizontal = 2.dp),
+                            .padding(horizontal = 10.dp, vertical = 12.dp),
                     )
                 }
             }

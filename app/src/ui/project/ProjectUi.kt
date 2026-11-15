@@ -154,7 +154,9 @@ fun ProjectSwitcher(
                         text = active?.name ?: "no project",
                         style = Theme[typography][label],
                         color = Theme[colors][textPrimary],
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
                     Text(
                         text = if (expanded) "▲" else "▼",

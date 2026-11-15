@@ -11,9 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -48,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -68,27 +67,28 @@ import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.theme.Theme
 import com.klyx.core.IoDispatcher
+import com.klyx.core.LocalWindowSizeClass
 import com.klyx.core.action.action
+import com.klyx.core.isWidthAtLeastExpandedBreakpoint
 import com.klyx.core.utils.relativeTo
+import com.klyx.document.DocumentPersistence
 import com.klyx.editor.EditorStore
 import com.klyx.lsp.CodeAction
 import com.klyx.lsp.Diagnostic
 import com.klyx.lsp.DiagnosticSeverity
-import com.klyx.ui.lsp.TermuxPermissionDialog
 import com.klyx.lsp.EditorLsp
-import com.klyx.lsp.getCodeActions
-import com.klyx.lsp.applyCodeAction
-import com.klyx.lsp.restartSession
-import com.klyx.lsp.requestHover
-import com.klyx.lsp.bindEditor
-import com.klyx.lsp.unbindEditor
-import com.klyx.lsp.applyCompletion
-import com.klyx.lsp.resolveCompletionDoc
-import com.klyx.document.DocumentPersistence
 import com.klyx.lsp.FormatDocument
 import com.klyx.lsp.LspDocumentUtils
 import com.klyx.lsp.LspSessionState
 import com.klyx.lsp.RestartLanguageServer
+import com.klyx.lsp.applyCodeAction
+import com.klyx.lsp.applyCompletion
+import com.klyx.lsp.bindEditor
+import com.klyx.lsp.getCodeActions
+import com.klyx.lsp.requestHover
+import com.klyx.lsp.resolveCompletionDoc
+import com.klyx.lsp.restartSession
+import com.klyx.lsp.unbindEditor
 import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
 import com.klyx.runtime.action.CloseDocument
@@ -98,6 +98,7 @@ import com.klyx.runtime.action.PromotePreviewDocument
 import com.klyx.runtime.action.SaveActiveDocument
 import com.klyx.runtime.action.SaveAllDocuments
 import com.klyx.runtime.action.SplitEditor
+import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.DocumentLocation
@@ -107,7 +108,6 @@ import com.klyx.runtime.workspace.EditorTabScope
 import com.klyx.runtime.workspace.ProjectId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.isVisibleIn
-import com.klyx.runtime.settings.SettingsStore
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonDefaultMinHeight
 import com.klyx.ui.components.KxButtonVariant
@@ -139,6 +139,7 @@ import com.klyx.ui.filetree.NodeIdRegistry
 import com.klyx.ui.filetree.VisibleFileNode
 import com.klyx.ui.filetree.platformFileTreeWidth
 import com.klyx.ui.filetree.rememberFileTreeIcons
+import com.klyx.ui.lsp.TermuxPermissionDialog
 import com.klyx.ui.project.OpenProjectDialog
 import com.klyx.ui.project.ProjectSwitcher
 import com.klyx.ui.theme.LocalCornerRadius
@@ -185,6 +186,8 @@ import io.github.vinceglb.filekit.parent
 import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.resolve
 import io.github.vinceglb.filekit.write
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -194,8 +197,6 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
-import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -203,6 +204,13 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     var openProjectDialog by remember { mutableStateOf(false) }
     val navigator = LocalNavigator.current
+    val wideScreen = LocalWindowSizeClass.current.isWidthAtLeastExpandedBreakpoint()
+    var explorerVisible by rememberSaveable { mutableStateOf(true) }
+    val hasVisibleFiles = rememberHasVisibleFiles()
+    val showFiles: () -> Unit = {
+        if (wideScreen) explorerVisible = !explorerVisible
+        else scope.launch { drawerState.open() }
+    }
 
     val workspace: Workspace = koinInject()
     val settingsStore: SettingsStore = koinInject()
@@ -291,6 +299,8 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     FileTreeDrawer(
         modifier = modifier,
         drawerState = drawerState,
+        wideScreen = wideScreen,
+        explorerVisible = explorerVisible,
         onOpenDialog = { openProjectDialog = true },
         onNavigate = { scope.launch { drawerState.close() } },
     ) {
@@ -300,20 +310,16 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             TopBar(
-                onFilesClick = { scope.launch { drawerState.open() } },
+                onFilesClick = showFiles,
                 onOpenDialog = { openProjectDialog = true },
                 onSettingsClick = { navigator.navigateTo(Settings) },
                 onShowProblems = { showProblemsDialog = true },
                 onShowLspStatus = { showLspStatusDialog = true },
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
-
             GroupStrip(groups = groups, activeId = activeId)
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            if (groups.isNotEmpty()) {
+            if (hasVisibleFiles) {
                 SinglePaneGroups(
                     groups = groups,
                     activeId = activeId,
@@ -324,37 +330,26 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         .weight(1f),
                 )
 
-                FlowRow(
-                    modifier = Modifier
-                        .background(Theme[colors][surfaceVariant])
-                        .height(IntrinsicSize.Max)
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp, horizontal = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    var isCmd by remember { mutableStateOf(false) }
-
-                    KxButton(
-                        onClick = { isCmd = !isCmd },
-                        variant = if (isCmd) KxButtonVariant.Filled else KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                if (!wideScreen && activeDoc != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().background(Theme[colors][surfaceVariant]),
                     ) {
-                        Text("Cmd")
-                    }
-
-                    KxButton(
-                        onClick = action(InsertText("\t")),
-                        variant = KxButtonVariant.Outlined,
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        Text("Tab")
+                        KxButton(
+                            onClick = action(InsertText("\t")),
+                            variant = KxButtonVariant.Ghost,
+                            contentDescription = "Insert tab",
+                        ) { Text("Tab") }
                     }
                 }
             } else {
-                EmptyEditorArea(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .weight(1f)
+                WelcomeScreen(
+                    onOpenFolder = { openProjectDialog = true },
+                    onBrowseFiles = {
+                        if (wideScreen) explorerVisible = true
+                        else scope.launch { drawerState.open() }
+                    },
+                    onSettings = { navigator.navigateTo(Settings) },
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
                 )
             }
 
@@ -461,9 +456,8 @@ private enum class OverflowMenuPage {
     Lsp,
 }
 
-@Suppress("UnusedReceiverParameter")
 @Composable
-private fun ColumnScope.TopBar(
+private fun TopBar(
     onFilesClick: () -> Unit,
     onOpenDialog: () -> Unit,
     onSettingsClick: () -> Unit = {},
@@ -479,67 +473,76 @@ private fun ColumnScope.TopBar(
     val canRedo by editors.canRedo.collectAsState()
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        KxButton(
-            onClick = onFilesClick,
-            variant = KxButtonVariant.Ghost,
-            indication = null,
-            contentPadding = PaddingValues(0.dp),
+        FlowRow(
+            modifier = Modifier.weight(1f),
+            itemVerticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("$ ", style = Theme[typography][headline], color = Theme[colors][textMuted])
-                Text("klyx", style = Theme[typography][headline])
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        if (hasVisibleFiles && showUndoRedo) {
             KxButton(
-                onClick = { editors.undo() },
-                enabled = canUndo,
+                onClick = onFilesClick,
                 variant = KxButtonVariant.Ghost,
-                bracketed = true,
-                indication = null,
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
-            ) {
-                Text("undo", style = Theme[typography][label])
-            }
+                contentDescription = "Toggle file explorer",
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) { Text("Files", style = Theme[typography][label]) }
 
             KxButton(
-                onClick = { editors.redo() },
-                enabled = canRedo,
+                onClick = onOpenDialog,
                 variant = KxButtonVariant.Ghost,
-                indication = null,
-                bracketed = true,
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
-            ) {
-                Text("redo", style = Theme[typography][label])
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) { Text("Open Folder", style = Theme[typography][label]) }
+
+            if (hasVisibleFiles && showUndoRedo) {
+                KxButton(
+                    onClick = { editors.undo() },
+                    enabled = canUndo,
+                    variant = KxButtonVariant.Ghost,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Text("Undo", style = Theme[typography][label])
+                }
+
+                KxButton(
+                    onClick = { editors.redo() },
+                    enabled = canRedo,
+                    variant = KxButtonVariant.Ghost,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Text("Redo", style = Theme[typography][label])
+                }
+            }
+        }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (hasVisibleFiles) {
+                KxButton(
+                    onClick = action(SaveActiveDocument),
+                    variant = KxButtonVariant.Ghost,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) { Text("Save", style = Theme[typography][label]) }
             }
 
-            Spacer(modifier = Modifier.width(6.dp))
+            TopBarOverflowMenu(
+                onSettingsClick = onSettingsClick,
+                onShowProblems = onShowProblems,
+                onShowLspStatus = onShowLspStatus,
+                showSplitAction = hasVisibleFiles,
+            )
         }
-
-        TopBarOverflowMenu(
-            onSettingsClick = onSettingsClick,
-            onShowProblems = onShowProblems,
-            onShowLspStatus = onShowLspStatus,
-            showSplitAction = hasVisibleFiles,
-        )
     }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ProjectSwitcher(onOpenDialog = onOpenDialog)
+        ProjectSwitcher(onOpenDialog = onOpenDialog, modifier = Modifier.weight(1f))
     }
+    Box(Modifier.fillMaxWidth().height(1.dp).background(Theme[colors][border]))
 }
 
 @Composable
@@ -684,7 +687,7 @@ private fun TopBarOverflowMenu(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                 modifier = Modifier.defaultMinSize(minHeight = KxButtonDefaultMinHeight),
             ) {
-                Text(text = "options", style = Theme[typography][label], color = Theme[colors][textSecondary])
+                Text(text = "More", style = Theme[typography][label], color = Theme[colors][textSecondary])
             }
         },
     )
@@ -1256,8 +1259,8 @@ private fun EditorStack(
 @Composable
 private fun EmptyEditorArea(
     modifier: Modifier = Modifier,
-    title: String = "no document open",
-    hint: String = "open a file from files",
+    title: String = "No file selected",
+    hint: String = "Choose a file from the explorer to start editing.",
 ) {
     Box(modifier = modifier.background(Theme[colors][background]), contentAlignment = Alignment.Center) {
         Column(
@@ -1278,10 +1281,28 @@ private fun EmptyEditorArea(
 private fun FileTreeDrawer(
     modifier: Modifier = Modifier,
     drawerState: DrawerState,
+    wideScreen: Boolean,
+    explorerVisible: Boolean,
     onOpenDialog: () -> Unit,
     onNavigate: () -> Unit,
     content: @Composable () -> Unit,
 ) {
+    if (wideScreen) {
+        Row(modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            if (explorerVisible) {
+                ExplorerPanel(
+                    onOpenDialog = onOpenDialog,
+                    onNavigate = {},
+                    modifier = Modifier.width(260.dp).fillMaxHeight()
+                        .background(Theme[colors][surfaceVariant]),
+                )
+                Box(Modifier.width(1.dp).fillMaxHeight().background(Theme[colors][border]))
+            }
+            Box(Modifier.weight(1f).fillMaxHeight()) { content() }
+        }
+        return
+    }
+
     ModalNavigationDrawer(
         modifier = modifier,
         drawerState = drawerState,
@@ -1357,6 +1378,19 @@ private fun ExplorerPanel(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("EXPLORER", style = Theme[typography][labelSmall], color = Theme[colors][textMuted])
+            Spacer(Modifier.weight(1f))
+            KxButton(
+                onClick = onOpenDialog,
+                variant = KxButtonVariant.Ghost,
+                contentDescription = "Open another folder",
+                contentPadding = PaddingValues(8.dp),
+            ) { Text("+ Open", style = Theme[typography][labelSmall]) }
+        }
         if (allProjects.isEmpty()) {
             DrawerEmptyState(
                 title = "No project open",
@@ -1386,11 +1420,30 @@ private fun ExplorerPanel(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = "FILES - ${activeProject.name}",
+                text = activeProject.name,
                 style = Theme[typography][labelSmall],
                 color = Theme[colors][textMuted],
                 maxLines = 1,
             )
+        }
+
+        val rootNode = tree.visibleNodes.firstOrNull()?.node
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            KxButton(
+                onClick = { rootNode?.let { createRequest = it to false } },
+                enabled = rootNode != null,
+                variant = KxButtonVariant.Ghost,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            ) { Text("New File", style = Theme[typography][labelSmall]) }
+            KxButton(
+                onClick = { rootNode?.let { createRequest = it to true } },
+                enabled = rootNode != null,
+                variant = KxButtonVariant.Ghost,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            ) { Text("New Folder", style = Theme[typography][labelSmall]) }
         }
 
         fun openFile(node: FileNode, preview: Boolean) {
