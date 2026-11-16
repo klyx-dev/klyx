@@ -25,7 +25,7 @@ class Navigator(val backStack: MutableList<Route>) {
     }
 
     fun navigateBack() {
-        if (backStack.size > 1) backStack.removeLast()
+        if (backStack.size > 1) backStack.removeLastOrNull()
     }
 
     fun replaceCurrentRouteWith(route: Route) {

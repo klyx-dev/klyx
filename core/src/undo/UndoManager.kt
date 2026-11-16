@@ -227,9 +227,7 @@ class UndoManager(
             } else null
 
         if (merged != null) {
-
-
-            undoStack.removeLast()
+            undoStack.removeLastOrNull()
             undoStack.addLast(Entry(nextEntryId++, merged, config.timeSource.markNow()))
         } else {
             undoStack.addLast(Entry(nextEntryId++, operation, config.timeSource.markNow()))
