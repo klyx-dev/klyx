@@ -13,12 +13,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -309,7 +307,7 @@ private fun DocumentTab(
                     }
                     .hoverable(interactionSource)
                     .semantics { selected = isSelected }
-                    .defaultMinSize(minHeight = 44.dp)
+                    .defaultMinSize(minHeight = 36.dp)
                     .alpha(if (pressed) 0.7f else 1f)
                     .combinedClickable(
                         interactionSource = interactionSource,
@@ -320,12 +318,12 @@ private fun DocumentTab(
                         onLongClick = { menuOpen = true },
                     )
                     .pointerHoverIcon(PointerIcon.Default)
-                    .padding(horizontal = 12.dp),
+                    .padding(start = 8.dp, end = 2.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     if (tab.pinned) {
                         Text(
@@ -354,17 +352,16 @@ private fun DocumentTab(
                             modifier = Modifier.semantics { contentDescription = "Unsaved changes" },
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "×",
-                        style = Theme[typography][label],
-                        color = Theme[colors][textPrimary],
+                    Box(
                         modifier = Modifier
+                            .sizeIn(minWidth = 28.dp, minHeight = 36.dp)
                             .clip(shape)
                             .semantics { contentDescription = "Close $name" }
-                            .clickable(onClick = action(CloseDocument(tab.documentId)))
-                            .padding(horizontal = 10.dp, vertical = 12.dp),
-                    )
+                            .clickable(role = Role.Button, onClick = action(CloseDocument(tab.documentId))),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("×", style = Theme[typography][label], color = Theme[colors][textPrimary])
+                    }
                 }
             }
         },

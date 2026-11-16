@@ -548,16 +548,24 @@ class LspSession(
         }.getOrNull()
     }
 
-    suspend fun formatting(uri: String, tabSize: Int = 4, insertSpaces: Boolean = true): List<TextEdit>? {
+    suspend fun formatting(
+        uri: String,
+        tabSize: Int = 4,
+        insertSpaces: Boolean = true,
+        range: Range? = null,
+    ): List<TextEdit>? {
         val server = serverConnection ?: return null
         if (_state.value != LspSessionState.Running) return null
-        if (!supportsBooleanProvider(capabilities?.documentFormattingProvider)) return null
+        val provider = if (range == null) capabilities?.documentFormattingProvider
+        else capabilities?.documentRangeFormattingProvider
+        if (!supportsBooleanProvider(provider)) return null
 
-        val params = DocumentFormattingParams(
-            textDocument = TextDocumentIdentifier(uri),
-            options = FormattingOptions(tabSize = tabSize.toUInt(), insertSpaces = insertSpaces),
-        )
-        return runCatching { server.textDocument.formatting(params) }.onFailure {
+        val document = TextDocumentIdentifier(uri)
+        val options = FormattingOptions(tabSize = tabSize.toUInt(), insertSpaces = insertSpaces)
+        return runCatching {
+            if (range == null) server.textDocument.formatting(DocumentFormattingParams(document, options))
+            else server.textDocument.rangeFormatting(DocumentRangeFormattingParams(document, range, options))
+        }.onFailure {
             if (it is CancellationException) {
                 currentCoroutineContext().ensureActive()
             }

@@ -91,13 +91,14 @@ import com.klyx.lsp.restartSession
 import com.klyx.lsp.unbindEditor
 import com.klyx.navigation.LocalNavigator
 import com.klyx.navigation.Settings
+import com.klyx.runtime.Platform
 import com.klyx.runtime.action.CloseDocument
-import com.klyx.runtime.action.InsertText
 import com.klyx.runtime.action.OpenDocument
 import com.klyx.runtime.action.PromotePreviewDocument
 import com.klyx.runtime.action.SaveActiveDocument
 import com.klyx.runtime.action.SaveAllDocuments
 import com.klyx.runtime.action.SplitEditor
+import com.klyx.runtime.currentPlatform
 import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
@@ -124,6 +125,7 @@ import com.klyx.ui.editor.GroupStrip
 import com.klyx.ui.editor.HoverCard
 import com.klyx.ui.editor.LspCompletionItemUi
 import com.klyx.ui.editor.LspStatusDialog
+import com.klyx.ui.editor.MobileEditorInput
 import com.klyx.ui.editor.ProblemsDialog
 import com.klyx.ui.editor.TabStrip
 import com.klyx.ui.editor.rememberEditorGroups
@@ -151,7 +153,6 @@ import com.klyx.ui.theme.border
 import com.klyx.ui.theme.colors
 import com.klyx.ui.theme.currentFontFamily
 import com.klyx.ui.theme.error
-import com.klyx.ui.theme.headline
 import com.klyx.ui.theme.kxShape
 import com.klyx.ui.theme.kxSmallShape
 import com.klyx.ui.theme.label
@@ -186,8 +187,6 @@ import io.github.vinceglb.filekit.parent
 import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.resolve
 import io.github.vinceglb.filekit.write
-import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -197,6 +196,8 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun HomeScreen(modifier: Modifier = Modifier) {
@@ -330,17 +331,6 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         .weight(1f),
                 )
 
-                if (!wideScreen && activeDoc != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().background(Theme[colors][surfaceVariant]),
-                    ) {
-                        KxButton(
-                            onClick = action(InsertText("\t")),
-                            variant = KxButtonVariant.Ghost,
-                            contentDescription = "Insert tab",
-                        ) { Text("Tab") }
-                    }
-                }
             } else {
                 WelcomeScreen(
                     onOpenFolder = { openProjectDialog = true },
@@ -349,7 +339,9 @@ fun HomeScreen(modifier: Modifier = Modifier) {
                         else scope.launch { drawerState.open() }
                     },
                     onSettings = { navigator.navigateTo(Settings) },
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
                 )
             }
 
@@ -473,7 +465,9 @@ private fun TopBar(
     val canRedo by editors.canRedo.collectAsState()
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -487,44 +481,51 @@ private fun TopBar(
                 variant = KxButtonVariant.Ghost,
                 contentDescription = "Toggle file explorer",
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-            ) { Text("Files", style = Theme[typography][label]) }
+            ) {
+                Text("Files", style = Theme[typography][label])
+            }
 
             KxButton(
                 onClick = onOpenDialog,
                 variant = KxButtonVariant.Ghost,
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-            ) { Text("Open Folder", style = Theme[typography][label]) }
-
-            if (hasVisibleFiles && showUndoRedo) {
-                KxButton(
-                    onClick = { editors.undo() },
-                    enabled = canUndo,
-                    variant = KxButtonVariant.Ghost,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-                ) {
-                    Text("Undo", style = Theme[typography][label])
-                }
-
-                KxButton(
-                    onClick = { editors.redo() },
-                    enabled = canRedo,
-                    variant = KxButtonVariant.Ghost,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-                ) {
-                    Text("Redo", style = Theme[typography][label])
-                }
+            ) {
+                Text("Open Folder", style = Theme[typography][label])
             }
         }
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             if (hasVisibleFiles) {
+                if (showUndoRedo) {
+                    KxButton(
+                        onClick = { editors.undo() },
+                        enabled = canUndo,
+                        variant = KxButtonVariant.Ghost,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        Text("Undo", style = Theme[typography][label])
+                    }
+
+                    KxButton(
+                        onClick = { editors.redo() },
+                        enabled = canRedo,
+                        variant = KxButtonVariant.Ghost,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        Text("Redo", style = Theme[typography][label])
+                    }
+                }
+
                 KxButton(
                     onClick = action(SaveActiveDocument),
                     variant = KxButtonVariant.Ghost,
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-                ) { Text("Save", style = Theme[typography][label]) }
+                ) {
+                    Text("Save", style = Theme[typography][label])
+                }
             }
 
             TopBarOverflowMenu(
@@ -537,12 +538,17 @@ private fun TopBar(
     }
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ProjectSwitcher(onOpenDialog = onOpenDialog, modifier = Modifier.weight(1f))
     }
-    Box(Modifier.fillMaxWidth().height(1.dp).background(Theme[colors][border]))
+    Box(Modifier
+        .fillMaxWidth()
+        .height(1.dp)
+        .background(Theme[colors][border]))
 }
 
 @Composable
@@ -707,8 +713,6 @@ private fun SinglePane(
 ) {
     Column(modifier = modifier) {
         TabStrip(group = group, modifier = Modifier.fillMaxWidth())
-
-        Spacer(modifier = Modifier.height(2.dp))
 
         EditorPane(
             group = group,
@@ -997,76 +1001,92 @@ private fun EditorDocument(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .onSizeChanged { editorBoxHeightPx = it.height },
-    ) {
-        SweetEditor(
-            controller = controller,
-            modifier = Modifier
+    val editorContent: @Composable (Modifier, Modifier) -> Unit = { layout, keys ->
+        Box(
+            modifier = layout
                 .fillMaxSize()
-                .focusRequester(focusRequester),
-            theme = theme,
-            settings = settings,
-        )
-
-        if (active && activeHover != null) {
-            HoverCard(
-                hover = activeHover!!,
-                onDismiss = { lsp.dismissHover() },
+                .onSizeChanged { editorBoxHeightPx = it.height },
+        ) {
+            SweetEditor(
+                controller = controller,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .offset { IntOffset(0, hoverYOffsetPx) },
+                    .fillMaxSize()
+                    .focusRequester(focusRequester)
+                    .then(keys),
+                theme = theme,
+                settings = settings,
             )
-        }
 
-        val activeCompletion by lsp.activeCompletion.collectAsState()
-        var docItemToShow by remember { mutableStateOf<LspCompletionItemUi?>(null) }
+            if (active && activeHover != null) {
+                HoverCard(
+                    hover = activeHover!!,
+                    onDismiss = { lsp.dismissHover() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .offset { IntOffset(0, hoverYOffsetPx) },
+                )
+            }
 
-        if (active && activeCompletion != null && activeCompletion?.documentId == document.id) {
-            CustomCompletionPopup(
-                state = activeCompletion!!,
-                onSelectItem = { },
-                onConfirmItem = { item ->
-                    lsp.applyCompletion(item, controller)
-                },
-                onShowDoc = { item ->
-                    scope.launch {
-                        val resolved = lsp.resolveCompletionDoc(document, item)
-                        val doc = resolved.documentation?.trim()
-                        if (doc.isNullOrBlank()) {
-                            onShowToast("No documentation available for \"${item.label}\"")
-                        } else {
-                            docItemToShow = resolved
+            val activeCompletion by lsp.activeCompletion.collectAsState()
+            var docItemToShow by remember { mutableStateOf<LspCompletionItemUi?>(null) }
+
+            if (active && activeCompletion != null && activeCompletion?.documentId == document.id) {
+                CustomCompletionPopup(
+                    state = activeCompletion!!,
+                    onSelectItem = { },
+                    onConfirmItem = { item ->
+                        lsp.applyCompletion(item, controller)
+                    },
+                    onShowDoc = { item ->
+                        scope.launch {
+                            val resolved = lsp.resolveCompletionDoc(document, item)
+                            val doc = resolved.documentation?.trim()
+                            if (doc.isNullOrBlank()) {
+                                onShowToast("No documentation available for \"${item.label}\"")
+                            } else {
+                                docItemToShow = resolved
+                            }
                         }
-                    }
-                },
-                onDismiss = {
-                    lsp.dismissCompletionPopup()
-                },
-            )
-        }
+                    },
+                    onDismiss = {
+                        lsp.dismissCompletionPopup()
+                    },
+                )
+            }
 
-        if (docItemToShow != null) {
-            CompletionDocDialog(
-                item = docItemToShow!!,
-                onDismiss = { docItemToShow = null },
-            )
-        }
+            if (docItemToShow != null) {
+                CompletionDocDialog(
+                    item = docItemToShow!!,
+                    onDismiss = { docItemToShow = null },
+                )
+            }
 
-        if (active && activeDiags.isNotEmpty()) {
-            DiagnosticBanner(
-                diagnostics = activeDiags,
-                onDismiss = { dismissedLine = cursorLine },
-                onQuickFix = onQuickFix,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-            )
+            if (active && activeDiags.isNotEmpty()) {
+                DiagnosticBanner(
+                    diagnostics = activeDiags,
+                    onDismiss = { dismissedLine = cursorLine },
+                    onQuickFix = onQuickFix,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+            }
         }
+    }
+    if (currentPlatform == Platform.Android || currentPlatform == Platform.iOS) {
+        MobileEditorInput(
+            document = document,
+            controller = controller,
+            lsp = lsp,
+            enabled = loaded && active && focused,
+            onShowToast = onShowToast,
+            modifier = modifier,
+            content = editorContent,
+        )
+    } else {
+        editorContent(modifier, Modifier)
     }
 }
 
@@ -1288,17 +1308,26 @@ private fun FileTreeDrawer(
     content: @Composable () -> Unit,
 ) {
     if (wideScreen) {
-        Row(modifier = modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+        Row(modifier = modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)) {
             if (explorerVisible) {
                 ExplorerPanel(
                     onOpenDialog = onOpenDialog,
                     onNavigate = {},
-                    modifier = Modifier.width(260.dp).fillMaxHeight()
+                    modifier = Modifier
+                        .width(260.dp)
+                        .fillMaxHeight()
                         .background(Theme[colors][surfaceVariant]),
                 )
-                Box(Modifier.width(1.dp).fillMaxHeight().background(Theme[colors][border]))
+                Box(Modifier
+                    .width(1.dp)
+                    .fillMaxHeight()
+                    .background(Theme[colors][border]))
             }
-            Box(Modifier.weight(1f).fillMaxHeight()) { content() }
+            Box(Modifier
+                .weight(1f)
+                .fillMaxHeight()) { content() }
         }
         return
     }
@@ -1379,7 +1408,9 @@ private fun ExplorerPanel(
 
     Column(modifier = modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("EXPLORER", style = Theme[typography][labelSmall], color = Theme[colors][textMuted])
@@ -1429,7 +1460,9 @@ private fun ExplorerPanel(
 
         val rootNode = tree.visibleNodes.firstOrNull()?.node
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             KxButton(

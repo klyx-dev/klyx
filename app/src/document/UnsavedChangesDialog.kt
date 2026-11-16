@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -126,10 +128,11 @@ fun UnsavedChangesDialog() {
             actions = {
                 DialogActionButton("Got it", onClick = ::dismissError)
             },
-        ) { SaveErrorMessage(error ?: backupError.orEmpty()) }
+        ) {
+            SaveErrorMessage(error ?: backupError.orEmpty())
+        }
     }
 }
-
 
 @Composable
 private fun UnsavedFileList(documents: List<Document>) {
@@ -224,7 +227,7 @@ private fun DialogActionButton(
 ) {
     KxButton(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 44.dp),
+        modifier = modifier,
         enabled = enabled,
         variant = variant,
         danger = danger,

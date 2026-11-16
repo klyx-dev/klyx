@@ -63,6 +63,7 @@ fun defaultClientCapabilities(): ClientCapabilities = ClientCapabilities(
         documentHighlight = DocumentHighlightClientCapabilities(
             dynamicRegistration = false,
         ),
+        rangeFormatting = RangeFormattingCapabilities(dynamicRegistration = false),
         codeAction = CodeActionCapabilities(
             codeActionLiteralSupport = CodeActionLiteralSupportCapabilities(
                 codeActionKind = CodeActionKindCapabilities(

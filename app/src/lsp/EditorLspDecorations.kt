@@ -1,5 +1,6 @@
 package com.klyx.lsp
 
+import com.klyx.editor.inDocumentOrder
 import com.klyx.runtime.workspace.Document
 import io.github.lumkit.sweeteditor.CodeLensItem
 import io.github.lumkit.sweeteditor.DocumentHighlight
@@ -12,46 +13,48 @@ import io.github.lumkit.sweeteditor.TextRange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal suspend fun EditorLsp.formatDocument(document: Document, controller: SweetEditorController): Boolean {
+internal suspend fun EditorLsp.formatDocument(
+    document: Document,
+    controller: SweetEditorController,
+    selection: TextRange? = null,
+): Boolean = withContext(Dispatchers.Main) {
+    val currentText = controller.getDocument().text
     val session = sessionForDocument(document)
-    val uri = LspDocumentUtils.uriOf(document, workspace)
-    if (session != null && session.state.value == LspSessionState.Running) {
-        val edits = session.formatting(uri)
-        if (edits != null) {
-            val sweetEdits = edits.map { edit ->
-                EditorTextEdit(
-                    range = TextRange(
-                        start = TextPosition(edit.range.start.line.toInt(), edit.range.start.character.toInt()),
-                        end = TextPosition(edit.range.end.line.toInt(), edit.range.end.character.toInt()),
-                    ),
-                    newText = edit.newText,
-                )
-            }
-            withContext(Dispatchers.Main) {
-                controller.applyTextEdits(sweetEdits)
-            }
-            return true
-        }
+    val settings = controller.getSettings()
+    val range = selection?.inDocumentOrder()?.let {
+        Range(Position(it.start.line, it.start.column), Position(it.end.line, it.end.column))
     }
+    val edits = if (session?.state?.value == LspSessionState.Running) {
+        val uri = LspDocumentUtils.uriOf(document, workspace)
+        session.syncTextIfNeeded(uri, currentText)
+        session.formatting(uri, settings.tabSize, settings.insertSpaces, range)
+    } else null
 
-    // Fallback smart formatting without LSP
-    val currentText = withContext(Dispatchers.Main) { controller.getDocument().text }
+    // The server can respond after the editor changes or the user switches tabs.
+    if (controller.getSettings().readOnly || controller.getDocument().text != currentText) {
+        return@withContext false
+    }
+    if (edits != null) {
+        controller.applyTextEdits(edits.map { edit ->
+            EditorTextEdit(
+                range = TextRange(
+                    start = TextPosition(edit.range.start.line.toInt(), edit.range.start.character.toInt()),
+                    end = TextPosition(edit.range.end.line.toInt(), edit.range.end.character.toInt()),
+                ),
+                newText = edit.newText,
+            )
+        })
+        return@withContext true
+    }
+    if (selection != null) return@withContext false
+
     val ext = document.name.substringAfterLast('.', "").lowercase()
     val formatted = SmartLanguageFeatures.formatTextFallback(currentText, ext)
-    if (formatted != currentText) {
-        val lines = currentText.lines()
-        val lastLine = (lines.size - 1).coerceAtLeast(0)
-        val lastCol = lines.getOrNull(lastLine)?.length ?: 0
-        val fullRange = TextRange(
-            start = TextPosition(0, 0),
-            end = TextPosition(lastLine, lastCol),
-        )
-        withContext(Dispatchers.Main) {
-            controller.applyTextEdits(listOf(EditorTextEdit(range = fullRange, newText = formatted)))
-        }
-        return true
-    }
-    return false
+    if (formatted == currentText) return@withContext false
+    val lines = currentText.lines()
+    val fullRange = TextRange(TextPosition(0, 0), TextPosition(lines.lastIndex, lines.last().length))
+    controller.applyTextEdits(listOf(EditorTextEdit(range = fullRange, newText = formatted)))
+    true
 }
 
 internal suspend fun EditorLsp.refreshSyntacticFolding(document: Document, controller: SweetEditorController) {
