@@ -38,6 +38,7 @@ class EditorLsp(
 ) : AutoCloseable {
 
     internal class EditorState {
+        var uri: String? = null
         val disposables = mutableListOf<() -> Unit>()
         var changeJob: Job? = null
         var highlightJob: Job? = null
@@ -77,13 +78,21 @@ class EditorLsp(
     val termuxAvailability: StateFlow<Map<String, Boolean>>
         field = MutableStateFlow<Map<String, Boolean>>(emptyMap())
 
-    internal fun updateHover(state: HoverState?) { activeHover.value = state }
+    internal fun updateHover(state: HoverState?) {
+        activeHover.value = state
+    }
 
-    internal fun updateCompletion(state: CompletionUiState?) { activeCompletion.value = state }
+    internal fun updateCompletion(state: CompletionUiState?) {
+        activeCompletion.value = state
+    }
 
-    internal fun reportError(message: String) { lspErrors.tryEmit(message) }
+    internal fun reportError(message: String) {
+        lspErrors.tryEmit(message)
+    }
 
-    internal fun updateAvailability(availability: Map<String, Boolean>) { termuxAvailability.value = availability }
+    internal fun updateAvailability(availability: Map<String, Boolean>) {
+        termuxAvailability.value = availability
+    }
 
     internal fun updateActiveSessions() {
         activeSessions.value = sessions.mapValues { it.value.state.value }

@@ -16,6 +16,7 @@ internal fun EditorLsp.bindEditor(document: Document, controller: SweetEditorCon
     unbindList.clear()
 
     val uri = LspDocumentUtils.uriOf(document, workspace)
+    state.uri = uri
     val langId = LspDocumentUtils.languageIdOf(document)
 
     controller.setCompletionItemRenderer { item, selected, theme ->
@@ -168,19 +169,22 @@ internal fun EditorLsp.unbindEditor(document: Document) {
     state?.changeJob?.cancel()
     state?.highlightJob?.cancel()
     state?.completionJob?.cancel()
-    val docUri = LspDocumentUtils.uriOf(document, workspace)
-    inlayHintJobs.remove(docUri)?.cancel()
-    inlayHintGeneration.remove(docUri)
+    // project registration may already be gone when Compose disposes this editor.
+    val docUri = state?.uri ?: LspDocumentUtils.uriOfOrNull(document, workspace)
+    if (docUri != null) {
+        inlayHintJobs.remove(docUri)?.cancel()
+        inlayHintGeneration.remove(docUri)
+    }
     if (activeCompletion.value?.documentId == document.id) {
         updateCompletion(null)
     }
     documentCodeLenses.remove(document.id)
 
+    val session = sessionFor(LspDocumentUtils.languageIdOf(document))
+    if (docUri == null || session == null) return
     scope.launch {
-        val session = sessionForDocument(document) ?: return@launch
         if (session.state.value == LspSessionState.Running) {
-            val uri = LspDocumentUtils.uriOf(document, workspace)
-            session.didClose(uri)
+            session.didClose(docUri)
         }
     }
 }

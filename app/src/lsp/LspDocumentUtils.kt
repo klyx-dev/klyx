@@ -1,17 +1,16 @@
 package com.klyx.lsp
 
 import com.klyx.core.utils.actualUri
-import com.klyx.core.utils.join
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentLocation
 import com.klyx.runtime.workspace.Workspace
 import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.resolve
-import io.github.vinceglb.filekit.toKotlinxIoPath
-import kotlinx.io.files.Path
 
 object LspDocumentUtils {
+
+    fun uriOfOrNull(document: Document, workspace: Workspace): String? =
+        fileOf(document, workspace)?.actualUri()
 
     fun uriOf(document: Document, workspace: Workspace): String = when (val loc = document.location) {
         is DocumentLocation.Platform -> loc.file.actualUri()
@@ -56,10 +55,5 @@ object LspDocumentUtils {
             "toml" -> "toml"
             else -> "plaintext"
         }
-    }
-
-    private fun pathToUri(path: String): String {
-        val normalized = if (path.startsWith("/")) path else "/$path"
-        return "file://$normalized"
     }
 }
