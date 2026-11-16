@@ -193,6 +193,8 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
@@ -200,7 +202,10 @@ import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun HomeScreen(modifier: Modifier = Modifier) {
+fun HomeScreen(
+    modifier: Modifier = Modifier,
+    toastMessages: Flow<String> = emptyFlow(),
+) {
     val scope = rememberCoroutineScope()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     var openProjectDialog by remember { mutableStateOf(false) }
@@ -231,6 +236,10 @@ fun HomeScreen(modifier: Modifier = Modifier) {
     var showCodeActionsDialog by remember { mutableStateOf(false) }
     var availableCodeActions by remember { mutableStateOf<List<CodeAction>>(emptyList()) }
     var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(toastMessages) {
+        toastMessages.collect { toastMessage = it }
+    }
 
     LaunchedEffect(toastMessage) {
         if (toastMessage != null) {
@@ -545,10 +554,12 @@ private fun TopBar(
     ) {
         ProjectSwitcher(onOpenDialog = onOpenDialog, modifier = Modifier.weight(1f))
     }
-    Box(Modifier
-        .fillMaxWidth()
-        .height(1.dp)
-        .background(Theme[colors][border]))
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(Theme[colors][border])
+    )
 }
 
 @Composable
@@ -1308,9 +1319,11 @@ private fun FileTreeDrawer(
     content: @Composable () -> Unit,
 ) {
     if (wideScreen) {
-        Row(modifier = modifier
-            .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
             if (explorerVisible) {
                 ExplorerPanel(
                     onOpenDialog = onOpenDialog,
@@ -1320,14 +1333,20 @@ private fun FileTreeDrawer(
                         .fillMaxHeight()
                         .background(Theme[colors][surfaceVariant]),
                 )
-                Box(Modifier
-                    .width(1.dp)
-                    .fillMaxHeight()
-                    .background(Theme[colors][border]))
+                Box(
+                    Modifier
+                        .width(1.dp)
+                        .fillMaxHeight()
+                        .background(Theme[colors][border])
+                )
             }
-            Box(Modifier
-                .weight(1f)
-                .fillMaxHeight()) { content() }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                content()
+            }
         }
         return
     }

@@ -644,6 +644,7 @@ private fun CustomServerDialog(
                                     .filter { it.isNotEmpty() },
                                 port = portValue ?: 0,
                                 manualSocket = manualSocket,
+                                supportsContentOnly = initial?.supportsContentOnly ?: false,
                             )
                         )
                     },

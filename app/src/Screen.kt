@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -39,12 +40,14 @@ import com.klyx.ui.theme.LocalCornerRadius
 import com.klyx.ui.theme.background
 import com.klyx.ui.theme.colors
 import com.klyx.ui.utils.BackHandler
+import kotlinx.coroutines.flow.MutableSharedFlow
 import org.koin.compose.koinInject
 
 @Composable
 fun Screen(onExit: () -> Unit = {}) {
     val settingsStore: SettingsStore = koinInject()
     val persistence: DocumentPersistence = koinInject()
+    val toastMessages = remember { MutableSharedFlow<String>(extraBufferCapacity = 1) }
 
     val settings by settingsStore.settings.collectAsState()
 
@@ -84,13 +87,17 @@ fun Screen(onExit: () -> Unit = {}) {
                         persistence.requestExit(onExit)
                     }
                     UnsavedChangesDialog()
-                    HomeScreen(modifier = Modifier.fillMaxSize())
+                    HomeScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        toastMessages = toastMessages
+                    )
                     AnimatedVisibility(
                         visible = showSettings,
                         enter = fadeIn(),
                         exit = fadeOut(),
                     ) {
                         SettingsScreen(
+                            onAppFilesOpened = { toastMessages.tryEmit("App files opened in the drawer") },
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Theme[colors][background]),

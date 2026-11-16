@@ -1,7 +1,9 @@
 package com.klyx.lsp
 
+import com.klyx.core.utils.actualUri
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
+import com.klyx.runtime.workspace.Project
 import com.klyx.runtime.workspace.ProjectId
 import io.github.vinceglb.filekit.name
 import kotlinx.coroutines.CancellationException
@@ -15,22 +17,27 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.seconds
 
 internal fun EditorLsp.observeWorkspaceProjects() {
-    var previousProjectIds = emptySet<ProjectId>()
+    var previousProjects = emptyMap<ProjectId, Project>()
     scope.launch {
         workspace.projects.collect { projects ->
             val currentIds = projects.keys
-            val added = (currentIds - previousProjectIds).mapNotNull { projects[it] }
-            val removed = (previousProjectIds - currentIds)
+            val added = (currentIds - previousProjects.keys).mapNotNull { projects[it] }
+            val removed = (previousProjects.keys - currentIds).mapNotNull { previousProjects[it] }
 
-            if (previousProjectIds.isNotEmpty() && (added.isNotEmpty() || removed.isNotEmpty())) {
-                val addedFolders = added.map { WorkspaceFolder(uri = "file://${it.root}", name = it.root.name) }
-                val removedFolders = removed.map { WorkspaceFolder(uri = "project://$it", name = it.value) }
-
+            if (added.isNotEmpty() || removed.isNotEmpty()) {
                 sessions.values.forEach { session ->
-                    session.didChangeWorkspaceFolders(added = addedFolders, removed = removedFolders)
+                    val addedFolders = added
+                        .filter { session.config.canUseWorkspaceFolder(it.root) }
+                        .map { WorkspaceFolder(uri = it.root.actualUri(), name = it.root.name) }
+                    val removedFolders = removed
+                        .filter { session.config.canUseWorkspaceFolder(it.root) }
+                        .map { WorkspaceFolder(uri = it.root.actualUri(), name = it.root.name) }
+                    if (addedFolders.isNotEmpty() || removedFolders.isNotEmpty()) {
+                        session.didChangeWorkspaceFolders(added = addedFolders, removed = removedFolders)
+                    }
                 }
             }
-            previousProjectIds = currentIds
+            previousProjects = projects
         }
     }
 }

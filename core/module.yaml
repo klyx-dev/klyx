@@ -36,6 +36,8 @@ dependencies@android:
 
 test-dependencies: 
   - $compose.uiTest
+
+test-dependencies@jvm:
   - app.cash.molecule:molecule-runtime:2.2.0
 
 test-settings:

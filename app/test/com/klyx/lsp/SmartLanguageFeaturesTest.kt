@@ -18,10 +18,14 @@ class SmartLanguageFeaturesTest : FunSpec({
     test("LspServerRegistry detects configured code language servers") {
         LspServerRegistry.hasServerFor("rust", "rs") shouldBe true
         LspServerRegistry.hasServerFor("python", "py") shouldBe true
-        LspServerRegistry.hasServerFor("kotlin", "kt") shouldBe true
         LspServerRegistry.hasServerFor("c", "c") shouldBe true
         LspServerRegistry.hasServerFor("typescript", "ts") shouldBe true
         LspServerRegistry.hasServerFor("json", "json") shouldBe true
+    }
+
+    test("Kotlin and Java have no built-in language server") {
+        LspServerRegistry.hasServerFor("kotlin", "kt") shouldBe false
+        LspServerRegistry.hasServerFor("java", "java") shouldBe false
     }
 
     test("SmartLanguageFeatures provides keywords for languages") {

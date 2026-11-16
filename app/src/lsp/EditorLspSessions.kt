@@ -5,10 +5,12 @@ import com.klyx.core.utils.actualUri
 import com.klyx.core.utils.isFileUri
 import com.klyx.core.utils.isTermuxUri
 import com.klyx.runtime.workspace.Document
+import com.klyx.runtime.workspace.DocumentLocation
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.exists
 import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.parent
+import io.github.vinceglb.filekit.path
 import io.github.vinceglb.filekit.resolve
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -19,7 +21,14 @@ internal fun EditorLsp.sessionFor(languageId: String): LspSession? = sessions[la
 
 internal fun EditorLsp.sessionForDocument(document: Document): LspSession? {
     val langId = LspDocumentUtils.languageIdOf(document)
-    return sessions[langId]
+    val session = sessions[langId] ?: return null
+    return session.takeIf { canAttachDocument(document, it.config) }
+}
+
+private fun EditorLsp.canAttachDocument(document: Document, config: LspServerConfig): Boolean {
+    if (config.canOpenPrivateFile()) return true
+    val file = LspDocumentUtils.fileOf(document, workspace) ?: return false
+    return !isAppPrivateFile(file)
 }
 
 internal fun shouldLaunchLspFor(document: Document): Boolean {
@@ -31,7 +40,7 @@ internal fun shouldLaunchLspFor(document: Document): Boolean {
 internal fun EditorLsp.attachAllOpenDocuments(languageId: String, session: LspSession) {
     scope.launch {
         val docs = workspace.documents.value.values.filter {
-            LspDocumentUtils.languageIdOf(it) == languageId
+            LspDocumentUtils.languageIdOf(it) == languageId && canAttachDocument(it, session.config)
         }
         for (doc in docs) {
             val controllers = editorStore.controllersFor(doc.id)
@@ -68,6 +77,11 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
             return null
         }
 
+    if (!canAttachDocument(document, config)) {
+        if (!silent) reportError("${config.languageId} requires filesystem access unavailable for app-private files in Termux.")
+        return null
+    }
+
     if (!termuxConsent.canStart(config)) return null
 
     val existing = sessions[langId]
@@ -91,9 +105,18 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
         }
     }
 
-    val activeProj = workspace.activeProjectId.value?.let { workspace.projects.value[it] }
     val docPath = LspDocumentUtils.fileOf(document, workspace)
-    val projectRoot = activeProj?.root ?: findProjectRoot(docPath)
+    val activeProj = when (val location = document.location) {
+        is DocumentLocation.Project -> workspace.projects.value[location.projectId]
+        is DocumentLocation.Platform -> workspace.activeProjectId.value
+            ?.let { workspace.projects.value[it] }
+            ?.takeIf { docPath != null && isPathInDirectories(docPath.path, listOf(it.root.path)) }
+    }
+
+    val contentOnly = config.needsAccessibleFiles() && docPath?.let(::isAppPrivateFile) == true
+    val projectRoot = if (!contentOnly) {
+        (activeProj?.root ?: findProjectRoot(docPath))?.takeIf(config::canUseWorkspaceFolder)
+    } else null
 
     if (projectRoot?.isTermuxUri() == false && !projectRoot.isFileUri()) return null
 
@@ -116,14 +139,16 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
     session.onNotice = { message -> reportError(message) }
 
     val rootUri = projectRoot?.actualUri()
-    val folders = if (activeProj != null) {
-        workspace.projects.value.values.map {
-            WorkspaceFolder(uri = it.root.actualUri(), name = it.root.name)
-        }
-    } else if (projectRoot != null) {
-        listOf(WorkspaceFolder(uri = projectRoot.actualUri(), name = projectRoot.name))
-    } else {
-        emptyList()
+    val folders = when {
+        contentOnly -> emptyList()
+
+        activeProj != null -> workspace.projects.value.values
+            .filter { config.canUseWorkspaceFolder(it.root) }
+            .map { WorkspaceFolder(uri = it.root.actualUri(), name = it.root.name) }
+
+        projectRoot != null -> listOf(WorkspaceFolder(uri = projectRoot.actualUri(), name = projectRoot.name))
+
+        else -> emptyList()
     }
 
     Log.i("LSP", "Starting session for ${config.languageId} with root: $rootUri")

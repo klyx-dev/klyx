@@ -47,11 +47,18 @@ import com.composeunstyled.Track
 import com.composeunstyled.UnstyledSwitch
 import com.composeunstyled.theme.Theme
 import com.klyx.build.BuildInfo
+import com.klyx.core.App
+import com.klyx.core.action.action
+import com.klyx.document.DocumentPersistence
 import com.klyx.navigation.LocalNavigator
+import com.klyx.runtime.action.OpenDocument
+import com.klyx.runtime.action.OpenProject
 import com.klyx.runtime.OperatingSystem
 import com.klyx.runtime.currentOperatingSystem
 import com.klyx.runtime.settings.Settings
 import com.klyx.runtime.settings.SettingsStore
+import com.klyx.runtime.settings.settingsFile
+import com.klyx.runtime.workspace.DocumentLocation
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.feedback.FeedbackDialog
@@ -71,7 +78,14 @@ import com.klyx.ui.theme.textMuted
 import com.klyx.ui.theme.textPrimary
 import com.klyx.ui.theme.typography
 import com.klyx.ui.utils.BackHandler
+import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.parent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import kotlin.math.roundToInt
 
@@ -82,7 +96,10 @@ enum class SettingsCategory(val label: String) {
 }
 
 @Composable
-fun SettingsScreen(modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    modifier: Modifier = Modifier,
+    onAppFilesOpened: () -> Unit = {}
+) {
     val palette = KxColors.current
     val navigator = LocalNavigator.current
     var selectedCategory by remember { mutableStateOf(SettingsCategory.General) }
@@ -141,6 +158,10 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
             }
 
             item {
+                InternalFilesSection(onAppFilesOpened = onAppFilesOpened)
+            }
+
+            item {
                 SettingsCategoryTabs(
                     categories = availableCategories,
                     selected = selectedCategory,
@@ -155,6 +176,46 @@ fun SettingsScreen(modifier: Modifier = Modifier) {
                     SettingsCategory.Termux -> TermuxSettings()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun InternalFilesSection(onAppFilesOpened: () -> Unit) {
+    val navigator = LocalNavigator.current
+    val scope = rememberCoroutineScope()
+    val persistence: DocumentPersistence = koinInject()
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        KxButton(
+            onClick = {
+                val file = App.global.settingsFile
+                action(OpenDocument(DocumentLocation.Platform(file), file.name))()
+                navigator.navigateBack()
+            },
+            variant = KxButtonVariant.Ghost,
+        ) {
+            Text("edit settings.json", style = KxTypography.label)
+        }
+        KxButton(
+            onClick = {
+                scope.launch {
+                    try {
+                        val directory = requireNotNull(App.global.settingsFile.parent())
+                        withContext(Dispatchers.IO) { directory.createDirectories() }
+                        App.global.actions.execute(OpenProject(directory))
+                        navigator.navigateBack()
+                        onAppFilesOpened()
+                    } catch (failure: CancellationException) {
+                        throw failure
+                    } catch (failure: Exception) {
+                        persistence.error.value = "Could not open app files: ${failure.message}"
+                    }
+                }
+            },
+            variant = KxButtonVariant.Ghost,
+        ) {
+            Text("browse app files", style = KxTypography.label)
         }
     }
 }

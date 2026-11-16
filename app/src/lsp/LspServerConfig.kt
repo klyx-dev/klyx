@@ -24,6 +24,8 @@ data class LspServerConfig(
     val transportType: LspTransportType = LspTransportType.Auto,
     val socketHost: String = "127.0.0.1",
     val socketPort: Int = 0,
+    /** can analyze didOpen/didChange text without access to the document's filesystem. */
+    val supportsContentOnly: Boolean = false,
 )
 
 fun defaultPortForLanguage(languageId: String): Int = when (languageId.lowercase()) {
@@ -144,20 +146,7 @@ object LspServerRegistry {
                 extensions = setOf("json"),
                 command = "vscode-json-language-server",
                 args = listOf("--stdio"),
-            )
-        )
-        register(
-            LspServerConfig(
-                languageId = "kotlin",
-                extensions = setOf("kt", "kts"),
-                command = "kotlin-language-server",
-            )
-        )
-        register(
-            LspServerConfig(
-                languageId = "java",
-                extensions = setOf("java"),
-                command = "jdtls",
+                supportsContentOnly = true,
             )
         )
         register(
@@ -245,4 +234,5 @@ fun CustomLspServer.toConfig(): LspServerConfig =
         args = args,
         transportType = if (manualSocket) LspTransportType.TcpSocket else LspTransportType.Auto,
         socketPort = port,
+        supportsContentOnly = supportsContentOnly,
     )

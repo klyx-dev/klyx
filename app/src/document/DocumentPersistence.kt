@@ -1,13 +1,15 @@
 package com.klyx.document
 
+import com.klyx.core.App
 import com.klyx.editor.EditorStore
 import com.klyx.runtime.settings.SettingsStore
+import com.klyx.runtime.settings.settingsFile
 import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.WorkspaceSessionManager
 import io.github.lumkit.sweeteditor.SweetEditorController
-import kotlin.time.Duration.Companion.milliseconds
+import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -24,6 +26,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
+import kotlin.time.Duration.Companion.milliseconds
 
 data class SavedDocument(val document: Document, val text: String)
 
@@ -74,7 +77,11 @@ class DocumentPersistence(
     suspend fun loadDocument(document: Document, controller: SweetEditorController, onLoaded: () -> Unit) {
         try {
             sessions.awaitRestored()
-            val text = workspace.buffers.value[document.id]?.text ?: workspace.readText(document.id)
+            val text = workspace.buffers.value[document.id]?.text ?: if (isSettingsFile(document)) {
+                settings.readJson()
+            } else {
+                workspace.readText(document.id)
+            }
             withContext(Dispatchers.Main) {
                 workspace.initializeBuffer(document.id, text)
                 controller.whenReady {
@@ -157,7 +164,11 @@ class DocumentPersistence(
         try {
             writes.withLock {
                 withContext(NonCancellable) {
-                    workspace.writeText(document.id, text)
+                    if (isSettingsFile(document)) {
+                        settings.writeJson(text)
+                    } else {
+                        workspace.writeText(document.id, text)
+                    }
                     withContext(Dispatchers.Main) { workspace.markSaved(document.id, text) }
                 }
                 sessions.saveCurrentSession()
@@ -169,6 +180,9 @@ class DocumentPersistence(
             this.error.value = "Could not save ${document.name}: ${error.message}"
         }
     }
+
+    private fun isSettingsFile(document: Document): Boolean =
+        workspace.resolve(document).path == App.global.settingsFile.path
 
     override fun close() {
         bindings.values.forEach { it() }

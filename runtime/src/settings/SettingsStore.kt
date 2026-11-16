@@ -30,4 +30,11 @@ class SettingsStore(storage: SettingsDataStore) {
     }
 
     suspend fun read(): Settings = store.data.first()
+
+    suspend fun readJson(): String = settingsJson.encodeToString(Settings.serializer(), read())
+
+    suspend fun writeJson(text: String) {
+        val parsed = settingsJson.decodeFromString(Settings.serializer(), text)
+        store.updateData { parsed }
+    }
 }

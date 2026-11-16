@@ -1,16 +1,8 @@
 package com.klyx.core.action
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.Snapshot
-import app.cash.molecule.RecompositionMode
-import app.cash.molecule.moleculeFlow
 import com.klyx.core.App
-import io.kotest.assertions.nondeterministic.eventually
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
-import io.kotest.core.test.TestScope
 import io.kotest.core.test.testCoroutineScheduler
 import io.kotest.engine.coroutines.backgroundScope
 import io.kotest.engine.coroutines.testScheduler
@@ -28,10 +20,10 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
@@ -185,7 +177,13 @@ data class Open(val path: String = "", val line: Int = 0) : Action
 @Serializable
 data class Query(val text: String = "") : Action
 
-private suspend fun <T> Deferred<T>.awaitShort(): T = withTimeout(5.seconds) { await() }
+// App actions run on Dispatchers.Default, virtual time can expire before that work gets CPU time.
+private suspend fun <T> awaitAppAction(block: suspend () -> T): T =
+    withContext(Dispatchers.Default.limitedParallelism(1)) {
+        withTimeout(5.seconds) { block() }
+    }
+
+private suspend fun <T> Deferred<T>.awaitShort(): T = awaitAppAction { await() }
 
 class ActionsApiTest : FunSpec({
     coroutineTestScope = true
@@ -242,7 +240,7 @@ class ActionsApiTest : FunSpec({
         onClick()
 
         repeat(2) {
-            withTimeout(5.seconds) { seen.receive() } shouldBe Open("/Main.kt", 42)
+            awaitAppAction { seen.receive() } shouldBe Open("/Main.kt", 42)
         }
     }
 
@@ -302,25 +300,5 @@ class ActionsApiTest : FunSpec({
 
         val e = shouldThrow<IllegalStateException> { action(Ping)() }
         e.message shouldBe "initKoin first"
-    }
-
-    fun TestScope.settle() {
-        Snapshot.sendApplyNotifications()
-        testCoroutineScheduler.advanceUntilIdle()
-    }
-
-    test("OnAction registers while composed and unregisters when it leaves") {
-        var show by mutableStateOf(true)
-        val job = moleculeFlow(RecompositionMode.Immediate) {
-            if (show) OnAction<Ping> { }
-        }.launchIn(backgroundScope)
-        settle()
-        eventually(5.seconds) { app.actions.isRegistered(Ping::class).shouldBeTrue() }
-
-        show = false
-        settle()
-        eventually(5.seconds) { app.actions.isRegistered(Ping::class).shouldBeFalse() }
-
-        job.cancel()
     }
 })

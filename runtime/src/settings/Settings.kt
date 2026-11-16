@@ -8,6 +8,7 @@ import androidx.datastore.core.Storage
 import com.klyx.core.App
 import com.klyx.runtime.Platform
 import com.klyx.runtime.currentPlatform
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -47,6 +48,7 @@ data class CustomLspServer(
     val args: List<String> = emptyList(),
     val port: Int = 0,
     val manualSocket: Boolean = false,
+    val supportsContentOnly: Boolean = false,
 )
 
 fun createDataStore(storage: Storage<Settings>): DataStore<Settings> =
@@ -55,6 +57,9 @@ fun createDataStore(storage: Storage<Settings>): DataStore<Settings> =
 expect fun createDataStore(): DataStore<Settings>
 
 expect val App.settingsFilePath: Path
+
+val App.settingsFile: PlatformFile
+    get() = PlatformFile(settingsFilePath.toString())
 
 internal const val dataStoreFileName = "settings.json"
 
