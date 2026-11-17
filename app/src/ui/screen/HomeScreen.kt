@@ -848,8 +848,14 @@ private fun EditorDocument(
     val editors: EditorStore = koinInject()
     val controller = retain(document) { editors[document.id] }
     val focusRequester = remember { FocusRequester() }
+
     var loaded by remember(document.id) { mutableStateOf(false) }
-    val settings = remember(active, loaded) { EditorSettings(readOnly = !active || !loaded) }
+    val persistence: DocumentPersistence = koinInject()
+    val readOnly = persistence.isReadOnly(document)
+
+    val settings = remember(active, loaded, readOnly) {
+        EditorSettings(readOnly = readOnly || !active || !loaded)
+    }
     val theme = editorTheme()
 
     val highlight = remember(document) {
@@ -874,7 +880,6 @@ private fun EditorDocument(
     }
 
     val lsp: EditorLsp = koinInject()
-    val persistence: DocumentPersistence = koinInject()
     val scope = rememberCoroutineScope()
 
     DisposableEffect(controller, document.id) {

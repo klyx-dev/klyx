@@ -8,6 +8,7 @@ import com.klyx.runtime.workspace.Document
 import com.klyx.runtime.workspace.DocumentId
 import com.klyx.runtime.workspace.Workspace
 import com.klyx.runtime.workspace.WorkspaceSessionManager
+import com.klyx.runtime.workspace.workspaceSessionFile
 import io.github.lumkit.sweeteditor.SweetEditorController
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.CancellationException
@@ -47,7 +48,13 @@ class DocumentPersistence(
     private val saved = MutableSharedFlow<SavedDocument>()
     val savedDocuments = saved.asSharedFlow()
 
+    fun isReadOnly(document: Document): Boolean = isWorkspaceSessionFile(
+        workspace.resolve(document),
+        App.global.workspaceSessionFile,
+    )
+
     fun bindEditor(document: Document, controller: SweetEditorController) {
+        if (isReadOnly(document)) return
         val count = bindingCounts[controller] ?: 0
         bindingCounts[controller] = count + 1
         if (count > 0) return
@@ -77,13 +84,20 @@ class DocumentPersistence(
     suspend fun loadDocument(document: Document, controller: SweetEditorController, onLoaded: () -> Unit) {
         try {
             sessions.awaitRestored()
-            val text = workspace.buffers.value[document.id]?.text ?: if (isSettingsFile(document)) {
+            val readOnly = isReadOnly(document)
+            val text = if (readOnly) {
+                workspace.readText(document.id)
+            } else workspace.buffers.value[document.id]?.text ?: if (isSettingsFile(document)) {
                 settings.readJson()
             } else {
                 workspace.readText(document.id)
             }
             withContext(Dispatchers.Main) {
                 workspace.initializeBuffer(document.id, text)
+                if (readOnly) {
+                    workspace.updateBuffer(document.id, text)
+                    workspace.markSaved(document.id, text)
+                }
                 controller.whenReady {
                     controller.loadDocument(text = workspace.buffers.value[document.id]?.text ?: text)
                     onLoaded()
@@ -162,6 +176,7 @@ class DocumentPersistence(
 
     private suspend fun save(document: Document, text: String) {
         try {
+            check(!isReadOnly(document)) { "The app's session.json is read-only" }
             writes.withLock {
                 withContext(NonCancellable) {
                     if (isSettingsFile(document)) {

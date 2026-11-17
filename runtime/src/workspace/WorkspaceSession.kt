@@ -2,6 +2,7 @@ package com.klyx.runtime.workspace
 
 import androidx.datastore.core.DataStore
 import com.klyx.core.App
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
@@ -42,6 +43,9 @@ expect fun createWorkspaceSessionDataStore(): DataStore<WorkspaceSessionData>
 
 expect val App.workspaceSessionFilePath: Path
 
+val App.workspaceSessionFile: PlatformFile
+    get() = PlatformFile(workspaceSessionFilePath.toString())
+
 internal const val workspaceSessionFileName = "session.json"
 
 internal val workspaceSessionJson = Json {
@@ -52,7 +56,6 @@ internal val workspaceSessionJson = Json {
     namingStrategy = JsonNamingStrategy.SnakeCase
 }
 
-/** The saved baseline makes undo back to disk contents clean again. */
 @Serializable
 data class DocumentBuffer(val text: String, val savedText: String) {
     val isDirty: Boolean get() = text != savedText
