@@ -17,6 +17,7 @@ import okio.Path
 
 @Serializable
 data class Settings(
+    val onboardingCompleted: Boolean = false,
     val showAllProjectsTabs: Boolean = false,
     val showUndoRedoButtons: Boolean = currentPlatform != Platform.JVM,
     val showInlayHints: Boolean = true,

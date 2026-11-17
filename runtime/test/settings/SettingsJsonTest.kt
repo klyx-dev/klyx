@@ -24,6 +24,15 @@ class SettingsJsonTest : FunSpec({
         store.read().autoSave shouldBe true
     }
 
+    test("onboarding completion survives settings serialization") {
+        val store = SettingsStore(SettingsDataStore(storage()))
+        store.read().onboardingCompleted shouldBe false
+        store.update { it.copy(onboardingCompleted = true) }
+        val restored = SettingsStore(SettingsDataStore(storage()))
+        restored.writeJson(store.readJson())
+        restored.read().onboardingCompleted shouldBe true
+    }
+
     test("invalid JSON leaves the previous settings intact") {
         val initial = Settings(autoSave = true)
         val store = SettingsStore(SettingsDataStore(storage(initial)))

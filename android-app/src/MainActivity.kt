@@ -59,9 +59,6 @@ class MainActivity : ComponentActivity() {
         App.global.declare(this)
         FileKit.init(this)
         Log.i("App", "MainActivity.onCreate")
-        if (!hasStorageAccess()) {
-            requestStoragePermission()
-        }
         setContent {
             val settingsStore: SettingsStore = koinInject()
             val settings by settingsStore.settings.collectAsState()
@@ -95,7 +92,12 @@ class MainActivity : ComponentActivity() {
                 mutableStateOf(CrashReporter.loadPending(this))
             }
 
-            Screen(onExit = ::finish)
+            Screen(
+                onExit = ::finish,
+                enableOnboarding = true,
+                storageAccessGranted = storagePermissionGranted,
+                onRequestStorageAccess = ::requestStoragePermission,
+            )
 
             pendingCrash.value?.let { report ->
                 CrashReportDialog(

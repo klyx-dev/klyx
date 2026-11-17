@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
@@ -33,6 +34,7 @@ import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.settings.resolveActiveThemeName
 import com.klyx.ui.provider.ProvideCompositionLocals
 import com.klyx.ui.screen.HomeScreen
+import com.klyx.ui.screen.OnboardingScreen
 import com.klyx.ui.screen.settings.SettingsScreen
 import com.klyx.ui.theme.KlyxTheme
 import com.klyx.ui.theme.LocalColorScheme
@@ -44,12 +46,20 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import org.koin.compose.koinInject
 
 @Composable
-fun Screen(onExit: () -> Unit = {}) {
+fun Screen(
+    onExit: () -> Unit = {},
+    enableOnboarding: Boolean = false,
+    storageAccessGranted: Boolean = true,
+    onRequestStorageAccess: (() -> Unit)? = null,
+) {
     val settingsStore: SettingsStore = koinInject()
     val persistence: DocumentPersistence = koinInject()
     val toastMessages = remember { MutableSharedFlow<String>(extraBufferCapacity = 1) }
 
     val settings by settingsStore.settings.collectAsState()
+    val onboardingCompleted by produceState<Boolean?>(null, enableOnboarding) {
+        value = !enableOnboarding || settingsStore.read().onboardingCompleted
+    }
 
     val effectiveCornerRadius = if (settings.roundedUi) settings.cornerRadius.dp else 0.dp
 
@@ -67,6 +77,16 @@ fun Screen(onExit: () -> Unit = {}) {
             LocalCornerRadius provides effectiveCornerRadius,
         ) {
             KlyxTheme(colorScheme = LocalColorScheme.current) {
+                if (onboardingCompleted == null) return@KlyxTheme
+                val needsFileAccess = !storageAccessGranted && onRequestStorageAccess != null
+                val needsOnboarding = enableOnboarding && onboardingCompleted == false && !settings.onboardingCompleted
+                if (needsFileAccess || needsOnboarding) {
+                    OnboardingScreen(
+                        storageAccessGranted = storageAccessGranted,
+                        onRequestStorageAccess = { onRequestStorageAccess?.invoke() },
+                    )
+                    return@KlyxTheme
+                }
                 val navigator = LocalNavigator.current
                 val showSettings = navigator.currentRoute is Settings
 
