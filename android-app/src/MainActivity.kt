@@ -28,7 +28,6 @@ import androidx.core.content.ContextCompat
 import com.klyx.core.App
 import com.klyx.core.Log
 import com.klyx.core.action.action
-import com.klyx.runtime.action.OpenProject
 import com.klyx.runtime.action.OpenDocument
 import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.settings.ThemeMode
@@ -206,7 +205,7 @@ class MainActivity : ComponentActivity() {
         if (uri?.scheme == "klyx") {
             if (intent.action == Intent.ACTION_VIEW && !storagePermissionGranted && !hasStorageAccess()) return
             setIntent(Intent())
-            if (intent.action == Intent.ACTION_VIEW) openDeepLink(uri)
+            if (intent.action == Intent.ACTION_VIEW) handleDeepLink(uri.toString()) { File(it).createNewFile() }
             return
         }
 
@@ -223,20 +222,6 @@ class MainActivity : ComponentActivity() {
                 ).invoke()
             }
             setIntent(Intent())
-        }
-    }
-
-    private fun openDeepLink(uri: Uri) {
-        if (uri.encodedAuthority != "open" || !uri.encodedPath.isNullOrEmpty()) return
-        val path = uri.getQueryParameter("path") ?: return
-        if (path.isEmpty() || '\u0000' in path) return
-        val target = File(path)
-        if (!target.isAbsolute || !target.canRead()) return
-
-        val file = PlatformFile(path)
-        when {
-            target.isDirectory -> action(OpenProject(file))()
-            target.isFile -> action(OpenDocument(DocumentLocation.Platform(file), file.name))()
         }
     }
 

@@ -49,6 +49,7 @@
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
 
+                <data android:host="new" android:scheme="klyx"/>
                 <data android:host="open"
                       android:scheme="klyx"/>
             </intent-filter>

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Klyx
+Exec=klyx %u
+Terminal=false
+NoDisplay=true
+MimeType=x-scheme-handler/klyx;
