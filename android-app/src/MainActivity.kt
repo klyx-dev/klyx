@@ -28,6 +28,7 @@ import androidx.core.content.ContextCompat
 import com.klyx.core.App
 import com.klyx.core.Log
 import com.klyx.core.action.action
+import com.klyx.runtime.action.OpenProject
 import com.klyx.runtime.action.OpenDocument
 import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.settings.ThemeMode
@@ -36,6 +37,7 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.dialogs.init
 import io.github.vinceglb.filekit.name
+import java.io.File
 import org.koin.compose.koinInject
 
 class MainActivity : ComponentActivity() {
@@ -50,6 +52,7 @@ class MainActivity : ComponentActivity() {
 
         if (readGranted && writeGranted) {
             storagePermissionGranted = true
+            handleIntent(intent)
         }
     }
 
@@ -200,6 +203,13 @@ class MainActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent) {
         val uri = intent.data
 
+        if (uri?.scheme == "klyx") {
+            if (intent.action == Intent.ACTION_VIEW && !storagePermissionGranted && !hasStorageAccess()) return
+            setIntent(Intent())
+            if (intent.action == Intent.ACTION_VIEW) openDeepLink(uri)
+            return
+        }
+
         if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_EDIT) {
             if (uri != null) {
                 persistUriPermissionIfAvailable(intent, uri)
@@ -213,6 +223,20 @@ class MainActivity : ComponentActivity() {
                 ).invoke()
             }
             setIntent(Intent())
+        }
+    }
+
+    private fun openDeepLink(uri: Uri) {
+        if (uri.encodedAuthority != "open" || !uri.encodedPath.isNullOrEmpty()) return
+        val path = uri.getQueryParameter("path") ?: return
+        if (path.isEmpty() || '\u0000' in path) return
+        val target = File(path)
+        if (!target.isAbsolute || !target.canRead()) return
+
+        val file = PlatformFile(path)
+        when {
+            target.isDirectory -> action(OpenProject(file))()
+            target.isFile -> action(OpenDocument(DocumentLocation.Platform(file), file.name))()
         }
     }
 

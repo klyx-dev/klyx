@@ -10,6 +10,13 @@ Klyx is a modern code editor for Android.
 
 Download the latest release from the [Releases](https://github.com/klyx-dev/klyx/releases/latest) page.
 
+## Android deep links
+
+Open a local project or file by passing its absolute path in the `path` query parameter. Percent-encode special characters in the value, including spaces (`%20`), `&` (`%26`), `+` (`%2B`), `#` (`%23`), and `%` (`%25`).
+
+- `klyx://open?path=/storage/emulated/0/Projects/My%20App` opens the directory as a project.
+- `klyx://open?path=/storage/emulated/0/Projects/My%20App/README.md` opens the file in the editor.
+
 ## Building
 
 ```bash
