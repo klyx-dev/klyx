@@ -21,8 +21,6 @@ import com.klyx.lsp.types.fold
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldNotBe
 import io.matthewnelson.kmp.process.Process
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -37,8 +35,7 @@ class ProcessTransportTest : FunSpec({
         }
 
         val builder = Process.Builder(command = "rust-analyzer")
-        val scope = CoroutineScope(Dispatchers.Default)
-        val lspServer = launchLspProcess(builder, client, scope)
+        val lspServer = launchLspProcess(builder, client)
 
         val initResult = lspServer.initialize(
             InitializeParams(

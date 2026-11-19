@@ -129,12 +129,13 @@ class LspSession(
                                     environment(key, value)
                                 }
                             }
-                        launchLspProcess(builder, client, scope)
+                        launchLspProcess(builder, client)
                     }
 
                     LspTransportType.Termux -> {
                         if (!TermuxBridge.isTermuxInstalled()) {
-                            val msg = "Termux is not installed on this device. Install Termux to run language servers on Android."
+                            val msg =
+                                "Termux is not installed on this device. Install Termux to run language servers on Android."
                             onNotice?.invoke(msg)
                             throw IllegalStateException(msg)
                         }
@@ -530,6 +531,38 @@ class LspSession(
                 currentCoroutineContext().ensureActive()
             }
         }.getOrNull() ?: emptyList()
+    }
+
+    suspend fun references(uri: String, line: Int, column: Int): List<Location> {
+        val server = serverConnection ?: return emptyList()
+        if (!supportsBooleanProvider(capabilities?.referencesProvider)) return emptyList()
+        return server.textDocument.references(
+            ReferenceParams(
+                textDocument = TextDocumentIdentifier(uri),
+                position = Position(line, column),
+                context = ReferenceContext(includeDeclaration = true)
+            )
+        ).orEmpty()
+    }
+
+    suspend fun definition(uri: String, line: Int, column: Int): Location? {
+        val server = serverConnection ?: return null
+        if (!supportsBooleanProvider(capabilities?.definitionProvider)) return null
+        val params = DefinitionParams(
+            textDocument = TextDocumentIdentifier(uri),
+            position = Position(line, column)
+        )
+        return server.textDocument.definition(params)?.fold(
+            left = { it.firstOrNull() },
+            right = { links ->
+                links.firstOrNull()?.let { (targetUri, targetSelectionRange) ->
+                    Location(
+                        targetUri,
+                        targetSelectionRange
+                    )
+                }
+            },
+        )
     }
 
     suspend fun hover(uri: String, line: Int, character: Int): Hover? {

@@ -2,6 +2,7 @@ package com.klyx.document
 
 import com.klyx.core.App
 import com.klyx.editor.EditorStore
+import com.klyx.lsp.termuxSnapshotSource
 import com.klyx.runtime.settings.SettingsStore
 import com.klyx.runtime.settings.settingsFile
 import com.klyx.runtime.workspace.Document
@@ -48,10 +49,10 @@ class DocumentPersistence(
     private val saved = MutableSharedFlow<SavedDocument>()
     val savedDocuments = saved.asSharedFlow()
 
-    fun isReadOnly(document: Document): Boolean = isWorkspaceSessionFile(
-        workspace.resolve(document),
-        App.global.workspaceSessionFile,
-    )
+    fun isReadOnly(document: Document): Boolean {
+        val file = workspace.resolve(document)
+        return termuxSnapshotSource(file) != null || isWorkspaceSessionFile(file, App.global.workspaceSessionFile)
+    }
 
     fun bindEditor(document: Document, controller: SweetEditorController) {
         if (isReadOnly(document)) return
@@ -63,7 +64,11 @@ class DocumentPersistence(
             pendingSaves.remove(controller)?.cancel()
             pendingSaves[controller] = scope.launch {
                 delay(500.milliseconds)
-                if (settings.settings.value.autoSave && workspace.pendingClose.value == null && workspace.isDirty(document.id)) {
+                if (
+                    settings.settings.value.autoSave &&
+                    workspace.pendingClose.value == null &&
+                    workspace.isDirty(document.id)
+                ) {
                     save(document, controller.getDocument().text)
                 }
             }
@@ -176,7 +181,7 @@ class DocumentPersistence(
 
     private suspend fun save(document: Document, text: String) {
         try {
-            check(!isReadOnly(document)) { "The app's session.json is read-only" }
+            check(!isReadOnly(document)) { "${document.name} is read-only" }
             writes.withLock {
                 withContext(NonCancellable) {
                     if (isSettingsFile(document)) {

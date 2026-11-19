@@ -62,6 +62,7 @@ import com.klyx.runtime.workspace.DocumentLocation
 import com.klyx.ui.components.KxButton
 import com.klyx.ui.components.KxButtonVariant
 import com.klyx.ui.feedback.FeedbackDialog
+import com.klyx.ui.palette.ShortcutSettings
 import com.klyx.ui.theme.KxColors
 import com.klyx.ui.theme.KxTypography
 import com.klyx.ui.theme.LocalCornerRadius
@@ -363,6 +364,12 @@ private fun GeneralSettings() {
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+
+        SettingsCard(title = "keyboard shortcuts", subtitle = "Customize command shortcuts.") {
+            ShortcutSettings(settings.keybindings) { command, binding ->
+                updateSettings { it.copy(keybindings = it.keybindings + (command.name to binding)) }
+            }
         }
 
         SettingsCard(

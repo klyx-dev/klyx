@@ -8,7 +8,7 @@ Klyx is a modern code editor for Android.
 
 ## Download
 
-Download the latest release from the [Releases](https://github.com/klyx-dev/klyx/releases/latest) page.
+Download the latest release from the [Releases](https://github.com/klyx-dev/klyx/releases) page.
 
 ## Deep links
 

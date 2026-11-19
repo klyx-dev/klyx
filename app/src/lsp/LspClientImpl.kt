@@ -316,7 +316,7 @@ class LspClientImpl(
             val doc = workspace.documents.value.values.firstOrNull {
                 LspDocumentUtils.uriOf(it, workspace) == uri
             }
-            if (doc != null) {
+            if (doc != null && termuxSnapshotSource(workspace.resolve(doc)) == null) {
                 applyEditsToDocument(doc.id, textEdits)
             } else {
                 appliedAll = false
@@ -330,7 +330,7 @@ class LspClientImpl(
                     val doc = workspace.documents.value.values.firstOrNull {
                         LspDocumentUtils.uriOf(it, workspace) == uri
                     }
-                    if (doc != null) {
+                    if (doc != null && termuxSnapshotSource(workspace.resolve(doc)) == null) {
                         val edits = edits.mapNotNull { e -> e.fold(left = { it }, right = { null }) }
                         applyEditsToDocument(doc.id, edits)
                     } else {

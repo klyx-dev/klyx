@@ -83,6 +83,11 @@ import com.klyx.lsp.server.TextDocumentService
 import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.OneOfThree
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
 
 internal class TextDocumentServiceImpl(val connection: JsonRpcConnection, val json: Json) : TextDocumentService {
@@ -123,7 +128,14 @@ internal class TextDocumentServiceImpl(val connection: JsonRpcConnection, val js
     }
 
     override suspend fun definition(params: DefinitionParams): OneOf<List<Location>, List<LocationLink>>? {
-        return sendRequest("definition", params)
+        val result = sendRequest<JsonElement?, DefinitionParams>("definition", params) ?: return null
+        if (result == JsonNull) return null
+        val entries = result as? JsonArray ?: JsonArray(listOf(result))
+        return if ((entries.firstOrNull() as? JsonObject)?.containsKey("targetUri") == true) {
+            OneOf.Right(json.decodeFromJsonElement<List<LocationLink>>(entries))
+        } else {
+            OneOf.Left(json.decodeFromJsonElement<List<Location>>(entries))
+        }
     }
 
     override suspend fun typeDefinition(params: TypeDefinitionParams): OneOf<List<Location>, List<LocationLink>>? {
@@ -134,7 +146,7 @@ internal class TextDocumentServiceImpl(val connection: JsonRpcConnection, val js
         return sendRequest("implementation", params)
     }
 
-    override suspend fun references(params: ReferenceParams): List<LocationLink>? {
+    override suspend fun references(params: ReferenceParams): List<Location>? {
         return sendRequest("references", params)
     }
 

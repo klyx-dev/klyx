@@ -25,10 +25,10 @@ actual fun PlatformFile.actualUri(): String {
         is AndroidFile.FileWrapper -> Uri.fromFile(file.file).toString()
         is AndroidFile.UriWrapper -> {
             if (isTermuxUri()) {
-                val docId = if (DocumentsContract.isTreeUri(file.uri)) {
-                    DocumentsContract.getTreeDocumentId(file.uri)
-                } else {
+                val docId = if (DocumentsContract.isDocumentUri(App.global.get<Context>(), file.uri)) {
                     DocumentsContract.getDocumentId(file.uri)
+                } else {
+                    DocumentsContract.getTreeDocumentId(file.uri)
                 }
 
                 Uri.fromFile(File(docId)).toString()

@@ -24,7 +24,7 @@ data class LocationLink(
      * Used as the underlined span for mouse interaction. Defaults to the word
      * range at the mouse position.
      */
-    var originSelectionRange: Range?,
+    var originSelectionRange: Range? = null,
 
     /**
      * The target resource identifier of this link.

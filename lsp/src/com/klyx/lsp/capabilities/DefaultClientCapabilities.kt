@@ -39,6 +39,8 @@ fun defaultClientCapabilities(): ClientCapabilities = ClientCapabilities(
                 ),
             ),
         ),
+        references = ReferenceClientCapabilities(dynamicRegistration = false),
+        definition = DefinitionCapabilities(linkSupport = true),
         hover = HoverCapabilities(
             contentFormat = listOf(MarkupKind.Markdown, MarkupKind.PlainText),
         ),

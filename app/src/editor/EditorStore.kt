@@ -1,5 +1,8 @@
 package com.klyx.editor
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.klyx.core.Disposable
 import com.klyx.core.action.Action
 import com.klyx.core.action.ActionRegistrar
@@ -32,8 +35,12 @@ import org.koin.core.annotation.Single
 
 data class EditorCursor(val line: Int, val column: Int)
 
+internal data class DocumentJump(val documentId: DocumentId, val line: Int, val column: Int)
+
 @Single
 class EditorStore : ActionRegistrar {
+
+    internal var pendingJump by mutableStateOf<DocumentJump?>(null)
 
     private val live = mutableMapOf<DocumentId, MutableSet<SweetEditorController>>()
     private val registrations = mutableMapOf<SweetEditorController, Int>()

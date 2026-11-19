@@ -31,6 +31,7 @@ data class Settings(
     val themeMode: ThemeMode = ThemeMode.System,
     val customLspServers: List<CustomLspServer> = emptyList(),
     val restorePreviousSession: Boolean = true,
+    val keybindings: Map<String, String> = emptyMap(),
 )
 
 /**

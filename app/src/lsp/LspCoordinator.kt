@@ -46,6 +46,10 @@ class EditorLsp(
     }
 
     internal val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    internal val navigationHistory = ArrayDeque<CursorLocation>()
+    internal val referenceResults = MutableStateFlow<ReferenceResults?>(null)
+    internal var navigationJob: Job? = null
+
     val client = LspClientImpl(workspace, editorStore)
 
     internal val sessions = mutableMapOf<String, LspSession>()

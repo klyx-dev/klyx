@@ -233,7 +233,7 @@ interface TextDocumentService {
      *
      * Registration Options: [ReferenceRegistrationOptions][com.klyx.lsp.ReferenceRegistrationOptions]
      */
-    suspend fun references(params: ReferenceParams): List<LocationLink>?
+    suspend fun references(params: ReferenceParams): List<Location>?
 
     /**
      * The call hierarchy request is sent from the client to the server

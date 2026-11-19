@@ -6,12 +6,28 @@ import io.github.vinceglb.filekit.PlatformFile
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
-import kotlinx.io.files.Path
 import java.nio.file.Files
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.io.files.Path
 
 class LspDocumentCleanupTest : FunSpec({
+    test("definition descriptors select the explicit grammar and preserve supported filenames") {
+        val workspace = Workspace()
+        for ([name, expected, language] in listOf(
+            Triple("iostream", "iostream.cpp", "cpp"),
+            Triple("builtins.pyi", "builtins.pyi", "python"),
+            Triple("README", "README", "plaintext"),
+        )) {
+            val doc = workspace.open(DocumentLocation.Platform(PlatformFile("/project/$name")), name)
+            val descriptor = LspDocumentUtils.highlightDescriptor(doc)
+            descriptor.fileName shouldBe expected
+            descriptor.syntaxName shouldBe language.takeUnless { it == "plaintext" }
+            LspDocumentUtils.languageIdOf(doc) shouldBe language
+            doc.name shouldBe name
+        }
+    }
+
     test("project document URI lookup is safe after closing its project") {
         val directory = withContext(Dispatchers.IO) {
             Files.createTempDirectory("klyx-lsp-close-project")
@@ -19,7 +35,10 @@ class LspDocumentCleanupTest : FunSpec({
         try {
             val workspace = Workspace()
             val project = workspace.openProject(PlatformFile(directory.toString()))
-            val id = workspace.openDocument(DocumentLocation.Project(project.id, Path("settings.json")), "settings.json")
+            val id = workspace.openDocument(
+                location = DocumentLocation.Project(project.id, Path("settings.json")),
+                name = "settings.json"
+            )
             val document = workspace[id]
             val uri = LspDocumentUtils.uriOf(document, workspace)
             LspDocumentUtils.uriOfOrNull(document, workspace) shouldBe uri

@@ -1,5 +1,19 @@
 package com.klyx.ui.editor
 
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import com.klyx.runtime.settings.SettingsStore
+import com.klyx.ui.palette.EditorCommand
+import com.klyx.ui.palette.LocalRunEditorCommand
+import com.klyx.ui.palette.binding
+import com.klyx.ui.palette.chord
+import com.klyx.ui.palette.normalizeBinding
+import org.koin.compose.koinInject
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -67,7 +81,12 @@ import com.klyx.ui.theme.typography
 import io.github.lumkit.sweeteditor.SweetEditorController
 import kotlinx.coroutines.launch
 
-private enum class InputModifier { Ctrl, Alt }
+private enum class InputModifier { Ctrl, Alt, Shift }
+
+internal fun mobileBinding(modifiers: List<String>, key: String, shift: Boolean): String? {
+    val active = if (shift && "shift" !in modifiers) modifiers + "shift" else modifiers
+    return normalizeBinding((active + key).joinToString("+"))
+}
 
 private enum class InputPanel { Symbols, Edit }
 
@@ -93,15 +112,15 @@ private enum class Shortcut(
 }
 
 private class MobileInputState {
-    var modifier by mutableStateOf<InputModifier?>(null)
+    var modifiers by mutableStateOf(emptySet<InputModifier>())
     var panel by mutableStateOf<InputPanel?>(null)
 
     fun toggleModifier(value: InputModifier) {
-        modifier = if (modifier == value) null else value
+        modifiers = if (value in modifiers) modifiers - value else modifiers + value
     }
 
     fun togglePanel(value: InputPanel) {
-        modifier = null
+        modifiers = emptySet()
         panel = if (panel == value) null else value
     }
 }
@@ -112,10 +131,15 @@ internal fun MobileEditorInput(
     controller: SweetEditorController,
     lsp: EditorLsp,
     enabled: Boolean,
+    focusEditor: () -> Unit,
     onShowToast: (String) -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable (layout: Modifier, keys: Modifier) -> Unit,
 ) {
+    val settings by koinInject<SettingsStore>().settings.collectAsState()
+    val bindings = remember(settings.keybindings) { EditorCommand.entries.associateWith { it.binding(settings.keybindings) } }
+    val dispatch = LocalRunEditorCommand.current
+
     val input = remember(controller, enabled) { MobileInputState() }
     var hasSelection by remember(controller) { mutableStateOf(controller.getSelection() != null) }
     var canUndo by remember(controller) { mutableStateOf(controller.canUndo()) }
@@ -131,7 +155,7 @@ internal fun MobileEditorInput(
         canRedo = controller.canRedo()
         val unsubscribeSelection = controller.onSelectionChanged { hasSelection = it.hasSelection }
         val unsubscribeText = controller.onTextChanged {
-            input.modifier = null
+            input.modifiers = emptySet()
             canUndo = controller.canUndo()
             canRedo = controller.canRedo()
         }
@@ -142,14 +166,14 @@ internal fun MobileEditorInput(
     }
 
     fun edit(block: SweetEditorController.() -> Unit) {
-        input.modifier = null
+        input.modifiers = emptySet()
         if (controller.getSettings().readOnly) return
         controller.block()
     }
 
     fun escape() {
-        if (input.modifier != null || input.panel != null) {
-            input.modifier = null
+        if (input.modifiers.isNotEmpty() || input.panel != null) {
+            input.modifiers = emptySet()
             input.panel = null
             return
         }
@@ -173,7 +197,7 @@ internal fun MobileEditorInput(
     }
 
     fun runShortcut(shortcut: Shortcut) {
-        input.modifier = null
+        input.modifiers = emptySet()
         if (!shortcutEnabled(shortcut)) return
         when (shortcut) {
             Shortcut.Save -> save()
@@ -195,34 +219,50 @@ internal fun MobileEditorInput(
         }
     }
 
-    fun move(direction: CursorDirection, key: Key) {
-        val armed = input.modifier
-        val shortcut = Shortcut.entries.firstOrNull { it.modifier == armed && it.key == key }
-        if (shortcut != null) {
-            runShortcut(shortcut)
-        } else {
-            input.modifier = null
-            controller.moveCursor(direction, byWord = armed == InputModifier.Ctrl)
+    fun runCommand(command: EditorCommand) {
+        input.modifiers = emptySet()
+        focusEditor()
+        dispatch(command)
+    }
+
+    fun runArmedKey(name: String, shift: Boolean = false): Boolean {
+        val mods = input.modifiers
+        if (mods.isEmpty()) return false
+        val binding = mobileBinding(mods.map { it.name.lowercase() }, name, shift)
+        val command = bindings.entries.firstOrNull { it.value == binding }?.key
+        if (command != null) {
+            runCommand(command)
+            return true
         }
+        val shortcut = Shortcut.entries.firstOrNull {
+            it != Shortcut.Save && mods == setOf(it.modifier) && it.label.equals(name, ignoreCase = true)
+        } ?: return false
+        focusEditor()
+        runShortcut(if (shift && shortcut == Shortcut.Undo) Shortcut.Redo else shortcut)
+        return true
+    }
+
+    fun move(direction: CursorDirection, key: Key) {
+        if (runArmedKey(direction.name.lowercase())) return
+        val armed = input.modifiers.singleOrNull()
+        val shortcut = Shortcut.entries.firstOrNull { it.modifier == armed && it.key == key }
+        input.modifiers = emptySet()
+        focusEditor()
+        if (shortcut != null) runShortcut(shortcut)
+        else controller.moveCursor(direction, byWord = armed == InputModifier.Ctrl)
     }
 
     fun handleKey(event: KeyEvent): Boolean {
-        val armed = input.modifier ?: return false
-        if (!enabled || event.type != KeyEventType.KeyDown) return false
+        if (input.modifiers.isEmpty() || !enabled || event.type != KeyEventType.KeyDown) return false
         when (event.key) {
-            Key.Escape -> escape()
+            Key.Escape -> { escape(); focusEditor() }
             Key.DirectionLeft -> move(CursorDirection.Left, event.key)
             Key.DirectionRight -> move(CursorDirection.Right, event.key)
             Key.DirectionUp -> move(CursorDirection.Up, event.key)
             Key.DirectionDown -> move(CursorDirection.Down, event.key)
-            Key.ShiftLeft, Key.ShiftRight, Key.CtrlLeft, Key.CtrlRight,
-            Key.AltLeft, Key.AltRight, Key.MetaLeft, Key.MetaRight -> return false
-
             else -> {
-                val shortcut = Shortcut.entries.firstOrNull { it.modifier == armed && it.key == event.key }
-                input.modifier = null
-                if (shortcut == null) return false
-                runShortcut(if (shortcut == Shortcut.Undo && event.isShiftPressed) Shortcut.Redo else shortcut)
+                val name = event.chord()?.substringAfterLast('+') ?: Shortcut.entries.find { it.key == event.key }?.label ?: return false
+                return runArmedKey(name, event.isShiftPressed)
             }
         }
         return true
@@ -262,11 +302,11 @@ internal fun MobileEditorInput(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     KeyRow(Modifier.weight(1f)) {
-                        InputKey("Ctrl", "Control", selected = input.modifier == InputModifier.Ctrl) {
-                            input.toggleModifier(InputModifier.Ctrl)
-                        }
-                        InputKey("Alt", selected = input.modifier == InputModifier.Alt) {
-                            input.toggleModifier(InputModifier.Alt)
+                        for (mod in listOf(InputModifier.Ctrl, InputModifier.Shift, InputModifier.Alt)) {
+                            InputKey(mod.name, selected = mod in input.modifiers) {
+                                input.toggleModifier(mod)
+                                if (input.modifiers.isEmpty()) focusEditor()
+                            }
                         }
                         InputKey("Esc", "Escape", onClick = ::escape)
                         InputKey("Tab", onClick = ::tab)
@@ -283,13 +323,59 @@ internal fun MobileEditorInput(
                     }
                 }
 
-                val armed = input.modifier
+                val armed = input.modifiers
                 val panel = input.panel ?: InputPanel.Edit.takeIf { hasSelection }
-                key(armed, panel) {
+                key(armed.isNotEmpty(), panel) {
                     when {
-                        armed != null -> KeyRow(rowHeight) {
-                            Shortcut.entries.filter { it.modifier == armed }.forEach { shortcut ->
+                        armed.isNotEmpty() -> KeyRow(rowHeight) {
+                            val prefix = listOf(InputModifier.Ctrl, InputModifier.Alt, InputModifier.Shift)
+                                .filter { it in armed }
+                                .joinToString("+") { it.name.lowercase() }
+                            val commands = bindings.filterValues {
+                                it.substringBeforeLast('+', "") == prefix
+                            }
+                            val focus = remember { FocusRequester() }
+
+                            BasicTextField(
+                                value = "",
+                                onValueChange = { text ->
+                                    text.singleOrNull()?.let { ch ->
+                                        val _ = runArmedKey(if (ch == ' ') "Space" else ch.lowercase(), ch.isUpperCase())
+                                    }
+                                },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Ascii,
+                                    autoCorrectEnabled = false
+                                ),
+                                modifier = Modifier
+                                    .widthIn(min = 32.dp)
+                                    .focusRequester(focus)
+                                    .onPreviewKeyEvent(::handleKey)
+                                    .semantics { contentDescription = "Shortcut key" },
+                                decorationBox = { inner ->
+                                    Box { Text("Key", color = Theme[colors][textMuted]); inner() }
+                                },
+                            )
+
+                            LaunchedEffect(Unit) {
+                                focus.requestFocus()
+                            }
+
+                            for ((key, value) in commands) {
+                                val name = value.substringAfterLast('+')
+                                InputKey(name.uppercase(), key.title) { runCommand(key) }
+                            }
+
+                            val commandKeys = commands.values.map {
+                                it.substringAfterLast('+')
+                            }.toSet()
+
+                            Shortcut.entries.filter {
+                                it != Shortcut.Save && armed == setOf(it.modifier) && it.label.lowercase() !in commandKeys
+                            }.forEach { shortcut ->
                                 InputKey(shortcut.label, shortcut.description, enabled = shortcutEnabled(shortcut)) {
+                                    focusEditor()
                                     runShortcut(shortcut)
                                 }
                             }

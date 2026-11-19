@@ -4,17 +4,22 @@ package com.klyx.lsp.server.internal
 
 import com.klyx.lsp.CancelParams
 import com.klyx.lsp.ConfigurationParams
+import com.klyx.lsp.DefinitionParams
 import com.klyx.lsp.ErrorCodes
 import com.klyx.lsp.IntRequestId
 import com.klyx.lsp.LogMessageParams
 import com.klyx.lsp.MessageActionItem
 import com.klyx.lsp.NotificationMessage
+import com.klyx.lsp.Position
 import com.klyx.lsp.PublishDiagnosticsParams
+import com.klyx.lsp.ReferenceContext
+import com.klyx.lsp.ReferenceParams
 import com.klyx.lsp.RequestMessage
 import com.klyx.lsp.ResponseError
 import com.klyx.lsp.ResponseMessage
 import com.klyx.lsp.ShowMessageParams
 import com.klyx.lsp.ShowMessageRequestParams
+import com.klyx.lsp.TextDocumentIdentifier
 import com.klyx.lsp.server.LanguageClient
 import com.klyx.lsp.server.ResponseErrorException
 import com.klyx.lsp.types.LSPAny
@@ -22,25 +27,28 @@ import com.klyx.lsp.types.LSPArray
 import com.klyx.lsp.types.LSPObject
 import com.klyx.lsp.types.OneOf
 import com.klyx.lsp.types.asRight
+import com.klyx.lsp.types.fold
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.io.Buffer
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
@@ -50,6 +58,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.put
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 class JsonRpcConnectionTest : FunSpec({
 
@@ -121,6 +131,62 @@ class JsonRpcConnectionTest : FunSpec({
         clientToServer.close()
         serverToClient.close()
         delay(50)
+    }
+
+    test("references decodes locations from multiple files with exact cursor positions") {
+        val setup = createTestSetup()
+        try {
+            val service = TextDocumentServiceImpl(setup.connection, json)
+            val params = ReferenceParams(
+                textDocument = TextDocumentIdentifier("file:///a.cpp"),
+                position = Position(1, 2),
+                context = ReferenceContext(true)
+            )
+            val pending = setup.scope.async(start = CoroutineStart.UNDISPATCHED) { service.references(params) }
+            val range = """{"start":{"line":3,"character":8},"end":{"line":3,"character":9}}"""
+            val locations = """[{"uri":"file:///a.cpp","range":$range},{"uri":"file:///b.cpp","range":$range}]"""
+            val response = ResponseMessage(
+                id = IntRequestId(0),
+                result = json.parseToJsonElement(locations),
+                error = null
+            )
+            setup.clientToServer.writeMessage(json.encodeToString(response))
+            val hits = pending.await().orEmpty()
+            hits.map { it.uri } shouldBe listOf("file:///a.cpp", "file:///b.cpp")
+            hits.last().range.start shouldBe Position(3, 8)
+            val request = setup.serverToClient.readAll()
+            request shouldContain "textDocument/references"
+            request shouldContain "\"includeDeclaration\":true"
+        } finally {
+            setup.cleanup()
+        }
+    }
+
+    test("definition accepts a location, location arrays, links without an origin range, and null") {
+        val setup = createTestSetup()
+        try {
+            val service = TextDocumentServiceImpl(setup.connection, json)
+            val params = DefinitionParams(TextDocumentIdentifier("file:///origin.kt"), Position(1, 3))
+            val range = """{"start":{"line":2,"character":1},"end":{"line":2,"character":3}}"""
+            val location = """{"uri":"file:///target.kt","range":$range}"""
+            val link = """{"targetUri":"file:///target.kt","targetRange":$range,"targetSelectionRange":$range}"""
+            val replies = listOf(location, "[$location]", "[$link]", "[]", "null")
+            replies.forEachIndexed { index, reply ->
+                val pending = setup.scope.async(start = CoroutineStart.UNDISPATCHED) {
+                    service.definition(params)
+                }
+                val response = ResponseMessage(
+                    id = IntRequestId(index),
+                    result = json.parseToJsonElement(reply),
+                    error = null
+                )
+                setup.clientToServer.writeMessage(json.encodeToString(response))
+                val uri = pending.await()?.fold({ it.firstOrNull()?.uri }, { it.firstOrNull()?.targetUri })
+                uri shouldBe if (index < 3) "file:///target.kt" else null
+            }
+        } finally {
+            setup.cleanup()
+        }
     }
 
     test("should send notification") {
@@ -397,7 +463,7 @@ class JsonRpcConnectionTest : FunSpec({
 class TestStream {
     private val channel = Channel<ByteArray>(Channel.UNLIMITED)
     private val closed = AtomicBoolean(false)
-    private val lock = Any()
+    private val lock = Mutex()
     private val buffer = Buffer()
 
     fun writeMessage(message: String) {
@@ -456,18 +522,14 @@ class TestStream {
         private val writeBuffer = Buffer()
 
         override fun write(source: Buffer, byteCount: Long) {
-            synchronized(lock) {
-                val _ = source.readAtMostTo(writeBuffer, byteCount)
-            }
+            val _ = source.readAtMostTo(writeBuffer, byteCount)
         }
 
         override fun flush() {
-            synchronized(lock) {
-                if (writeBuffer.size > 0) {
-                    val bytes = ByteArray(writeBuffer.size.toInt())
-                    writeBuffer.readTo(bytes)
-                    channel.trySend(bytes)
-                }
+            if (writeBuffer.size > 0) {
+                val bytes = ByteArray(writeBuffer.size.toInt())
+                writeBuffer.readTo(bytes)
+                channel.trySend(bytes)
             }
         }
 
@@ -481,7 +543,7 @@ class TestStream {
     suspend fun readAll(): String {
         val result = StringBuilder()
 
-        synchronized(lock) {
+        lock.withLock {
             if (buffer.size > 0) {
                 val bytes = ByteArray(buffer.size.toInt())
                 buffer.readTo(bytes)

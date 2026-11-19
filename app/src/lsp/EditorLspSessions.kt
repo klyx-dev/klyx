@@ -28,7 +28,7 @@ internal fun EditorLsp.sessionForDocument(document: Document): LspSession? {
 private fun EditorLsp.canAttachDocument(document: Document, config: LspServerConfig): Boolean {
     if (config.canOpenPrivateFile()) return true
     val file = LspDocumentUtils.fileOf(document, workspace) ?: return false
-    return !isAppPrivateFile(file)
+    return termuxSnapshotSource(file) != null || !isAppPrivateFile(file)
 }
 
 internal fun shouldLaunchLspFor(document: Document): Boolean {
@@ -106,16 +106,17 @@ internal suspend fun EditorLsp.ensureSession(document: Document, silent: Boolean
     }
 
     val docPath = LspDocumentUtils.fileOf(document, workspace)
+    val librarySource = docPath?.let(::termuxSnapshotSource)
     val activeProj = when (val location = document.location) {
         is DocumentLocation.Project -> workspace.projects.value[location.projectId]
         is DocumentLocation.Platform -> workspace.activeProjectId.value
             ?.let { workspace.projects.value[it] }
-            ?.takeIf { docPath != null && isPathInDirectories(docPath.path, listOf(it.root.path)) }
+            ?.takeIf { librarySource != null || (docPath != null && isPathInDirectories(docPath.path, listOf(it.root.path))) }
     }
 
-    val contentOnly = config.needsAccessibleFiles() && docPath?.let(::isAppPrivateFile) == true
+    val contentOnly = librarySource == null && config.needsAccessibleFiles() && docPath?.let(::isAppPrivateFile) == true
     val projectRoot = if (!contentOnly) {
-        (activeProj?.root ?: findProjectRoot(docPath))?.takeIf(config::canUseWorkspaceFolder)
+        (activeProj?.root ?: if (librarySource == null) findProjectRoot(docPath) else null)?.takeIf(config::canUseWorkspaceFolder)
     } else null
 
     if (projectRoot?.isTermuxUri() == false && !projectRoot.isFileUri()) return null

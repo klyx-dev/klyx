@@ -142,6 +142,8 @@ import com.klyx.ui.filetree.VisibleFileNode
 import com.klyx.ui.filetree.platformFileTreeWidth
 import com.klyx.ui.filetree.rememberFileTreeIcons
 import com.klyx.ui.lsp.TermuxPermissionDialog
+import com.klyx.ui.palette.EditorCommand
+import com.klyx.ui.palette.binding
 import com.klyx.ui.project.OpenProjectDialog
 import com.klyx.ui.project.ProjectSwitcher
 import com.klyx.ui.theme.LocalCornerRadius
@@ -167,9 +169,9 @@ import com.klyx.ui.theme.warning
 import io.github.lumkit.sweeteditor.EditorActionSource
 import io.github.lumkit.sweeteditor.EditorSettings
 import io.github.lumkit.sweeteditor.EditorTheme
+import io.github.lumkit.sweeteditor.ScrollBehavior
 import io.github.lumkit.sweeteditor.SweetEditor
 import io.github.lumkit.sweeteditor.TextChangeKind
-import io.github.lumkit.sweeteditor.highlight.HighlightDocumentDescriptor
 import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
 import io.github.lumkit.sweeteditor.highlight.HighlightTheme
 import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
@@ -203,6 +205,7 @@ import kotlin.time.Duration.Companion.seconds
 
 @Composable
 fun HomeScreen(
+    onCommands: () -> Unit,
     modifier: Modifier = Modifier,
     toastMessages: Flow<String> = emptyFlow(),
 ) {
@@ -320,6 +323,7 @@ fun HomeScreen(
                 .windowInsetsPadding(WindowInsets.safeDrawing),
         ) {
             TopBar(
+                onCommands = onCommands,
                 onFilesClick = showFiles,
                 onOpenDialog = { openProjectDialog = true },
                 onSettingsClick = { navigator.navigateTo(Settings) },
@@ -459,6 +463,7 @@ private enum class OverflowMenuPage {
 
 @Composable
 private fun TopBar(
+    onCommands: () -> Unit,
     onFilesClick: () -> Unit,
     onOpenDialog: () -> Unit,
     onSettingsClick: () -> Unit = {},
@@ -538,6 +543,8 @@ private fun TopBar(
             }
 
             TopBarOverflowMenu(
+                onCommands = onCommands,
+                bindings = settings.keybindings,
                 onSettingsClick = onSettingsClick,
                 onShowProblems = onShowProblems,
                 onShowLspStatus = onShowLspStatus,
@@ -564,6 +571,8 @@ private fun TopBar(
 
 @Composable
 private fun TopBarOverflowMenu(
+    onCommands: () -> Unit,
+    bindings: Map<String, String>,
     onSettingsClick: () -> Unit,
     onShowProblems: () -> Unit,
     onShowLspStatus: () -> Unit,
@@ -594,8 +603,16 @@ private fun TopBarOverflowMenu(
                 when (menuPage) {
                     OverflowMenuPage.Main -> {
                         KxMenuItem(
+                            label = "command palette",
+                            trailing = EditorCommand.Palette.binding(bindings),
+                            onClick = {
+                                expanded = false
+                                onCommands()
+                            }
+                        )
+                        KxMenuItem(
                             label = "save",
-                            trailing = "Ctrl+S",
+                            trailing = EditorCommand.Save.binding(bindings),
                             enabled = hasActiveDoc,
                             onClick = {
                                 action(SaveActiveDocument).invoke()
@@ -604,7 +621,7 @@ private fun TopBarOverflowMenu(
                         )
                         KxMenuItem(
                             label = "save all",
-                            trailing = "Ctrl+Shift+S",
+                            trailing = EditorCommand.SaveAll.binding(bindings),
                             onClick = {
                                 action(SaveAllDocuments).invoke()
                                 expanded = false
@@ -861,7 +878,7 @@ private fun EditorDocument(
     val highlight = remember(document) {
         SweetLineHighlight(
             SweetLineHighlightConfig(
-                document = HighlightDocumentDescriptor(document.name),
+                document = LspDocumentUtils.highlightDescriptor(document),
                 features = HighlightFeatureFlags(
                     syntaxHighlight = true,
                     indentGuides = false,
@@ -899,6 +916,15 @@ private fun EditorDocument(
             onDispose {
                 editors.clearActive(controller)
             }
+        }
+    }
+
+    val jump = editors.pendingJump
+    LaunchedEffect(jump, active, focused, loaded) {
+        if (jump != null && jump.documentId == document.id && active && focused && loaded) {
+            controller.setCursorPosition(jump.line, jump.column)
+            controller.ensureCursorVisible()
+            editors.pendingJump = null
         }
     }
 
@@ -1093,6 +1119,7 @@ private fun EditorDocument(
     }
     if (currentPlatform == Platform.Android || currentPlatform == Platform.iOS) {
         MobileEditorInput(
+            focusEditor = { focusRequester.requestFocus() },
             document = document,
             controller = controller,
             lsp = lsp,
@@ -1119,6 +1146,9 @@ private fun StatusBar(
     val activeSessions by lsp.activeSessions.collectAsState()
     val progressItems by lsp.client.progressItems.collectAsState()
     val cursor by editors.activeCursor.collectAsState()
+
+    val persistence: DocumentPersistence = koinInject()
+    val readOnly = remember(activeDoc) { activeDoc?.let(persistence::isReadOnly) == true }
 
     val langId = activeDoc?.let { LspDocumentUtils.languageIdOf(it) }
     val currentSessionState = langId?.let { activeSessions[it] }
@@ -1162,6 +1192,11 @@ private fun StatusBar(
                 style = Theme[typography][labelSmall],
                 color = Theme[colors][textSecondary],
             )
+        }
+
+        if (readOnly) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("read-only", style = Theme[typography][labelSmall], color = Theme[colors][textSecondary])
         }
 
         if (progressItems.isNotEmpty()) {

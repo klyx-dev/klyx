@@ -10,6 +10,22 @@ class LspFileAccessTest : FunSpec({
     val android = OperatingSystem.Android
     val workspaceServer = LspServerConfig("test", setOf("test"), "test-server")
 
+    test("Termux definition paths must be descendants of the granted directory") {
+        val root = "/data/data/com.termux/files/home/code"
+        termuxRelativePath(root, "/data/user/0/com.termux/files/home/code/lib/a b.kt") shouldBe "lib/a b.kt"
+        termuxRelativePath(root, "${root}base/file.kt") shouldBe null
+        termuxRelativePath(root, "$root/../outside.kt") shouldBe null
+        termuxRelativePath(root, "/data/data/com.termux/files/usr/lib/file.kt") shouldBe null
+    }
+
+    test("library definition paths retain their package path inside the Termux prefix") {
+        val library = "lib/node_modules/typescript/lib/lib.dom.d.ts"
+        termuxRelativePath(termuxPrefix, "$termuxPrefix/$library") shouldBe library
+        termuxRelativePath(termuxPrefix, "/data/user/0/com.termux/files/usr/$library") shouldBe library
+        termuxRelativePath(termuxPrefix, "$termuxPrefix/../home/secrets") shouldBe null
+        termuxRelativePath(termuxPrefix, "${termuxPrefix}2/$library") shouldBe null
+    }
+
     test("Android remote transports block private documents by default") {
         for (transport in listOf(LspTransportType.Auto, LspTransportType.Termux, LspTransportType.TcpSocket)) {
             workspaceServer.copy(transportType = transport).canOpenPrivateFile(android) shouldBe false

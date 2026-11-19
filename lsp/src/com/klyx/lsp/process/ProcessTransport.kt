@@ -6,8 +6,6 @@ import com.klyx.lsp.server.createLanguageServer
 import com.klyx.lsp.transport.LspServerConnection
 import io.matthewnelson.kmp.process.Process
 import io.matthewnelson.kmp.process.Stdio
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.io.RawSink
 import kotlinx.io.RawSource
 
@@ -30,7 +28,6 @@ class LspProcessServer(
 suspend fun launchLspProcess(
     builder: Process.Builder,
     client: LanguageClient,
-    scope: CoroutineScope = CoroutineScope(Dispatchers.Default),
 ): LspProcessServer {
     val process = builder
         .stdin(Stdio.Pipe)
