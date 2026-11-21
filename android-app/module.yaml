@@ -12,6 +12,11 @@ settings:
   android:
     namespace: "com.klyx"
     applicationId: "com.klyx"
+    compileSdk:
+      apiLevel: 37
+      minorApiLevel: 1
+    
+    targetSdk: 37
 
     versionCode: 1
     versionName: "0.1.0-alpha.1"
