@@ -1,6 +1,7 @@
 modules:
   - android-app
-  - app
+  - app-classic
+  - app-m3
   - build-config
   - core
   - editor

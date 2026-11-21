@@ -2,7 +2,7 @@ product:
   type: ios/app
 
 dependencies:
-  - //app
+  - //app-classic
 
 apply:
   - //common.module-template.yaml

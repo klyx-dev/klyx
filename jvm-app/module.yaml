@@ -1,7 +1,7 @@
 product: jvm/app
 
 dependencies:
-  - //app
+  - //app-classic
   - $compose.desktop.currentOs
   - $libs.filekit.dialogs
 

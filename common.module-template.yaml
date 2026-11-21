@@ -1,5 +1,7 @@
 settings:
-  compose: enabled
+  compose:
+    enabled: true
+    version: 1.13.0-rc01
   kotlin:
     version: 2.4.21
     languageVersion: 2.4
