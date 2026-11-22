@@ -29,11 +29,7 @@ permissions:
   actions: read
 
 env:
-  APP_NAME: "Klyx"
-  APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || 'dev' }}
-
-  KOTLIN_SHARED_CACHE_DIR: /home/runner/.cache/JetBrains/Kotlin
-  KOTLIN_CLI_NO_WELCOME_BANNER: "1"
+  BUILD_TYPE: ${{ github.event_name == 'pull_request' && 'debug' || 'release' }}
 
 jobs:
   build-android:
@@ -48,16 +44,11 @@ jobs:
           submodules: false
           fetch-depth: 0
 
-      - name: Make Kotlin executable
-        run: chmod +x ./kotlin
-
-      - name: Cache Kotlin Toolchain
-        uses: actions/cache@v6
+      - uses: actions/setup-java@v4
         with:
-          path: /home/runner/.cache/JetBrains/Kotlin
-          key: ${{ runner.os }}-kotlin-${{ hashFiles('kotlin') }}
-          restore-keys: |
-            ${{ runner.os }}-kotlin-
+          distribution: zulu
+          java-version: '21'
+          cache: gradle
 
       - name: Restore signing files
         if: github.event_name != 'pull_request'
@@ -66,49 +57,30 @@ jobs:
           KEYSTORE_PROP_B64: ${{ secrets.KEYSTORE_PROP }}
         run: |
           echo "$KEYSTORE_B64" | base64 -d > /tmp/klyx.keystore
-          echo "$KEYSTORE_PROP_B64" | base64 -d > android-app/sign.properties
-          sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' android-app/sign.properties
+          echo "$KEYSTORE_PROP_B64" | base64 -d > app/android/sign.properties
+          sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' app/android/sign.properties
 
       - name: Build APK
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ./kotlin build --variant debug
-          else
-            ./kotlin build --variant release
-          fi
+        run: ./gradlew ":app:android:assemble${BUILD_TYPE^}"
 
-      - name: Prepare APK
+      - name: Prepare APKs
         id: apk
         run: |
           mkdir -p artifacts
-
           SHORT_SHA=$(git rev-parse --short HEAD)
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            APK="build/tasks/_android-app_buildAndroidDebug/gradle-project-debug.apk"
-          else
-            APK="build/tasks/_android-app_buildAndroidRelease/gradle-project-release.apk"
-          fi
-
-          if [ ! -f "$APK" ]; then
-            echo "APK not found: $APK"
-            echo "Available APKs:"
-            find build -type f -name "*.apk" -print
-            exit 1
-          fi
-
-          OUTPUT="artifacts/klyx-${SHORT_SHA}.apk"
-          cp "$APK" "$OUTPUT"
-
+          for flavor in classic m3; do
+            cp "app/android/build/outputs/apk/$flavor/$BUILD_TYPE/android-$flavor-$BUILD_TYPE.apk" \
+              "artifacts/klyx-${SHORT_SHA}-$flavor.apk"
+          done
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "apk=$OUTPUT" >> "$GITHUB_OUTPUT"
+          echo "apk=artifacts/klyx-${SHORT_SHA}-classic.apk" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK
         id: apk_artifact
         uses: actions/upload-artifact@v7
         with:
           name: klyx-apk
-          path: ${{ steps.apk.outputs.apk }}
+          path: artifacts/*.apk
           retention-days: 15
           if-no-files-found: error
 
@@ -283,4 +255,4 @@ jobs:
         if: always()
         run: |
           rm -f /tmp/klyx.keystore
-          rm -f android-app/sign.properties
+          rm -f app/android/sign.properties

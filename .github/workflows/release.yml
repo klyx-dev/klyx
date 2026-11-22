@@ -18,8 +18,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  KOTLIN_SHARED_CACHE_DIR: /home/runner/.cache/JetBrains/Kotlin
-  KOTLIN_CLI_NO_WELCOME_BANNER: "1"
   VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
 
 jobs:
@@ -34,16 +32,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Make Kotlin executable
-        run: chmod +x ./kotlin
-
-      - name: Cache Kotlin Toolchain
-        uses: actions/cache@v6
+      - uses: actions/setup-java@v4
         with:
-          path: /home/runner/.cache/JetBrains/Kotlin
-          key: ${{ runner.os }}-kotlin-${{ hashFiles('kotlin') }}
-          restore-keys: |
-            ${{ runner.os }}-kotlin-
+          distribution: zulu
+          java-version: '21'
+          cache: gradle
 
       - name: Restore signing
         env:
@@ -52,10 +45,10 @@ jobs:
         run: |
           set -euo pipefail
           echo "$KEYSTORE_B64" | base64 -d > /tmp/klyx.keystore
-          echo "$KEYSTORE_PROP_B64" | base64 -d > android-app/sign.properties
-          sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' android-app/sign.properties
+          echo "$KEYSTORE_PROP_B64" | base64 -d > app/android/sign.properties
+          sed -i 's|^storeFile=.*|storeFile=/tmp/klyx.keystore|' app/android/sign.properties
 
-      - name: Stamp version
+      - name: Build versioned release APKs
         run: |
           set -euo pipefail
 
@@ -68,31 +61,20 @@ jobs:
 
           CODE=$((1000 + GITHUB_RUN_NUMBER))
 
-          sed -i -E "s/versionCode: [0-9]+/versionCode: ${CODE}/" android-app/module.yaml
-          sed -i -E "s|versionName: \"[^\"]*\"|versionName: \"${VERSION}\"|" android-app/module.yaml
-
-          grep -E 'versionCode|versionName' android-app/module.yaml
-
-      - name: Build release APK
-        run: ./kotlin build --variant release
+          ./gradlew :app:android:assembleRelease "-PklyxVersionCode=$CODE" "-PklyxVersionName=$VERSION"
 
       - name: Prepare assets
         run: |
           set -euo pipefail
 
-          APK="build/tasks/_android-app_buildAndroidRelease/gradle-project-release.apk"
-
-          if [ ! -f "$APK" ]; then
-            echo "APK not found: $APK"
-            find build -type f -name "*.apk" -print
-            exit 1
-          fi
-
           mkdir -p artifacts
-          cp "$APK" "artifacts/klyx-${VERSION}.apk"
+          for flavor in classic m3; do
+            cp "app/android/build/outputs/apk/$flavor/release/android-$flavor-release.apk" \
+              "artifacts/klyx-${VERSION}-$flavor.apk"
+          done
 
           cd artifacts
-          sha256sum "klyx-${VERSION}.apk" > SHA256SUMS
+          sha256sum *.apk > SHA256SUMS
           ls -lh
 
       - name: Publish pre-release
@@ -101,16 +83,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          APK="artifacts/klyx-${VERSION}.apk"
+          APKS=(artifacts/*.apk)
           SUMS="artifacts/SHA256SUMS"
 
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            gh release upload "$VERSION" "$APK" "$SUMS" --clobber
+            gh release upload "$VERSION" "${APKS[@]}" "$SUMS" --clobber
             gh release edit "$VERSION" \
               --title "Klyx $VERSION" \
               --prerelease
           else
-            gh release create "$VERSION" "$APK" "$SUMS" \
+            gh release create "$VERSION" "${APKS[@]}" "$SUMS" \
               --title "Klyx $VERSION" \
               --generate-notes \
               --prerelease

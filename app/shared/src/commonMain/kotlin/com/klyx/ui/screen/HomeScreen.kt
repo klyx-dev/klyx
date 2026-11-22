@@ -1,0 +1,1961 @@
+package com.klyx.ui.screen
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.retain.retain
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import com.composeunstyled.Text
+import com.composeunstyled.UnstyledDropdownMenu
+import com.composeunstyled.theme.Theme
+import com.klyx.core.action.action
+import com.klyx.core.utils.relativeTo
+import com.klyx.document.DocumentPersistence
+import com.klyx.editor.EditorStore
+import com.klyx.lsp.CodeAction
+import com.klyx.lsp.Diagnostic
+import com.klyx.lsp.DiagnosticSeverity
+import com.klyx.lsp.EditorLsp
+import com.klyx.lsp.FormatDocument
+import com.klyx.lsp.LspDocumentUtils
+import com.klyx.lsp.LspSessionState
+import com.klyx.lsp.RestartLanguageServer
+import com.klyx.lsp.applyCodeAction
+import com.klyx.lsp.applyCompletion
+import com.klyx.lsp.bindEditor
+import com.klyx.lsp.getCodeActions
+import com.klyx.lsp.requestHover
+import com.klyx.lsp.resolveCompletionDoc
+import com.klyx.lsp.restartSession
+import com.klyx.lsp.unbindEditor
+import com.klyx.navigation.LocalNavigator
+import com.klyx.navigation.Settings
+import com.klyx.platform.LocalWindowSizeClass
+import com.klyx.platform.Platform
+import com.klyx.platform.currentPlatform
+import com.klyx.platform.isWidthAtLeastExpandedBreakpoint
+import com.klyx.runtime.action.CloseDocument
+import com.klyx.runtime.action.OpenDocument
+import com.klyx.runtime.action.PromotePreviewDocument
+import com.klyx.runtime.action.SaveActiveDocument
+import com.klyx.runtime.action.SaveAllDocuments
+import com.klyx.runtime.action.SplitEditor
+import com.klyx.runtime.settings.SettingsStore
+import com.klyx.runtime.workspace.Document
+import com.klyx.runtime.workspace.DocumentId
+import com.klyx.runtime.workspace.DocumentLocation
+import com.klyx.runtime.workspace.EditorGroup
+import com.klyx.runtime.workspace.EditorGroupId
+import com.klyx.runtime.workspace.EditorTabScope
+import com.klyx.runtime.workspace.ProjectId
+import com.klyx.runtime.workspace.Workspace
+import com.klyx.runtime.workspace.isVisibleIn
+import com.klyx.ui.components.KxButton
+import com.klyx.ui.components.KxButtonDefaultMinHeight
+import com.klyx.ui.components.KxButtonVariant
+import com.klyx.ui.components.KxDialog
+import com.klyx.ui.components.KxMenuItem
+import com.klyx.ui.components.KxMenuPanel
+import com.klyx.ui.components.KxMenuSeparator
+import com.klyx.ui.components.KxTextField
+import com.klyx.ui.editor.CodeActionsDialog
+import com.klyx.ui.editor.CompletionDocDialog
+import com.klyx.ui.editor.CustomCompletionPopup
+import com.klyx.ui.editor.DiagnosticBanner
+import com.klyx.ui.editor.GroupStrip
+import com.klyx.ui.editor.HoverCard
+import com.klyx.ui.editor.LspCompletionItemUi
+import com.klyx.ui.editor.LspStatusDialog
+import com.klyx.ui.editor.MobileEditorInput
+import com.klyx.ui.editor.ProblemsDialog
+import com.klyx.ui.editor.TabStrip
+import com.klyx.ui.editor.rememberEditorGroups
+import com.klyx.ui.editor.rememberHasVisibleFiles
+import com.klyx.ui.feedback.FeedbackDialog
+import com.klyx.ui.filetree.ChildrenLoader
+import com.klyx.ui.filetree.FileNode
+import com.klyx.ui.filetree.FileTree
+import com.klyx.ui.filetree.FileTreeMenuItem
+import com.klyx.ui.filetree.FileTreeMenuSeparator
+import com.klyx.ui.filetree.FileTreeState
+import com.klyx.ui.filetree.NodeIdRegistry
+import com.klyx.ui.filetree.VisibleFileNode
+import com.klyx.ui.filetree.platformFileTreeWidth
+import com.klyx.ui.filetree.rememberFileTreeIcons
+import com.klyx.ui.lsp.TermuxPermissionDialog
+import com.klyx.ui.palette.EditorCommand
+import com.klyx.ui.palette.binding
+import com.klyx.ui.project.OpenProjectDialog
+import com.klyx.ui.project.ProjectSwitcher
+import com.klyx.ui.theme.LocalCornerRadius
+import com.klyx.ui.theme.accent
+import com.klyx.ui.theme.accentSecondary
+import com.klyx.ui.theme.background
+import com.klyx.ui.theme.bodySmall
+import com.klyx.ui.theme.border
+import com.klyx.ui.theme.colors
+import com.klyx.ui.theme.currentFontFamily
+import com.klyx.ui.theme.error
+import com.klyx.ui.theme.kxShape
+import com.klyx.ui.theme.kxSmallShape
+import com.klyx.ui.theme.label
+import com.klyx.ui.theme.labelSmall
+import com.klyx.ui.theme.surface
+import com.klyx.ui.theme.surfaceVariant
+import com.klyx.ui.theme.textMuted
+import com.klyx.ui.theme.textPrimary
+import com.klyx.ui.theme.textSecondary
+import com.klyx.ui.theme.typography
+import com.klyx.ui.theme.warning
+import io.github.lumkit.sweeteditor.EditorActionSource
+import io.github.lumkit.sweeteditor.EditorSettings
+import io.github.lumkit.sweeteditor.EditorTheme
+import io.github.lumkit.sweeteditor.SweetEditor
+import io.github.lumkit.sweeteditor.TextChangeKind
+import io.github.lumkit.sweeteditor.highlight.HighlightFeatureFlags
+import io.github.lumkit.sweeteditor.highlight.HighlightTheme
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlight
+import io.github.lumkit.sweeteditor.highlight.SweetLineHighlightConfig
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.absolutePath
+import io.github.vinceglb.filekit.atomicMove
+import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.delete
+import io.github.vinceglb.filekit.exists
+import io.github.vinceglb.filekit.isDirectory
+import io.github.vinceglb.filekit.list
+import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.parent
+import io.github.vinceglb.filekit.path
+import io.github.vinceglb.filekit.resolve
+import io.github.vinceglb.filekit.write
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
+import kotlin.math.roundToInt
+import kotlin.time.Duration.Companion.seconds
+
+@Composable
+fun HomeScreen(
+    onCommands: () -> Unit,
+    modifier: Modifier = Modifier,
+    toastMessages: Flow<String> = emptyFlow(),
+) {
+    val scope = rememberCoroutineScope()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    var openProjectDialog by remember { mutableStateOf(false) }
+    val navigator = LocalNavigator.current
+    val wideScreen = LocalWindowSizeClass.current.isWidthAtLeastExpandedBreakpoint()
+    var explorerVisible by rememberSaveable { mutableStateOf(true) }
+    val hasVisibleFiles = rememberHasVisibleFiles()
+    val showFiles: () -> Unit = {
+        if (wideScreen) explorerVisible = !explorerVisible
+        else scope.launch { drawerState.open() }
+    }
+
+    val workspace: Workspace = koinInject()
+    val settingsStore: SettingsStore = koinInject()
+    val settings by settingsStore.settings.collectAsState()
+    val editors: EditorStore = koinInject()
+    val lsp: EditorLsp = koinInject()
+
+    TermuxPermissionDialog()
+
+    val documents by workspace.documents.collectAsState()
+    val activeDocId by editors.activeDocumentId.collectAsState()
+    val activeDoc = documents[activeDocId]
+
+    var showProblemsDialog by remember { mutableStateOf(false) }
+    var showLspStatusDialog by remember { mutableStateOf(false) }
+
+    var showCodeActionsDialog by remember { mutableStateOf(false) }
+    var availableCodeActions by remember { mutableStateOf<List<CodeAction>>(emptyList()) }
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(toastMessages) {
+        toastMessages.collect { toastMessage = it }
+    }
+
+    LaunchedEffect(toastMessage) {
+        if (toastMessage != null) {
+            delay(2.5.seconds)
+            toastMessage = null
+        }
+    }
+
+    LaunchedEffect(lsp) {
+        lsp.lspErrors.collect { message ->
+            toastMessage = message
+        }
+    }
+
+    val allDiags by lsp.client.diagnostics.collectAsState()
+    val activeDocDiags = remember(allDiags, activeDoc?.id) {
+        val doc = activeDoc ?: return@remember emptyList()
+        val uri = LspDocumentUtils.uriOf(doc, workspace)
+        val normalized = lsp.client.normalizeUri(uri)
+        allDiags.entries.firstOrNull { lsp.client.normalizeUri(it.key) == normalized }?.value ?: emptyList()
+    }
+
+    val onQuickFix: (Diagnostic) -> Unit = { diag ->
+        if (activeDoc != null) {
+            scope.launch {
+                val actions = lsp.getCodeActions(activeDoc, diag.range, listOf(diag))
+                if (actions.isNotEmpty()) {
+                    availableCodeActions = actions
+                    showCodeActionsDialog = true
+                } else {
+                    toastMessage = "No quick fixes available for this problem"
+                }
+            }
+        }
+    }
+
+//    Debug {
+//        try {
+//            action(OpenProject(systemHomeDirectory / "zed/Projects/rs-test"))
+//        } catch (e: Exception) {
+//            currentCoroutineContext().ensureActive()
+//            toastMessage = "Failed to open project: ${e.message}"
+//        }
+//    }
+
+    val activeProjectId by workspace.activeProjectId.collectAsState()
+    val tabScope = if (settings.showAllProjectsTabs) EditorTabScope.AllProjects else EditorTabScope.CurrentProject
+
+    (val groups = first, val activeId = second) = rememberEditorGroups()
+
+    LaunchedEffect(activeProjectId, tabScope) {
+        if (tabScope != EditorTabScope.CurrentProject) return@LaunchedEffect
+        val docs = workspace.documents.value
+        workspace.editorGroups.value.forEach { (id, documents, activeDocumentId) ->
+            val visible = documents.filter { tab ->
+                docs[tab.documentId]?.isVisibleIn(activeProjectId) ?: true
+            }
+            val selectionVisible = activeDocumentId?.let { active ->
+                visible.any { it.documentId == active }
+            } == true
+            if (!selectionVisible && visible.isNotEmpty()) {
+                workspace.activateDocument(id, visible.first().documentId)
+            }
+        }
+    }
+
+    FileTreeDrawer(
+        modifier = modifier,
+        drawerState = drawerState,
+        wideScreen = wideScreen,
+        explorerVisible = explorerVisible,
+        onOpenDialog = { openProjectDialog = true },
+        onNavigate = { scope.launch { drawerState.close() } },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing),
+        ) {
+            TopBar(
+                onCommands = onCommands,
+                onFilesClick = showFiles,
+                onOpenDialog = { openProjectDialog = true },
+                onSettingsClick = { navigator.navigateTo(Settings) },
+                onShowProblems = { showProblemsDialog = true },
+                onShowLspStatus = { showLspStatusDialog = true },
+            )
+
+            GroupStrip(groups = groups, activeId = activeId)
+
+            if (hasVisibleFiles) {
+                SinglePaneGroups(
+                    groups = groups,
+                    activeId = activeId,
+                    onQuickFix = onQuickFix,
+                    onShowToast = { msg -> toastMessage = msg },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f),
+                )
+
+            } else {
+                WelcomeScreen(
+                    onOpenFolder = { openProjectDialog = true },
+                    onBrowseFiles = {
+                        if (wideScreen) explorerVisible = true
+                        else scope.launch { drawerState.open() }
+                    },
+                    onSettings = { navigator.navigateTo(Settings) },
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+            }
+
+            if (activeDoc != null) {
+                StatusBar(
+                    activeDoc = activeDoc,
+                    activeDiags = activeDocDiags,
+                    onShowProblems = { showProblemsDialog = true },
+                    onShowLspStatus = { showLspStatusDialog = true },
+                )
+            }
+        }
+    }
+
+    AnimatedVisibility(
+        visible = toastMessage != null,
+        enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .safeDrawingPadding()
+            .padding(top = 16.dp),
+    ) {
+        toastMessage?.let { msg ->
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                val toastShape = kxShape()
+                Box(
+                    modifier = Modifier
+                        .shadow(8.dp, toastShape)
+                        .clip(toastShape)
+                        .background(Theme[colors][surfaceVariant], toastShape)
+                        .border(1.dp, Theme[colors][border], toastShape)
+                        .clickable { toastMessage = null }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            text = "ℹ",
+                            style = Theme[typography][bodySmall].copy(fontWeight = FontWeight.Bold),
+                            color = Theme[colors][accentSecondary],
+                        )
+                        Text(
+                            text = msg,
+                            style = Theme[typography][bodySmall],
+                            color = Theme[colors][textPrimary],
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    OpenProjectDialog(visible = openProjectDialog, onDismiss = { openProjectDialog = false })
+
+    if (activeDoc != null) {
+        ProblemsDialog(
+            visible = showProblemsDialog,
+            onDismiss = { showProblemsDialog = false },
+            documentName = activeDoc.name,
+            diagnostics = activeDocDiags,
+            onSelectDiagnostic = { diag ->
+                val ctrl = editors[activeDoc.id]
+                ctrl.setCursorPosition(diag.range.start.line.toInt(), diag.range.start.character.toInt())
+                ctrl.ensureCursorVisible()
+            },
+            onQuickFix = onQuickFix,
+        )
+    }
+
+    CodeActionsDialog(
+        visible = showCodeActionsDialog,
+        onDismiss = { showCodeActionsDialog = false },
+        actions = availableCodeActions,
+        onSelectAction = { action ->
+            scope.launch {
+                lsp.applyCodeAction(action)
+            }
+        },
+    )
+
+    val activeSessions by lsp.activeSessions.collectAsState()
+    val progressItems by lsp.client.progressItems.collectAsState()
+    LspStatusDialog(
+        visible = showLspStatusDialog,
+        onDismiss = { showLspStatusDialog = false },
+        sessions = activeSessions,
+        progressItems = progressItems,
+        onRestartLanguageServer = { lang ->
+            scope.launch {
+                val _ = lsp.restartSession(lang)
+            }
+        },
+    )
+}
+
+private enum class OverflowMenuPage {
+    Main,
+    Lsp,
+}
+
+@Composable
+private fun TopBar(
+    onCommands: () -> Unit,
+    onFilesClick: () -> Unit,
+    onOpenDialog: () -> Unit,
+    onSettingsClick: () -> Unit = {},
+    onShowProblems: () -> Unit = {},
+    onShowLspStatus: () -> Unit = {},
+) {
+    val editors: EditorStore = koinInject()
+    val settingsStore: SettingsStore = koinInject()
+    val hasVisibleFiles = rememberHasVisibleFiles()
+    val settings by settingsStore.settings.collectAsState()
+    val showUndoRedo = settings.showUndoRedoButtons
+    val canUndo by editors.canUndo.collectAsState()
+    val canRedo by editors.canRedo.collectAsState()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FlowRow(
+            modifier = Modifier.weight(1f),
+            itemVerticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            KxButton(
+                onClick = onFilesClick,
+                variant = KxButtonVariant.Ghost,
+                contentDescription = "Toggle file explorer",
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Text("Files", style = Theme[typography][label])
+            }
+
+            KxButton(
+                onClick = onOpenDialog,
+                variant = KxButtonVariant.Ghost,
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+            ) {
+                Text("Open Folder", style = Theme[typography][label])
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (hasVisibleFiles) {
+                if (showUndoRedo) {
+                    KxButton(
+                        onClick = { editors.undo() },
+                        enabled = canUndo,
+                        variant = KxButtonVariant.Ghost,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        Text("Undo", style = Theme[typography][label])
+                    }
+
+                    KxButton(
+                        onClick = { editors.redo() },
+                        enabled = canRedo,
+                        variant = KxButtonVariant.Ghost,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                    ) {
+                        Text("Redo", style = Theme[typography][label])
+                    }
+                }
+
+                KxButton(
+                    onClick = action(SaveActiveDocument),
+                    variant = KxButtonVariant.Ghost,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Text("Save", style = Theme[typography][label])
+                }
+            }
+
+            TopBarOverflowMenu(
+                onCommands = onCommands,
+                bindings = settings.keybindings,
+                onSettingsClick = onSettingsClick,
+                onShowProblems = onShowProblems,
+                onShowLspStatus = onShowLspStatus,
+                showSplitAction = hasVisibleFiles,
+            )
+        }
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProjectSwitcher(onOpenDialog = onOpenDialog, modifier = Modifier.weight(1f))
+    }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .background(Theme[colors][border])
+    )
+}
+
+@Composable
+private fun TopBarOverflowMenu(
+    onCommands: () -> Unit,
+    bindings: Map<String, String>,
+    onSettingsClick: () -> Unit,
+    onShowProblems: () -> Unit,
+    onShowLspStatus: () -> Unit,
+    modifier: Modifier = Modifier,
+    showSplitAction: Boolean = true,
+) {
+    val workspace: Workspace = koinInject()
+    val editors: EditorStore = koinInject()
+    val lsp: EditorLsp = koinInject()
+    val scope = rememberCoroutineScope()
+    var expanded by remember { mutableStateOf(false) }
+    var showFeedback by remember { mutableStateOf(false) }
+    var menuPage by remember { mutableStateOf(OverflowMenuPage.Main) }
+
+    val activeDocId by editors.activeDocumentId.collectAsState()
+    val hasActiveDoc = activeDocId != null
+
+    UnstyledDropdownMenu(
+        expanded = expanded,
+        onExpandedChange = {
+            expanded = it
+            if (!it) menuPage = OverflowMenuPage.Main
+        },
+        sideOffset = 4.dp,
+        modifier = modifier,
+        panel = {
+            KxMenuPanel {
+                when (menuPage) {
+                    OverflowMenuPage.Main -> {
+                        KxMenuItem(
+                            label = "command palette",
+                            trailing = EditorCommand.Palette.binding(bindings),
+                            onClick = {
+                                expanded = false
+                                onCommands()
+                            }
+                        )
+                        KxMenuItem(
+                            label = "save",
+                            trailing = EditorCommand.Save.binding(bindings),
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                action(SaveActiveDocument).invoke()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "save all",
+                            trailing = EditorCommand.SaveAll.binding(bindings),
+                            onClick = {
+                                action(SaveAllDocuments).invoke()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "format document",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                action(FormatDocument)()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "LSP & tools",
+                            trailing = "▶",
+                            closeOnClick = false,
+                            onClick = {
+                                menuPage = OverflowMenuPage.Lsp
+                            },
+                        )
+                        KxMenuSeparator()
+                        if (showSplitAction) {
+                            KxMenuItem(
+                                label = "split editor",
+                                onClick = {
+                                    action(SplitEditor)()
+                                    expanded = false
+                                },
+                            )
+                        }
+                        KxMenuItem(
+                            label = "settings",
+                            onClick = {
+                                onSettingsClick()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "send feedback",
+                            onClick = {
+                                expanded = false
+                                showFeedback = true
+                            },
+                        )
+                    }
+
+                    OverflowMenuPage.Lsp -> {
+                        KxMenuItem(
+                            label = "◀ back",
+                            closeOnClick = false,
+                            onClick = { menuPage = OverflowMenuPage.Main },
+                        )
+                        KxMenuSeparator()
+                        KxMenuItem(
+                            label = "restart server",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                action(RestartLanguageServer)()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "view problems",
+                            onClick = {
+                                onShowProblems()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "server status & tasks",
+                            onClick = {
+                                onShowLspStatus()
+                                expanded = false
+                            },
+                        )
+                        KxMenuItem(
+                            label = "hover documentation",
+                            enabled = hasActiveDoc,
+                            onClick = {
+                                expanded = false
+                                scope.launch {
+                                    val doc = activeDocId?.let { workspace.document(it) } ?: return@launch
+                                    (val line, val column) = editors.activeCursor.value ?: return@launch
+                                    val _ = lsp.requestHover(doc, line, column)
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        },
+        anchor = {
+            KxButton(
+                onClick = { expanded = true },
+                variant = KxButtonVariant.Outlined,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                modifier = Modifier.defaultMinSize(minHeight = KxButtonDefaultMinHeight),
+            ) {
+                Text(text = "More", style = Theme[typography][label], color = Theme[colors][textSecondary])
+            }
+        },
+    )
+
+    FeedbackDialog(
+        visible = showFeedback,
+        onDismiss = { showFeedback = false },
+    )
+}
+
+@Composable
+private fun SinglePane(
+    group: EditorGroup,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        TabStrip(group = group, modifier = Modifier.fillMaxWidth())
+
+        EditorPane(
+            group = group,
+            onQuickFix = onQuickFix,
+            onShowToast = onShowToast,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = 2.dp),
+        )
+    }
+}
+
+@Composable
+private fun SinglePaneGroups(
+    groups: List<EditorGroup>,
+    activeId: EditorGroupId?,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val visibleId = activeId?.takeIf { id ->
+        groups.any { group -> group.id == id }
+    } ?: groups.firstOrNull()?.id
+
+    Layout(
+        modifier = modifier,
+        content = {
+            groups.forEach { group ->
+                key(group.id) {
+                    SinglePane(
+                        group = group,
+                        onQuickFix = onQuickFix,
+                        onShowToast = onShowToast,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
+            }
+        },
+    ) { measurables, constraints ->
+        val placeables = measurables.map { measurable -> measurable.measure(constraints) }
+        layout(width = constraints.maxWidth, height = constraints.maxHeight) {
+            placeables.forEachIndexed { index, placeable ->
+                if (groups[index].id == visibleId) {
+                    placeable.place(0, 0)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EditorPane(
+    group: EditorGroup?,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (group == null) {
+        EmptyEditorArea(modifier)
+        return
+    }
+
+    val workspace: Workspace = koinInject()
+
+    val documents by workspace.documents.collectAsState()
+    val activeProjectId by workspace.activeProjectId.collectAsState()
+    val activeEditorGroupId by workspace.activeEditorGroupId.collectAsState()
+    val settingsStore: SettingsStore = koinInject()
+    val settings by settingsStore.settings.collectAsState()
+    val tabScope = if (settings.showAllProjectsTabs) EditorTabScope.AllProjects else EditorTabScope.CurrentProject
+
+    val focused = group.id == activeEditorGroupId
+    val openedDocuments = group.documents.mapNotNull { documents[it.documentId] }
+    val visibleDocuments = when (tabScope) {
+        EditorTabScope.AllProjects -> openedDocuments
+        EditorTabScope.CurrentProject -> openedDocuments.filter { it.isVisibleIn(activeProjectId) }
+    }
+    val activeDocumentId = group.activeDocumentId
+        ?.takeIf { id -> visibleDocuments.any { it.id == id } }
+        ?: visibleDocuments.firstOrNull()?.id
+
+    if (openedDocuments.isEmpty()) {
+        EmptyEditorArea(modifier)
+        return
+    }
+
+    Box(modifier = modifier) {
+        EditorStack(
+            activeDocumentId = activeDocumentId,
+            documents = openedDocuments,
+            modifier = Modifier.fillMaxSize(),
+        ) { document, active ->
+            EditorDocument(
+                document = document,
+                active = active,
+                focused = focused,
+                onQuickFix = onQuickFix,
+                onShowToast = onShowToast,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (activeDocumentId == null) {
+            EmptyEditorArea(
+                title = "no files open in this project",
+                hint = "switch project or show all tabs in settings",
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditorDocument(
+    document: Document,
+    active: Boolean,
+    focused: Boolean,
+    onQuickFix: (Diagnostic) -> Unit,
+    onShowToast: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val workspace: Workspace = koinInject()
+    val editors: EditorStore = koinInject()
+    val controller = retain(document) { editors[document.id] }
+    val focusRequester = remember { FocusRequester() }
+
+    var loaded by remember(document.id) { mutableStateOf(false) }
+    val persistence: DocumentPersistence = koinInject()
+    val readOnly = persistence.isReadOnly(document)
+
+    val settings = remember(active, loaded, readOnly) {
+        EditorSettings(readOnly = readOnly || !active || !loaded)
+    }
+    val theme = editorTheme()
+
+    val highlight = remember(document) {
+        SweetLineHighlight(
+            SweetLineHighlightConfig(
+                document = LspDocumentUtils.highlightDescriptor(document),
+                features = HighlightFeatureFlags(
+                    syntaxHighlight = true,
+                    indentGuides = false,
+                    bracketGuides = true,
+                    matchedBrackets = true,
+                    rainbowBrackets = true,
+                ),
+                theme = HighlightTheme.dark()
+            )
+        )
+    }
+
+    DisposableEffect(controller, highlight) {
+        val binding = highlight.bind(controller)
+        onDispose(binding::close)
+    }
+
+    val lsp: EditorLsp = koinInject()
+    val scope = rememberCoroutineScope()
+
+    DisposableEffect(controller, document.id) {
+        editors.register(document.id, controller)
+        persistence.bindEditor(document, controller)
+        lsp.bindEditor(document, controller)
+        onDispose {
+            persistence.unbindEditor(controller)
+            lsp.unbindEditor(document)
+            editors.unregister(document.id, controller)
+        }
+    }
+
+    if (active && focused) {
+        DisposableEffect(controller, document.id) {
+            editors.setActive(document.id, controller)
+            onDispose {
+                editors.clearActive(controller)
+            }
+        }
+    }
+
+    val jump = editors.pendingJump
+    LaunchedEffect(jump, active, focused, loaded) {
+        if (jump != null && jump.documentId == document.id && active && focused && loaded) {
+            controller.setCursorPosition(jump.line, jump.column)
+            controller.ensureCursorVisible()
+            editors.pendingJump = null
+        }
+    }
+
+    LaunchedEffect(document.id) {
+        persistence.loadDocument(document, controller) {
+            loaded = true
+            scope.launch {
+                val uri = LspDocumentUtils.uriOf(document, workspace)
+                lsp.client.applyDiagnosticsToController(uri, controller)
+            }
+        }
+    }
+
+    DisposableEffect(controller, document.id) {
+        val unsubscribe = controller.onTextChanged { (kind, source) ->
+            editors.refreshUndoState()
+            if (source == EditorActionSource.KEYBOARD ||
+                source == EditorActionSource.IME ||
+                source == EditorActionSource.GESTURE ||
+                kind == TextChangeKind.UNDO ||
+                kind == TextChangeKind.REDO
+            ) {
+                action(PromotePreviewDocument(document.id)).invoke()
+            }
+        }
+        onDispose(unsubscribe)
+    }
+
+    val allDiags by lsp.client.diagnostics.collectAsState()
+    val fileDiags = remember(allDiags, document.id) {
+        val uri = LspDocumentUtils.uriOf(document, workspace)
+        val normalized = lsp.client.normalizeUri(uri)
+        allDiags.entries.firstOrNull { lsp.client.normalizeUri(it.key) == normalized }?.value ?: emptyList()
+    }
+
+    LaunchedEffect(fileDiags, controller) {
+        controller.whenReady {
+            scope.launch {
+                val uri = LspDocumentUtils.uriOf(document, workspace)
+                lsp.client.applyDiagnosticsToController(uri, controller)
+            }
+        }
+    }
+
+    var cursorLine by remember { mutableStateOf<Int?>(null) }
+    var dismissedLine by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(fileDiags) {
+        dismissedLine = null
+    }
+
+    DisposableEffect(controller, active, focused) {
+        val unsubscribe = controller.onCursorChanged { event ->
+            cursorLine = event.cursorPosition.line
+            if (active && focused) {
+                editors.updateCursor(event.cursorPosition.line, event.cursorPosition.column)
+            }
+        }
+        onDispose(unsubscribe)
+    }
+
+    LaunchedEffect(controller, active, focused) {
+        controller.whenReady {
+            cursorLine = controller.getCursorPosition()?.line
+            val pos = controller.getCursorPosition()
+            if (pos != null && active && focused) {
+                editors.updateCursor(pos.line, pos.column)
+            }
+        }
+    }
+
+    val activeDiags = remember(fileDiags, cursorLine, dismissedLine) {
+        val line = cursorLine ?: return@remember emptyList()
+        if (line == dismissedLine) return@remember emptyList()
+        fileDiags.filter { diag ->
+            val startLine = diag.range.start.line.toInt()
+            val endLine = diag.range.end.line.toInt()
+            line in startLine..endLine
+        }
+    }
+
+    LaunchedEffect(active, focused) {
+        if (!active || !focused) return@LaunchedEffect
+        withFrameNanos {}
+        val _ = runCatching { focusRequester.requestFocus() }
+    }
+
+    var editorBoxHeightPx by remember { mutableStateOf(0) }
+    var hoverScrollTick by remember { mutableStateOf(0) }
+
+    DisposableEffect(controller) {
+        val unsubscribe = controller.onScrollChanged { hoverScrollTick++ }
+        onDispose(unsubscribe)
+    }
+
+    val activeHover by lsp.activeHover.collectAsState()
+    val hoverRect = remember(activeHover, hoverScrollTick) {
+        (val line, val column) = activeHover ?: return@remember null
+        runCatching { controller.getPositionRect(line, column) }.getOrNull()
+    }
+
+    val density = LocalDensity.current
+
+    val hoverYOffsetPx = remember(hoverRect, editorBoxHeightPx) {
+        val marginPx = with(density) { 8.dp.roundToPx() }
+        if (hoverRect == null || editorBoxHeightPx <= 0) {
+            marginPx
+        } else {
+            val below = (hoverRect.y + hoverRect.height).roundToInt() + marginPx
+            val estCardPx = with(density) { 280.dp.roundToPx() }
+            if (below + estCardPx <= editorBoxHeightPx) {
+                below
+            } else {
+                (hoverRect.y.roundToInt() - marginPx - estCardPx).coerceAtLeast(marginPx)
+            }
+        }
+    }
+
+    val editorContent: @Composable (Modifier, Modifier) -> Unit = { layout, keys ->
+        Box(
+            modifier = layout
+                .fillMaxSize()
+                .onSizeChanged { editorBoxHeightPx = it.height },
+        ) {
+            SweetEditor(
+                controller = controller,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusRequester(focusRequester)
+                    .then(keys),
+                theme = theme,
+                settings = settings,
+            )
+
+            if (active && activeHover != null) {
+                HoverCard(
+                    hover = activeHover!!,
+                    onDismiss = { lsp.dismissHover() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .offset { IntOffset(0, hoverYOffsetPx) },
+                )
+            }
+
+            val activeCompletion by lsp.activeCompletion.collectAsState()
+            var docItemToShow by remember { mutableStateOf<LspCompletionItemUi?>(null) }
+
+            if (active && activeCompletion != null && activeCompletion?.documentId == document.id) {
+                CustomCompletionPopup(
+                    state = activeCompletion!!,
+                    onSelectItem = { },
+                    onConfirmItem = { item ->
+                        lsp.applyCompletion(item, controller)
+                    },
+                    onShowDoc = { item ->
+                        scope.launch {
+                            val resolved = lsp.resolveCompletionDoc(document, item)
+                            val doc = resolved.documentation?.trim()
+                            if (doc.isNullOrBlank()) {
+                                onShowToast("No documentation available for \"${item.label}\"")
+                            } else {
+                                docItemToShow = resolved
+                            }
+                        }
+                    },
+                    onDismiss = {
+                        lsp.dismissCompletionPopup()
+                    },
+                )
+            }
+
+            if (docItemToShow != null) {
+                CompletionDocDialog(
+                    item = docItemToShow!!,
+                    onDismiss = { docItemToShow = null },
+                )
+            }
+
+            if (active && activeDiags.isNotEmpty()) {
+                DiagnosticBanner(
+                    diagnostics = activeDiags,
+                    onDismiss = { dismissedLine = cursorLine },
+                    onQuickFix = onQuickFix,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+            }
+        }
+    }
+    if (currentPlatform == Platform.ANDROID || currentPlatform == Platform.IOS) {
+        MobileEditorInput(
+            focusEditor = { focusRequester.requestFocus() },
+            document = document,
+            controller = controller,
+            lsp = lsp,
+            enabled = loaded && active && focused,
+            onShowToast = onShowToast,
+            modifier = modifier,
+            content = editorContent,
+        )
+    } else {
+        editorContent(modifier, Modifier)
+    }
+}
+
+@Composable
+private fun StatusBar(
+    activeDoc: Document?,
+    activeDiags: List<Diagnostic>,
+    onShowProblems: () -> Unit,
+    onShowLspStatus: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val lsp: EditorLsp = koinInject()
+    val editors: EditorStore = koinInject()
+    val activeSessions by lsp.activeSessions.collectAsState()
+    val progressItems by lsp.client.progressItems.collectAsState()
+    val cursor by editors.activeCursor.collectAsState()
+
+    val persistence: DocumentPersistence = koinInject()
+    val readOnly = remember(activeDoc) { activeDoc?.let(persistence::isReadOnly) == true }
+
+    val langId = activeDoc?.let { LspDocumentUtils.languageIdOf(it) }
+    val currentSessionState = langId?.let { activeSessions[it] }
+    val pillShape = kxSmallShape()
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(Theme[colors][surfaceVariant])
+            .border(width = 0.5.dp, color = Theme[colors][border])
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(pillShape)
+                .clickable(onClick = onShowLspStatus)
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            val dotColor = when (currentSessionState) {
+                LspSessionState.Running -> Theme[colors][accent]
+                LspSessionState.Starting -> Theme[colors][warning]
+                LspSessionState.Error -> Theme[colors][error]
+                LspSessionState.Stopped, null -> Theme[colors][textMuted]
+            }
+            val statusSymbol = when (currentSessionState) {
+                LspSessionState.Running -> "●"
+                LspSessionState.Starting -> "◐"
+                LspSessionState.Error -> "●"
+                LspSessionState.Stopped, null -> "○"
+            }
+            Text(
+                text = statusSymbol,
+                style = Theme[typography][labelSmall],
+                color = dotColor,
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = langId ?: "plain text",
+                style = Theme[typography][labelSmall],
+                color = Theme[colors][textSecondary],
+            )
+        }
+
+        if (readOnly) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("read-only", style = Theme[typography][labelSmall], color = Theme[colors][textSecondary])
+        }
+
+        if (progressItems.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(8.dp))
+            (val title, val percentage) = progressItems.values.first()
+            val percentText = percentage?.let { " $it%" } ?: ""
+            val extraCount = if (progressItems.size > 1) " (+${progressItems.size - 1})" else ""
+            Row(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .background(Theme[colors][accent].copy(alpha = 0.12f), pillShape)
+                    .clickable(onClick = onShowLspStatus)
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "$title$percentText$extraCount",
+                    style = Theme[typography][labelSmall],
+                    color = Theme[colors][accent],
+                    maxLines = 1,
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        if (activeDiags.isNotEmpty()) {
+            val errorCount = activeDiags.count { it.severity == DiagnosticSeverity.Error || it.severity == null }
+            val warnCount = activeDiags.count { it.severity == DiagnosticSeverity.Warning }
+
+            Row(
+                modifier = Modifier
+                    .clip(pillShape)
+                    .clickable(onClick = onShowProblems)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (errorCount > 0) {
+                    Text(
+                        text = "✕ $errorCount",
+                        style = Theme[typography][labelSmall].copy(fontWeight = FontWeight.Bold),
+                        color = Theme[colors][error],
+                    )
+                    if (warnCount > 0) Spacer(modifier = Modifier.width(6.dp))
+                }
+                if (warnCount > 0) {
+                    Text(
+                        text = "$warnCount",
+                        style = Theme[typography][labelSmall].copy(fontWeight = FontWeight.Bold),
+                        color = Theme[colors][warning],
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+
+        if (cursor != null) {
+            Text(
+                text = "Ln ${cursor!!.line + 1}, Col ${cursor!!.column + 1}",
+                style = Theme[typography][labelSmall],
+                color = Theme[colors][textMuted],
+            )
+        }
+    }
+}
+
+@Composable
+private fun editorTheme(): EditorTheme = EditorTheme(
+    backgroundColor = Theme[colors][background].toArgb(),
+    textColor = Theme[colors][textPrimary].toArgb(),
+    cursorColor = Theme[colors][accent].toArgb(),
+    currentLineColor = Theme[colors][surface].copy(alpha = 0.2f).toArgb(),
+    lineNumberColor = Theme[colors][textMuted].toArgb(),
+    currentLineNumberColor = Theme[colors][accent].toArgb(),
+    splitLineColor = Theme[colors][border].toArgb(),
+    scrollbarTrackColor = Theme[colors][surface].copy(alpha = 0.3f).toArgb(),
+    scrollbarThumbColor = Theme[colors][accent].copy(alpha = 0.5f).toArgb(),
+    scrollbarThumbActiveColor = Theme[colors][accent].copy(alpha = 0.7f).toArgb(),
+    selectionColor = Theme[colors][accentSecondary].copy(alpha = 0.3f).toArgb(),
+    selectionTextColor = Theme[colors][textPrimary].toArgb(),
+    diagnosticErrorColor = Theme[colors][error].toArgb(),
+    diagnosticWarningColor = Theme[colors][warning].toArgb(),
+    diagnosticInfoColor = Theme[colors][accentSecondary].toArgb(),
+    diagnosticHintColor = Theme[colors][textMuted].toArgb(),
+    codeLensColor = Theme[colors][textMuted].toArgb(),
+    activeCodeLensColor = Theme[colors][accent].toArgb(),
+    documentHighlightTextBgColor = Theme[colors][accent].copy(alpha = 0.18f).toArgb(),
+    documentHighlightReadBgColor = Theme[colors][accent].copy(alpha = 0.18f).toArgb(),
+    documentHighlightWriteBgColor = Theme[colors][accentSecondary].copy(alpha = 0.25f).toArgb(),
+    compositionUnderlineColor = Theme[colors][accent].toArgb(),
+    bracketHighlightBgColor = Theme[colors][accent].copy(alpha = 0.15f).toArgb(),
+    bracketHighlightBorderColor = Theme[colors][accent].toArgb(),
+    selectionMenuBgColor = Theme[colors][surface].toArgb(),
+    selectionMenuTextColor = Theme[colors][textPrimary].toArgb(),
+    selectionMenuDividerColor = Theme[colors][border].toArgb(),
+    contextMenuBgColor = Theme[colors][surface].toArgb(),
+    contextMenuTextColor = Theme[colors][textPrimary].toArgb(),
+    contextMenuDividerColor = Theme[colors][border].toArgb(),
+    fontFamily = currentFontFamily(),
+)
+
+@Composable
+private fun EditorStack(
+    activeDocumentId: DocumentId?,
+    documents: List<Document>,
+    modifier: Modifier = Modifier,
+    content: @Composable (Document, Boolean) -> Unit,
+) {
+    Layout(
+        modifier = modifier,
+        content = {
+            documents.forEach { document ->
+                key(document.id) {
+                    content(document, activeDocumentId == document.id)
+                }
+            }
+        },
+    ) { measurables, constraints ->
+        val placeables = measurables.map { it.measure(constraints) }
+        layout(width = constraints.maxWidth, height = constraints.maxHeight) {
+            placeables.forEachIndexed { index, placeable ->
+                val document = documents[index]
+                if (document.id == activeDocumentId) {
+                    placeable.place(0, 0)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmptyEditorArea(
+    modifier: Modifier = Modifier,
+    title: String = "No file selected",
+    hint: String = "Choose a file from the explorer to start editing.",
+) {
+    Box(modifier = modifier.background(Theme[colors][background]), contentAlignment = Alignment.Center) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(title, style = Theme[typography][label], color = Theme[colors][textMuted])
+            Text(
+                text = hint,
+                style = Theme[typography][labelSmall],
+                color = Theme[colors][textMuted].copy(alpha = 0.7f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FileTreeDrawer(
+    modifier: Modifier = Modifier,
+    drawerState: DrawerState,
+    wideScreen: Boolean,
+    explorerVisible: Boolean,
+    onOpenDialog: () -> Unit,
+    onNavigate: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    if (wideScreen) {
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+        ) {
+            if (explorerVisible) {
+                ExplorerPanel(
+                    onOpenDialog = onOpenDialog,
+                    onNavigate = {},
+                    modifier = Modifier
+                        .width(260.dp)
+                        .fillMaxHeight()
+                        .background(Theme[colors][surfaceVariant]),
+                )
+                Box(
+                    Modifier
+                        .width(1.dp)
+                        .fillMaxHeight()
+                        .background(Theme[colors][border])
+                )
+            }
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            ) {
+                content()
+            }
+        }
+        return
+    }
+
+    ModalNavigationDrawer(
+        modifier = modifier,
+        drawerState = drawerState,
+        gesturesEnabled = drawerState.isOpen,
+        drawerContent = {
+            val radius = LocalCornerRadius.current
+            val drawerShape =
+                if (radius > 0.dp) RoundedCornerShape(topEnd = radius, bottomEnd = radius) else RectangleShape
+            ModalDrawerSheet(
+                drawerShape = drawerShape,
+                drawerState = drawerState,
+                drawerContainerColor = Theme[colors][background],
+                modifier = Modifier
+                    .width(platformFileTreeWidth)
+                    .fillMaxHeight()
+                    .imePadding(),
+            ) {
+                ExplorerPanel(onOpenDialog = onOpenDialog, onNavigate = onNavigate, modifier = Modifier.fillMaxSize())
+            }
+        },
+        content = content,
+    )
+}
+
+@Composable
+private fun ExplorerPanel(
+    onOpenDialog: () -> Unit,
+    onNavigate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ids = remember { NodeIdRegistry() }
+    val childrenLoader = remember(ids) { fileTreeChildrenLoader(ids) }
+    val icons = rememberFileTreeIcons()
+    val workspace: Workspace = koinInject()
+    val treeScope = rememberCoroutineScope()
+
+    val allProjects by workspace.projects.collectAsState()
+    val activeProjectId by workspace.activeProjectId.collectAsState()
+    val activeProject = activeProjectId?.let { allProjects[it] }
+
+    val treeStates = remember { mutableMapOf<ProjectId, FileTreeState>() }
+    LaunchedEffect(allProjects) {
+        treeStates.keys.retainAll(allProjects.keys)
+    }
+    val state = remember(activeProjectId, treeScope, childrenLoader) {
+        activeProjectId?.let { id -> treeStates.getOrPut(id) { FileTreeState(treeScope, childrenLoader) } }
+    }
+    val treeListState = remember(activeProjectId) { LazyListState() }
+
+    var createRequest by remember { mutableStateOf<Pair<FileNode, Boolean>?>(null) }
+    var renameRequest by remember { mutableStateOf<FileNode?>(null) }
+    var deleteRequest by remember { mutableStateOf<FileNode?>(null) }
+
+    LaunchedEffect(state, activeProject) {
+        val tree = state ?: return@LaunchedEffect
+        (val id, val projectRoot = root, val name) = activeProject ?: return@LaunchedEffect
+        val rootId = ids.idFor("project", id.value)
+        tree.visibleNodes.firstOrNull()?.let { existing ->
+            if (existing.node.file == projectRoot) return@LaunchedEffect
+            tree.removeNode(existing.node.id)
+        }
+        val root = withContext(Dispatchers.IO) {
+            FileNode(
+                id = rootId,
+                name = name,
+                file = projectRoot,
+                isDirectory = true,
+                childCount = runCatching { projectRoot.list().size }.getOrNull(),
+                projectId = id.value,
+            )
+        }
+        tree.toggle(tree.addRoot(root))
+    }
+
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("EXPLORER", style = Theme[typography][labelSmall], color = Theme[colors][textMuted])
+            Spacer(Modifier.weight(1f))
+            KxButton(
+                onClick = onOpenDialog,
+                variant = KxButtonVariant.Ghost,
+                contentDescription = "Open another folder",
+                contentPadding = PaddingValues(8.dp),
+            ) { Text("+ Open", style = Theme[typography][labelSmall]) }
+        }
+        if (allProjects.isEmpty()) {
+            DrawerEmptyState(
+                title = "No project open",
+                subtitle = "Open a folder to browse files",
+                actionLabel = "+ open project",
+                onAction = onOpenDialog,
+            )
+            return@Column
+        }
+        if (activeProject == null) {
+            DrawerEmptyState(
+                title = "No project selected",
+                subtitle = "Pick one from project selector",
+                actionLabel = null,
+                onAction = null,
+            )
+            return@Column
+        }
+
+        val tree = state ?: return@Column
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                text = activeProject.name,
+                style = Theme[typography][labelSmall],
+                color = Theme[colors][textMuted],
+                maxLines = 1,
+            )
+        }
+
+        val rootNode = tree.visibleNodes.firstOrNull()?.node
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            KxButton(
+                onClick = { rootNode?.let { createRequest = it to false } },
+                enabled = rootNode != null,
+                variant = KxButtonVariant.Ghost,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            ) { Text("New File", style = Theme[typography][labelSmall]) }
+            KxButton(
+                onClick = { rootNode?.let { createRequest = it to true } },
+                enabled = rootNode != null,
+                variant = KxButtonVariant.Ghost,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            ) { Text("New Folder", style = Theme[typography][labelSmall]) }
+        }
+
+        fun openFile(node: FileNode, preview: Boolean) {
+            action(OpenDocument(location = locationOf(node, workspace), name = node.name, preview = preview))()
+            if (!node.isDirectory) onNavigate()
+        }
+
+        fun targetDirFor(node: FileNode): PlatformFile = if (node.isDirectory) {
+            node.file
+        } else {
+            node.file.parent() ?: activeProject.root
+        }
+
+        fun findVisibleByPath(path: String): VisibleFileNode? =
+            tree.visibleNodes.firstOrNull { it.node.file.path == path }
+
+        fun refreshDir(dir: PlatformFile) {
+            val vn = findVisibleByPath(dir.path) ?: return
+            if (tree.isExpanded(vn.node.id)) tree.refresh(vn.node) else tree.toggle(vn)
+        }
+
+        fun requireCleanDocumentsUnder(path: PlatformFile) {
+            val raw = path.path.trimEnd('/')
+            val dirty = workspace.documents.value.values.any { doc ->
+                val documentPath = workspace.resolve(doc).path.trimEnd('/')
+                (documentPath == raw || documentPath.startsWith("$raw/")) && workspace.isDirty(doc.id)
+            }
+            check(!dirty) { "Save or close unsaved files before renaming or deleting them." }
+        }
+
+        fun closeDocumentsUnder(path: PlatformFile) {
+            val raw = path.path.trimEnd('/')
+            val prefix = "$raw/"
+
+            workspace.documents.value.values.toList().forEach { doc ->
+                val documentPath = runCatching {
+                    workspace.resolve(doc).path.trimEnd('/')
+                }.getOrNull() ?: return@forEach
+
+                if (documentPath == raw || documentPath.startsWith(prefix)) {
+                    val _ = runCatching {
+                        action(CloseDocument(doc.id)).invoke()
+                    }
+                }
+            }
+        }
+
+        if (tree.visibleNodes.isEmpty()) {
+            DrawerEmptyState(
+                title = "Empty folder",
+                subtitle = activeProject.root.toString(),
+                actionLabel = null,
+                onAction = null,
+                compact = true,
+            )
+        } else {
+            FileTree(
+                state = tree,
+                listState = treeListState,
+                iconResolver = icons.resolver,
+                contentSniffer = icons.sniffer,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                onFileClick = { visible ->
+                    if (!visible.node.isDirectory) openFile(visible.node, preview = true)
+                },
+                onDoubleClick = { visible ->
+                    if (!visible.node.isDirectory) openFile(visible.node, preview = false)
+                },
+                menuItems = { visible ->
+                    val node = visible.node
+                    val isRoot = node.file == activeProject.root
+                    buildList {
+                        if (node.isDirectory) {
+                            add(FileTreeMenuItem("new file") { createRequest = node to false })
+                            add(FileTreeMenuItem("new folder") { createRequest = node to true })
+                            add(FileTreeMenuSeparator)
+                            add(FileTreeMenuItem("refresh") { tree.refresh(node) })
+                            if (!isRoot) {
+                                add(FileTreeMenuItem("rename") { renameRequest = node })
+                                add(FileTreeMenuItem("delete", danger = true) { deleteRequest = node })
+                            }
+                        } else {
+                            val doc = runCatching { workspace.find(locationOf(node, workspace)) }.getOrNull()
+                            val tab = doc?.let { d ->
+                                workspace.editorGroups.value.flatMap { it.documents }
+                                    .firstOrNull { it.documentId == d.id }
+                            }
+                            if (doc == null || tab == null) {
+                                add(FileTreeMenuItem("open") { openFile(node, preview = false) })
+                                add(FileTreeMenuItem("open preview") { openFile(node, preview = true) })
+                            } else {
+                                add(FileTreeMenuItem("open") { openFile(node, preview = false) })
+                                if (tab.preview) {
+                                    add(
+                                        FileTreeMenuItem(
+                                            "keep open",
+                                            onClick = action(PromotePreviewDocument(doc.id))
+                                        )
+                                    )
+                                }
+                                add(FileTreeMenuItem("close", onClick = action(CloseDocument(doc.id))))
+                            }
+                            add(FileTreeMenuSeparator)
+                            add(FileTreeMenuItem("rename") { renameRequest = node })
+                            add(FileTreeMenuItem("delete", danger = true) { deleteRequest = node })
+                        }
+                    }
+                },
+            )
+        }
+
+        val createTarget = createRequest
+        if (createTarget != null) {
+            val target = createTarget.first
+            val isFolder = createTarget.second
+            FileNameDialog(
+                visible = true,
+                title = if (isFolder) "New folder" else "New file",
+                subtitle = "In ${target.file.absolutePath()}",
+                initial = "",
+                confirmLabel = "create",
+                onDismiss = { createRequest = null },
+                onConfirm = { name ->
+                    val dir = targetDirFor(target)
+                    val newPath = dir.resolve(name)
+                    try {
+                        withContext(Dispatchers.IO) {
+                            if (newPath.exists()) error("Already exists")
+                            if (isFolder) {
+                                newPath.createDirectories()
+                            } else {
+                                if (!dir.exists()) dir.createDirectories()
+                                newPath.write(byteArrayOf())
+                            }
+                        }
+                        refreshDir(dir)
+                        if (!isFolder) {
+                            openFile(
+                                FileNode(
+                                    id = "",
+                                    name = name,
+                                    file = newPath,
+                                    isDirectory = false,
+                                    projectId = target.projectId,
+                                ),
+                                preview = true,
+                            )
+                        }
+                        null
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                        }
+                        t.message ?: "Failed to create"
+                    }
+                },
+            )
+        }
+
+        val renameTarget = renameRequest
+        if (renameTarget != null) {
+            FileNameDialog(
+                visible = true,
+                title = "Rename",
+                subtitle = renameTarget.file.absolutePath(),
+                initial = renameTarget.name,
+                confirmLabel = "rename",
+                onDismiss = { renameRequest = null },
+                onConfirm = { name ->
+                    if (name == renameTarget.name) return@FileNameDialog null
+                    val src = renameTarget.file
+                    val parent = src.parent() ?: return@FileNameDialog "Cannot rename here"
+                    val dst = parent.resolve(name)
+                    try {
+                        withContext(Dispatchers.IO) {
+                            requireCleanDocumentsUnder(src)
+                            if (dst.exists()) error("Already exists")
+                            src.atomicMove(dst)
+                        }
+                        closeDocumentsUnder(src)
+                        refreshDir(parent)
+                        null
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                        }
+                        t.message ?: "Failed to rename"
+                    }
+                },
+            )
+        }
+
+        val deleteTarget = deleteRequest
+        if (deleteTarget != null) {
+            ConfirmDeleteDialog(
+                visible = true,
+                name = deleteTarget.name,
+                subtitle = deleteTarget.file.absolutePath(),
+                onDismiss = { deleteRequest = null },
+                onConfirm = {
+                    val path = deleteTarget.file
+                    val parent = path.parent()
+                    try {
+                        withContext(Dispatchers.IO) {
+                            requireCleanDocumentsUnder(path)
+                            path.delete(recursively = true)
+                        }
+                        closeDocumentsUnder(path)
+                        if (parent != null) refreshDir(parent)
+                        null
+                    } catch (t: Throwable) {
+                        if (t is CancellationException) {
+                            currentCoroutineContext().ensureActive()
+                        }
+                        t.message ?: "Failed to delete"
+                    }
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DrawerEmptyState(
+    title: String,
+    subtitle: String,
+    actionLabel: String?,
+    onAction: (() -> Unit)?,
+    compact: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = if (compact) 12.dp else 24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(text = title, style = Theme[typography][label], color = Theme[colors][textPrimary])
+        Text(text = subtitle, style = Theme[typography][labelSmall], color = Theme[colors][textMuted], maxLines = 2)
+
+        if (actionLabel != null && onAction != null) {
+            KxButton(
+                onClick = onAction,
+                variant = KxButtonVariant.Outlined,
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.defaultMinSize(minHeight = KxButtonDefaultMinHeight),
+            ) {
+                Text(text = actionLabel, style = Theme[typography][label])
+            }
+        }
+    }
+}
+
+@Composable
+private fun FileNameDialog(
+    visible: Boolean,
+    title: String,
+    subtitle: String?,
+    initial: String,
+    confirmLabel: String,
+    onDismiss: () -> Unit,
+    onConfirm: suspend (String) -> String?,
+) {
+    val field = rememberTextFieldState(initial)
+    var error by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(visible, initial) {
+        if (visible) {
+            error = null
+            busy = false
+            field.edit { replace(0, length, initial) }
+        }
+    }
+
+    KxDialog(
+        visible = visible,
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = title,
+        subtitle = subtitle,
+        actions = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KxButton(
+                    onClick = { if (!busy) onDismiss() },
+                    variant = KxButtonVariant.Ghost,
+                    enabled = !busy,
+                ) {
+                    Text(text = "cancel", style = Theme[typography][label])
+                }
+                KxButton(
+                    onClick = {
+                        val name = field.text.toString().trim()
+                        if (name.isEmpty()) {
+                            error = "Name is empty"
+                            return@KxButton
+                        }
+                        if (name.contains("/")) {
+                            error = "Name cannot contain /"
+                            return@KxButton
+                        }
+                        scope.launch {
+                            busy = true
+                            val err = onConfirm(name)
+                            busy = false
+                            if (err == null) onDismiss() else error = err
+                        }
+                    },
+                    variant = KxButtonVariant.Filled,
+                    enabled = !busy,
+                ) {
+                    Text(text = confirmLabel, style = Theme[typography][label])
+                }
+            }
+        },
+    ) {
+        KxTextField(state = field, label = "Name", placeholder = "untitled.txt")
+        if (error != null) {
+            Text(
+                text = error!!,
+                style = Theme[typography][bodySmall],
+                color = Theme[colors][com.klyx.ui.theme.error],
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ConfirmDeleteDialog(
+    visible: Boolean,
+    name: String,
+    subtitle: String?,
+    onDismiss: () -> Unit,
+    onConfirm: suspend () -> String?,
+) {
+    var error by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(visible) {
+        if (visible) {
+            error = null
+            busy = false
+        }
+    }
+
+    KxDialog(
+        visible = visible,
+        onDismissRequest = { if (!busy) onDismiss() },
+        title = "Delete \"$name\"?",
+        subtitle = subtitle,
+        actions = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KxButton(
+                    onClick = { if (!busy) onDismiss() },
+                    variant = KxButtonVariant.Ghost,
+                    enabled = !busy,
+                ) {
+                    Text(text = "cancel", style = Theme[typography][label])
+                }
+                KxButton(
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            val err = onConfirm()
+                            busy = false
+                            if (err == null) onDismiss() else error = err
+                        }
+                    },
+                    backgroundColor = Theme[colors][com.klyx.ui.theme.error],
+                    variant = KxButtonVariant.Filled,
+                    enabled = !busy,
+                ) {
+                    Text(text = "delete", style = Theme[typography][label])
+                }
+            }
+        },
+    ) {
+        Text(
+            text = "This cannot be undone.",
+            style = Theme[typography][bodySmall],
+            color = Theme[colors][textMuted],
+        )
+        if (error != null) {
+            Text(
+                text = error!!,
+                style = Theme[typography][bodySmall],
+                color = Theme[colors][com.klyx.ui.theme.error],
+                modifier = Modifier.padding(top = 6.dp),
+            )
+        }
+    }
+}
+
+private fun locationOf(node: FileNode, workspace: Workspace): DocumentLocation {
+    val projectId = node.projectId
+    val path = node.file
+    return if (projectId == null) {
+        DocumentLocation.Platform(path)
+    } else {
+        val root = workspace[ProjectId(projectId)].root
+        DocumentLocation.Project(ProjectId(projectId), path.relativeTo(root))
+    }
+}
+
+private fun fileTreeChildrenLoader(ids: NodeIdRegistry): ChildrenLoader = { (id, file, projectId) ->
+    withContext(Dispatchers.IO) {
+        file.list().map { path ->
+            val isDirectory = path.isDirectory()
+            val childCount = if (isDirectory) path.list().size else null
+            FileNode(
+                id = ids.idFor(id, path.toString()),
+                name = path.name,
+                file = path,
+                isDirectory = isDirectory,
+                childCount = childCount,
+                projectId = projectId,
+            )
+        }.sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+    }
+}

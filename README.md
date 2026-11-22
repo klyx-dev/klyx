@@ -20,19 +20,44 @@ Open a local project or file, or create an empty file, by passing its absolute p
 
 Android and iOS register the scheme when the app is installed. Use paths accessible to Klyx on that device. On desktop, the JVM launcher accepts a URL as a single command-line argument. To enable clickable links for a desktop installation:
 
-- **Linux:** With the `klyx` launcher on the desktop session’s PATH, copy [klyx.desktop](jvm-app/packaging/klyx.desktop) to `~/.local/share/applications/`, then run `xdg-mime default klyx.desktop x-scheme-handler/klyx`.
-- **Windows:** Run [register-url-handler.ps1](jvm-app/packaging/register-url-handler.ps1) with `-Launcher 'C:\path\to\klyx.exe'` to register the launcher for the current user.
-- **macOS:** For a bundled JVM launcher, include the `CFBundleURLTypes` entry from the [iOS Info.plist](ios-app/src/Info.plist) in the bundle’s Info.plist before signing. Klyx receives the URL through the desktop Open URI handler.
+- **Linux:** With the `klyx` launcher on the desktop session’s PATH, copy [klyx.desktop](app/desktop/packaging/linux/klyx.desktop) to `~/.local/share/applications/`, then run `xdg-mime default klyx.desktop x-scheme-handler/klyx`.
+- **Windows:** Run [register-url-handler.ps1](app/desktop/packaging/windows/register-url-handler.ps1) with `-Launcher 'C:\path\to\klyx.exe'` to register the launcher for the current user.
+- **macOS:** For a bundled JVM launcher, include the `CFBundleURLTypes` entry from the [Info.plist](app/desktop/packaging/macos/Info.plist) in the bundle’s Info.plist before signing. Klyx receives the URL through the desktop Open URI handler.
 
 ## Building
+
+Use JDK 21 and install Android SDK Platforms 37 and 37.1 through SDK Manager. Set `ANDROID_HOME` to your SDK directory, or set `sdk.dir` in the repository's `local.properties`.
+
+Build the Classic and Material 3 (M3) debug APKs with the Gradle wrapper:
 
 ```bash
 git clone https://github.com/klyx-dev/klyx.git
 cd klyx
-./kotlin build
+./gradlew :app:android:assembleDebug
 ```
 
-See [Kotlin Toolchain](https://kotlin-toolchain.org/latest/user-guide/product-types/android-app/#running-your-application) guide for more information.
+On Windows, use `gradlew.bat` in place of `./gradlew`. The debug APKs are written to:
+
+- `app/android/build/outputs/apk/classic/debug/android-classic-debug.apk`
+- `app/android/build/outputs/apk/m3/debug/android-m3-debug.apk`
+
+To install one flavor on a connected Android device or running emulator, run `./gradlew :app:android:installClassicDebug` or `./gradlew :app:android:installM3Debug`.
+
+### Signed release APKs
+
+Create `app/android/sign.properties` with your keystore details. Git ignores this file.
+
+```properties
+storeFile=/absolute/path/to/klyx.keystore
+storePassword=YOUR_STORE_PASSWORD
+keyAlias=YOUR_KEY_ALIAS
+keyPassword=YOUR_KEY_PASSWORD
+```
+
+Run `./gradlew :app:android:assembleRelease` to generate both signed APKs:
+
+- `app/android/build/outputs/apk/classic/release/android-classic-release.apk`
+- `app/android/build/outputs/apk/m3/release/android-m3-release.apk`
 
 ## Status
 

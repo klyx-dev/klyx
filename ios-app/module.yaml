@@ -1,8 +1,0 @@
-product:
-  type: ios/app
-
-dependencies:
-  - //app-classic
-
-apply:
-  - //common.module-template.yaml

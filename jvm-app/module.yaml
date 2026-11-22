@@ -1,9 +1,0 @@
-product: jvm/app
-
-dependencies:
-  - //app-classic
-  - $compose.desktop.currentOs
-  - $libs.filekit.dialogs
-
-apply:
-  - //common.module-template.yaml
